@@ -1,0 +1,1 @@
+﻿import { skillMaxFor } from './src/calc/mainSkills'; import { POKEDEX } from './src/calc/data'; const m = new Map(); for (const p of POKEDEX) m.set(p.mainSkill, skillMaxFor(p.mainSkill)); console.log([...m].map(([k,v])=>k+'='+v).join('  '))
