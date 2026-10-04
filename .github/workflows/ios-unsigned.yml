@@ -33,6 +33,8 @@ jobs:
         run: |
           npx cap add ios
           npx cap sync ios
+          npm run icons:ios
+          /usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName 宝睡小助手' ios/App/App/Info.plist
       - name: Build unsigned iPhone app
         run: |
           xcodebuild \
