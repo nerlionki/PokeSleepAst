@@ -1,0 +1,55 @@
+name: iOS unsigned device build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: app
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build web assets
+        run: npm run build
+      - name: Generate and sync iOS project
+        run: |
+          npx cap add ios
+          npx cap sync ios
+      - name: Build unsigned iPhone app
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/pokesleep-ios-build" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Package unsigned IPA
+        run: |
+          app_path="$RUNNER_TEMP/pokesleep-ios-build/Build/Products/Release-iphoneos/App.app"
+          test -d "$app_path"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_path/Info.plist"
+          mkdir -p release/ios-unsigned/Payload
+          ditto "$app_path" release/ios-unsigned/Payload/App.app
+          (cd release/ios-unsigned && zip -qry ../PokeSleepAst-unsigned.ipa Payload)
+          unzip -tq release/PokeSleepAst-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PokeSleepAst-unsigned-ipa
+          path: app/release/PokeSleepAst-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
