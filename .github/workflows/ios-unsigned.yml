@@ -2,6 +2,11 @@ name: iOS unsigned device build
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ios-unsigned.yml'
 
 permissions:
   contents: read

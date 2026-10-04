@@ -1,7 +1,7 @@
 iOS 真机测试包（Windows + 免费云端构建）
 
 1. 将需要构建的代码提交并推送到 GitHub。GitHub Actions 只能读取已推送的代码，不能读取本机未提交的改动。
-2. 在 GitHub 仓库打开 Actions → iOS unsigned device build → Run workflow，选择要构建的分支并运行。
+2. 推送到 main 后会自动构建。也可以在 GitHub 仓库打开 Actions → iOS unsigned device build → Run workflow，选择要构建的分支手动运行。
 3. 等待 build 任务完成，在该次运行的 Artifacts 下载 PokeSleepAst-unsigned-ipa，解压得到 PokeSleepAst-unsigned.ipa。
 4. 这是未签名的 iPhone 真机包，直接点开无法安装。每位使用者在自己的 Windows 电脑上安装 AltServer（https://altstore.io/），连接自己的 iPhone，用自己的免费 Apple ID 安装。按住 Shift 点击 Windows 托盘中的 AltServer 图标，可选择“Sideload .ipa…”直接安装该文件。也可以先安装 AltStore，再从 AltStore 安装并定期刷新应用。
 5. 免费 Apple ID 的测试签名约 7 天过期。到期前按 AltStore 指引刷新；安装新版本时也需要重新侧载。不要把自己的 Apple ID 或密码交给其他使用者。
