@@ -35,10 +35,11 @@ jobs:
         run: |
           node --input-type=module -e '
             import { versionCode } from "./src/update/version.ts";
-            import { appendFileSync } from "node:fs";
+            import { appendFileSync, readFileSync } from "node:fs";
             const tag = process.env.RELEASE_TAG;
             if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error("Only vMAJOR.MINOR.PATCH tags are supported");
             const version = tag.slice(1);
+            if (version !== JSON.parse(readFileSync("package.json", "utf8")).version) throw new Error("Release tag and package version must match");
             versionCode(version);
             appendFileSync(process.env.GITHUB_ENV, `APP_VERSION=${version}\n`);
           '
@@ -50,6 +51,8 @@ jobs:
         run: npm run test:update
       - name: Test back navigation and OCR import
         run: npm run test:mobile
+      - name: Test baby efficiency planner
+        run: npm test -- src/calc/babyEfficiency.test.ts src/composables/useBabyEfficiency.test.ts src/stores/plans.test.ts
       - name: Prepare signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -83,13 +86,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          if gh release view "$RELEASE_TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
-            test "$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json isDraft --jq .isDraft)" = true || { echo 'Release is already public; immutable version cannot be overwritten'; exit 1; }
-          else
-            gh release create "$RELEASE_TAG" --repo "$REPOSITORY" --verify-tag --draft --generate-notes --title "宝睡助手 $APP_VERSION"
-          fi
-          gh release upload "$RELEASE_TAG" "release/PokeSleepAst-$APP_VERSION.apk" release/update.json --repo "$REPOSITORY" --clobber
-          gh release edit "$RELEASE_TAG" --repo "$REPOSITORY" --draft=false --latest
+          bash ../.github/scripts/publish-release.sh "$RELEASE_TAG" "release/PokeSleepAst-$APP_VERSION.apk" release/update.json
       - name: Remove temporary signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/pokesleep-release.jks"
