@@ -1,4 +1,4 @@
-import type { BoxPokemon, IngredientSlots } from '../types'
+import type { BoxPokemon, IngredientSlots, OcrMissingField } from '../types'
 import { NATURES, SUBSKILLS, pokeById } from './data'
 import { slotDrop } from './ingredients'
 import { MAIN_SKILLS, skillMaxFor } from './mainSkills'
@@ -202,7 +202,7 @@ function headerLevel(words: OcrWord[], name: OcrWord | null): { word: OcrWord, l
   return biggest ? { word: biggest.word, level: biggest.level } : null
 }
 
-function skillLevelOf(words: OcrWord[], pokeId: number, header: OcrWord | null): number {
+function skillLevelOf(words: OcrWord[], pokeId: number, header: OcrWord | null): number | null {
   const max = skillMaxFor(pokeById(pokeId)?.mainSkill ?? '')
   const hits = words.flatMap((word) => {
     if (word === header) return []
@@ -211,7 +211,7 @@ function skillLevelOf(words: OcrWord[], pokeId: number, header: OcrWord | null):
     return [{ word, level, x: center(word).x }]
   })
   const right = [...hits].sort((a, b) => b.x - a.x)[0]
-  return right?.level ?? 1
+  return right?.level ?? null
 }
 
 function ribbonHours(words: OcrWord[]): number {
@@ -426,25 +426,36 @@ export function parseCard(words: OcrWord[], options: ParseOptions): Omit<BoxPoke
   if (pokeId == null) return null
   const labeled = nameWord(words)
   const header = headerLevel(words, labeled)
-  const nature = words.map((word) => natureName(word.text)).find(Boolean) ?? '勤奋'
+  const nature = words.map((word) => natureName(word.text)).find(Boolean)
+  const subskills = placeSubskills(words)
+  const skillLevel = skillLevelOf(words, pokeId, header?.word ?? null)
+  const ocrMissing: OcrMissingField[] = []
+  if (!header) ocrMissing.push('level')
+  if (!nature) ocrMissing.push('nature')
+  if (skillLevel == null) ocrMissing.push('skillLevel')
+  if (isAllRounder(pokeById(pokeId))) ocrMissing.push('ingredient0')
+  options.slotLines.forEach((line, index) => { if (line == null) ocrMissing.push(`ingredient${index + 1}` as OcrMissingField) })
+  subskills.forEach((skill, index) => { if (!skill) ocrMissing.push(`subskill${index}` as OcrMissingField) })
   return {
     pokeId,
     level: header?.level ?? 30,
-    nature,
-    subskills: placeSubskills(words),
+    nature: nature ?? '勤奋',
+    subskills,
     ingredientSlots: ingredientSlotsFor(pokeId, options.slotLines),
-    skillLevel: skillLevelOf(words, pokeId, header?.word ?? null),
+    skillLevel: skillLevel ?? 1,
     name: labeled ? stripLevelPrefix(labeled.text) : '',
     napping: false,
     ...(options.shiny ? { shiny: true } : {}),
     tune: { ...defaultTune(), ribbonHours: ribbonHours(words) },
+    ...(ocrMissing.length ? { ocrMissing } : {}),
   }
 }
 
-export function fingerprint(pokemon: Pick<BoxPokemon, 'pokeId' | 'level' | 'nature' | 'subskills' | 'ingredientSlots' | 'skillLevel' | 'shiny'>): string {
+export function fingerprint(pokemon: Pick<BoxPokemon, 'pokeId' | 'level' | 'nature' | 'subskills' | 'ingredientSlots' | 'skillLevel' | 'shiny' | 'ocrMissing'>): string {
   const subs = [0, 1, 2, 3, 4].map((index) => pokemon.subskills[index] ?? '')
   const slots = [0, 1, 2].map((index) => pokemon.ingredientSlots[index] == null ? 'null' : String(pokemon.ingredientSlots[index]))
-  return [pokemon.pokeId, pokemon.level, pokemon.nature, subs.join(','), slots.join(','), pokemon.skillLevel, pokemon.shiny ? 'shiny' : 'normal'].join('|')
+  const key = [pokemon.pokeId, pokemon.level, pokemon.nature, subs.join(','), slots.join(','), pokemon.skillLevel, pokemon.shiny ? 'shiny' : 'normal'].join('|')
+  return pokemon.ocrMissing?.length ? `${key}|missing:${[...pokemon.ocrMissing].sort().join(',')}` : key
 }
 
 export function planImports(existing: BoxPokemon[], cards: Array<Omit<BoxPokemon, 'uid'> | null>) {

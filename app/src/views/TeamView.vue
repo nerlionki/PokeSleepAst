@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { usePageTab } from '../composables/usePageTab'
 import Segmented from '../components/shared/Segmented.vue'
 import ComparePane from '../components/team/ComparePane.vue'
 import TeamRosterPane from '../components/team/TeamRosterPane.vue'
 
-const route = useRoute()
-const tab = ref<'team' | 'cmp'>(route.query.tab === 'cmp' ? 'cmp' : 'team')
-
-watch(() => route.query.tab, (v) => {
-  if (v === 'cmp' || v === 'team') tab.value = v
-})
+const tab = usePageTab(['team', 'cmp'] as const, 'team')
 </script>
 
 <template>

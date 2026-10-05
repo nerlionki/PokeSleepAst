@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { usePageTab } from '../composables/usePageTab'
 import SleepGallery from '../components/plan/SleepGallery.vue'
 import BoxPane from '../components/pokemon/BoxPane.vue'
 import PokedexPane from '../components/pokemon/PokedexPane.vue'
 import Segmented from '../components/shared/Segmented.vue'
 
-const tab = shallowRef<'dex' | 'box' | 'wall'>('dex')
+const tab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
 </script>
 
 <template>

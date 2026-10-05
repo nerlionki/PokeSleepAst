@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { usePageTab } from '../composables/usePageTab'
 import CandyPane from '../components/plan/CandyPane.vue'
 import CatchPane from '../components/plan/CatchPane.vue'
 import SleepPane from '../components/plan/SleepPane.vue'
 import TrainPane from '../components/plan/TrainPane.vue'
 import Segmented from '../components/shared/Segmented.vue'
 
-const tab = shallowRef<'catch' | 'sleep' | 'candy' | 'train'>('sleep')
+const tab = usePageTab(['catch', 'sleep', 'candy', 'train'] as const, 'sleep')
 </script>
 
 <template>

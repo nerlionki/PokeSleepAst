@@ -6,6 +6,8 @@ import { usePlanStore } from '../../stores/plans'
 import { useRosterStore } from '../../stores/roster'
 import { useSettingsStore } from '../../stores/settings'
 import SettingsPanel from './SettingsPanel.vue'
+import UpdateDialog from '../update/UpdateDialog.vue'
+import { useUpdateStore } from '../../stores/update'
 
 const titles: Record<string, string> = {
   pokemon: '宝可梦',
@@ -19,8 +21,10 @@ const route = useRoute()
 const title = computed(() => titles[String(route.name)] ?? '宝睡助手')
 const open = shallowRef(false)
 const settings = useSettingsStore()
+const updater = useUpdateStore()
 
 onMounted(async () => {
+  void updater.initialize()
   await Promise.all([
     settings.hydrate(),
     useBoxStore().hydrate(),
@@ -65,5 +69,6 @@ onMounted(async () => {
       </RouterLink>
     </nav>
     <SettingsPanel v-if="open" @close="open = false" />
+    <UpdateDialog />
   </div>
 </template>

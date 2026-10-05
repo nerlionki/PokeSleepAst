@@ -10,7 +10,7 @@ const list = computed(() => POKEDEX.filter((poke) => pokeHit(poke, q.value)))
 </script>
 
 <template>
-  <div class="overlay" @click.self="emit('close')">
+  <div v-back="() => emit('close')" class="overlay" @click.self="emit('close')">
     <section class="sheet stack">
       <div class="row">
         <h3>添加宝可梦</h3>

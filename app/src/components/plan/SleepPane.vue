@@ -49,29 +49,50 @@ const sameMult = (mult: number) => Math.abs(settings.value.eventMult - mult) < 0
 const BATCH = 4000
 const eventMix = shallowRef(false)
 const otherShare = Math.round((1 - EVENT_OTHER_SHARE) * 100)
-const seen = ref<{ pokeId: number, name: string, count: number }[]>([])
+const seen = ref<{ pokeId: number, name: string, count: number, researchExp: number, shards: number, candy: number }[]>([])
 let drawSeed = 1
 
 watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult], () => {
   manualWhole.value = null
+})
+watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, settings.value.shinyUp, eventMix.value], () => {
   seen.value = []
 })
 
 function calculate() {
   drawSeed += 1
-  seen.value = sleepExpect(island.value, plan.value.sleepType as SleepType, dp.value, BATCH, 'normal', {
+  const opts = {
     rank: rank.value,
     discovered: resolvedSleepdex(plan.value),
     undiscoveredBoost: plan.value.undiscoveredBoost,
     rare: plan.value.rare,
     shinyUp: plan.value.shinyUp || settings.value.shinyUp,
     eventMix: eventMix.value,
-    seed: drawSeed,
-  }).map((row) => ({ pokeId: row.pokeId, name: row.name, count: row.count }))
+  }
+  const scores = whole.value ? [plan.value.sleepScore] : [result.value.best.a, result.value.best.b]
+  seen.value = scores.flatMap((score, index) => sleepExpect(
+    island.value,
+    plan.value.sleepType as SleepType,
+    drowsyPower(score, plan.value.snorlaxStrength, settings.value.eventMult),
+    BATCH,
+    'normal',
+    { ...opts, seed: drawSeed + index },
+  )).map((row) => ({ pokeId: row.pokeId, name: row.name, count: row.count, researchExp: row.researchExp, shards: row.shards, candy: row.candy }))
 }
 
 const board = computed(() => expectSpecies(seen.value))
 const seenTotal = computed(() => seen.value.reduce((sum, row) => sum + row.count, 0))
+const rewards = computed(() => seen.value.reduce((sum, row) => ({
+  researchExp: sum.researchExp + row.researchExp,
+  shards: sum.shards + row.shards,
+  candy: sum.candy + row.candy,
+}), { researchExp: 0, shards: 0, candy: 0 }))
+const perSleep = computed(() => ({
+  researchExp: rewards.value.researchExp / BATCH,
+  shards: rewards.value.shards / BATCH,
+  candy: rewards.value.candy / BATCH,
+}))
+const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits: 1 })
 </script>
 
 <template>
@@ -143,8 +164,14 @@ const seenTotal = computed(() => seen.value.reduce((sum, row) => sum + row.count
       <div class="row">
         <button class="btn sage" type="button" @click="calculate">计算 4000 次</button>
       </div>
-      <p v-if="seenTotal" class="muted">本次 {{ BATCH.toLocaleString('zh-CN') }} 次睡眠，共遇到 {{ seenTotal.toLocaleString('zh-CN') }} 只。预期只数 = 这只遇到的数量 / 全部遇到的数量。再点一次会重新算，不会累加。</p>
-      <p v-else class="muted">点一次单独算 4000 次。再点会换一批结果，不会和上一次加在一起。</p>
+      <p v-if="seenTotal" class="muted">本次模拟 {{ BATCH.toLocaleString('zh-CN') }} 次{{ whole ? '整觉' : '拆分方案' }}，共遇到 {{ seenTotal.toLocaleString('zh-CN') }} 只。预期只数 = 这只遇到的数量 / 全部遇到的数量。再点一次会重新算，不会累加。</p>
+      <p v-else class="muted">点一次单独模拟 4000 次当前方案。再点会换一批结果，不会和上一次加在一起。</p>
+      <div v-if="seenTotal" class="sleep-reward-summary">
+        <p><span>每次方案平均研究 EXP</span><strong>{{ average(perSleep.researchExp) }}</strong></p>
+        <p><span>每次方案平均梦之碎片</span><strong>{{ average(perSleep.shards) }}</strong></p>
+        <p><span>每次方案平均糖果</span><strong>{{ average(perSleep.candy) }}</strong></p>
+      </div>
+      <p v-if="seenTotal && (plan.campTicket || plan.incense)" class="muted">奖励基于基础睡姿抽取；露营券与薰香增加的遭遇未计入。</p>
       <div v-if="board.length" class="expect-list">
         <div v-for="item in board" :key="item.pokeId" class="expect-line">
           <PokeSprite :id="item.pokeId" :name="item.name" />

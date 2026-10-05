@@ -6,6 +6,7 @@ import { canPickBerries } from '../../calc/defaults'
 import { categoryLabel, recipeLevelOf } from '../../calc/cook'
 import BerryIcon from '../shared/BerryIcon.vue'
 import MealIcon from '../shared/MealIcon.vue'
+import UpdateSettings from '../update/UpdateSettings.vue'
 import { useSettingsStore } from '../../stores/settings'
 import type { MealCategory } from '../../types'
 
@@ -41,13 +42,14 @@ function setRecipeLevel(name: string, level: number) {
 </script>
 
 <template>
-  <div class="overlay" @click.self="emit('close')">
+  <div v-back="() => emit('close')" class="overlay" @click.self="emit('close')">
     <section class="sheet stack">
       <div class="row">
         <h2>全局设置</h2>
         <button class="btn ghost" type="button" @click="emit('close')">关闭</button>
       </div>
       <p class="muted">{{ summary }}</p>
+      <UpdateSettings />
       <div class="row">
         <button class="btn ghost" type="button" @click="store.applyPreset('default')">默认作息</button>
         <button class="btn ghost" type="button" @click="store.applyPreset('ideal')">理想满睡</button>

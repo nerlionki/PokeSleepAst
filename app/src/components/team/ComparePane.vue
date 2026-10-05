@@ -246,7 +246,7 @@ function saveCustomToBox() {
       </article>
     </div>
 
-    <div v-if="picking" class="overlay" @click.self="picking = false">
+    <div v-if="picking" v-back="() => { picking = false }" class="overlay" @click.self="picking = false">
       <section class="sheet stack">
         <h3>加入比较</h3>
         <button v-for="p in box.pokemon" :key="p.uid" class="data-row" type="button" @click="take(p.uid)">
@@ -260,7 +260,7 @@ function saveCustomToBox() {
 
     <SpeciesSheet v-if="adding" @close="adding = false" @pick="addCustom" />
 
-    <div v-if="editingPanel" class="overlay" @click.self="editing = null">
+    <div v-if="editingPanel" v-back="() => { editing = null }" class="overlay" @click.self="editing = null">
       <section class="sheet stack">
         <div class="row">
           <h3>{{ customs.some((item) => item.uid === editing) ? '自定义面板' : '编辑个体' }}</h3>

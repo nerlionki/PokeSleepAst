@@ -39,6 +39,8 @@ export interface Settings {
 }
 
 export type IngredientSlots = [number | null, number | null, number | null]
+export type OcrMissingField = 'level' | 'nature' | 'skillLevel' | 'ingredient0' | 'ingredient1' | 'ingredient2'
+  | 'subskill0' | 'subskill1' | 'subskill2' | 'subskill3' | 'subskill4'
 
 export interface BoxPokemon {
   uid: string
@@ -53,6 +55,8 @@ export interface BoxPokemon {
   napping: boolean
   shiny?: boolean
   tune?: MemberTune
+  /** OCR 未识别、尚待用户确认的字段；与占位默认值分开保存。 */
+  ocrMissing?: OcrMissingField[]
 }
 
 export type CarryMode = 'preset' | 'normal' | 'full' | 'unlimited'

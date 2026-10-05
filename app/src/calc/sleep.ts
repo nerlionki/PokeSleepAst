@@ -1,6 +1,7 @@
 import snorlaxRanks from '../data/snorlax-ranks.json'
 import type { IslandId, SleepType } from '../types'
 import { ENCOUNTER_BANDS, FALLBACKS, ISLANDS, islandById, POKEDEX, pokeById, SLEEP_STYLES } from './data'
+import { sleepReward } from './sleepRewards'
 
 type BandKey = keyof typeof ENCOUNTER_BANDS
 
@@ -159,6 +160,7 @@ export interface DrawnStyle {
   stars: number
   styleName: string
   dpr: number
+  styleId?: number
   rare?: boolean
   shiny?: boolean
   undiscovered?: boolean
@@ -335,20 +337,28 @@ export function sleepExpect(
   mode: 'normal' | 'map' = 'normal',
   opts: DrawOpts & { seed?: number } = {},
 ) {
-  const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number }>()
+  const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()
   const rank = opts.rank ?? '大师1'
   const pool = unlockedStyles(island, sleepType, dp, rank, mode)
   const openPool = opts.eventMix ? unlockedStyles(island, '没有特征', dp, rank, 'normal') : pool
-  const seed = opts.seed ?? 0
+  let randomState = (opts.seed ?? 0) >>> 0
+  const rng = () => {
+    randomState = (randomState + 0x6D2B79F5) >>> 0
+    let x = randomState
+    x = Math.imul(x ^ (x >>> 15), x | 1)
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61)
+    return ((x ^ (x >>> 14)) >>> 0) / 0x100000000
+  }
   for (let i = 0; i < n; i++) {
-    const draw = sleepDraw(island, sleepType, dp, rank, mode, () => {
-      const x = Math.sin((i + 1 + seed) * 9301 + freq.size * 49297) * 49297
-      return x - Math.floor(x)
-    }, { ...opts, pool, openPool })
+    const draw = sleepDraw(island, sleepType, dp, rank, mode, rng, { ...opts, pool, openPool })
     for (const s of draw) {
       const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
-      const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0 }
+      const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
+      const reward = sleepReward(s)
       cur.count += 1
+      cur.researchExp += reward?.researchExp ?? 0
+      cur.shards += reward?.shards ?? 0
+      cur.candy += reward?.candy ?? 0
       if (s.shiny) cur.shiny += 1
       if (s.rare) cur.rare += 1
       freq.set(key, cur)

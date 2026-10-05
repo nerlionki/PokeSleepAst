@@ -182,7 +182,7 @@ const presets = CANDY_PRESETS
       </div>
     </article>
     <p v-if="!plan.candyRows.length" class="muted">新增宝可梦，填写目标等级或要花的糖果。</p>
-    <div v-if="importing" class="overlay" @click.self="importing = false">
+    <div v-if="importing" v-back="() => { importing = false }" class="overlay" @click.self="importing = false">
       <section class="sheet stack">
         <div class="row">
           <h3>从 Box 导入</h3>

@@ -1,9 +1,15 @@
 ocrTest/
 docs/
 *.md
+!/app/RELEASE.md
 dist
 ios
 android
+!/app/android/
+*.jks
+*.keystore
+.signing/
+app/release/
 .env
 .env.local
 .env.development.local

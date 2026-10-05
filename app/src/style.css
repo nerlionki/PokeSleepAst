@@ -938,4 +938,9 @@ button.ing-token.on { outline: 2px solid var(--amber); background: rgba(240, 162
   border-radius: 12px;
   padding: 8px;
 }
+.sleep-reward-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sleep-reward-summary p { display: grid; gap: 4px; margin: 0; padding: 10px; border-radius: 12px; background: var(--card); }
+.sleep-reward-summary span { color: var(--muted); font-size: 12px; }
+.sleep-reward-summary strong { font-variant-numeric: tabular-nums; }
+.style-rewards { font-size: 11px; line-height: 1.4; }
 .editor-actions { justify-content: flex-end; }

@@ -1,12 +1,17 @@
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import path from 'node:path'
+import { versionCode } from '../src/update/version.ts'
 
 const appRoot = path.resolve(import.meta.dirname, '..')
 const projectName = path.basename(path.resolve(appRoot, '..'))
 const target = (process.argv[2] ?? 'all').toLowerCase()
 const mode = normalizeMode(process.argv[3] ?? 'debug')
 const outDir = path.join(appRoot, 'release')
+const appVersion = process.env.APP_VERSION ?? JSON.parse(readFileSync(path.join(appRoot, 'package.json'), 'utf8')).version
+versionCode(appVersion)
+process.env.APP_VERSION = appVersion
 
 if (!['android', 'ios', 'all'].includes(target) || !mode) {
   console.error('用法: node scripts/build-app.mjs <android|ios|all> <debug|prod>')
@@ -22,12 +27,30 @@ function normalizeMode(value) {
 }
 
 function run(command, args, cwd = appRoot, extraEnv = {}) {
-  const result = spawnSync([command, ...args].join(' '), {
+  // Run npm and Capacitor through Node so Windows .cmd shim resolution is unambiguous.
+  if (command === 'npm') {
+    const candidates = [process.env.npm_execpath,
+      path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'),
+      path.resolve(path.dirname(process.execPath), '../lib/node_modules/npm/bin/npm-cli.js')]
+    const cli = candidates.find((file) => file && existsSync(file))
+    if (!cli) throw new Error('没有找到 npm，请通过 npm run 调用打包脚本')
+    args = [cli, ...args]
+    command = process.execPath
+  } else if (command === 'npx') {
+    args = [path.join(appRoot, 'node_modules/@capacitor/cli/bin/capacitor'), ...args.slice(1)]
+    command = process.execPath
+  }
+  const windowsBatch = process.platform === 'win32' && command.endsWith('.bat')
+  const quote = (value) => {
+    if (/["\r\n%]/.test(value)) throw new Error('命令参数包含不支持的字符')
+    return `"${value}"`
+  }
+  const result = windowsBatch ? spawnSync([command, ...args.map(quote)].join(' '), {
     cwd,
     stdio: 'inherit',
     shell: true,
     env: { ...process.env, ...extraEnv },
-  })
+  }) : spawnSync(command, args, { cwd, stdio: 'inherit', env: { ...process.env, ...extraEnv } })
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
@@ -70,6 +93,7 @@ function publish(source, fileName) {
   const dest = path.join(outDir, fileName)
   copyFileSync(source, dest)
   console.log(`安装包：${dest}`)
+  return dest
 }
 
 function findApk(dir) {
@@ -92,7 +116,12 @@ function buildAndroid() {
   run(gradlew, [task], path.join(appRoot, 'android'), env)
   const folder = mode === 'prod' ? 'release' : 'debug'
   const apk = findApk(path.join(appRoot, 'android', 'app', 'build', 'outputs', 'apk', folder))
-  publish(apk, `${projectName}-${mode}.apk`)
+  const dest = publish(apk, mode === 'prod' ? `PokeSleepAst-${appVersion}.apk` : `${projectName}-${mode}.apk`)
+  if (mode === 'prod') {
+    const manifest = { version: appVersion, versionCode: versionCode(appVersion), fileName: path.basename(dest),
+      size: statSync(dest).size, sha256: createHash('sha256').update(readFileSync(dest)).digest('hex') }
+    writeFileSync(path.join(outDir, 'update.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+  }
 }
 
 function buildIos() {

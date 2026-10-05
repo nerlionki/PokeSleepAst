@@ -1,0 +1,95 @@
+name: Android Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module -e '
+            import { versionCode } from "./src/update/version.ts";
+            import { appendFileSync } from "node:fs";
+            const tag = process.env.RELEASE_TAG;
+            if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error("Only vMAJOR.MINOR.PATCH tags are supported");
+            const version = tag.slice(1);
+            versionCode(version);
+            appendFileSync(process.env.GITHUB_ENV, `APP_VERSION=${version}\n`);
+          '
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Android SDK packages
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"'
+      - name: Test updater
+        run: npm run test:update
+      - name: Test back navigation and OCR import
+        run: npm run test:mobile
+      - name: Prepare signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" && test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" || { echo 'Missing Android signing secrets'; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pokesleep-release.jks"
+          chmod 600 "$RUNNER_TEMP/pokesleep-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/pokesleep-release.jks" >> "$GITHUB_ENV"
+      - name: Build signed APK and update manifest
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x android/gradlew
+          npm run build:android:prod
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "release/PokeSleepAst-$APP_VERSION.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ env.APP_VERSION }}
+          path: |
+            app/release/*.apk
+            app/release/update.json
+          if-no-files-found: error
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            test "$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json isDraft --jq .isDraft)" = true || { echo 'Release is already public; immutable version cannot be overwritten'; exit 1; }
+          else
+            gh release create "$RELEASE_TAG" --repo "$REPOSITORY" --verify-tag --draft --generate-notes --title "宝睡助手 $APP_VERSION"
+          fi
+          gh release upload "$RELEASE_TAG" "release/PokeSleepAst-$APP_VERSION.apk" release/update.json --repo "$REPOSITORY" --clobber
+          gh release edit "$RELEASE_TAG" --repo "$REPOSITORY" --draft=false --latest
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/pokesleep-release.jks"

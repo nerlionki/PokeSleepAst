@@ -4,6 +4,7 @@ import { pokeHit } from '../../calc/pokeSearch'
 import { storeToRefs } from 'pinia'
 import { BERRIES, ISLANDS, POKEDEX, SLEEP_STYLES } from '../../calc/data'
 import { resolvedSleepdex, styleKey } from '../../calc/sleep'
+import { sleepReward } from '../../calc/sleepRewards'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
 import type { IslandId } from '../../types'
@@ -148,6 +149,7 @@ function pickChip(which: 'type' | 'spec' | 'sleep', value: string) {
         <PokeSprite :id="style.pokeId" :name="style.name" />
         <strong>{{ style.name }}</strong>
         <span>★{{ style.stars }}{{ style.styleName ? ` · ${style.styleName}` : '' }}</span>
+        <span v-if="sleepReward(style)" class="style-rewards">EXP {{ sleepReward(style)?.researchExp }} · 梦碎 {{ sleepReward(style)?.shards }} · 糖果 {{ sleepReward(style)?.candy }}</span>
         <em v-if="style.limited" class="amber">活动限定睡姿</em>
         <em>{{ islandName(style.island) }}</em>
       </button>
