@@ -138,7 +138,7 @@ export function maxEncounters(island: IslandId, score: number, strength: number,
 export const EVENT_OTHER_SHARE = 0.3
 
 /** 一场睡眠里最多一只。平日必须睡姿类型与所选类型一致。 */
-const SPECIAL_POKEMON = new Set([243, 244, 245, 488, 380, 381, 150])
+export const SPECIAL_POKEMON = new Set([243, 244, 245, 488, 380, 381, 150])
 
 export interface DrawOpts {
   rank?: string
@@ -254,7 +254,7 @@ export function favoredOnIsland(island: IslandId, berries: string[]) {
     .filter((p): p is NonNullable<typeof p> => !!p && berries.includes(p.berry))
 }
 
-function fallbackStyle(island: IslandId, sleepType: SleepType): DrawnStyle {
+export function fallbackStyle(island: IslandId, sleepType: SleepType): DrawnStyle {
   const allowed = islandById(island)?.species ?? []
   const species = new Set(allowed)
   const fb = FALLBACKS[island] as Record<string, string> | undefined
