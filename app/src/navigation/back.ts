@@ -37,11 +37,24 @@ export function installAndroidBack(router: Router, target: Pick<Window, 'addEven
   const stop = router.afterEach(() => { navigating = false })
   const onBack = () => {
     if (backStack.handle() || navigating) return
+    const current = router.currentRoute.value
+    const tabs = current.meta.backTabs
+    const mainTab = Array.isArray(tabs)
+    if (mainTab) {
+      const section = typeof current.query.tab === 'string' && tabs.includes(current.query.tab) ? current.query.tab : tabs[0]
+      // Each bottom tab's initial section is a boundary, even with older route history.
+      if (section === tabs[0]) return
+    }
     const previous = router.options.history.state.back
+    const destination = typeof previous === 'string' ? router.resolve(previous) : null
     // Only move through app routes; never leave the WebView at the initial page.
-    if (typeof previous === 'string' && router.resolve(previous).matched.length) {
+    if (destination?.matched.length && (!mainTab || destination.path === current.path)) {
       navigating = true
       router.back()
+    } else if (mainTab) {
+      // A deep link into a section must return to this tab, rather than another main tab.
+      navigating = true
+      void router.replace({ path: current.path, query: { ...current.query, tab: tabs[0] } })
     }
   }
   target.addEventListener('appBackButton', onBack)
