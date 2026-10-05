@@ -7,6 +7,8 @@ import BerryIcon from './BerryIcon.vue'
 import PokeSprite from './PokeSprite.vue'
 
 const model = defineModel<number>({ required: true })
+const props = defineProps<{ allowedIds?: readonly number[] }>()
+const allowed = computed(() => props.allowedIds ? new Set(props.allowedIds) : null)
 const open = shallowRef(false)
 const q = shallowRef('')
 const panel = shallowRef<'none' | 'spec' | 'type' | 'sleep' | 'ing'>('none')
@@ -22,6 +24,7 @@ const sleeps = computed(() => [...new Set(POKEDEX.map((p) => p.sleepType))])
 const current = computed(() => POKEDEX.find((p) => p.id === model.value) ?? POKEDEX[0]!)
 
 const list = computed(() => POKEDEX.filter((p) => {
+  if (allowed.value && !allowed.value.has(p.id)) return false
   if (!specialtyHit(p.specialty, spec.value)) return false
   if (type.value && p.berryType !== type.value) return false
   if (sleep.value && p.sleepType !== sleep.value) return false

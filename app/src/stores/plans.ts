@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { CandyRow } from '../calc/candyPlan'
 import type { CatchGoal } from '../calc/catch'
+import { DEFAULT_BABY_EFFICIENCY, validateBabyEfficiency, type BabyEfficiencyOptions } from '../calc/babyEfficiency'
 import { loadJson, saveJson } from '../storage'
 
 interface PlanState {
@@ -21,6 +22,7 @@ interface PlanState {
   catchGoals: CatchGoal[]
   candyRows: CandyRow[]
   candyStocks: Record<string, number>
+  babyEfficiency: BabyEfficiencyOptions
 }
 
 const empty: PlanState = {
@@ -39,14 +41,16 @@ const empty: PlanState = {
   catchGoals: [],
   candyRows: [],
   candyStocks: {},
+  babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY },
 }
 
 export const usePlanStore = defineStore('plans', () => {
-  const plan = ref<PlanState>({ ...empty })
+  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY } })
   const ready = ref(false)
 
   async function hydrate() {
     const saved = await loadJson<Partial<PlanState>>('plans', empty)
+    const babyEfficiency = { ...DEFAULT_BABY_EFFICIENCY, ...saved.babyEfficiency }
     plan.value = {
       ...empty,
       ...saved,
@@ -56,6 +60,7 @@ export const usePlanStore = defineStore('plans', () => {
       catchGoals: saved.catchGoals ?? [],
       candyRows: saved.candyRows ?? [],
       candyStocks: saved.candyStocks ?? {},
+      babyEfficiency: validateBabyEfficiency(babyEfficiency) ? { ...DEFAULT_BABY_EFFICIENCY } : babyEfficiency,
     }
     ready.value = true
   }
