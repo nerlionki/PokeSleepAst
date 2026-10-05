@@ -35,6 +35,7 @@ describe('app back navigation', () => {
     let afterEach = () => {}
     const stop = vi.fn()
     const router = { options: { history: { state } }, back: vi.fn(),
+      currentRoute: { value: { meta: {}, path: '/pokemon', query: {} } },
       resolve: (path: string) => ({ matched: path.startsWith('/pokemon') ? [{}] : [] }),
       afterEach: (handler: () => void) => { afterEach = handler; return stop },
     } as unknown as Router
@@ -61,5 +62,59 @@ describe('app back navigation', () => {
     gesture()
     expect(router.back).toHaveBeenCalledOnce()
     expect(stop).toHaveBeenCalledOnce()
+  })
+  it.each([
+    ['/pokemon', ['dex', 'box', 'wall']],
+    ['/plan', ['sleep', 'catch', 'candy', 'train']],
+    ['/team', ['team', 'cmp']],
+    ['/data', ['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot']],
+    ['/profile', []],
+  ])('keeps the %s main tab at its root regardless of existing history', (path, tabs) => {
+    const target = new EventTarget()
+    const query: { tab?: string } = {}
+    const state = { back: '/pokemon?tab=box' }
+    const router = { options: { history: { state } }, back: vi.fn(), replace: vi.fn(),
+      currentRoute: { value: { path, query, meta: { backTabs: tabs } } },
+      resolve: () => ({ matched: [{}], path: '/pokemon' }), afterEach: () => () => {},
+    } as unknown as Router
+    const cleanup = installAndroidBack(router, target)
+    const gesture = () => target.dispatchEvent(new Event('appBackButton'))
+    gesture()
+    query.tab = tabs[0]
+    gesture()
+    query.tab = 'invalid'
+    gesture()
+    expect(router.back).not.toHaveBeenCalled()
+    expect(router.replace).not.toHaveBeenCalled()
+    const close = vi.fn()
+    const remove = backStack.add(close)
+    gesture()
+    expect(close).toHaveBeenCalledOnce()
+    remove()
+    cleanup()
+  })
+  it('returns within a tab and sends a deep-linked section to its own root', () => {
+    const target = new EventTarget()
+    const state: { back: string | null } = { back: '/team?tab=team' }
+    let finish = () => {}
+    const router = { options: { history: { state } }, back: vi.fn(), replace: vi.fn().mockResolvedValue(undefined),
+      currentRoute: { value: { path: '/team', query: { tab: 'cmp', uid: 'member' }, meta: { backTabs: ['team', 'cmp'] } } },
+      resolve: (path: string) => ({ path: path.split('?')[0], matched: [{}] }),
+      afterEach: (handler: () => void) => { finish = handler; return () => {} },
+    } as unknown as Router
+    const cleanup = installAndroidBack(router, target)
+    const gesture = () => target.dispatchEvent(new Event('appBackButton'))
+    gesture()
+    expect(router.back).toHaveBeenCalledOnce()
+    finish()
+    state.back = '/pokemon?tab=box'
+    gesture()
+    expect(router.back).toHaveBeenCalledOnce()
+    expect(router.replace).toHaveBeenCalledWith({ path: '/team', query: { tab: 'team', uid: 'member' } })
+    finish()
+    state.back = null
+    gesture()
+    expect(router.replace).toHaveBeenCalledTimes(2)
+    cleanup()
   })
 })

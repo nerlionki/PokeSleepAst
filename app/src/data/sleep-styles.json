@@ -27392,5 +27392,385 @@
     "styleName": "心繫夥伴睡",
     "dpr": 6000000,
     "limited": true
+  },
+  {
+    "id": 2730,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "greengrass",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 2090000
+  },
+  {
+    "id": 2731,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "greengrass",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "晃菌傘睡",
+    "dpr": 9120000
+  },
+  {
+    "id": 2732,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "greengrass",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 49894000
+  },
+  {
+    "id": 2733,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "lapis",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 2090000
+  },
+  {
+    "id": 2734,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "lapis",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "晃菌傘睡",
+    "dpr": 9120000
+  },
+  {
+    "id": 2735,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "lapis",
+    "sleepType": "淺淺入夢",
+    "stars": 3,
+    "styleName": "噴吐孢子睡",
+    "dpr": 38304000
+  },
+  {
+    "id": 2736,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "lapis",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 49894000
+  },
+  {
+    "id": 2737,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "canyon",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 2090000
+  },
+  {
+    "id": 2738,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "canyon",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "晃菌傘睡",
+    "dpr": 9120000
+  },
+  {
+    "id": 2739,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "canyon",
+    "sleepType": "淺淺入夢",
+    "stars": 3,
+    "styleName": "噴吐孢子睡",
+    "dpr": 38304000
+  },
+  {
+    "id": 2740,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "canyon",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 49894000
+  },
+  {
+    "id": 2741,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "greenex",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 2090000
+  },
+  {
+    "id": 2742,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "greenex",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "晃菌傘睡",
+    "dpr": 9120000
+  },
+  {
+    "id": 2743,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "greenex",
+    "sleepType": "淺淺入夢",
+    "stars": 3,
+    "styleName": "噴吐孢子睡",
+    "dpr": 38304000
+  },
+  {
+    "id": 2744,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "greenex",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 49894000
+  },
+  {
+    "id": 2745,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "cyanex",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 2090000
+  },
+  {
+    "id": 2746,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "cyanex",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "晃菌傘睡",
+    "dpr": 9120000
+  },
+  {
+    "id": 2747,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "cyanex",
+    "sleepType": "淺淺入夢",
+    "stars": 3,
+    "styleName": "噴吐孢子睡",
+    "dpr": 38304000
+  },
+  {
+    "id": 2748,
+    "pokeId": 590,
+    "name": "哎呀球菇",
+    "island": "cyanex",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 49894000
+  },
+  {
+    "id": 2749,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "greengrass",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 11780000
+  },
+  {
+    "id": 2750,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "greengrass",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "引誘睡",
+    "dpr": 33478000
+  },
+  {
+    "id": 2751,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "greengrass",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 134710000
+  },
+  {
+    "id": 2752,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "lapis",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 11780000
+  },
+  {
+    "id": 2753,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "lapis",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "引誘睡",
+    "dpr": 33478000
+  },
+  {
+    "id": 2754,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "lapis",
+    "sleepType": "淺淺入夢",
+    "stars": 3,
+    "styleName": "噴出孢子睡",
+    "dpr": 93290000
+  },
+  {
+    "id": 2755,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "lapis",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 134710000
+  },
+  {
+    "id": 2756,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "canyon",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 11780000
+  },
+  {
+    "id": 2757,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "canyon",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "引誘睡",
+    "dpr": 33478000
+  },
+  {
+    "id": 2758,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "canyon",
+    "sleepType": "淺淺入夢",
+    "stars": 3,
+    "styleName": "噴出孢子睡",
+    "dpr": 93290000
+  },
+  {
+    "id": 2759,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "canyon",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 134710000
+  },
+  {
+    "id": 2760,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "greenex",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 11780000
+  },
+  {
+    "id": 2761,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "greenex",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "引誘睡",
+    "dpr": 33478000
+  },
+  {
+    "id": 2762,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "greenex",
+    "sleepType": "淺淺入夢",
+    "stars": 3,
+    "styleName": "噴出孢子睡",
+    "dpr": 93290000
+  },
+  {
+    "id": 2763,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "greenex",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 134710000
+  },
+  {
+    "id": 2764,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "cyanex",
+    "sleepType": "淺淺入夢",
+    "stars": 1,
+    "styleName": "擬態睡",
+    "dpr": 11780000
+  },
+  {
+    "id": 2765,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "cyanex",
+    "sleepType": "淺淺入夢",
+    "stars": 2,
+    "styleName": "引誘睡",
+    "dpr": 33478000
+  },
+  {
+    "id": 2766,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "cyanex",
+    "sleepType": "淺淺入夢",
+    "stars": 3,
+    "styleName": "噴出孢子睡",
+    "dpr": 93290000
+  },
+  {
+    "id": 2767,
+    "pokeId": 591,
+    "name": "敗露球菇",
+    "island": "cyanex",
+    "sleepType": "淺淺入夢",
+    "stars": 4,
+    "styleName": "大肚上睡",
+    "dpr": 134710000
   }
 ]

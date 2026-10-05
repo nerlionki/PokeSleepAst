@@ -10823,5 +10823,89 @@
       }
     ],
     "formKey": "皮卡丘船長"
+  },
+  {
+    "id": 590,
+    "name": "哎呀球菇",
+    "specialty": "食材型",
+    "sleepType": "淺淺入夢",
+    "berry": "零余果",
+    "berryType": "毒",
+    "interval": 5700,
+    "carry": 12,
+    "ingredientRate": 0.174,
+    "skillRate": 0.035,
+    "mainSkill": "能量填充S(X)",
+    "friendship": 5,
+    "medalGroup": 1,
+    "ingredients": [
+      {
+        "id": 2,
+        "name": "品鲜蘑菇",
+        "amounts": [
+          2,
+          5,
+          7
+        ]
+      },
+      {
+        "id": 3,
+        "name": "特选蛋",
+        "amounts": [
+          7,
+          10
+        ]
+      },
+      {
+        "id": 12,
+        "name": "好眠番茄",
+        "amounts": [
+          11
+        ]
+      }
+    ],
+    "formKey": "哎呀球菇"
+  },
+  {
+    "id": 591,
+    "name": "敗露球菇",
+    "specialty": "食材型",
+    "sleepType": "淺淺入夢",
+    "berry": "零余果",
+    "berryType": "毒",
+    "interval": 3500,
+    "carry": 19,
+    "ingredientRate": 0.204,
+    "skillRate": 0.047,
+    "mainSkill": "能量填充S(X)",
+    "friendship": 12,
+    "medalGroup": 2,
+    "ingredients": [
+      {
+        "id": 2,
+        "name": "品鲜蘑菇",
+        "amounts": [
+          2,
+          5,
+          7
+        ]
+      },
+      {
+        "id": 3,
+        "name": "特选蛋",
+        "amounts": [
+          7,
+          10
+        ]
+      },
+      {
+        "id": 12,
+        "name": "好眠番茄",
+        "amounts": [
+          11
+        ]
+      }
+    ],
+    "formKey": "敗露球菇"
   }
 ]
