@@ -73,3 +73,25 @@ describe('box uid', () => {
     expect(new Set(uids).size).toBe(3)
   })
 })
+
+describe('OCR pending persistence', () => {
+  it('keeps pending fields after hydration and saves partial completion without losing the record', async () => {
+    stored.box = null
+    setActivePinia(createPinia())
+    const box = useBoxStore()
+    await box.hydrate()
+    const pokemon = box.create({ ...member('pending', 30), ocrMissing: ['level', 'nature'] })
+    expect(pokemon.ocrMissing).toEqual(['level', 'nature'])
+    await vi.waitFor(() => expect((stored.box as { pokemon: typeof box.pokemon }).pokemon[0]?.ocrMissing).toEqual(['level', 'nature']))
+    setActivePinia(createPinia())
+    const restored = useBoxStore()
+    await restored.hydrate()
+    expect(restored.pokemon[0]?.ocrMissing).toEqual(['level', 'nature'])
+    restored.update('pending', { level: 40, ocrMissing: ['nature'] })
+    expect(restored.pokemon[0]?.level).toBe(40)
+    expect(restored.pokemon[0]?.ocrMissing).toEqual(['nature'])
+    restored.update('pending', { nature: '固执', ocrMissing: [] })
+    expect(restored.pokemon).toHaveLength(1)
+    expect(restored.pokemon[0]?.ocrMissing).toEqual([])
+  })
+})

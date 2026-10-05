@@ -15,6 +15,8 @@ import SubskillIcon from '../shared/SubskillIcon.vue'
 import ShinyMark from '../shared/ShinyMark.vue'
 import MemberEditor from '../team/MemberEditor.vue'
 import { SPECIALTY_FILTERS } from '../../calc/specialty'
+import OcrCompletionDialog from './OcrCompletionDialog.vue'
+import { normalizeOcrMissing } from '../../calc/ocrCompletion'
 
 const TYPES = SPECIALTY_FILTERS
 
@@ -31,6 +33,28 @@ interface BoxDraft extends BoxPokemon {
 }
 
 const editing = ref<BoxDraft | null>(null)
+const completionQueue = shallowRef<string[]>([])
+const pendingOcr = computed(() => box.pokemon.filter((pokemon) => normalizeOcrMissing(pokemon.ocrMissing).length))
+const completing = computed(() => completionQueue.value.map((uid) => box.pokemon.find((pokemon) => pokemon.uid === uid))
+  .find((pokemon) => pokemon && normalizeOcrMissing(pokemon.ocrMissing).length))
+
+function resumeCompletion(pokemon?: BoxPokemon) {
+  completionQueue.value = pokemon ? [pokemon.uid] : pendingOcr.value.map((item) => item.uid)
+}
+
+function persistCompletion(pokemon: BoxPokemon) {
+  box.update(pokemon.uid, { ...pokemon, ocrMissing: pokemon.ocrMissing ?? [] })
+}
+
+function saveCompletion(pokemon: BoxPokemon) {
+  persistCompletion(pokemon)
+  completionQueue.value = completionQueue.value.filter((uid) => uid !== pokemon.uid)
+}
+
+function pauseCompletion(pokemon: BoxPokemon) {
+  persistCompletion(pokemon)
+  completionQueue.value = []
+}
 
 function blank(pokeId: number): BoxDraft {
   return {
@@ -60,7 +84,8 @@ async function onShots(event: Event) {
   ocrMsg.value = '正在识别…'
   try {
     const result = await importScreenshotFiles(files, box.pokemon)
-    for (const pokemon of result.accepted) box.create(pokemon)
+    const imported = result.accepted.map((pokemon) => box.create(pokemon))
+    completionQueue.value = imported.filter((pokemon) => normalizeOcrMissing(pokemon.ocrMissing).length).map((pokemon) => pokemon.uid)
     ocrMsg.value = `写入 ${result.accepted.length} 只，跳过 ${result.skipped} 只，丢弃 ${result.discarded} 只`
   }
   catch {
@@ -124,6 +149,10 @@ const activeFilters = computed(() => filterCount(query))
       <input ref="shotInput" hidden type="file" accept="image/*" multiple @change="onShots">
     </div>
     <p v-if="ocrMsg" class="amber">{{ ocrMsg }}</p>
+    <div v-if="pendingOcr.length" class="card row">
+      <span class="muted">{{ pendingOcr.length }} 只宝可梦有待补全字段</span>
+      <button class="btn ghost" type="button" @click="resumeCompletion()">继续补全</button>
+    </div>
 
     <div v-if="!box.pokemon.length" class="card muted">还没有盒子成员</div>
     <div v-else-if="!filtered.length" class="card stack">
@@ -136,14 +165,16 @@ const activeFilters = computed(() => filterCount(query))
         <div>
           <strong>{{ boxLabel(pokemon) }}<ShinyMark v-if="pokemon.shiny" /></strong>
           <div class="muted">Lv.{{ pokemon.level }} · {{ pokemon.nature }}{{ pokemon.napping ? ' · 午睡岛' : '' }}</div>
+          <span v-if="pokemon.ocrMissing?.length" class="amber">{{ pokemon.ocrMissing.length }} 项待补全</span>
         </div>
         <div class="stack">
+          <button v-if="pokemon.ocrMissing?.length" class="btn" type="button" @click="resumeCompletion(pokemon)">补全</button>
           <button class="btn ghost" type="button" @click="openEdit(pokemon)">编辑</button>
           <button class="btn ghost" type="button" @click="box.remove(pokemon.uid)">删除</button>
         </div>
       </div>
     </div>
-    <div v-if="filtering" class="overlay" @click.self="filtering = false">
+    <div v-if="filtering" v-back="() => { filtering = false }" class="overlay" @click.self="filtering = false">
       <section class="sheet stack">
         <div class="row">
           <h3>筛选</h3>
@@ -202,7 +233,7 @@ const activeFilters = computed(() => filterCount(query))
       </section>
     </div>
     <SpeciesSheet v-if="picking" @close="picking = false" @pick="pickSpecies" />
-    <div v-if="editing" class="overlay" @click.self="editing = null">
+    <div v-if="editing" v-back="() => { editing = null }" class="overlay" @click.self="editing = null">
       <section class="sheet stack">
         <div class="row">
           <h3>{{ editing.uid ? '编辑个体' : '新建个体' }}<ShinyMark v-if="editing.shiny" /></h3>
@@ -215,5 +246,6 @@ const activeFilters = computed(() => filterCount(query))
         <button class="btn" type="button" @click="save">保存</button>
       </section>
     </div>
+    <OcrCompletionDialog v-if="completing" :key="completing.uid" :pokemon="completing" :remaining="completionQueue.length" @save="saveCompletion" @pause="pauseCompletion" />
   </div>
 </template>

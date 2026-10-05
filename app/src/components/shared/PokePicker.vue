@@ -61,7 +61,7 @@ const filterOn = computed(() => Boolean(spec.value || type.value || sleep.value 
       </div>
     </button>
     <Teleport to="body">
-      <div v-if="open" class="overlay picker-overlay" @click.self="open = false">
+      <div v-if="open" v-back="() => { open = false }" class="overlay picker-overlay" @click.self="open = false">
         <section class="sheet picker-sheet stack">
           <div class="row">
             <h3>选择宝可梦</h3>

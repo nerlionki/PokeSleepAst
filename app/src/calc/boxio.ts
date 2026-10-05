@@ -1,6 +1,7 @@
 import type { BoxPokemon } from '../types'
 import { INGREDIENTS, NATURES, POKEDEX, SUBSKILLS, pokeById } from './data'
 import { foldText } from './text'
+import { normalizeOcrMissing } from './ocrCompletion'
 
 export type BoxSource = 'native' | 'sdrice' | 'rae' | 'mixed'
 
@@ -235,6 +236,7 @@ function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
       skillLevel: Number(o.skillLevel) || 1,
       name: String(o.name ?? o.note ?? ''),
       napping: Boolean(o.napping),
+      ...(normalizeOcrMissing(o.ocrMissing).length ? { ocrMissing: normalizeOcrMissing(o.ocrMissing) } : {}),
       ...(o.shiny ? { shiny: true } : {}),
       tune: o.tune && typeof o.tune === 'object' ? o.tune as BoxPokemon['tune'] : undefined,
     }

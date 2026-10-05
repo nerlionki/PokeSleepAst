@@ -231,7 +231,7 @@ function saveCustomToBox() {
       <p v-for="(event, i) in events" :key="i" class="muted">{{ clockOf(event.minute) }} · {{ event.name }} · {{ kindLabel(event.kind) }}</p>
     </article>
 
-    <div v-if="picking !== null" class="overlay" @click.self="picking = null">
+    <div v-if="picking !== null" v-back="() => { picking = null }" class="overlay" @click.self="picking = null">
       <section class="sheet stack">
         <h3>放入槽位 {{ picking + 1 }}</h3>
         <button v-for="p in box.pokemon" :key="p.uid" class="data-row" type="button" :disabled="p.napping" @click="put(p.uid)">
@@ -245,7 +245,7 @@ function saveCustomToBox() {
 
     <SpeciesSheet v-if="adding !== null" @close="adding = null" @pick="pickSpecies" />
 
-    <div v-if="editingDraft" class="overlay" @click.self="editing = null">
+    <div v-if="editingDraft" v-back="() => { editing = null }" class="overlay" @click.self="editing = null">
       <section class="sheet stack">
         <div class="row">
           <h3>{{ editingDraft && editing?.startsWith('custom-') ? '自定义面板' : '编辑个体' }}</h3>

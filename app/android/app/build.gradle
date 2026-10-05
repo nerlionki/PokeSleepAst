@@ -1,0 +1,89 @@
+apply plugin: 'com.android.application'
+
+def appRoot = rootProject.projectDir.parentFile
+def appVersion = System.getenv('APP_VERSION') ?: new groovy.json.JsonSlurper().parse(new File(appRoot, 'package.json')).version
+if (!(appVersion ==~ /(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)/)) {
+    throw new GradleException('APP_VERSION 必须为 MAJOR.MINOR.PATCH')
+}
+def parts = appVersion.split('\\.').collect { it.toBigInteger() }
+def appVersionCode = parts[0] * 1000000 + parts[1] * 1000 + parts[2]
+if (parts[0] > 2099 || parts[1] > 999 || parts[2] > 999 || appVersionCode < 1) {
+    throw new GradleException('版本范围：major 0..2099，minor/patch 0..999，版本不能为 0.0.0')
+}
+def signingFile = new File(appRoot, '.signing/config.json')
+def signing = signingFile.exists() ? new groovy.json.JsonSlurper().parse(signingFile) : [:]
+def releaseStore = System.getenv('ANDROID_KEYSTORE_PATH') ?: signing.storeFile
+def releaseStorePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD') ?: signing.storePassword
+def releaseAlias = System.getenv('ANDROID_KEY_ALIAS') ?: signing.keyAlias
+def releaseKeyPassword = System.getenv('ANDROID_KEY_PASSWORD') ?: signing.keyPassword
+def hasReleaseSigning = releaseStore && releaseStorePassword && releaseAlias && releaseKeyPassword
+
+android {
+    namespace = "com.pokesleep.ast"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.pokesleep.ast"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode.intValue()
+        versionName appVersion
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseStore)
+                storePassword releaseStorePassword
+                keyAlias releaseAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.project == project && it.name.toLowerCase().contains('release') } && !hasReleaseSigning) {
+        throw new GradleException('缺少正式签名配置。先运行 npm run signing:init 或配置 ANDROID_KEYSTORE_* 环境变量。')
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

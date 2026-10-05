@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { loadJson, saveJson } from '../storage'
 import type { BoxPokemon } from '../types'
+import { normalizeOcrMissing } from '../calc/ocrCompletion'
 
 function adopt(item: BoxPokemon & { note?: string }): BoxPokemon {
   const name = item.name ?? item.note ?? ''
@@ -17,6 +18,7 @@ function adopt(item: BoxPokemon & { note?: string }): BoxPokemon {
     napping: Boolean(item.napping),
     ...(item.shiny ? { shiny: true } : {}),
     tune: item.tune,
+    ...(normalizeOcrMissing(item.ocrMissing).length ? { ocrMissing: normalizeOcrMissing(item.ocrMissing) } : {}),
   }
 }
 
@@ -53,6 +55,7 @@ export const useBoxStore = defineStore('box', () => {
       napping: partial.napping,
       ...(partial.shiny ? { shiny: true } : {}),
       tune: partial.tune,
+      ...(normalizeOcrMissing(partial.ocrMissing).length ? { ocrMissing: normalizeOcrMissing(partial.ocrMissing) } : {}),
     }
     pokemon.value = [...pokemon.value, item]
     return item

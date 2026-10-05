@@ -5,7 +5,7 @@ const emit = defineEmits<{ close: [] }>()
 
 <template>
   <Teleport to="body">
-    <div class="overlay drawer-overlay" @click.self="emit('close')">
+    <div v-back="() => emit('close')" class="overlay drawer-overlay" @click.self="emit('close')">
       <section class="sheet drawer-page">
         <header class="drawer-bar">
           <button class="drawer-back" type="button" aria-label="返回" @click="emit('close')">‹</button>
