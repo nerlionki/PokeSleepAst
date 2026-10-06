@@ -2,16 +2,40 @@
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "allowArbitraryExtensions": true,
     "resolveJsonModule": true,
-
-    /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "#platform/*": [
+        "./src/platform/*"
+      ],
+      "vue": [
+        "./node_modules/vue"
+      ],
+      "pinia": [
+        "./node_modules/pinia"
+      ],
+      "vue-router": [
+        "./node_modules/vue-router"
+      ]
+    }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.json"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "src/**/*.json",
+    "../core/src/**/*.ts",
+    "../core/src/**/*.vue",
+    "../core/src/**/*.json"
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
+  ]
 }

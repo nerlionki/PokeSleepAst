@@ -5,9 +5,9 @@ import { parseCard, splitCards } from './ocrBox'
 
 describe('ocr engine smoke', () => {
   it('reads a real screenshot', async () => {
-    const det = readFileSync(new URL('../../public/ocr/det.onnx', import.meta.url))
-    const rec = readFileSync(new URL('../../public/ocr/rec.onnx', import.meta.url))
-    const dict = readFileSync(new URL('../../public/ocr/keys.txt', import.meta.url), 'utf8')
+    const det = readFileSync(new URL('../../../core/public/ocr/det.onnx', import.meta.url))
+    const rec = readFileSync(new URL('../../../core/public/ocr/rec.onnx', import.meta.url))
+    const dict = readFileSync(new URL('../../../core/public/ocr/keys.txt', import.meta.url), 'utf8')
     const raw = readFileSync(new URL('../../ocr-sample.raw', import.meta.url))
     const width = 1170
     const height = 2532

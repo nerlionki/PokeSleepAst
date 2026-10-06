@@ -10,7 +10,7 @@ import { crop, diskCrop, ingredientIconCrop, matchIngredientSprite, pickClosest,
 import { isAllRounder } from './specialty'
 
 const require = createRequire(import.meta.url)
-const samples = 'D:/PokeSleepAst/ocrTest'
+const samples = '../ocrTest'
 
 function hasSharp(): boolean {
   try {
@@ -39,9 +39,9 @@ describe('ocr portrait', () => {
       const { data, info } = await sharp(path).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
       return { data: new Uint8ClampedArray(data), width: info.width, height: info.height }
     }
-    const det = readFileSync(new URL('../../public/ocr/det.onnx', import.meta.url))
-    const rec = readFileSync(new URL('../../public/ocr/rec.onnx', import.meta.url))
-    const dict = readFileSync(new URL('../../public/ocr/keys.txt', import.meta.url), 'utf8')
+    const det = readFileSync(new URL('../../../core/public/ocr/det.onnx', import.meta.url))
+    const rec = readFileSync(new URL('../../../core/public/ocr/rec.onnx', import.meta.url))
+    const dict = readFileSync(new URL('../../../core/public/ocr/keys.txt', import.meta.url), 'utf8')
     const sessions = await createOcrFromBuffers(
       det.buffer.slice(det.byteOffset, det.byteOffset + det.byteLength),
       rec.buffer.slice(rec.byteOffset, rec.byteOffset + rec.byteLength),
@@ -50,9 +50,9 @@ describe('ocr portrait', () => {
     const portraits: { id: number, shiny: boolean, image: PixelImage }[] = []
     for (const poke of POKEDEX) {
       try {
-        portraits.push({ id: poke.id, shiny: false, image: trimOpaque(await loadImage(`src/assets/imgs/pokemon/portrait/${poke.id}.webp`)) })
+        portraits.push({ id: poke.id, shiny: false, image: trimOpaque(await loadImage(`../core/src/assets/imgs/pokemon/portrait/${poke.id}.webp`)) })
         if (!isAllRounder(poke)) {
-          portraits.push({ id: poke.id, shiny: true, image: trimOpaque(await loadImage(`src/assets/imgs/pokemon/portrait/shiny/${poke.id}.webp`)) })
+          portraits.push({ id: poke.id, shiny: true, image: trimOpaque(await loadImage(`../core/src/assets/imgs/pokemon/portrait/shiny/${poke.id}.webp`)) })
         }
       }
       catch {
@@ -61,12 +61,12 @@ describe('ocr portrait', () => {
     }
     const ingredientRefs: { id: number, image: PixelImage }[] = []
     for (const ingredient of INGREDIENTS) {
-      ingredientRefs.push({ id: ingredient.id, image: trimOpaque(await loadImage(`src/assets/imgs/ingredient/${ingredient.id}.webp`)) })
+      ingredientRefs.push({ id: ingredient.id, image: trimOpaque(await loadImage(`../core/src/assets/imgs/ingredient/${ingredient.id}.webp`)) })
     }
     const files = readdirSync(samples).filter((name) => name.endsWith('.jpg'))
-    const found: number[][] = []
-    const shinyFound: boolean[][] = []
-    for (const [fileIndex, name] of files.entries()) {
+    const expectedIds: Record<string, number[]> = { "40706B91346C4F34629C83F0E324D450.jpg": [252], "1": [195], "2": [454, 845, 845], "3": [845], "4": [57], "5": [154], "6": [923], "7": [922], "8": [381,380], "9": [9006], "10": [491], "11": [906] }
+
+    for (const name of files) {
       const image = await loadImage(join(samples, name))
       const words = await recognize(sessions, image)
       const ids = []
@@ -98,7 +98,7 @@ describe('ocr portrait', () => {
         }
         ids.push(id ?? 0)
         shiny.push(variant?.shiny ?? false)
-        if (fileIndex === 9 && id === 491) {
+        if (name.includes('_10_') && id === 491) {
           const card = parseCard(group, { portraitId: id, slotLines: [null, null] })
           expect(planImports([], [card]).accepted[0]).toMatchObject({
             pokeId: 491,
@@ -106,7 +106,7 @@ describe('ocr portrait', () => {
             ingredientSlots: [0, null, null],
           })
         }
-        if (fileIndex === 10 && id === 906) {
+        if (name.includes('_11_') && id === 906) {
           const card = parseCard(group, {
             portraitId: id,
             slotLines: [0, 0],
@@ -118,34 +118,10 @@ describe('ocr portrait', () => {
           })
         }
       }
-      found.push(ids)
-      shinyFound.push(shiny)
+      const key = name.match(/_(\d+)_857\.jpg$/)?.[1] ?? name
+      if (expectedIds[key]) expect(ids).toEqual(expectedIds[key])
+      if (expectedIds[key]) expect(shiny).toEqual(ids.map(() => key === "11"))
     }
-    expect(found).toEqual([
-      [195],
-      [454, 845, 845],
-      [845],
-      [57],
-      [154],
-      [923],
-      [922],
-      [381, 380],
-      [9006],
-      [491],
-      [906],
-    ])
-    expect(shinyFound).toEqual([
-      [false],
-      [false, false, false],
-      [false],
-      [false],
-      [false],
-      [false],
-      [false],
-      [false, false],
-      [false],
-      [false],
-      [true],
-    ])
+
   }, 180000)
 })

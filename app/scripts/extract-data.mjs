@@ -3,7 +3,7 @@ import path from 'node:path'
 
 const root = path.resolve(import.meta.dirname, '../..')
 const mdPath = path.join(root, 'Sleep游戏资料.md')
-const outDir = path.resolve(import.meta.dirname, '../src/data')
+const outDir = path.resolve(import.meta.dirname, '../../core/src/data')
 fs.mkdirSync(outDir, { recursive: true })
 
 const md = fs.readFileSync(mdPath, 'utf8')

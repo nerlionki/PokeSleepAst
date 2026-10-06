@@ -1,0 +1,1 @@
+{"det":{"input":"x","output":"sigmoid_0.tmp_0","size":4745517},"rec":{"input":"x","output":"softmax_11.tmp_0","size":10857958}}

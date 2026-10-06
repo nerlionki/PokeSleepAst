@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["@tarojs/taro", "miniprogram-api-typings"],
+    "lib": ["ES2022", "DOM"],
+    "paths": {
+      "#platform/*": ["./src/platform/*"],
+      "vue-router": ["./src/platform/router.ts"],
+      "vue": ["./node_modules/vue"],
+      "pinia": ["./node_modules/pinia"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue", "../core/src/**/*.ts"],
+  "exclude": ["src/workers", "src/generated/components/update/UpdateDialog.vue", "src/generated/components/layout/AppShell.vue"]
+}

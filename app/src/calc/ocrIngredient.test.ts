@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module'
+import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import * as vision from './ocrVision'
 import type { OcrWord } from './ocrBox'
@@ -16,7 +17,7 @@ function hasSharp(): boolean {
 }
 
 describe('ingredient screenshot matching', () => {
-  it.skipIf(!hasSharp())('matches normal and faded icons after shifting left from the quantity label', async () => {
+  it.skipIf(!hasSharp() || !existsSync('../ocrTest/微信图片_20261003140326_1_857.jpg'))('matches normal and faded icons after shifting left from the quantity label', async () => {
     const sharp = (await import('sharp')).default
     const api = vision as typeof vision & {
       ingredientIconCrop: (image: vision.PixelImage, mark: OcrWord, gap: number) => vision.PixelImage
@@ -30,26 +31,26 @@ describe('ingredient screenshot matching', () => {
       return { data: new Uint8ClampedArray(data), width: info.width, height: info.height }
     }
     async function refs(ids: number[]) {
-      return Promise.all(ids.map(async (id) => ({ id, image: vision.trimOpaque(await load(`src/assets/imgs/ingredient/${id}.webp`)) })))
+      return Promise.all(ids.map(async (id) => ({ id, image: vision.trimOpaque(await load(`../core/src/assets/imgs/ingredient/${id}.webp`)) })))
     }
 
     const cases = [
       {
-        path: 'D:/PokeSleepAst/ocrTest/微信图片_20261003140326_1_857.jpg',
+        path: '../ocrTest/微信图片_20261003140326_1_857.jpg',
         mark: { text: '5', x: 757, y: 482, width: 20, height: 24 },
         gap: 178,
         ids: [2, 4, 7],
         expected: 2,
       },
       {
-        path: 'D:/PokeSleepAst/ocrTest/微信图片_20261003140327_2_857.jpg',
+        path: '../ocrTest/微信图片_20261003140327_2_857.jpg',
         mark: { text: '×7', x: 1509, y: 365, width: 36, height: 24 },
         gap: 136,
         ids: [10, 4],
         expected: 10,
       },
       {
-        path: 'D:/PokeSleepAst/ocrTest/微信图片_20261003140329_4_857.jpg',
+        path: '../ocrTest/微信图片_20261003140329_4_857.jpg',
         mark: { text: '×4', x: 924, y: 500, width: 36, height: 24 },
         gap: 169,
         ids: [7, 9],

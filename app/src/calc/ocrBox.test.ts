@@ -182,6 +182,21 @@ describe('screenshot card', () => {
 })
 
 describe('ingredient icon slot', () => {
+  it('uses paired locked levels when an overlay hides the ingredient heading', () => {
+    const marks = ingredientQuantityMarks([
+      word('Lv.30', 530, 185, 90, 18), word('LV.60', 675, 185, 90, 18),
+      word('×1', 465, 290, 25, 12), word('X2', 610, 290, 25, 12), word('x3', 750, 290, 25, 12),
+      word('幫忙間隔', 80, 365, 160, 28),
+    ])
+    expect(marks.map(mark => mark?.quantity)).toEqual([2, 3])
+    expect(matchIngredientSlot(252, 1, 17, 2)).toBe(1)
+    expect(matchIngredientSlot(252, 2, null, 3)).toBe(1)
+    expect(parseCard([], { portraitId: 252, slotLines: [1, 2] })?.ingredientSlots).toEqual([0, 1, 2])
+  })
+
+  it('does not infer an ingredient row from a single skill level', () => {
+    expect(ingredientQuantityMarks([word('Lv.30', 530, 185), word('2', 610, 290), word('3', 750, 290)])).toEqual([null, null])
+  })
   it('rejects a hit whose quantity does not match that slot', () => {
     expect(matchIngredientSlot(845, 1, 10, 5)).toBe(0)
     expect(matchIngredientSlot(845, 1, 10, 4)).toBeNull()

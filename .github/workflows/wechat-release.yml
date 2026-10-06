@@ -1,0 +1,41 @@
+name: WeChat miniapp
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*', '*_hotfix']
+    paths:
+      - 'core/**'
+      - 'wxapp/**'
+      - '.github/workflows/wechat-release.yml'
+      - '.github/scripts/publish-release.sh'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wxapp
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: wxapp/package-lock.json
+      - run: npm ci
+      - run: npm run build:weapp
+      - run: npm run typecheck
+      - run: node scripts/package-release.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wechat-miniapp
+          path: |
+            app/release/*-weapp.zip
+            app/release/*-ocr-models.zip
+          if-no-files-found: error

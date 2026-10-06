@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src/generated/
+src/asset-pack*/
+src/workers/
+src/platform/image-map.json
+*.log
+.swc/
+.taro/

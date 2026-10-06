@@ -2,7 +2,7 @@ import { mkdirSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
 
-const portraitDir = path.resolve('src/assets/imgs/pokemon/portrait')
+const portraitDir = path.resolve('../core/src/assets/imgs/pokemon/portrait')
 const outDir = path.join(portraitDir, 'shiny')
 mkdirSync(outDir, { recursive: true })
 

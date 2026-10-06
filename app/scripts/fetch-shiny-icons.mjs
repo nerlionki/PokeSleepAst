@@ -3,7 +3,7 @@ import path from 'node:path'
 import sharp from 'sharp'
 
 /** RAE 图鉴打开「異色」筛选后显示的图标，见 https://pks.raenonx.cc/zh/pokedex */
-const iconDir = path.resolve('src/assets/imgs/pokemon/icons')
+const iconDir = path.resolve('../core/src/assets/imgs/pokemon/icons')
 const outDir = path.join(iconDir, 'shiny')
 mkdirSync(outDir, { recursive: true })
 

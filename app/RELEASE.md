@@ -2,6 +2,8 @@
 
 推送 `vMAJOR.MINOR.PATCH` 标签触发 `.github/workflows/android-release.yml`。工作流生成签名 APK 和 `update.json`，完成上传后才公开 GitHub Release。
 
+GitHub Release 包含 APK、未签名 IPA 和 `update.json`，三份齐全后公开。微信编译包与 OCR 模型包保留在本地或 Actions artifacts，不追加到 Release。已经公开的 APK 与更新清单保持不变。微信编译命令与 OCR 体验说明见 `../wxapp/README.md`。
+
 App 使用匿名请求检查更新，因此仓库及 Release 附件必须公开可访问。无需在 App 中配置 GitHub token。
 
 ## 首次签名配置
