@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { createHash } from 'node:crypto'
+import { runInNewContext } from 'node:vm'
 const root = path.resolve(import.meta.dirname, '..')
 const dist = path.join(root, 'dist')
 const config = JSON.parse(fs.readFileSync(path.join(dist, 'app.json')))
@@ -38,7 +39,30 @@ for (const file of walk(path.join(root, 'src/generated')).filter(file => file.en
 const size = list => list.reduce((sum,file)=>sum+fs.statSync(file).size,0)
 const sub = config.subPackages ?? config.subpackages ?? []
 const main = files.filter(file => !sub.some(p => file.startsWith(path.join(dist,p.root)+path.sep)) && !(config.workers?.isSubpackage && file.startsWith(path.join(dist, config.workers.path) + path.sep)))
-if (!main.filter(file => file.endsWith('.js')).some(file => /require\(["']\.\/image-loader\.js["']\)/.test(fs.readFileSync(file, 'utf8')))) throw Error('Image loader must remain a native external require')
+const importingChunks = main.filter(file => file.endsWith('.js') && /require\(["']\.\/image-loader\.js["']\)/.test(fs.readFileSync(file, 'utf8')))
+if (!importingChunks.length) throw Error('Image loader must remain a native external require')
+const nativeModules = new Map()
+const asyncPaths = []
+function nativeModule(file) {
+  if (nativeModules.has(file)) return nativeModules.get(file).exports
+  if (!fs.existsSync(file)) throw Error(`Native module missing: ${path.relative(dist, file)}`)
+  const module = { exports:{} }
+  nativeModules.set(file, module)
+  const nativeRequire = Object.assign(arg => nativeModule(path.resolve(path.dirname(file), arg)), { async:async arg => {
+    const target = path.resolve(path.dirname(file), arg)
+    asyncPaths.push(target)
+    return nativeModule(target)
+  } })
+  runInNewContext(fs.readFileSync(file, 'utf8'), { module, exports:module.exports, require:nativeRequire, Promise, Error }, { filename:file })
+  return module.exports
+}
+const first = Object.values(manifest)[0]
+for (const chunk of importingChunks) {
+  const loader = nativeModule(path.join(path.dirname(chunk), 'image-loader.js'))
+  const payload = await loader.loadImageModule(first.pack)
+  if (payload[first.key] !== modules.get(first.pack)[first.key]) throw Error(`Native image loader returned wrong payload: ${chunk}`)
+}
+if (asyncPaths.some(file => file !== path.join(dist, first.pack, 'images.js'))) throw Error('Native async image paths must resolve from the root bridge')
 console.log(`Main package: ${size(main)} bytes; total: ${size(files)} bytes`)
 if (size(main) > 2 * 1024 * 1024) throw Error('Main package exceeds 2 MB')
 for(const pack of sub) {
@@ -52,3 +76,4 @@ const profile = fs.readFileSync(path.join(root,'src/generated/views/ProfileView.
 if(profile.includes('UpdateSettings') || profile.includes('资料版本')) throw Error('WeChat must not contain update check or data version panel')
 console.log('WeChat build verified: pages, AppID, package sizes and profile scope.')
 console.log(`Verified ${Object.keys(images).length} PNG images and the native async loader.`)
+console.log(`Verified native image require paths from ${importingChunks.length} importing chunks.`)

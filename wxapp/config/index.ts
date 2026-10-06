@@ -1,6 +1,7 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import { defineConfig } from '@tarojs/cli'
+import { NativeImageLoaderPlugin } from './native-image-loader.cjs'
 
 export default defineConfig({
   projectName: 'pokesleep-wxapp',
@@ -30,6 +31,7 @@ export default defineConfig({
     webpackChain(chain) {
       chain.resolve.modules.add(path.resolve(__dirname, '../node_modules'))
       chain.externals({ '#image-loader': 'commonjs ./image-loader.js' })
+      chain.plugin('native-image-loader-paths').use(NativeImageLoaderPlugin)
     },
   },
 })
