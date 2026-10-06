@@ -49,6 +49,8 @@ jobs:
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"'
       - name: Test updater
         run: npm run test:update
+      - name: Test ingredient OCR regression and WeChat form contracts
+        run: npm test -- src/calc/ocrTreecko.test.ts src/calc/ocrBox.test.ts src/platform/wechatForms.test.ts src/platform/wechatWorker.test.ts
       - name: Test back navigation and OCR import
         run: npm run test:mobile
       - name: Test baby efficiency planner

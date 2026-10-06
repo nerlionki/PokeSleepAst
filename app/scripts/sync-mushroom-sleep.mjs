@@ -22,7 +22,7 @@ function collection(source, key) {
   throw new Error(`Unclosed ${key}`)
 }
 
-const dataDir = path.resolve(import.meta.dirname, '../src/data')
+const dataDir = path.resolve(import.meta.dirname, '../../core/src/data')
 const read = name => JSON.parse(fs.readFileSync(path.join(dataDir, `${name}.json`), 'utf8'))
 const write = (name, value, compact = false) => fs.writeFileSync(path.join(dataDir, `${name}.json`), `${JSON.stringify(value, null, compact ? undefined : 2)}\n`)
 const styles = read('sleep-styles'), ranks = read('snorlax-ranks')

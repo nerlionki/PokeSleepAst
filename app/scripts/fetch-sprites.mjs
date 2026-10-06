@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import pokedex from '../src/data/pokedex.json' with { type: 'json' }
+import pokedex from '../../core/src/data/pokedex.json' with { type: 'json' }
 
 const ART = {
   7006: 10037,
@@ -29,7 +29,7 @@ function artId(id) {
   return id
 }
 
-const outDir = path.resolve(import.meta.dirname, '../public/sprites')
+const outDir = path.resolve(import.meta.dirname, '../../core/public/sprites')
 fs.mkdirSync(outDir, { recursive: true })
 const ids = [...new Set(pokedex.map((p) => p.id))]
 

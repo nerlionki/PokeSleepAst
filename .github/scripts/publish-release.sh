@@ -17,10 +17,17 @@ if test "$(gh release view "$tag" --repo "$repo" --json isDraft --jq .isDraft)" 
   for name in "PokeSleepAst-$version.apk" "PokeSleepAst-$version-unsigned.ipa" update.json; do
     printf '%s\n' "$assets" | grep -Fxq "$name" || { echo "Published release is missing $name"; exit 1; }
   done
-  echo 'Complete release is already public; keeping its immutable assets'
+  # Preserve the locally built release APK and its matching update manifest.
+  echo 'Release is public; existing assets retained'
   exit 0
 fi
-gh release upload "$tag" "$@" --repo "$repo" --clobber
+assets="$(gh release view "$tag" --repo "$repo" --json assets --jq '.assets[].name')"
+for file in "$@"; do
+  name="$(basename "$file")"
+  if ! printf '%s\n' "$assets" | grep -Fxq "$name"; then
+    gh release upload "$tag" "$file" --repo "$repo"
+  fi
+done
 assets="$(gh release view "$tag" --repo "$repo" --json assets --jq '.assets[].name')"
 for name in "PokeSleepAst-$version.apk" "PokeSleepAst-$version-unsigned.ipa" update.json; do
   if ! printf '%s\n' "$assets" | grep -Fxq "$name"; then
