@@ -21,11 +21,15 @@ export default defineConfig({
   defineConstants: { __APP_VERSION__: JSON.stringify('1.0.3') },
   copy: { patterns: [
     { from: 'src/workers', to: 'dist/workers' },
+    { from: 'src/native/image-loader.js', to: 'dist/image-loader.js' },
     ...fs.readdirSync(path.resolve(__dirname, '../src')).filter(name => /^asset-pack\d+$/.test(name)).map(name => ({ from: `src/${name}`, to: `dist/${name}`, ignore: ['**/*.vue', '**/*.ts'] })),
   ] },
   mini: {
     compile: { include: [path.resolve(__dirname, '../../core')] },
     postcss: { pxtransform: { enable: true }, cssModules: { enable: false } },
-    webpackChain(chain) { chain.resolve.modules.add(path.resolve(__dirname, '../node_modules')) },
+    webpackChain(chain) {
+      chain.resolve.modules.add(path.resolve(__dirname, '../node_modules'))
+      chain.externals({ '#image-loader': 'commonjs ./image-loader.js' })
+    },
   },
 })

@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
 import type { PixelImage } from '../../../core/src/calc/ocrVision'
-import { loadAssetPackage } from './subpackage'
+import { resolveImagePath } from './images'
 const cache = new Map<string, PixelImage>()
 export async function fileToImage(file: File | string): Promise<PixelImage> {
   if (typeof file !== 'string') throw new Error('请选择微信中的截图文件')
@@ -16,9 +16,7 @@ export async function fileToImage(file: File | string): Promise<PixelImage> {
 export async function loadUrl(url: string): Promise<PixelImage | null> {
   if (cache.has(url)) return cache.get(url)!
   try {
-    const pack = url.match(/^\/(asset-pack\d+)\//)?.[1]
-    if (pack) await loadAssetPackage(pack)
-    const pixels = await fileToImage(url)
+    const pixels = await fileToImage(await resolveImagePath(url))
     cache.set(url, pixels)
     return pixels
   } catch { return null }

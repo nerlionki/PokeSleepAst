@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
+import { createHash } from 'node:crypto'
 const root = path.resolve(import.meta.dirname, '../..')
 const wxRoot = path.join(root, 'wxapp')
 const core = path.join(root, 'core/src')
@@ -47,21 +48,33 @@ for (const file of walk(core)) {
   if (imports.length) text = text.replace(/(<script setup[^>]*>)/, '$1\n' + imports.join('\n'))
   write(dest, text)
 }
-// Each asset subpackage stays below 2 MB and is loaded only when its images are used.
+// Native async modules cross package boundaries; image components cannot reference
+// another package's raw files. PNG payloads are materialized in USER_DATA_PATH.
 for (const dir of fs.readdirSync(path.join(wxRoot, 'src')).filter(n => /^asset-pack\d+$/.test(n))) clean(path.join(wxRoot, 'src', dir))
 const map = {}
+const manifest = {}
 let pack = 0, size = 0
-const assets = walk(path.join(core, 'assets/imgs')).sort()
-for (const file of assets) {
-  const bytes = fs.statSync(file).size
-  if (size + bytes > 1_700_000) { pack++; size = 0 }
+const sharp = require('sharp')
+const assetRoots = [path.join(core, 'assets/imgs'), path.join(root, 'core/public')]
+const assets = assetRoots.flatMap(dir => walk(dir).filter(file => /\.(webp|png|jpe?g)$/i.test(file)).map(file => ({ file, rel: path.relative(dir, file).replaceAll('\\', '/') }))).sort((a, b) => a.rel.localeCompare(b.rel, 'en'))
+let payload = {}
+const flush = () => write(path.join(wxRoot, 'src', `asset-pack${pack}`, 'images.js'), `module.exports=${JSON.stringify(payload)};\n`)
+for (const { file, rel } of assets) {
+  // The largest shared display is 96 CSS pixels; retain twice that resolution.
+  const data = await sharp(file).resize({ width:192, height:192, fit:'inside', withoutEnlargement:true }).png({ palette:true, quality:100, compressionLevel:9 }).toBuffer()
+  const key = rel.replace(/\.[^.]+$/, '.png')
+  const base64 = data.toString('base64')
+  const bytes = Buffer.byteLength(JSON.stringify(key)) + base64.length + 4
+  if (size + bytes > 1_600_000) { flush(); pack++; size = 0; payload = {} }
   size += bytes
-  const rel = path.relative(path.join(core, 'assets/imgs'), file).replaceAll('\\', '/')
-  const dest = path.join(wxRoot, 'src', `asset-pack${pack}`, rel)
-  fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.copyFileSync(file, dest)
-  map[rel] = `/asset-pack${pack}/${rel}`
+  payload[key] = base64
+  const url = `/asset-pack${pack}/${key}`
+  map[rel] = url
+  manifest[url] = { pack:`asset-pack${pack}`, key, file:`${createHash('sha256').update(data).digest('hex')}.png`, size:data.length }
 }
+flush()
 write(path.join(wxRoot, 'src/platform/image-map.json'), JSON.stringify(map))
+write(path.join(wxRoot, 'src/platform/image-manifest.json'), JSON.stringify(manifest))
 const subPackages = Array.from({ length: pack + 1 }, (_, index) => ({ name: `asset-pack${index}`, root: `asset-pack${index}`, pages: ['index'] }))
 for (const item of subPackages) {
   write(path.join(wxRoot, 'src', item.root, 'index.vue'), '<template><view /></template>\n')

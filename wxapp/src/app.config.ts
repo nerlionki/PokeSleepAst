@@ -74,6 +74,48 @@ export default defineAppConfig({
       "pages": [
         "index"
       ]
+    },
+    {
+      "name": "asset-pack5",
+      "root": "asset-pack5",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack6",
+      "root": "asset-pack6",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack7",
+      "root": "asset-pack7",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack8",
+      "root": "asset-pack8",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack9",
+      "root": "asset-pack9",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack10",
+      "root": "asset-pack10",
+      "pages": [
+        "index"
+      ]
     }
   ],
   "workers": {
