@@ -6,7 +6,8 @@
     "prepare:weapp": "node scripts/prepare.mjs",
     "build:weapp": "npm run prepare:weapp && taro build --type weapp && node scripts/check-build.mjs",
     "dev:weapp": "npm run prepare:weapp && taro build --type weapp --watch",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "test:ocr": "node --test scripts/test-ocr.mjs"
   },
   "dependencies": {
     "@tarojs/components": "4.3.0",
