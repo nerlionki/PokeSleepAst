@@ -57,7 +57,7 @@ function shift(step: number) {
       </div>
       <button type="button" aria-label="下一档" :disabled="index === POT_TIERS.length - 1" @click="shift(1)">›</button>
     </div>
-    <div class="seg">
+    <div class="seg seg-3">
       <button
         v-for="c in MEAL_CATEGORIES"
         :key="c.id"

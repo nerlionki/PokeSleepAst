@@ -191,7 +191,7 @@ function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number)
     <p class="muted">持有 +{{ ribbon.carry }}{{ ribbon.speedCut ? `，帮忙间隔缩短 ${Math.round(ribbon.speedCut * 100)}%，帮忙速度变快` : '，帮忙间隔不变' }}</p>
 
     <p class="muted">持有上限计算模式</p>
-    <div class="seg">
+    <div class="seg seg-4">
       <button v-for="mode in MODES" :key="mode.id" type="button" :class="{ on: model.tune.carryMode === mode.id }" @click="patchTune({ carryMode: mode.id })">{{ mode.label }}</button>
     </div>
 

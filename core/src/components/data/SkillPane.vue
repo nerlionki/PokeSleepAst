@@ -72,7 +72,7 @@ function toggle(id: number) {
     <div v-else class="sub-list">
       <article v-for="item in subs" :key="item.id" class="sub-line">
         <header>
-          <strong><SubskillIcon :id="item.id" />{{ item.name }}</strong>
+          <div class="sub-name"><SubskillIcon :id="item.id" /><strong>{{ item.name }}</strong></div>
           <span class="chip" :class="`rarity-${item.rarity}`">{{ RARITY_LABEL[item.rarity as keyof typeof RARITY_LABEL] }}</span>
         </header>
         <p>{{ SUBSKILL_NOTES[item.id] ?? '' }}</p>

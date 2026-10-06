@@ -15,6 +15,6 @@ function change(event: unknown) {
 <template>
   <switch v-if="type === 'checkbox'" :checked="Boolean(current)" :disabled="disabled" color="#7fcec0" @change="change" />
   <slider v-else-if="type === 'range'" :value="Math.round(Number(current) * sliderScale)" :min="Math.round(Number(min ?? 0) * sliderScale)" :max="Math.round(Number(max ?? 100) * sliderScale)" :step="Math.max(1, Math.round(Number(step ?? 1) * sliderScale))" active-color="#7fcec0" @change="change" />
-  <picker v-else-if="type === 'time'" mode="time" :value="String(current)" @change="change"><view>{{ current || '选择时间' }}</view></picker>
-  <input v-else :type="type === 'number' ? 'digit' : 'text'" :value="String(current)" :placeholder="placeholder" :disabled="disabled" @input="change" />
+  <picker v-else-if="type === 'time'" class="wx-control" mode="time" :value="String(current)" @change="change"><view class="wx-select">{{ current || '选择时间' }}</view></picker>
+  <input v-else class="wx-control wx-input" :type="type === 'number' ? 'digit' : 'text'" :value="String(current)" :placeholder="placeholder" :disabled="disabled" @input="change" />
 </template>

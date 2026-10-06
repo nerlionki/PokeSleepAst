@@ -6,7 +6,7 @@ import { NativeImageLoaderPlugin } from './native-image-loader.cjs'
 export default defineConfig({
   projectName: 'pokesleep-wxapp',
   date: '2026-10-06',
-  designWidth: 750,
+  designWidth: 375,
   deviceRatio: { 375: 2, 640: 1.17, 750: 1 },
   sourceRoot: 'src',
   outputRoot: 'dist',
@@ -23,7 +23,7 @@ export default defineConfig({
   copy: { patterns: [
     { from: 'src/workers', to: 'dist/workers' },
     { from: 'src/native/image-loader.js', to: 'dist/image-loader.js' },
-    ...fs.readdirSync(path.resolve(__dirname, '../src')).filter(name => /^asset-pack\d+$/.test(name)).map(name => ({ from: `src/${name}`, to: `dist/${name}`, ignore: ['**/*.vue', '**/*.ts'] })),
+    ...fs.readdirSync(path.resolve(__dirname, '../src')).filter(name => /^(asset|ocr)-pack\d+$/.test(name)).map(name => ({ from: `src/${name}`, to: `dist/${name}`, ignore: ['**/*.vue', '**/*.ts'] })),
   ] },
   mini: {
     compile: { include: [path.resolve(__dirname, '../../core')] },
