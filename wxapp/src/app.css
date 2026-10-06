@@ -22,12 +22,7 @@ page {
 
 * { box-sizing: border-box; }
 page { min-height: 100%; margin: 0; overflow-x: clip; }
-page {
-  background:
-    radial-gradient(circle at 12% -10%, rgba(228, 177, 90, 0.16), transparent 32%),
-    radial-gradient(circle at 90% 0%, rgba(127, 206, 192, 0.12), transparent 28%),
-    var(--ink);
-}
+page { background: #081018; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -952,4 +947,4 @@ button.ing-token.on { outline: 2px solid var(--amber); background: rgba(240, 162
 .style-rewards { font-size: 11px; line-height: 1.4; }
 .editor-actions { justify-content: flex-end; }
 
-page{padding:16px;box-sizing:border-box;font-size:14px} .wx-select{padding:8px;min-height:24px} image{display:inline-block} button{line-height:1.5} textarea{width:100%;min-height:100px} .source-link{color:#7fcec0;margin-right:12px} .wx-settings{margin-bottom:14px}
+page{padding:16px;box-sizing:border-box;font-size:14px;min-height:100vh;background:#081018;background-image:none} .wx-select{padding:8px;min-height:24px} image{display:inline-block} button{line-height:1.5} textarea{width:100%;min-height:100px} .source-link{color:#7fcec0;margin-right:12px} .wx-settings{margin-bottom:14px}

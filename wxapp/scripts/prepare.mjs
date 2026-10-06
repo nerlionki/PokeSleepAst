@@ -76,6 +76,7 @@ flush()
 write(path.join(wxRoot, 'src/platform/image-map.json'), JSON.stringify(map))
 write(path.join(wxRoot, 'src/platform/image-manifest.json'), JSON.stringify(manifest))
 const subPackages = Array.from({ length: pack + 1 }, (_, index) => ({ name: `asset-pack${index}`, root: `asset-pack${index}`, pages: ['index'] }))
+write(path.join(wxRoot, 'src/native/image-loader.js'), require('./config/native-image-loader.cjs').imageLoaderSource(subPackages.map(item => item.name)))
 for (const item of subPackages) {
   write(path.join(wxRoot, 'src', item.root, 'index.vue'), '<template><view /></template>\n')
   write(path.join(wxRoot, 'src', item.root, 'index.config.ts'), 'export default {}\n')
@@ -112,6 +113,6 @@ for (const name of ['det', 'rec']) {
 }
 write(path.join(wxRoot, 'src/platform/ocr-models.json'), JSON.stringify(models))
 write(path.join(wxRoot, 'src/platform/ocr-dict.json'), JSON.stringify(fs.readFileSync(path.join(root, 'core/public/ocr/keys.txt'), 'utf8').replace(/^\uFEFF/, '').trimEnd().split(/\r?\n/)))
-let css = fs.readFileSync(path.join(core, 'style.css'), 'utf8').replaceAll(':root', 'page').replace(/html, body, #app/g, 'page').replace(/\bbody\b/g, 'page').replaceAll('input[type="checkbox"]', 'switch')
-write(path.join(wxRoot, 'src/app.css'), css + '\npage{padding:16px;box-sizing:border-box;font-size:14px} .wx-select{padding:8px;min-height:24px} image{display:inline-block} button{line-height:1.5} textarea{width:100%;min-height:100px} .source-link{color:#7fcec0;margin-right:12px} .wx-settings{margin-bottom:14px}\n')
+let css = fs.readFileSync(path.join(core, 'style.css'), 'utf8').replace(/\bbody\s*\{[\s\S]*?\n\}/, 'body { background: #081018; }').replaceAll(':root', 'page').replace(/html, body, #app/g, 'page').replace(/\bbody\b/g, 'page').replaceAll('input[type="checkbox"]', 'switch')
+write(path.join(wxRoot, 'src/app.css'), css + '\npage{padding:16px;box-sizing:border-box;font-size:14px;min-height:100vh;background:#081018;background-image:none} .wx-select{padding:8px;min-height:24px} image{display:inline-block} button{line-height:1.5} textarea{width:100%;min-height:100px} .source-link{color:#7fcec0;margin-right:12px} .wx-settings{margin-bottom:14px}\n')
 console.log(`Prepared shared views and ${pack + 1} asset subpackages (${assets.length} images).`)
