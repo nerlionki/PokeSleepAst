@@ -1,4 +1,4 @@
-import { recipeLevelMult } from './cook'
+import { RECIPE_LEVEL_MAX, recipeLevelMult } from './cook'
 import { RECIPES } from './data'
 
 export type RecipeRow = (typeof RECIPES)[number]
@@ -9,7 +9,7 @@ export const MEAL_CATEGORIES = [
   { id: 'dessert', label: '点心、饮料' },
 ] as const
 
-export const RECIPE_LEVELS = [1, 10, 20, 30, 40, 50, 60] as const
+export const RECIPE_LEVELS = [1, 10, 20, 30, 40, 50, 60, RECIPE_LEVEL_MAX] as const
 
 export function dishEnergy(baseEnergy: number, level: number): number {
   return Math.round(baseEnergy * recipeLevelMult(level))

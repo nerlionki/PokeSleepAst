@@ -67,9 +67,6 @@ export const SLEEP_STYLES = sleepStyles as SleepStyleRow[]
 export const NATURES = natures
 export const SUBSKILLS = subskills
 
-export const CHARGE_S = [400, 569, 785, 1083, 1496, 2066]
-export const CHARGE_M = [880, 1251, 1726, 2382, 3288, 4546]
-
 export function pokeById(id: number) {
   return POKEDEX.find((p) => p.id === id)
 }

@@ -1,12 +1,14 @@
 import type { CookMeal, MealCategory, Settings } from '../types'
 import { INGREDIENTS, RECIPES } from './data'
 
+export const RECIPE_LEVEL_MAX = 70
+
 export function recipeLevelOf(settings: Settings, name: string): number {
-  return Math.min(60, Math.max(1, settings.recipeLevels?.[name] || 1))
+  return Math.min(RECIPE_LEVEL_MAX, Math.max(1, settings.recipeLevels?.[name] || 1))
 }
 
 export function recipeLevelMult(level: number): number {
-  const lv = Math.min(60, Math.max(1, level || 1))
+  const lv = Math.min(RECIPE_LEVEL_MAX, Math.max(1, level || 1))
   return 1 + (lv - 1) * 0.02
 }
 

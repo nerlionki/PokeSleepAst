@@ -1,4 +1,5 @@
 import type { MemberTune, ProduceInput } from '../types'
+import { clampSkillLevel } from './mainSkills'
 
 export type { MemberTune }
 
@@ -45,13 +46,13 @@ export function stepSkillLevel(current: SkillSeeds, level: number, skillMax: num
   return { skillLevel, goldSeeds: Math.min(current.goldSeeds, skillLevel - 1) }
 }
 
-/** 主技能等级加上已解锁的技能等级提升 S/M。 */
-export function effectiveSkillLevel(level: number, skillLevel: number, subskills: string[]): number {
+/** 主技能等级加上已解锁的技能等级提升 S/M，再按该技能表封顶。 */
+export function effectiveSkillLevel(level: number, skillLevel: number, subskills: string[], mainSkill: string): number {
   const subs = unlockedSubskills(level, subskills)
   let lv = Math.max(1, skillLevel)
   if (subs.includes('skillLevelS')) lv += 1
   if (subs.includes('skillLevelM')) lv += 2
-  return lv
+  return clampSkillLevel(mainSkill, lv)
 }
 
 /** 共眠小时换算起床活力。0 小时表示跟随全队睡眠分数。8.5 小时约为 100。 */

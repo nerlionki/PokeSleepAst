@@ -10,6 +10,11 @@ export function isAllRounder(poke: { specialty: string } | null | undefined): bo
   return poke?.specialty === ALL_ROUNDER
 }
 
+/** 技能型与全能型可储存两次主技能，其余专长只能储存一次。 */
+export function skillStorageLimit(specialty: string): number {
+  return specialty === '技能型' || specialty === ALL_ROUNDER ? 2 : 1
+}
+
 export function isAllRounderId(pokeId: number): boolean {
   return isAllRounder(pokeById(pokeId))
 }

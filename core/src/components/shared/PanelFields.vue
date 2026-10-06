@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { NATURES, POKEDEX, SUBSKILLS, pokeById } from '../../calc/data'
 import { POKEMON_LEVEL_MAX } from '../../calc/xp'
+import { skillMaxFor } from '../../calc/mainSkills'
 import type { ProduceInput } from '../../types'
 import IngredientIcon from './IngredientIcon.vue'
 import PokePicker from './PokePicker.vue'
@@ -9,6 +10,7 @@ import PokePicker from './PokePicker.vue'
 const model = defineModel<ProduceInput>({ required: true })
 
 const poke = computed(() => pokeById(model.value.pokeId) ?? POKEDEX[0]!)
+const skillMax = computed(() => skillMaxFor(poke.value.mainSkill))
 
 function setSlot(index: number, value: number) {
   const next: [number | null, number | null, number | null] = [model.value.ingredientSlots[0], model.value.ingredientSlots[1], model.value.ingredientSlots[2]]
@@ -54,7 +56,7 @@ function setSub(index: number, value: string) {
     </div>
     <div class="field">
       <label>技能等级</label>
-      <input v-model.number="model.skillLevel" type="number" min="1" max="6">
+      <input v-model.number="model.skillLevel" type="number" min="1" :max="skillMax">
     </div>
   </div>
 </template>
