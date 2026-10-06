@@ -8,6 +8,9 @@ if (project.appid !== 'wxa305c12ee6676e08') throw Error('Incorrect AppID')
 if (config.pages.length !== 5) throw Error('Missing feature pages')
 const walk = d => fs.readdirSync(d, {withFileTypes:true}).flatMap(f => f.isDirectory() ? walk(path.join(d,f.name)) : [path.join(d,f.name)])
 const files = walk(dist)
+for (const file of walk(path.join(root, 'src/generated')).filter(file => file.endsWith('.vue'))) {
+  if (/\b(?:crypto\.randomUUID|document\.|window\.|navigator\.)/.test(fs.readFileSync(file, 'utf8'))) throw Error(`Browser API in WeChat view: ${file}`)
+}
 const size = list => list.reduce((sum,file)=>sum+fs.statSync(file).size,0)
 const sub = config.subPackages ?? config.subpackages ?? []
 const main = files.filter(file => !sub.some(p => file.startsWith(path.join(dist,p.root)+path.sep)) && !(config.workers?.isSubpackage && file.startsWith(path.join(dist, config.workers.path) + path.sep)))

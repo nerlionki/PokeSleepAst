@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { newUid } from '../../calc/uid'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
@@ -50,7 +51,7 @@ watch(() => route.query.uid, (uid) => {
   if (typeof uid === 'string' && uid && !selected.value.includes(uid)) selected.value = [...selected.value, uid]
 }, { immediate: true })
 
-function blank(pokeId: number, uid = `c-${crypto.randomUUID()}`): CustomPanel {
+function blank(pokeId: number, uid = `c-${newUid()}`): CustomPanel {
   return {
     uid,
     pokeId,
@@ -91,7 +92,7 @@ function copyRow(uid: string) {
     subskills: [...source.subskills],
     ingredientSlots: [source.ingredientSlots[0], source.ingredientSlots[1], source.ingredientSlots[2]],
     tune: { ...source.tune },
-    uid: `c-${crypto.randomUUID()}`,
+    uid: `c-${newUid()}`,
   }
   customs.value = [...customs.value, row]
   selected.value = [...selected.value, row.uid]

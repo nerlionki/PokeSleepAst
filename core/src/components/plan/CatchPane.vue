@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { newUid } from '../../calc/uid'
 import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { recommendThree, type CatchGoal, type CatchPurpose } from '../../calc/catch'
@@ -22,7 +23,7 @@ const dirty = computed(() => stamped.value !== '' && stamped.value !== fingerpri
 
 function addGoal() {
   plan.value.catchGoals.push({
-    id: crypto.randomUUID(),
+    id: newUid(),
     pokeId: 1,
     purpose: 'catch',
     stars: [],

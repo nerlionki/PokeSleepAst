@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { newUid } from '../../calc/uid'
 import { computed, ref, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { boxLabel } from '../../calc/boxFilter'
@@ -36,7 +37,7 @@ const boost = computed(() => CANDY_BOOSTS[mode.value])
 
 function addRow() {
   plan.value.candyRows.push({
-    id: crypto.randomUUID(),
+    id: newUid(),
     pokeId: 1,
     method: 'target',
     start: 1,
