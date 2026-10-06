@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
 import { POT_TIERS, RECIPES } from '../../calc/data'
-import { MEAL_CATEGORIES, type RecipeRow } from '../../calc/recipes'
+import { MEAL_CATEGORIES, RECIPE_LEVELS, type RecipeRow } from '../../calc/recipes'
 import { textHit } from '../../calc/text'
 import RecipeCard from './RecipeCard.vue'
 import RecipeSheet from './RecipeSheet.vue'
@@ -69,7 +69,7 @@ function shift(step: number) {
     <label class="recipe-tools">
       食谱等级
       <select v-model.number="level">
-        <option v-for="lv in [1, 10, 20, 30, 40, 50, 60]" :key="lv" :value="lv">{{ lv }}</option>
+        <option v-for="lv in RECIPE_LEVELS" :key="lv" :value="lv">{{ lv }}</option>
       </select>
     </label>
     <p class="muted">当前可做 {{ ready.length }} 道</p>

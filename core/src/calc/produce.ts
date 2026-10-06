@@ -93,7 +93,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   const split = splitHelps(helps, ingRate, skillRate, slots, snacking)
   const berries = cutDecimal(split.berryHelps * per, 1)
   const unit = berryEnergyAt(poke.berry, input.level) * (favored ? 2 : 1) * (1 + settings.areaBonus)
-  const skillLv = effectiveSkillLevel(input.level, input.skillLevel, input.subskills)
+  const skillLv = effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill)
   return {
     helps,
     berries,

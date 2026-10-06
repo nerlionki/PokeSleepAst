@@ -8,6 +8,7 @@ import { slotDrop } from './ingredients'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
 import { natureStatFactor } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
+import { skillStorageLimit } from './specialty'
 import { ACCEL_FACTOR, ACCEL_MINUTES, chargeStrength, skillKind, skillValue } from './skills'
 
 export function teamHelpingBonus(roster: BoxPokemon[], fallback: number): number {
@@ -108,7 +109,7 @@ export function simulateTeam(
     const favored = settings.berries.includes(poke.berry)
     const subs = unlockedSubskills(input.level, input.subskills)
     const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))
-    const skillLv = effectiveSkillLevel(input.level, input.skillLevel, input.subskills)
+    const skillLv = effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill)
     members.push({
       input,
       poke,
@@ -166,7 +167,7 @@ export function simulateTeam(
     m.stock -= 1
     m.result.skillProcs += 1
     const kind = skillKind(m.poke.mainSkill)
-    const value = skillValue(kind, m.skillLv)
+    const value = skillValue(m.poke.mainSkill, m.skillLv)
     if (kind === 'charge') m.result.skillEnergy += m.fill
     if (kind === 'healSelf') m.energy = Math.min(150, m.energy + value * m.factor)
     if (kind === 'healAll') {
@@ -223,10 +224,8 @@ export function simulateTeam(
       m.result.berryEnergy += m.perHelp * m.unitBerry
       m.held += m.perHelp
     }
-    const spec = m.poke.specialty === '技能型' || m.poke.specialty === '全部'
     if (opts.alwaysProc || roll(seed + 7) < m.skillRate) {
-      if (spec && m.stock < 2) m.stock += 1
-      else m.stock = Math.max(1, m.stock)
+      m.stock = Math.min(skillStorageLimit(m.poke.specialty), m.stock + 1)
     }
     if (m.stock > 0 && !asleepAt(minute) && !fromSupport) triggerSkill(m, minute)
   }

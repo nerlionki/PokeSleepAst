@@ -303,3 +303,16 @@ export function skillByPokedexName(name: string): MainSkill | undefined {
 export function skillMaxFor(name: string): number {
   return skillByPokedexName(name)?.maxLevel ?? 6
 }
+
+export function clampSkillLevel(name: string, level: number): number {
+  return Math.min(skillMaxFor(name), Math.max(1, Math.floor(level) || 1))
+}
+
+/** 当前技能对应等级的指定数值列；缺少该效果时为 0。 */
+export function mainSkillValue(name: string, level: number, column: string): number {
+  const skill = skillByPokedexName(name)
+  if (!skill) return 0
+  const index = skill.columns.indexOf(column)
+  if (index < 0) return 0
+  return Number(skill.levels[clampSkillLevel(name, level) - 1]?.[index]) || 0
+}

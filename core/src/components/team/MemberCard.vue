@@ -84,7 +84,7 @@ const carry = computed(() => {
   return carryLimit(mon.carry, subs.value, settings.value.goodCamp, props.carryMode, ribbon.carry)
 })
 
-const skillLv = computed(() => effectiveSkillLevel(props.level, props.skillLevel, props.subskills))
+const skillLv = computed(() => effectiveSkillLevel(props.level, props.skillLevel, props.subskills, poke.value?.mainSkill ?? ''))
 
 function bandFactor(asleep: boolean) {
   const points = props.result.curve.filter((point) => point.asleep === asleep)

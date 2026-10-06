@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { BERRIES, ISLANDS, RECIPES } from '../../calc/data'
 import { canPickBerries, EX_MAIN } from '../../calc/defaults'
-import { categoryLabel, recipeLevelOf } from '../../calc/cook'
+import { categoryLabel, RECIPE_LEVEL_MAX, recipeLevelOf } from '../../calc/cook'
 import BerryIcon from '../shared/BerryIcon.vue'
 import MealIcon from '../shared/MealIcon.vue'
 import UpdateSettings from '../update/UpdateSettings.vue'
@@ -28,7 +28,7 @@ const recipeGroups = computed(() => (['curry', 'salad', 'dessert'] as MealCatego
 function setRecipeLevel(name: string, level: number) {
   settings.value.recipeLevels = {
     ...settings.value.recipeLevels,
-    [name]: Math.min(60, Math.max(1, Number(level) || 1)),
+    [name]: Math.min(RECIPE_LEVEL_MAX, Math.max(1, Number(level) || 1)),
   }
 }
 </script>
@@ -146,7 +146,7 @@ function setRecipeLevel(name: string, level: number) {
               :value="recipeLevelOf(settings, r.name)"
               type="number"
               min="1"
-              max="60"
+              :max="RECIPE_LEVEL_MAX"
               @change="setRecipeLevel(r.name, Number(($event.target as HTMLInputElement).value))"
             >
           </div>

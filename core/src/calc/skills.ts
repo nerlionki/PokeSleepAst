@@ -1,19 +1,17 @@
-import { CHARGE_M, CHARGE_S } from './data'
+import { mainSkillValue, skillByPokedexName } from './mainSkills'
 
 export type SkillKind = 'charge' | 'healAll' | 'healOne' | 'healSelf' | 'support' | 'typeAccel' | 'helpAccel' | 'other'
 
 /** 能量填充一类技能直接加到卡比兽身上的能量。 */
 export function chargeStrength(mainSkill: string, level: number): number {
-  const lv = Math.min(6, Math.max(1, level)) - 1
-  if (/能量填充M|梦魇|夢魘/.test(mainSkill)) return CHARGE_M[lv] ?? CHARGE_M[0]
-  if (/能量填充|蓄力|波导弹|精神击破|波導彈/.test(mainSkill)) return CHARGE_S[lv] ?? CHARGE_S[0]
-  return 0
+  const skill = skillByPokedexName(mainSkill)
+  if (skill?.id === 5) {
+    return (mainSkillValue(mainSkill, level, '最低') + mainSkillValue(mainSkill, level, '最高')) / 2
+  }
+  if (skill?.id === 15) return mainSkillValue(mainSkill, level, '0 层')
+  return mainSkillValue(mainSkill, level, '能量')
 }
 
-export const HEAL_ALL = [12, 15, 19, 23, 28, 34]
-export const HEAL_ONE = [14, 18, 23, 29, 36, 44]
-export const HEAL_SELF = [12, 16, 21, 27, 34, 43]
-export const SUPPORT_HELPS = [4, 5, 6, 7, 8, 9]
 export const ACCEL_FACTOR = 0.9
 export const ACCEL_MINUTES = 120
 
@@ -28,12 +26,13 @@ export function skillKind(name: string): SkillKind {
   return 'other'
 }
 
-export function skillValue(kind: SkillKind, level: number): number {
-  const i = Math.min(6, Math.max(1, level)) - 1
-  if (kind === 'healAll') return HEAL_ALL[i]
-  if (kind === 'healOne') return HEAL_ONE[i]
-  if (kind === 'healSelf') return HEAL_SELF[i]
-  if (kind === 'support') return SUPPORT_HELPS[i]
+export function skillValue(mainSkill: string, level: number): number {
+  const kind = skillKind(mainSkill)
+  if (kind === 'charge') return chargeStrength(mainSkill, level)
+  if (kind === 'healAll' || kind === 'healOne' || kind === 'healSelf') {
+    return mainSkillValue(mainSkill, level, '活力') || mainSkillValue(mainSkill, level, '自己')
+  }
+  if (kind === 'support') return mainSkillValue(mainSkill, level, '帮忙')
   return 0
 }
 
