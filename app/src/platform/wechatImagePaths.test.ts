@@ -4,9 +4,15 @@ import { posix } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { readFileSync } from 'node:fs'
 const require = createRequire(import.meta.url)
-const { imageLoaderShims } = require('../../../wxapp/config/native-image-loader.cjs') as { imageLoaderShims: (files: Record<string, string>) => Record<string, string> }
+const { imageLoaderShims, imageLoaderSource } = require('../../../wxapp/config/native-image-loader.cjs') as { imageLoaderShims: (files: Record<string, string>) => Record<string, string>; imageLoaderSource:(names:string[])=>string }
 
 describe('WeChat image loader module paths', () => {
+  it('declares literal async imports so the compiler retains every package module', () => {
+    const source = imageLoaderSource(['asset-pack0','asset-pack10'])
+    const dependencies = [...source.matchAll(/require\.async\(["']([^"']+)["']\)/g)].map(match => match[1])
+    expect(dependencies).toEqual(['./asset-pack0/images.js','./asset-pack10/images.js'])
+    expect(() => imageLoaderSource(['../escape'])).toThrow('Invalid image package')
+  })
   it('generates a relative forwarder in every importing page directory', () => {
     const files = { 'pages/pokemon/index.js':'module.exports=require("./image-loader.js")', 'pages/data/index.js':"module.exports = require('./image-loader.js')", 'common.js':'module.exports=require("./image-loader.js")', 'other.js':'console.log(1)' }
     expect(imageLoaderShims(files)).toEqual({

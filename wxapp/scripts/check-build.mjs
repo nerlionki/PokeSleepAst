@@ -33,6 +33,11 @@ for (const folder of ['berry/', 'ingredient/', 'mainSkill/', 'meal/', 'pokemon/i
 }
 const bridge = fs.readFileSync(path.join(dist, 'image-loader.js'), 'utf8')
 if (!bridge.includes('require.async(') || bridge.includes('wx.loadSubpackage')) throw Error('Invalid native async image bridge')
+const literalImports = new Set([...bridge.matchAll(/require\.async\(\s*["']\.\/(asset-pack\d+)\/images\.js["']\s*\)/g)].map(match => match[1]))
+for (const item of Object.values(manifest)) if (!literalImports.has(item.pack)) throw Error(`Native image package needs a literal async dependency: ${item.pack}`)
+const wxss = fs.readFileSync(path.join(dist, 'app.wxss'), 'utf8')
+const pageRules = [...wxss.matchAll(/(?:^|})\s*page\s*\{([^}]*)\}/g)].map(match => match[1])
+if (pageRules.some(rule => rule.includes('gradient(')) || !pageRules.some(rule => /background-image\s*:\s*none/.test(rule))) throw Error('WeChat page background must be solid')
 for (const file of walk(path.join(root, 'src/generated')).filter(file => file.endsWith('.vue'))) {
   if (/\b(?:crypto\.randomUUID|document\.|window\.|navigator\.)/.test(fs.readFileSync(file, 'utf8'))) throw Error(`Browser API in WeChat view: ${file}`)
 }
