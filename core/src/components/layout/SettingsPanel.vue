@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { BERRIES, ISLANDS, RECIPES } from '../../calc/data'
-import { canPickBerries } from '../../calc/defaults'
+import { canPickBerries, EX_MAIN } from '../../calc/defaults'
 import { categoryLabel, recipeLevelOf } from '../../calc/cook'
 import BerryIcon from '../shared/BerryIcon.vue'
 import MealIcon from '../shared/MealIcon.vue'
@@ -17,15 +17,7 @@ const { settings, summary } = storeToRefs(store)
 const pickBerries = computed(() => canPickBerries(settings.value.island))
 const islandBerries = computed(() => ISLANDS.find((i) => i.id === settings.value.island)?.berries ?? [])
 
-function toggleBerry(name: string) {
-  const cur = settings.value.berries
-  if (cur.includes(name)) {
-    settings.value.berries = cur.filter((b) => b !== name)
-    return
-  }
-  if (cur.length >= 3) return
-  settings.value.berries = [...cur, name]
-}
+const secondaryBerries = computed(() => BERRIES.filter(berry => berry.name !== settings.value.berries[0]))
 
 const recipeGroups = computed(() => (['curry', 'salad', 'dessert'] as MealCategory[]).map((c) => ({
   id: c,
@@ -64,7 +56,21 @@ function setRecipeLevel(name: string, level: number) {
           <option v-for="i in ISLANDS" :key="i.id" :value="i.id">{{ i.name }}</option>
         </select>
       </div>
-      <div v-if="pickBerries" class="stack">
+      <div v-if="settings.island === 'cyanex'" class="stack">
+        <p class="muted">主树果（三选一）</p>
+        <div class="seg seg-3">
+          <button v-for="name in EX_MAIN" :key="name" type="button" :class="{ on: settings.berries[0] === name }" @click="store.setEx2MainBerry(name)">
+            <BerryIcon :name="name" small />{{ name }}
+          </button>
+        </div>
+        <p class="muted">副树果 {{ settings.berries.length - 1 }}/2 · 从其余 {{ secondaryBerries.length }} 种中任选两种</p>
+        <div class="picker-opts">
+          <button v-for="b in secondaryBerries" :key="b.name" type="button" :class="{ on: settings.berries.slice(1).includes(b.name) }" @click="store.toggleBerry(b.name)">
+            <BerryIcon :name="b.name" />{{ b.name }}
+          </button>
+        </div>
+      </div>
+      <div v-else-if="pickBerries" class="stack">
         <p class="muted">树果喜好 {{ settings.berries.length }}/3 · 仅 1 岛 / EX / EX2 可改</p>
         <div class="picker-opts">
           <button
@@ -72,7 +78,7 @@ function setRecipeLevel(name: string, level: number) {
             :key="b.name"
             type="button"
             :class="{ on: settings.berries.includes(b.name) }"
-            @click="toggleBerry(b.name)"
+            @click="store.toggleBerry(b.name)"
           >
             <BerryIcon :name="b.name" />{{ b.name }}
           </button>

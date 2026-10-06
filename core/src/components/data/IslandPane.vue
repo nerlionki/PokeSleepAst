@@ -58,12 +58,13 @@ function groups(id: string) {
       </DataRow>
       <div v-if="openId === i.id" class="acc-body plain">
         <p class="muted berry-inline">
-          {{ islandUnlock(i.id as IslandId) }} · 喜好
+          {{ islandUnlock(i.id as IslandId) }} · {{ i.id === 'cyanex' ? '主树果三选一' : '喜好' }}
           <template v-if="i.berries.length">
             <span v-for="b in i.berries" :key="b" class="berry-name"><BerryIcon :name="b" small />{{ b }}</span>
           </template>
           <template v-else>每周随机三颗</template>
         </p>
+        <p v-if="i.id === 'cyanex'" class="muted">副树果从排除已选主树果后的其余 17 种中任选两种，不可重复。</p>
         <div class="seg">
           <button type="button" :class="{ on: view === 'band' }" @click="view = 'band'">只数</button>
           <button type="button" :class="{ on: view === 'spread' }" @click="view = 'spread'">分布</button>

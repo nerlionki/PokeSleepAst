@@ -1,4 +1,5 @@
 import type { IslandId, Settings } from '../types'
+import berries from '../data/berries.json'
 
 export const BERRY_PREF_ISLANDS: IslandId[] = ['greengrass', 'greenex', 'cyanex']
 
@@ -52,14 +53,23 @@ export const helpMaxSettings = (): Settings => ({
 
 export const EX_MAIN = ['桃桃果', '椰木果', '橙橙果']
 
+/** EX2: the first entry is its main berry; the other entries are distinct secondary berries. */
+export function normalizeEx2Berries(selected: readonly string[]): string[] {
+  const main = selected.find(name => EX_MAIN.includes(name)) ?? EX_MAIN[0]!
+  const secondary = [...new Set(selected)].filter(name => name !== main && berries.some(berry => berry.name === name)).slice(0, 2)
+  return [main, ...secondary]
+}
+
 export function mergeSettings(saved: (Partial<Settings> & { recipeLevel?: number, goodNightRibbon?: boolean }) | null | undefined): Settings {
   const base = defaultSettings()
   if (!saved) return base
   const { recipeLevel: _legacy, goodNightRibbon: _ribbon, ...rest } = saved
-  return {
+  const merged: Settings = {
     ...base,
     ...rest,
     berries: saved.berries?.length ? saved.berries : base.berries,
     recipeLevels: { ...(saved.recipeLevels ?? {}) },
   }
+  if (merged.island === 'cyanex') merged.berries = normalizeEx2Berries(merged.berries)
+  return merged
 }
