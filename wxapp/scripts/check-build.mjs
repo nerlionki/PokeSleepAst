@@ -12,6 +12,19 @@ if (config.pages.length !== 5) throw Error('Missing feature pages')
 const walk = d => fs.readdirSync(d, {withFileTypes:true}).flatMap(f => f.isDirectory() ? walk(path.join(d,f.name)) : [path.join(d,f.name)])
 const files = walk(dist)
 const require = createRequire(import.meta.url)
+const compressedJson = require('../config/compressed-json.cjs')
+for (const file of walk(path.resolve(root, '../core/src/data')).filter(file => file.endsWith('.json'))) {
+  const source = fs.readFileSync(file, 'utf8')
+  const module = { exports: {} }
+  runInNewContext(compressedJson(source), { module, require, Uint8Array, wx: {
+    base64ToArrayBuffer(value) {
+      const bytes = Buffer.from(value, 'base64')
+      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    },
+  } }, { filename: file })
+  if (JSON.stringify(module.exports) !== JSON.stringify(JSON.parse(source))) throw Error(`Compressed JSON changed data: ${file}`)
+}
+console.log('Verified lossless synchronous decompression of every shared data table.')
 const images = JSON.parse(fs.readFileSync(path.join(root, 'src/platform/image-map.json'), 'utf8'))
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'src/platform/image-manifest.json'), 'utf8'))
 for (const folder of [path.resolve(root, '../core/src/assets/imgs'), path.resolve(root, '../core/public')]) {
@@ -79,7 +92,8 @@ for (const chunk of importingChunks) {
 }
 if (asyncPaths.some(file => file !== path.join(dist, first.pack, 'images.js'))) throw Error('Native async image paths must resolve from the root bridge')
 console.log(`Main package: ${size(main)} bytes; total: ${size(files)} bytes`)
-if (size(main) > 2 * 1024 * 1024) throw Error('Main package exceeds 2 MB')
+// Use decimal MB as the stricter interpretation of the IDE quality threshold.
+if (size(main) >= 1_500_000) throw Error('Main package must be smaller than 1.5 MB (code quality requirement)')
 for(const pack of sub) {
   const bytes = size(files.filter(f=>f.startsWith(path.join(dist,pack.root)+path.sep)))
   console.log(`${pack.root}: ${bytes} bytes`)

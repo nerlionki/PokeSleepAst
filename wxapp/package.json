@@ -1,6 +1,6 @@
 {
   "name": "pokesleep-wxapp",
-  "version": "1.0.3",
+  "version": "1.0.3.1",
   "private": true,
   "scripts": {
     "prepare:weapp": "node scripts/prepare.mjs",
@@ -14,6 +14,7 @@
     "@tarojs/runtime": "4.3.0",
     "@tarojs/shared": "4.3.0",
     "@tarojs/taro": "4.3.0",
+    "fflate": "^0.8.3",
     "pinia": "^4.0.3",
     "vue": "^3.5.42"
   },

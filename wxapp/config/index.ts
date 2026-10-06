@@ -19,7 +19,7 @@ export default defineConfig({
     vue: path.resolve(__dirname, '../node_modules/vue/dist/vue.runtime.esm-bundler.js'),
     pinia: path.resolve(__dirname, '../node_modules/pinia/dist/pinia.js'),
   },
-  defineConstants: { __APP_VERSION__: JSON.stringify('1.0.3') },
+  defineConstants: { __APP_VERSION__: JSON.stringify(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8')).version) },
   copy: { patterns: [
     { from: 'src/workers', to: 'dist/workers' },
     { from: 'src/native/image-loader.js', to: 'dist/image-loader.js' },
@@ -30,6 +30,11 @@ export default defineConfig({
     postcss: { pxtransform: { enable: true }, cssModules: { enable: false } },
     webpackChain(chain) {
       chain.resolve.modules.add(path.resolve(__dirname, '../node_modules'))
+      chain.module.rule('compressed-core-data')
+        .test(/\.json$/)
+        .include.add(path.resolve(__dirname, '../../core/src/data')).end()
+        .type('javascript/auto')
+        .use('compressed-json').loader(path.resolve(__dirname, 'compressed-json.cjs'))
       chain.externals({ '#image-loader': 'commonjs ./image-loader.js' })
       chain.plugin('native-image-loader-paths').use(NativeImageLoaderPlugin)
     },
