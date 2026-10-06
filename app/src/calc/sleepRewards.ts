@@ -14,7 +14,7 @@ for (const row of rewards) {
   if (!bySpeciesAndStars.has(key)) bySpeciesAndStars.set(key, row)
 }
 
-/** RAE 睡姿内码优先；普通睡姿用种族与星级定位。 */
+/** RAE 睡姿内码优先；普通睡姿用宝可梦与星级定位。 */
 export function sleepReward(style: { pokeId: number, stars: number, styleId?: number }): SleepReward | undefined {
   return (style.styleId != null ? byId.get(style.styleId) : undefined)
     ?? bySpeciesAndStars.get(`${style.pokeId}-${style.stars}`)

@@ -7,7 +7,7 @@ const model = defineModel<T>({ required: true })
 </script>
 
 <template>
-  <div class="seg">
+  <div class="seg" :style="{ gridTemplateColumns: `repeat(${Math.max(1, Math.min(options.length, 4))}, minmax(0, 1fr))` }">
     <button
       v-for="opt in options"
       :key="opt.id"

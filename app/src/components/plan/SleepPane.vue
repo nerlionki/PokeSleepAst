@@ -7,6 +7,7 @@ import PokeSprite from '../shared/PokeSprite.vue'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
 import type { SleepType } from '../../types'
+import { candyExpectation } from '../../calc/sleepCandy'
 
 const settingsStore = useSettingsStore()
 const planStore = usePlanStore()
@@ -37,7 +38,7 @@ const splitHelps = computed(() => result.value.best.total > result.value.single)
 const manualWhole = shallowRef<boolean | null>(null)
 const whole = computed(() => manualWhole.value ?? !splitHelps.value)
 const caught = computed(() => whole.value ? result.value.single : result.value.best.total)
-const shown = computed(() => caught.value + (plan.value.campTicket ? 1 : 0) + (plan.value.incense ? 1 : 0))
+const shown = computed(() => caught.value + (plan.value.campTicket ? 1 : 0))
 const nextCatch = computed(() => strengthToNext(
   island.value,
   plan.value.sleepScore,
@@ -81,16 +82,15 @@ function calculate() {
 }
 
 const board = computed(() => expectSpecies(seen.value))
+const candies = computed(() => candyExpectation(seen.value, BATCH))
 const seenTotal = computed(() => seen.value.reduce((sum, row) => sum + row.count, 0))
 const rewards = computed(() => seen.value.reduce((sum, row) => ({
   researchExp: sum.researchExp + row.researchExp,
   shards: sum.shards + row.shards,
-  candy: sum.candy + row.candy,
-}), { researchExp: 0, shards: 0, candy: 0 }))
+}), { researchExp: 0, shards: 0 }))
 const perSleep = computed(() => ({
   researchExp: rewards.value.researchExp / BATCH,
   shards: rewards.value.shards / BATCH,
-  candy: rewards.value.candy / BATCH,
 }))
 const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits: 1 })
 </script>
@@ -154,11 +154,10 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
       </select>
     </div>
     <label class="row"><input v-model="plan.campTicket" type="checkbox"> 露营券 +1（只加第一觉）</label>
-    <label class="row"><input v-model="plan.incense" type="checkbox"> 薰香 +1</label>
     <label class="row"><input v-model="eventMix" type="checkbox"> 活动期间遇到一些其他类型宝可梦（{{ otherShare }}%）</label>
     <p class="muted">
       {{ ISLANDS.find((i) => i.id === island)?.name }}评级 {{ rank }}<template v-if="nextRank">，再 {{ nextRank.need.toLocaleString('zh-CN') }} 能量升到 {{ nextRank.rank }}</template>。
-      露营券和薰香各加 1 只。分数按满睡眠 8 小时 30 分 = 100 分换算。
+      露营券加 1 只。分数按满睡眠 8 小时 30 分 = 100 分换算。
     </p>
     <article class="expect-board">
       <div class="row">
@@ -169,9 +168,15 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
       <div v-if="seenTotal" class="sleep-reward-summary">
         <p><span>每次方案平均研究 EXP</span><strong>{{ average(perSleep.researchExp) }}</strong></p>
         <p><span>每次方案平均梦之碎片</span><strong>{{ average(perSleep.shards) }}</strong></p>
-        <p><span>每次方案平均糖果</span><strong>{{ average(perSleep.candy) }}</strong></p>
       </div>
-      <p v-if="seenTotal && (plan.campTicket || plan.incense)" class="muted">奖励基于基础睡姿抽取；露营券与薰香增加的遭遇未计入。</p>
+      <div v-if="candies.length" class="sleep-candy-summary">
+        <p class="muted">每次方案平均糖果（同一进化链合并）</p>
+        <div v-for="candy in candies" :key="candy.pokeId" class="sleep-candy-line">
+          <PokeSprite :id="candy.pokeId" :name="candy.name" />
+          <span>{{ candy.name }}</span><strong>{{ average(candy.average) }}</strong>
+        </div>
+      </div>
+      <p v-if="seenTotal && plan.campTicket" class="muted">奖励基于基础睡姿抽取；露营券增加的遭遇未计入。</p>
       <div v-if="board.length" class="expect-list">
         <div v-for="item in board" :key="item.pokeId" class="expect-line">
           <PokeSprite :id="item.pokeId" :name="item.name" />

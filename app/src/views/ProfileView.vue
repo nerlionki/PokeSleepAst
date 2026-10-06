@@ -82,9 +82,13 @@ async function exportBox() {
 function applyImport(replace: boolean) {
   try {
     const parsed = parseBoxText(incoming.value)
+    if (!parsed.pokemon.length) {
+      msg.value = '没有可导入的宝可梦，请检查 JSON 格式与图鉴编号；盒子未修改'
+      return
+    }
     if (replace) box.replaceAll(parsed.pokemon)
     else box.merge(parsed.pokemon)
-    const label = parsed.source === 'sdrice' ? 'sdrice' : parsed.source === 'rae' ? 'RAE' : parsed.source === 'native' ? '本机' : '混合'
+    const label = parsed.source === 'iqdooh' ? 'iqdooh' : parsed.source === 'sdrice' ? 'sdrice' : parsed.source === 'rae' ? 'RAE' : parsed.source === 'native' ? '本机' : '混合'
     msg.value = `${replace ? '覆盖' : '合并'}导入 ${parsed.pokemon.length} 只（${label}）${parsed.skipped ? `，跳过 ${parsed.skipped}` : ''}`
   }
   catch {
@@ -103,7 +107,7 @@ async function wipe() {
   <div class="stack">
     <article class="card stack">
       <h3>本机备份</h3>
-      <p class="muted">可导入本机 / sdrice 盒子数组 / RAE pokebox JSON。</p>
+      <p class="muted">可导入本机 / sdrice 盒子数组 / RAE pokebox / iqdooh 宝可梦盒备份 JSON。缺失字段可在 Box 中补全。</p>
       <div class="field">
         <label>导出格式</label>
         <select v-model="mode">
@@ -112,7 +116,7 @@ async function wipe() {
         </select>
       </div>
       <button class="btn" type="button" @click="exportBox">导出 Box JSON</button>
-      <textarea v-model="incoming" rows="6" placeholder="粘贴本机、sdrice 或 RAE Box JSON"></textarea>
+      <textarea v-model="incoming" rows="6" placeholder="粘贴本机、sdrice、RAE 或 iqdooh Box JSON"></textarea>
       <div class="row">
         <button class="btn sage" type="button" @click="applyImport(false)">合并导入</button>
         <button class="btn ghost" type="button" @click="applyImport(true)">覆盖导入</button>
@@ -126,7 +130,7 @@ async function wipe() {
     </article>
     <article class="card stack">
       <h3>数值引用</h3>
-      <p class="muted">计算在本机完成，不读取这些网站。下面是整理数值时对照过的页面。图鉴卡片上的 DPR 按星级估算，不是 RaenonX 页面上的 SPO。</p>
+      <p class="muted">计算在本机完成，不读取这些网站。下面是整理数值时对照过的页面。哎呀球菇一家普通岛睡意之力需求已按 RAE 核验；其余图鉴 DPR 按星级估算。DPR 与 RAE 的 SPO 数值单位不同。</p>
       <section v-for="source in SOURCES" :key="source.name" class="source-block">
         <strong>{{ source.name }}</strong>
         <p class="muted">{{ source.note }}</p>

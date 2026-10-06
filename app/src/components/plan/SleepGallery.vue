@@ -109,7 +109,7 @@ function pickChip(which: 'type' | 'spec' | 'sleep', value: string) {
       </select>
     </div>
     <div class="field">
-      <label>种族</label>
+      <label>宝可梦</label>
       <input :value="nameQuery" placeholder="宝可梦名称" @input="setName(($event.target as HTMLInputElement).value)">
     </div>
     <div class="seg">

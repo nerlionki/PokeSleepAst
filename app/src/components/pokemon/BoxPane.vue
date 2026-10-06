@@ -143,7 +143,7 @@ const activeFilters = computed(() => filterCount(query))
 <template>
   <div class="stack">
     <div class="row">
-      <button class="btn" type="button" @click="picking = true">从种族新建</button>
+      <button class="btn" type="button" @click="picking = true">从宝可梦新建</button>
       <button class="btn" type="button" :disabled="ocrBusy" @click="pickShots">从截图导入</button>
       <button v-if="box.pokemon.length" class="btn" type="button" :class="{ on: activeFilters }" @click="filtering = true">{{ activeFilters ? `筛选 ${activeFilters}` : '筛选' }}</button>
       <input ref="shotInput" hidden type="file" accept="image/*" multiple @change="onShots">
@@ -240,7 +240,7 @@ const activeFilters = computed(() => filterCount(query))
           <button class="btn ghost" type="button" @click="editing = null">取消</button>
         </div>
         <MemberEditor v-model="editing" :actions="false" :shiny="editing.shiny" />
-        <div class="field"><label>名称</label><input v-model="editing.name" placeholder="留空则显示种族名"></div>
+        <div class="field"><label>名称</label><input v-model="editing.name" placeholder="留空则显示宝可梦名"></div>
         <label v-if="hasShiny(editing.pokeId)" class="row"><input v-model="editing.shiny" type="checkbox"> 闪光<ShinyMark v-if="editing.shiny" /></label>
         <label class="row"><input v-model="editing.napping" type="checkbox"> 寄放午睡岛</label>
         <button class="btn" type="button" @click="save">保存</button>

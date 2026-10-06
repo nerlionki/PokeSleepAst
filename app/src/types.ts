@@ -50,7 +50,7 @@ export interface BoxPokemon {
   subskills: string[]
   ingredientSlots: IngredientSlots
   skillLevel: number
-  /** 空字符串表示用种族中文名。 */
+  /** 空字符串表示用宝可梦中文名。 */
   name: string
   napping: boolean
   shiny?: boolean
@@ -94,7 +94,7 @@ export interface ProduceInput {
   wakeEnergy?: number
   /** 一起睡觉的累计小时，用来算睡饱饱勋章。 */
   ribbonHours?: number
-  /** 时间记录里显示的个体名称。不填则用种族名。 */
+  /** 时间记录里显示的个体名称。不填则用宝可梦名。 */
   displayName?: string
 }
 

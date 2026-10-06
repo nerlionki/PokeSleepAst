@@ -3,6 +3,7 @@ import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { BERRIES, POKEDEX } from '../../calc/data'
 import { pokeHit } from '../../calc/pokeSearch'
+import { compareDex } from '../../calc/pokedexOrder'
 import { evolutionStages } from '../../calc/evolution'
 import { homeText } from '../../calc/islandMeta'
 import { berryCount, friendTiers, ingredientColumns } from '../../calc/ingredients'
@@ -33,7 +34,7 @@ const list = computed(() => POKEDEX.filter((p) => {
   if (berry.value !== '全部' && p.berry !== berry.value) return false
   if (skill.value !== '全部' && p.mainSkill !== skill.value) return false
   return true
-}))
+}).sort(compareDex))
 
 const detail = computed(() => POKEDEX.find((p) => p.id === selected.value) ?? null)
 const board = computed(() => detail.value ? ingredientColumns(detail.value.ingredients) : [])

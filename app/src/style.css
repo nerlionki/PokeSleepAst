@@ -1,4 +1,8 @@
 :root {
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
   --ink: #081018;
   --ink-2: #101a26;
   --card: #152232;
@@ -81,7 +85,7 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 10px;
+  padding: calc(14px + var(--safe-top)) calc(16px + var(--safe-right)) 10px calc(16px + var(--safe-left));
   position: sticky;
   top: 0;
   z-index: 5;
@@ -103,7 +107,7 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   color: var(--amber);
 }
 
-.page { padding: 0 16px 140px; overflow-x: clip; }
+.page { padding: 0 calc(16px + var(--safe-right)) calc(140px + var(--safe-bottom)) calc(16px + var(--safe-left)); overflow-x: clip; }
 
 .tabbar {
   position: sticky;
@@ -111,7 +115,7 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
-  padding: 8px 8px calc(10px + env(safe-area-inset-bottom));
+  padding: 8px calc(8px + var(--safe-right)) calc(10px + var(--safe-bottom)) calc(8px + var(--safe-left));
   background: rgba(8, 16, 24, 0.94);
   border-top: 1px solid var(--line);
   backdrop-filter: blur(12px);
@@ -164,8 +168,7 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
 }
 
 .seg {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   align-items: stretch;
   gap: 6px;
   background: var(--ink-2);
@@ -178,7 +181,8 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   color: var(--muted);
   padding: 8px 10px;
   border-radius: 10px;
-  flex: 1 1 4.5em;
+  min-width: 0;
+  overflow-wrap: anywhere;
   min-height: 40px;
 }
 .seg button.on {
@@ -235,8 +239,8 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   background: var(--ink-2);
   border-top: 1px solid var(--line);
   border-radius: 24px 24px 0 0;
-  padding: 16px 16px 28px;
-  max-height: 92dvh;
+  padding: 16px calc(16px + var(--safe-right)) calc(28px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  max-height: calc(92dvh - var(--safe-top));
   overflow-x: clip;
   overflow-y: auto;
 }
@@ -245,7 +249,7 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   height: 100dvh;
   max-height: 100dvh;
   border-radius: 0;
-  padding: 0 16px 20px;
+  padding: var(--safe-top) calc(16px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(16px + var(--safe-left));
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;
@@ -294,7 +298,7 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
 }
 .poke-pick-txt { display: grid; gap: 2px; }
 .picker-overlay { z-index: 30; align-items: stretch; }
-.picker-sheet { max-height: 96dvh; }
+.picker-sheet { max-height: calc(96dvh - var(--safe-top)); }
 .picker-search {
   width: 100%;
   background: var(--ink);
@@ -938,7 +942,10 @@ button.ing-token.on { outline: 2px solid var(--amber); background: rgba(240, 162
   border-radius: 12px;
   padding: 8px;
 }
-.sleep-reward-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sleep-reward-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sleep-candy-summary { display: grid; gap: 6px; }
+.sleep-candy-line { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.sleep-candy-line .sprite { width: 36px; height: 36px; }
 .sleep-reward-summary p { display: grid; gap: 4px; margin: 0; padding: 10px; border-radius: 12px; background: var(--card); }
 .sleep-reward-summary span { color: var(--muted); font-size: 12px; }
 .sleep-reward-summary strong { font-variant-numeric: tabular-nums; }

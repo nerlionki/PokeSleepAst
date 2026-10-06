@@ -44,16 +44,22 @@ public class AppUpdaterPlugin extends Plugin {
         t.url = call.getString("url", "");
         t.size = call.getData().optLong("size", 0);
         t.code = call.getData().optLong("versionCode", 0);
-        if (!t.version.matches("(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)")) {
+        if (!t.version.matches("(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\.(0|[1-9][0-9]*))?")) {
             throw new Exception("更新版本号无效");
         }
         String[] p = t.version.split("\\.");
         long major = Long.parseLong(p[0]), minor = Long.parseLong(p[1]), patch = Long.parseLong(p[2]);
-        long code = major * 1000000 + minor * 1000 + patch;
-        if (major > 2099 || minor > 999 || patch > 999 || code < 1 || code != t.code
+        long hotfix = p.length == 4 ? Long.parseLong(p[3]) : 0;
+        long legacyCode = major * 1000000 + minor * 1000 + patch;
+        long code = legacyCode * 100 + hotfix;
+        boolean validCode = t.code == code || (p.length == 3 && t.code == legacyCode);
+        if (!t.url.startsWith(RELEASE_ROOT)) throw new Exception("更新下载地址无效");
+        String tag = t.url.substring(RELEASE_ROOT.length()).split("/", -1)[0];
+        boolean validTag = tag.equals("v" + t.version) || (p.length == 4 && tag.equals(t.version + "_hotfix"));
+        if (major > 2099 || minor > 999 || patch > 999 || hotfix > 99 || t.code < 1 || t.code > 2100000000L || !validCode
             || !t.name.equals("PokeSleepAst-" + t.version + ".apk")
             || !t.hash.matches("[a-f0-9]{64}") || t.size <= 0 || t.size > 1000000000L
-            || !t.url.equals(RELEASE_ROOT + "v" + t.version + "/" + t.name)) {
+            || !validTag || !t.url.equals(RELEASE_ROOT + tag + "/" + t.name)) {
             throw new Exception("更新安装包信息无效");
         }
         return t;
