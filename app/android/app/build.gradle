@@ -2,12 +2,13 @@ apply plugin: 'com.android.application'
 
 def appRoot = rootProject.projectDir.parentFile
 def appVersion = System.getenv('APP_VERSION') ?: new groovy.json.JsonSlurper().parse(new File(appRoot, 'package.json')).version
-if (!(appVersion ==~ /(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)/)) {
-    throw new GradleException('APP_VERSION 必须为 MAJOR.MINOR.PATCH')
+if (!(appVersion ==~ /(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))?/)) {
+    throw new GradleException('APP_VERSION 必须为三段或四段数字版本')
 }
 def parts = appVersion.split('\\.').collect { it.toBigInteger() }
-def appVersionCode = parts[0] * 1000000 + parts[1] * 1000 + parts[2]
-if (parts[0] > 2099 || parts[1] > 999 || parts[2] > 999 || appVersionCode < 1) {
+def hotfix = parts.size() == 4 ? parts[3] : 0
+def appVersionCode = (parts[0] * 1000000 + parts[1] * 1000 + parts[2]) * 100 + hotfix
+if (parts[0] > 2099 || parts[1] > 999 || parts[2] > 999 || hotfix > 99 || appVersionCode < 1 || appVersionCode > 2100000000) {
     throw new GradleException('版本范围：major 0..2099，minor/patch 0..999，版本不能为 0.0.0')
 }
 def signingFile = new File(appRoot, '.signing/config.json')

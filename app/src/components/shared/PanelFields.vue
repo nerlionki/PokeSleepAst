@@ -26,7 +26,7 @@ function setSub(index: number, value: string) {
 <template>
   <div class="stack">
     <div class="field">
-      <label>种族</label>
+      <label>宝可梦</label>
       <PokePicker v-model="model.pokeId" />
     </div>
     <div class="field">

@@ -389,7 +389,7 @@ export interface PortraitScore {
   score: number
 }
 
-/** 保留普通/异色模板来源；选定种族后才能据此写入异色标记。 */
+/** 保留普通/异色模板来源；选定宝可梦后才能据此写入异色标记。 */
 export function portraitScores(
   shot: PixelImage,
   portraits: { id: number, shiny: boolean, image: PixelImage }[],
@@ -399,7 +399,7 @@ export function portraitScores(
     .sort((a, b) => a.score - b.score)
 }
 
-/** 种族识别仍只比较每个种族表现最好的普通/异色模板。 */
+/** 宝可梦识别仍只比较每个宝可梦表现最好的普通/异色模板。 */
 export function speciesScores(scores: PortraitScore[]): { id: number, score: number }[] {
   const bestById = new Map<number, number>()
   for (const row of scores) {
@@ -413,7 +413,7 @@ export function bestPortraitVariant(scores: PortraitScore[], id: number): Portra
   return scores.filter((row) => row.id === id).sort((a, b) => a.score - b.score)[0] ?? null
 }
 
-/** 在头像圆盘里滑动立绘，按颜色误差找种族。立绘需要带着透明底。 */
+/** 在头像圆盘里滑动立绘，按颜色误差找宝可梦。立绘需要带着透明底。 */
 export function spriteScores(shot: PixelImage, portraits: { id: number, image: PixelImage }[]): { id: number, score: number }[] {
   const scores = rawSpriteScores(shot, portraits).map(({ portrait, score }) => ({ id: portrait.id, score }))
   const bestById = new Map<number, number>()

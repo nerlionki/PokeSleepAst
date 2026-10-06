@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { assetUrl, localDate, manifestAsset, releaseVersion, shouldPrompt, validateUpdate, type GitHubRelease } from './release'
-import { versionCode } from './version'
+import { versionCode, buildVersionCode, compareVersions, iosMarketingVersion } from './version'
 
 const manifest = { version: '1.2.3', versionCode: 1002003, fileName: 'PokeSleepAst-1.2.3.apk', size: 1234, sha256: 'a'.repeat(64) }
 const release: GitHubRelease = {
@@ -12,6 +12,26 @@ const release: GitHubRelease = {
 }
 
 describe('release validation', () => {
+  it('orders hotfixes between patches and creates increasing native build codes', () => {
+    expect(compareVersions('1.0.2.1', '1.0.2')).toBeGreaterThan(0)
+    expect(compareVersions('1.0.3', '1.0.2.99')).toBeGreaterThan(0)
+    expect(buildVersionCode('1.0.2.1')).toBe(100000201)
+    expect(buildVersionCode('1.0.3')).toBeGreaterThan(buildVersionCode('1.0.2.99'))
+    expect(iosMarketingVersion('1.0.2.1')).toBe('1.0.2')
+    for (const invalid of ['1.0.2.100', '1.0.2.01', '1.0.2.1.2']) expect(() => buildVersionCode(invalid)).toThrow()
+  })
+  it('binds a hotfix release to its numeric version and exact asset URLs', () => {
+    const tag = '1.0.2.1_hotfix'
+    const hotfixManifest = { ...manifest, version: '1.0.2.1', versionCode: 100000201, fileName: 'PokeSleepAst-1.0.2.1.apk' }
+    const hotfix = { ...release, tag_name: tag, assets: [
+      { ...release.assets[0]!, browser_download_url: assetUrl(tag, 'update.json') },
+      { ...release.assets[1]!, name: hotfixManifest.fileName, browser_download_url: assetUrl(tag, hotfixManifest.fileName) },
+    ] }
+    expect(releaseVersion(hotfix)).toBe('1.0.2.1')
+    expect(validateUpdate(hotfix, hotfixManifest).url).toBe(assetUrl(tag, hotfixManifest.fileName))
+    expect(() => validateUpdate(hotfix, { ...hotfixManifest, versionCode: 1000002 })).toThrow()
+    expect(() => validateUpdate({ ...hotfix, assets: hotfix.assets.map(a => ({ ...a, browser_download_url: a.browser_download_url.replace(tag, 'v1.0.2.1') })) }, hotfixManifest)).toThrow()
+  })
   it('compares multi digit versions and respects Android version code bounds', () => {
     expect(versionCode('1.10.0')).toBeGreaterThan(versionCode('1.9.999'))
     expect(versionCode('2.0.0')).toBeGreaterThan(versionCode('1.999.999'))

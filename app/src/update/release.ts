@@ -1,4 +1,4 @@
-import { versionCode } from './version'
+import { versionCode, buildVersionCode, versionFromTag } from './version'
 
 export const REPOSITORY = 'nerlionki/PokeSleepAst'
 export const LATEST_RELEASE_API = `https://api.github.com/repos/${REPOSITORY}/releases/latest`
@@ -39,7 +39,7 @@ export interface ReminderState {
 
 export function releaseVersion(release: GitHubRelease): string | null {
   if (release.draft || release.prerelease) return null
-  const version = release.tag_name?.match(/^v(.+)$/)?.[1]
+  const version = versionFromTag(release.tag_name ?? '')
   if (!version) return null
   try { versionCode(version) } catch { return null }
   return version
@@ -57,7 +57,8 @@ export function manifestAsset(release: GitHubRelease): ReleaseAsset | undefined 
 export function validateUpdate(release: GitHubRelease, raw: unknown): AvailableUpdate {
   const version = releaseVersion(release)
   const manifest = raw as Partial<UpdateManifest> | null
-  if (!version || !manifest || manifest.version !== version || manifest.versionCode !== versionCode(version)
+  if (!version || !manifest || manifest.version !== version || !Number.isSafeInteger(manifest.versionCode)
+    || ![versionCode(version), buildVersionCode(version)].includes(Number(manifest.versionCode))
     || manifest.fileName !== `PokeSleepAst-${version}.apk`
     || !Number.isSafeInteger(manifest.size) || Number(manifest.size) <= 0
     || typeof manifest.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(manifest.sha256)) {

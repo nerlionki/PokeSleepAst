@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
-import { versionCode } from '../src/update/version.ts'
+import { buildVersionCode, iosMarketingVersion } from '../src/update/version.ts'
 
 const appRoot = path.resolve(import.meta.dirname, '..')
 const projectName = path.basename(path.resolve(appRoot, '..'))
@@ -10,7 +10,7 @@ const target = (process.argv[2] ?? 'all').toLowerCase()
 const mode = normalizeMode(process.argv[3] ?? 'debug')
 const outDir = path.join(appRoot, 'release')
 const appVersion = process.env.APP_VERSION ?? JSON.parse(readFileSync(path.join(appRoot, 'package.json'), 'utf8')).version
-versionCode(appVersion)
+buildVersionCode(appVersion)
 process.env.APP_VERSION = appVersion
 
 if (!['android', 'ios', 'all'].includes(target) || !mode) {
@@ -118,7 +118,7 @@ function buildAndroid() {
   const apk = findApk(path.join(appRoot, 'android', 'app', 'build', 'outputs', 'apk', folder))
   const dest = publish(apk, mode === 'prod' ? `PokeSleepAst-${appVersion}.apk` : `${projectName}-${mode}.apk`)
   if (mode === 'prod') {
-    const manifest = { version: appVersion, versionCode: versionCode(appVersion), fileName: path.basename(dest),
+    const manifest = { version: appVersion, versionCode: buildVersionCode(appVersion), fileName: path.basename(dest),
       size: statSync(dest).size, sha256: createHash('sha256').update(readFileSync(dest)).digest('hex') }
     writeFileSync(path.join(outDir, 'update.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   }
@@ -138,6 +138,8 @@ function buildIos() {
     '-destination', 'generic/platform=iOS Simulator',
     '-configuration', configuration,
     '-derivedDataPath', 'build',
+    `MARKETING_VERSION=${iosMarketingVersion(appVersion)}`,
+    `CURRENT_PROJECT_VERSION=${buildVersionCode(appVersion)}`,
     `PRODUCT_NAME=${projectName}`,
     'CODE_SIGNING_ALLOWED=NO',
   ], project)

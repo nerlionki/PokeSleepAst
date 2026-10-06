@@ -5,7 +5,7 @@ import { loadJson, saveJson } from '../storage'
 import { AppUpdater, supportsUpdates, type DownloadProgress } from '../update/native'
 import { LATEST_RELEASE_API, localDate, manifestAsset, releaseVersion, shouldPrompt, validateUpdate,
   type AvailableUpdate, type GitHubRelease, type ReminderState } from '../update/release'
-import { versionCode } from '../update/version'
+import { compareVersions } from '../update/version'
 
 const KEY = 'app-update-reminders'
 type Phase = 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'ready'
@@ -50,7 +50,7 @@ export const useUpdateStore = defineStore('app-update', () => {
       currentVersion.value = info.version
       const release = await requestJson(LATEST_RELEASE_API, true) as GitHubRelease | null
       const version = release && releaseVersion(release)
-      if (!release || !version || versionCode(version) <= info.versionCode) {
+      if (!release || !version || compareVersions(version, info.version) <= 0) {
         update.value = null
         phase.value = 'idle'
         if (manual) message.value = release ? '当前已是最新版本' : '暂无已发布的正式版本'

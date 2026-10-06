@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['v*', '*_hotfix']
     paths:
       - 'app/**'
       - '.github/workflows/ios-unsigned.yml'
@@ -31,12 +31,12 @@ jobs:
         run: |
           node --input-type=module -e '
             import { readFileSync, appendFileSync } from "node:fs";
-            import { versionCode } from "./src/update/version.ts";
+            import { buildVersionCode, iosMarketingVersion, versionFromTag } from "./src/update/version.ts";
             const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version;
             const tag = process.env.GITHUB_REF_NAME;
-            const version = process.env.GITHUB_REF_TYPE === "tag" ? tag.replace(/^v/, "") : packageVersion;
-            if (process.env.GITHUB_REF_TYPE === "tag" && (!/^v\d+\.\d+\.\d+$/.test(tag) || version !== packageVersion)) throw new Error("Release tag and package version must match");
-            appendFileSync(process.env.GITHUB_ENV, `APP_VERSION=${version}\nAPP_VERSION_CODE=${versionCode(version)}\n`);
+            const version = process.env.GITHUB_REF_TYPE === "tag" ? versionFromTag(tag) : packageVersion;
+            if (!version || version !== packageVersion) throw new Error("Release tag and package version must match");
+            appendFileSync(process.env.GITHUB_ENV, `APP_VERSION=${version}\nIOS_MARKETING_VERSION=${iosMarketingVersion(version)}\nAPP_VERSION_CODE=${buildVersionCode(version)}\n`);
           '
       - name: Install dependencies
         run: npm ci
@@ -56,7 +56,7 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/pokesleep-ios-build" \
-            MARKETING_VERSION="$APP_VERSION" \
+            MARKETING_VERSION="$IOS_MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$APP_VERSION_CODE" \
             CODE_SIGNING_ALLOWED=NO \
             build
@@ -64,7 +64,7 @@ jobs:
         run: |
           app_path="$RUNNER_TEMP/pokesleep-ios-build/Build/Products/Release-iphoneos/App.app"
           test -d "$app_path"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_path/Info.plist")" = "$APP_VERSION"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_path/Info.plist")" = "$IOS_MARKETING_VERSION"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$app_path/Info.plist")" = "$APP_VERSION_CODE"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_path/Info.plist"
           mkdir -p release/ios-unsigned/Payload
@@ -78,7 +78,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Publish complete release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}

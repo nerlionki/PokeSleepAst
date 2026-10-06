@@ -2,8 +2,9 @@ import type { BoxPokemon } from '../types'
 import { INGREDIENTS, NATURES, POKEDEX, SUBSKILLS, pokeById } from './data'
 import { foldText } from './text'
 import { normalizeOcrMissing } from './ocrCompletion'
+import { parseIqdoohEntry } from './iqdoohBox'
 
-export type BoxSource = 'native' | 'sdrice' | 'rae' | 'mixed'
+export type BoxSource = 'native' | 'sdrice' | 'rae' | 'iqdooh' | 'mixed'
 
 const NATURE_EN: Record<string, string> = {
   lonely: '怕寂寞', adamant: '固执', naughty: '顽皮', brave: '勇敢',
@@ -197,12 +198,14 @@ function asRecord(v: unknown): Record<string, unknown> | null {
 
 function extractList(raw: unknown): { list: unknown[], source: BoxSource } {
   if (Array.isArray(raw)) {
+    if (raw.some(item => asRecord(item)?.dex != null)) return { list: raw, source: 'iqdooh' }
     if (raw.length && asRecord(raw[0])?.pokemonId != null) return { list: raw, source: 'sdrice' }
     if (raw.length && (asRecord(raw[0])?.pokemon != null || asRecord(raw[0])?.pokeId != null)) return { list: raw, source: 'rae' }
     return { list: raw, source: 'mixed' }
   }
   const o = asRecord(raw)
   if (!o) return { list: [], source: 'mixed' }
+  if (o.version === 1 && Array.isArray(o.entries)) return { list: o.entries, source: 'iqdooh' }
   if (Array.isArray(o.pokemon) && o.schemaVersion) return { list: o.pokemon, source: 'native' }
   const rae = o.pokebox ?? o.PokeBox ?? o.pokeBox ?? asRecord(o.data)?.pokebox ?? o.pokemons
   if (Array.isArray(rae)) return { list: rae, source: 'rae' }
@@ -225,6 +228,7 @@ function nativeSlots(raw: unknown): BoxPokemon['ingredientSlots'] {
 function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
   const o = asRecord(item)
   if (!o) return null
+  if (source === 'iqdooh') return parseIqdoohEntry(o)
   if (typeof o.pokeId === 'number' && o.uid) {
     return {
       uid: String(o.uid),

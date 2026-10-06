@@ -2,7 +2,7 @@ name: Android Release
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v*', '*_hotfix']
 
 permissions:
   contents: write
@@ -34,13 +34,13 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           node --input-type=module -e '
-            import { versionCode } from "./src/update/version.ts";
+            import { buildVersionCode, versionFromTag } from "./src/update/version.ts";
             import { appendFileSync, readFileSync } from "node:fs";
             const tag = process.env.RELEASE_TAG;
-            if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error("Only vMAJOR.MINOR.PATCH tags are supported");
-            const version = tag.slice(1);
+            const version = versionFromTag(tag);
+            if (!version) throw new Error("Unsupported release tag");
             if (version !== JSON.parse(readFileSync("package.json", "utf8")).version) throw new Error("Release tag and package version must match");
-            versionCode(version);
+            buildVersionCode(version);
             appendFileSync(process.env.GITHUB_ENV, `APP_VERSION=${version}\n`);
           '
       - name: Install dependencies
@@ -53,6 +53,8 @@ jobs:
         run: npm run test:mobile
       - name: Test baby efficiency planner
         run: npm test -- src/calc/babyEfficiency.test.ts src/composables/useBabyEfficiency.test.ts src/stores/plans.test.ts
+      - name: Test hotfix import and sleep rewards
+        run: npm test -- src/calc/hotfix.test.ts
       - name: Prepare signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
