@@ -4,6 +4,7 @@ src/generated/
 src/asset-pack*/
 src/workers/
 src/platform/image-map.json
+src/platform/image-manifest.json
 *.log
 .swc/
 .taro/
