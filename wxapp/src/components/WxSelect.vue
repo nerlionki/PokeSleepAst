@@ -20,4 +20,4 @@ function change(event: { detail: { value: number | string } }) {
   emit('update:modelValue', value); emit('change', { target: { value } })
 }
 </script>
-<template><picker :range="items" range-key="label" :value="selected" :disabled="disabled" @change="change"><view class="wx-select">{{ items[selected]?.label ?? '请选择' }} ▾</view></picker></template>
+<template><picker class="wx-control" :range="items" range-key="label" :value="selected" :disabled="disabled" @change="change"><view class="wx-select">{{ items[selected]?.label ?? '请选择' }} ▾</view></picker></template>

@@ -39,7 +39,17 @@ const wxss = fs.readFileSync(path.join(dist, 'app.wxss'), 'utf8')
 const pageRules = [...wxss.matchAll(/(?:^|})\s*page\s*\{([^}]*)\}/g)].map(match => match[1])
 if (pageRules.some(rule => rule.includes('gradient(')) || !pageRules.some(rule => /background-image\s*:\s*none/.test(rule))) throw Error('WeChat page background must be solid')
 for (const file of walk(path.join(root, 'src/generated')).filter(file => file.endsWith('.vue'))) {
-  if (/\b(?:crypto\.randomUUID|document\.|window\.|navigator\.)/.test(fs.readFileSync(file, 'utf8'))) throw Error(`Browser API in WeChat view: ${file}`)
+  const source = fs.readFileSync(file, 'utf8')
+  if (/\b(?:crypto\.randomUUID|document\.|window\.|navigator\.)/.test(source)) throw Error(`Browser API in WeChat view: ${file}`)
+  const template = require('@vue/compiler-sfc').parse(source).descriptor.template
+  if (template) {
+    const hasImage = node => /^(?:\w*Icon|PokeSprite|WxImage)$/.test(node.tag ?? '') || (node.children ?? []).some(hasImage)
+    const verify = node => {
+      if (['span', 'strong', 'em'].includes(node.tag) && hasImage(node)) throw Error(`Native text cannot contain images: ${file}`)
+      for (const child of node.children ?? []) verify(child)
+    }
+    verify(require('@vue/compiler-dom').parse(template.content))
+  }
 }
 const size = list => list.reduce((sum,file)=>sum+fs.statSync(file).size,0)
 const sub = config.subPackages ?? config.subpackages ?? []
@@ -75,10 +85,17 @@ for(const pack of sub) {
   console.log(`${pack.root}: ${bytes} bytes`)
   if(bytes > 2 * 1024 * 1024) throw Error(`${pack.root} exceeds 2 MB`)
 }
-if(size(files) > 20 * 1024 * 1024) throw Error('Total package exceeds 20 MB')
+if(size(files) > 30 * 1024 * 1024) throw Error('Total package exceeds 30 MB')
 if(config.workers?.isSubpackage && size(files.filter(file => file.startsWith(path.join(dist, config.workers.path) + path.sep))) > 2 * 1024 * 1024) throw Error('Worker subpackage exceeds 2 MB')
 const profile = fs.readFileSync(path.join(root,'src/generated/views/ProfileView.vue'),'utf8')
-if(profile.includes('UpdateSettings') || profile.includes('资料版本')) throw Error('WeChat must not contain update check or data version panel')
+if(profile.includes('UpdateSettings') || profile.includes('资料版本') || profile.includes('OcrModels')) throw Error('WeChat must not contain update check, data version or model import panels')
+const models = JSON.parse(fs.readFileSync(path.join(root, 'src/platform/ocr-models.json')))
+for (const [name, info] of Object.entries(models)) {
+  const chunks = info.chunks.map(chunk => fs.readFileSync(path.join(dist, chunk.pack, 'model.bin')))
+  const restored = Buffer.concat(chunks)
+  const original = fs.readFileSync(path.join(root, '../core/public/ocr', `${name}.onnx`))
+  if (!restored.equals(original) || createHash('sha256').update(restored).digest('hex') !== info.hash) throw Error(`Packaged OCR model differs: ${name}`)
+}
 console.log('WeChat build verified: pages, AppID, package sizes and profile scope.')
 console.log(`Verified ${Object.keys(images).length} PNG images and the native async loader.`)
 console.log(`Verified native image require paths from ${importingChunks.length} importing chunks.`)

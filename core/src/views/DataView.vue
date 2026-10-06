@@ -18,7 +18,7 @@ const tab = usePageTab(['island', 'berry', 'ing', 'recipe', 'skill', 'nature', '
 <template>
   <div class="stack">
     <input v-model="q" class="picker-search" placeholder="搜索功能或名称">
-    <div class="seg">
+    <div class="seg seg-4">
       <button type="button" :class="{ on: tab === 'island' }" @click="tab = 'island'">营地</button>
       <button type="button" :class="{ on: tab === 'berry' }" @click="tab = 'berry'">树果</button>
       <button type="button" :class="{ on: tab === 'ing' }" @click="tab = 'ing'">食材</button>

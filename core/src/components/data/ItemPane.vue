@@ -30,8 +30,3 @@ const listed = computed(() => ITEMS.filter((item) => item.category === category.
     </DrawerSheet>
   </div>
 </template>
-
-<style scoped>
-.item-icon { width: 38px; height: 38px; object-fit: contain; }
-.item-icon.large { width: 64px; height: 64px; }
-</style>

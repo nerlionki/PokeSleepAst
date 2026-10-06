@@ -30,6 +30,27 @@ for (const file of walk(core)) {
   if (rel === 'components/plan/BabyEfficiencyPane.vue') text = text.replace(/watch\(busy,[\s\S]*?\n\}\)\n/, '')
   text = text.replace(/\s+v-back="[^"]*"/g, '')
   text = text.replace(/<Teleport\b[^>]*>/g, '').replace(/<\/Teleport>/g, '')
+  // Native text nodes cannot host image children. Preserve inline icon rows
+  // using a view, including berry labels and member production summaries.
+  const template = require('@vue/compiler-sfc').parse(text).descriptor.template
+  if (template) {
+    const edits = []
+    const hasImage = node => /^(?:\w*Icon|PokeSprite|img)$/.test(node.tag ?? '') || (node.children ?? []).some(hasImage)
+    const visit = node => {
+      if (['span', 'em'].includes(node.tag) && hasImage(node)) {
+        edits.push({ start: node.loc.start.offset + 1, length: node.tag.length, value: 'view' })
+        const closing = template.content.lastIndexOf(`</${node.tag}`, node.loc.end.offset)
+        edits.push({ start: closing + 2, length: node.tag.length, value: 'view' })
+        const cls = node.props.find(prop => prop.type === 6 && prop.name === 'class')
+        edits.push(cls?.value ? { start: cls.value.loc.start.offset + 1, length: 0, value: 'wx-inline ' } : { start: node.loc.start.offset + 1 + node.tag.length, length: 0, value: ' class="wx-inline"' })
+      }
+      for (const child of node.children ?? []) visit(child)
+    }
+    visit(require('@vue/compiler-dom').parse(template.content))
+    let content = template.content
+    for (const edit of edits.sort((a, b) => b.start - a.start)) content = content.slice(0, edit.start) + edit.value + content.slice(edit.start + edit.length)
+    text = text.slice(0, template.loc.start.offset) + content + text.slice(template.loc.end.offset)
+  }
   const tags = [['input', 'WxInput'], ['select', 'WxSelect'], ['textarea', 'WxTextarea'], ['a', 'WxLink'], ['img', 'WxImage']]
   const imports = []
   for (const [tag, component] of tags) {
@@ -40,11 +61,24 @@ for (const file of walk(core)) {
     text = text.replace(new RegExp(`</${tag}>`, 'g'), `</${component}>`)
   }
   if (rel === 'views/ProfileView.vue') {
-    imports.push("import OcrModels from '../../components/OcrModels.vue'", "import { importBackupText } from '#platform/backup'")
+    imports.push("import { importBackupText } from '#platform/backup'")
     text = text.replace('async function wipe()', `async function importFile() {\n  try { incoming.value = await importBackupText(); msg.value = '文件已读取，请选择合并或覆盖导入' }\n  catch (error) { msg.value = error instanceof Error ? error.message : '文件选择取消或失败' }\n}\n\nasync function wipe()`)
-    text = text.replace('<div class="stack">', '<div class="stack"><OcrModels />').replace('<WxTextarea', '<button class="btn ghost" @click="importFile">选择备份 JSON 文件</button><WxTextarea')
+    text = text.replace('<WxTextarea', '<button class="btn ghost" @click="importFile">选择备份 JSON 文件</button><WxTextarea')
   }
   if (rel === 'components/pokemon/BoxPane.vue') text = text.replace('从截图导入</button>', '从截图导入（体验版）</button>')
+  if (rel === 'components/shared/SubskillIcon.vue') {
+    text = `<script setup lang="ts">
+import { computed } from 'vue'
+import { SUBSKILLS } from '../../calc/data'
+import { subskillImageUrl } from '../../calc/raeImage'
+import WxImage from '../../../components/WxImage.vue'
+const props = defineProps<{ id: string; locked?: boolean }>()
+const skill = computed(() => SUBSKILLS.find(item => item.id === props.id))
+const src = computed(() => subskillImageUrl(props.id))
+</script>
+<template><WxImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="skill.name" /></template>
+`
+  }
   if (imports.length) text = text.replace(/(<script setup[^>]*>)/, '$1\n' + imports.join('\n'))
   write(dest, text)
 }
@@ -55,13 +89,20 @@ const map = {}
 const manifest = {}
 let pack = 0, size = 0
 const sharp = require('sharp')
+const skillImageNumbers = Object.fromEntries([...fs.readFileSync(path.join(core, 'calc/raeImage.ts'), 'utf8').split('const SUBSKILL_IMAGE')[1].split('}')[0].matchAll(/(\w+):\s*(\d+)/g)].map(match => [match[1], Number(match[2])]))
+const skillColors = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(core, 'data/subskills.json'))).map(skill => [skillImageNumbers[skill.id], { gold: '#e2a423', blue: '#3c86d6', white: '#f4f7fb' }[skill.rarity]]))
 const assetRoots = [path.join(core, 'assets/imgs'), path.join(root, 'core/public')]
 const assets = assetRoots.flatMap(dir => walk(dir).filter(file => /\.(webp|png|jpe?g)$/i.test(file)).map(file => ({ file, rel: path.relative(dir, file).replaceAll('\\', '/') }))).sort((a, b) => a.rel.localeCompare(b.rel, 'en'))
 let payload = {}
 const flush = () => write(path.join(wxRoot, 'src', `asset-pack${pack}`, 'images.js'), `module.exports=${JSON.stringify(payload)};\n`)
 for (const { file, rel } of assets) {
-  // The largest shared display is 96 CSS pixels; retain twice that resolution.
-  const data = await sharp(file).resize({ width:192, height:192, fit:'inside', withoutEnlargement:true }).png({ palette:true, quality:100, compressionLevel:9 }).toBuffer()
+  let image = sharp(file).resize({ width:128, height:128, fit:'inside', withoutEnlargement:true })
+  const skillNumber = /^subSkill\/(\d+)\./.exec(rel)?.[1]
+  if (skillNumber && skillColors[skillNumber]) {
+    const { data: alpha, info } = await image.ensureAlpha().extractChannel(3).raw().toBuffer({ resolveWithObject: true })
+    image = sharp({ create: { width: info.width, height: info.height, channels: 3, background: skillColors[skillNumber] } }).joinChannel(alpha, { raw: { width: info.width, height: info.height, channels: 1 } })
+  }
+  const data = await image.png({ palette:true, quality:100, compressionLevel:9 }).toBuffer()
   const key = rel.replace(/\.[^.]+$/, '.png')
   const base64 = data.toString('base64')
   const bytes = Buffer.byteLength(JSON.stringify(key)) + base64.length + 4
@@ -76,7 +117,24 @@ flush()
 write(path.join(wxRoot, 'src/platform/image-map.json'), JSON.stringify(map))
 write(path.join(wxRoot, 'src/platform/image-manifest.json'), JSON.stringify(manifest))
 const subPackages = Array.from({ length: pack + 1 }, (_, index) => ({ name: `asset-pack${index}`, root: `asset-pack${index}`, pages: ['index'] }))
-write(path.join(wxRoot, 'src/native/image-loader.js'), require('./config/native-image-loader.cjs').imageLoaderSource(subPackages.map(item => item.name)))
+// Keep original model bytes in resource packages, below the single-package limit.
+for (const dir of fs.readdirSync(path.join(wxRoot, 'src')).filter(n => /^ocr-pack\d+$/.test(n))) clean(path.join(wxRoot, 'src', dir))
+const modelChunks = {}
+let modelPack = 0
+for (const name of ['det', 'rec']) {
+  const data = fs.readFileSync(path.join(root, 'core/public/ocr', `${name}.onnx`))
+  modelChunks[name] = []
+  for (let offset = 0; offset < data.length; offset += 1_600_000) {
+    const packageName = `ocr-pack${modelPack++}`
+    const bytes = data.subarray(offset, offset + 1_600_000)
+    write(path.join(wxRoot, 'src', packageName, 'model.bin'), bytes)
+    write(path.join(wxRoot, 'src', packageName, 'images.js'), `module.exports={path:${JSON.stringify(`${packageName}/model.bin`)}};\n`)
+    modelChunks[name].push({ pack: packageName, size: bytes.length })
+    subPackages.push({ name: packageName, root: packageName, pages: ['index'] })
+  }
+}
+const modelLoaders = subPackages.filter(item => item.name.startsWith('ocr-')).map(item => `${JSON.stringify(item.name)}:()=>require.async(${JSON.stringify(`./${item.name}/images.js`)})`).join(',')
+write(path.join(wxRoot, 'src/native/image-loader.js'), require('./config/native-image-loader.cjs').imageLoaderSource(subPackages.filter(item => item.name.startsWith('asset-')).map(item => item.name)) + `\nexports.loadModelChunk=function(name){const loaders={${modelLoaders}};if(!loaders[name])return Promise.reject(new Error('Invalid model package'));return loaders[name]();};\n`)
 for (const item of subPackages) {
   write(path.join(wxRoot, 'src', item.root, 'index.vue'), '<template><view /></template>\n')
   write(path.join(wxRoot, 'src', item.root, 'index.config.ts'), 'export default {}\n')
@@ -109,10 +167,10 @@ for (const name of ['det', 'rec']) {
   const data = fs.readFileSync(file)
   const graph = fields(fields(data).find(item => item.field === 7).data)
   const valueName = field => fields(graph.find(item => item.field === field).data).find(item => item.field === 1).data.toString('utf8')
-  models[name] = { input: valueName(11), output: valueName(12), size: data.length }
+  models[name] = { input: valueName(11), output: valueName(12), size: data.length, chunks: modelChunks[name], hash: createHash('sha256').update(data).digest('hex') }
 }
 write(path.join(wxRoot, 'src/platform/ocr-models.json'), JSON.stringify(models))
 write(path.join(wxRoot, 'src/platform/ocr-dict.json'), JSON.stringify(fs.readFileSync(path.join(root, 'core/public/ocr/keys.txt'), 'utf8').replace(/^\uFEFF/, '').trimEnd().split(/\r?\n/)))
 let css = fs.readFileSync(path.join(core, 'style.css'), 'utf8').replace(/\bbody\s*\{[\s\S]*?\n\}/, 'body { background: #081018; }').replaceAll(':root', 'page').replace(/html, body, #app/g, 'page').replace(/\bbody\b/g, 'page').replaceAll('input[type="checkbox"]', 'switch')
-write(path.join(wxRoot, 'src/app.css'), css + '\npage{padding:16px;box-sizing:border-box;font-size:14px;min-height:100vh;background:#081018;background-image:none} .wx-select{padding:8px;min-height:24px} image{display:inline-block} button{line-height:1.5} textarea{width:100%;min-height:100px} .source-link{color:#7fcec0;margin-right:12px} .wx-settings{margin-bottom:14px}\n')
+write(path.join(wxRoot, 'src/app.css'), css + '\npage{padding:16px;box-sizing:border-box;font-size:16px;min-height:100vh;background:#081018;background-image:none} view,text,button,input,picker,textarea{box-sizing:border-box} .page{padding-left:0;padding-right:0} .wx-control{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:16px;color:var(--text)} .wx-input{height:44px;line-height:24px;padding:10px 12px} .wx-select{padding:10px 12px;min-height:44px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere} .wx-inline{display:inline-flex;align-items:center;gap:4px;min-width:0} .wx-sub-ico{background:transparent;mask-image:none;-webkit-mask-image:none} .wx-textarea{padding:10px 12px} image{display:inline-block} button{line-height:1.5;margin:0} textarea{width:100%;min-height:100px} .source-link{color:#7fcec0;margin-right:12px} .wx-settings{margin-bottom:14px}\n')
 console.log(`Prepared shared views and ${pack + 1} asset subpackages (${assets.length} images).`)

@@ -157,10 +157,12 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
 .rose { color: var(--rose); }
 .big { font-size: 40px; line-height: 1; font-weight: 700; }
 
-.field { display: grid; gap: 6px; }
+.field { display: grid; gap: 6px; min-width: 0; }
 .field label { font-size: 12px; color: var(--muted); }
 .field input, .field select, .field textarea {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   background: var(--ink-2);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -169,13 +171,18 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
 
 .seg {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   gap: 6px;
   background: var(--ink-2);
   padding: 4px;
   border-radius: 14px;
 }
+.seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .seg button {
+  width: 100%;
+  margin: 0;
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -450,6 +457,8 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   border-radius: 10px;
 }
 .rae-icon.meal { width: 48px; height: 36px; object-fit: cover; border-radius: 8px; }
+.item-icon { width: 38px; height: 38px; object-fit: contain; flex: none; }
+.item-icon.large { width: 64px; height: 64px; }
 .ing-mark {
   width: 40px;
   height: 40px;
@@ -868,6 +877,7 @@ button.ing-token.on { outline: 2px solid var(--amber); background: rgba(240, 162
 .sub-ico.rarity-blue { color: #3c86d6; }
 .sub-ico.rarity-white { color: #f4f7fb; }
 .sub-ico.locked { opacity: 0.35; }
+.sub-name { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .member-nature, .member-freq, .member-speed, .member-line, .member-total, .mix-legend { margin: 0; }
 .member-nature { display: flex; gap: 8px; color: #d5deea; }
 .member-total { color: #f0a202; font-size: 28px; font-weight: 700; }

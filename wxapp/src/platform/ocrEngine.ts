@@ -1,35 +1,44 @@
 import { recognize, type OcrModel, type OcrSessions } from '../../../core/src/calc/ocrPipeline'
 export { recognize }
 export type { PixelImage } from '../../../core/src/calc/ocrVision'
+import { loadModelChunk } from '#image-loader'
 import dictText from './ocr-dict.json'
 import modelInfo from './ocr-models.json'
 
 let loading: Promise<OcrSessions> | null = null
-const modelPath = (name: string) => `${wx.env.USER_DATA_PATH}/ocr-${name}.onnx`
-export function hasOcrModels(): boolean {
-  try { for (const name of ['det', 'rec']) wx.getFileSystemManager().accessSync(modelPath(name)); return true } catch { return false }
-}
-export async function importOcrModels(): Promise<void> {
-  const selected = await new Promise<WechatMiniprogram.ChooseMessageFileSuccessCallbackResult>((resolve, reject) => wx.chooseMessageFile({ count: 2, type: 'file', extension: ['onnx'], success: resolve, fail: reject }))
+const modelPath = (name: string) => `${wx.env.USER_DATA_PATH}/ocr-${name}-${(modelInfo as Record<string, {hash:string}>)[name]!.hash}.onnx`
+async function prepareModel(name: string): Promise<string> {
   const fs = wx.getFileSystemManager()
-  const files = ['det', 'rec'].map(name => {
-    const item = selected.tempFiles.find(f => f.name === `${name}.onnx`)
-    if (!item || item.size !== (modelInfo as Record<string, { size: number }>)[name]!.size) throw new Error(`请选择提供的模型包中的 ${name}.onnx，文件名和大小必须匹配`)
-    return { name, path: item.path }
-  })
-  // Validate both files before replacing either cached model.
-  for (const item of files) fs.copyFileSync(item.path, modelPath(item.name) + '.new')
-  if (loading) {
-    const sessions = await loading.catch(() => null)
-    sessions?.det.dispose?.(); sessions?.rec.dispose?.()
+  const info = (modelInfo as Record<string, {size:number; chunks:Array<{pack:string;size:number}>}>)[name]!
+  const target = modelPath(name)
+  try { if ((fs.statSync(target) as WechatMiniprogram.Stats).size === info.size) return target } catch {}
+  const temporary = target + '.new'
+  try {
+    const restored = new Uint8Array(info.size)
+    let offset = 0
+    for (const chunk of info.chunks) {
+      const payload = await loadModelChunk(chunk.pack)
+      const bytes = fs.readFileSync(payload.path) as ArrayBuffer
+      if (bytes.byteLength !== chunk.size) throw new Error('OCR 模型分包不完整，请重新编译小程序')
+      restored.set(new Uint8Array(bytes), offset)
+      offset += bytes.byteLength
+    }
+    if (offset !== info.size) throw new Error('OCR 模型还原失败，请重试')
+    fs.writeFileSync(temporary, restored.buffer)
+    if ((fs.statSync(temporary) as WechatMiniprogram.Stats).size !== info.size) throw new Error('OCR 模型保存失败，请重试')
+    fs.renameSync(temporary, target)
+    return target
+  } catch (error) {
+    try { fs.unlinkSync(temporary) } catch {}
+    const message = error instanceof Error ? error.message : String(error)
+    if (/storage limit|quota|空间|存储/.test(message)) throw new Error('OCR 原模型需要约 16 MB 文件空间；当前环境文件额度不足，请使用支持更大文件额度的微信真机验证')
+    throw error
   }
-  loading = null
-  for (const item of files) fs.renameSync(modelPath(item.name) + '.new', modelPath(item.name))
 }
 async function openModel(name: string): Promise<OcrModel> {
   if (!wx.createInferenceSession) throw new Error('当前微信或设备不支持本地 OCR，请升级微信或使用手动录入')
   const info = (modelInfo as Record<string, { input: string; output: string }>)[name]!
-  const session = wx.createInferenceSession({ model: modelPath(name), precisionLevel: 4, allowNPU: false, allowQuantize: false })
+  const session = wx.createInferenceSession({ model: await prepareModel(name), precisionLevel: 4, allowNPU: false, allowQuantize: false })
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => { session.destroy(); reject(new Error('OCR 模型加载超时，请重试')) }, 60_000)
     session.onLoad(() => { clearTimeout(timer); resolve() })
@@ -43,7 +52,6 @@ async function openModel(name: string): Promise<OcrModel> {
   } }
 }
 export function loadOcr(): Promise<OcrSessions> {
-  if (!hasOcrModels()) return Promise.reject(new Error('请先在“我的”页面导入 OCR 模型文件'))
   loading ??= Promise.allSettled([openModel('det'), openModel('rec')]).then(results => {
     const failed = results.find(result => result.status === 'rejected')
     if (failed?.status === 'rejected') {

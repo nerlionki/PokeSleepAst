@@ -112,11 +112,11 @@ function pickChip(which: 'type' | 'spec' | 'sleep', value: string) {
       <label>宝可梦</label>
       <input :value="nameQuery" placeholder="宝可梦名称" @input="setName(($event.target as HTMLInputElement).value)">
     </div>
-    <div class="seg">
+    <div class="seg seg-4">
       <button type="button" :class="{ on: stars === 0 }" @click="stars = 0; resetPage()">全部星</button>
       <button v-for="n in 5" :key="n" type="button" :class="{ on: stars === n }" @click="stars = n; resetPage()">★{{ n }}</button>
     </div>
-    <div class="seg">
+    <div class="seg seg-3">
       <button type="button" :class="{ on: view === 'all' }" @click="view = 'all'; resetPage()">全部</button>
       <button type="button" :class="{ on: view === 'found' }" @click="view = 'found'; resetPage()">已发现</button>
       <button type="button" :class="{ on: view === 'missing' }" @click="invert">反选</button>

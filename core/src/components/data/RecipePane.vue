@@ -23,7 +23,7 @@ const list = computed(() => {
 
 <template>
   <div class="stack">
-    <div class="seg">
+    <div class="seg seg-3">
       <button
         v-for="c in MEAL_CATEGORIES"
         :key="c.id"

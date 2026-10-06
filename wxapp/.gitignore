@@ -2,6 +2,7 @@ node_modules/
 dist/
 src/generated/
 src/asset-pack*/
+src/ocr-pack*/
 src/workers/
 src/platform/image-map.json
 src/platform/image-manifest.json

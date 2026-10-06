@@ -164,11 +164,11 @@ function saveCustomToBox() {
       <button type="button" :class="{ on: level === null }" @click="level = null">原级</button>
       <button v-for="lv in LEVELS" :key="lv" type="button" :class="{ on: level === lv }" @click="level = lv">{{ lv }}</button>
     </div>
-    <div class="seg">
+    <div class="seg seg-2">
       <button type="button" :class="{ on: settings.period === 'day' }" @click="settings.period = 'day'">每日</button>
       <button type="button" :class="{ on: settings.period === 'week' }" @click="settings.period = 'week'">每周</button>
     </div>
-    <div class="seg">
+    <div class="seg seg-3">
       <button type="button" :class="{ on: view === 'overview' }" @click="view = 'overview'">概览</button>
       <button type="button" :class="{ on: view === 'detail' }" @click="view = 'detail'">详细</button>
       <button type="button" :class="{ on: view === 'time' }" @click="view = 'time'">时间</button>
