@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import { canPickBerries, defaultSettings, helpMaxSettings, idealSettings, mergeSettings, work18Settings } from '../calc/defaults'
-import { ISLANDS } from '../calc/data'
+import { canPickBerries, defaultSettings, EX_MAIN, helpMaxSettings, idealSettings, mergeSettings, normalizeEx2Berries, work18Settings } from '../calc/defaults'
+import { BERRIES, ISLANDS } from '../calc/data'
 import { loadJson, saveJson } from '../storage'
 import type { Settings } from '../types'
 
@@ -25,8 +25,24 @@ export const useSettingsStore = defineStore('settings', () => {
   function applyIsland(id: Settings['island']) {
     const island = ISLANDS.find((i) => i.id === id)
     settings.value.island = id
+    if (id === 'cyanex') settings.value.berries = normalizeEx2Berries(settings.value.berries)
     if (!canPickBerries(id) && island?.berries.length) settings.value.berries = [...island.berries]
     if (island?.pot) settings.value.potSize = island.pot
+  }
+
+  function setEx2MainBerry(name: string) {
+    if (settings.value.island !== 'cyanex' || !EX_MAIN.includes(name)) return
+    const current = normalizeEx2Berries(settings.value.berries)
+    settings.value.berries = [name, ...current.slice(1).filter(berry => berry !== name)]
+  }
+
+  function toggleBerry(name: string) {
+    if (!canPickBerries(settings.value.island)) return
+    if (settings.value.island === 'cyanex' && !BERRIES.some(berry => berry.name === name)) return
+    const current = settings.value.berries
+    if (settings.value.island === 'cyanex' && name === current[0]) return
+    if (current.includes(name)) settings.value.berries = current.filter(berry => berry !== name)
+    else if (current.length < 3) settings.value.berries = [...current, name]
   }
 
   function reset() {
@@ -57,5 +73,5 @@ export const useSettingsStore = defineStore('settings', () => {
     return `${name} · 营地 ${Math.round(s.areaBonus * 100)}% · ${s.sleepStart}–${s.sleepEnd} / ${s.sleepScore}分 · 三餐${s.meals ? '开' : '关'}`
   })
 
-  return { settings, ready, hydrate, applyIsland, reset, applyPreset, summary }
+  return { settings, ready, hydrate, applyIsland, setEx2MainBerry, toggleBerry, reset, applyPreset, summary }
 })
