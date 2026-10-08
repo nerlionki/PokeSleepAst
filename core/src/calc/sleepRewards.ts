@@ -19,3 +19,8 @@ export function sleepReward(style: { pokeId: number, stars: number, styleId?: nu
   return (style.styleId != null ? byId.get(style.styleId) : undefined)
     ?? bySpeciesAndStars.get(`${style.pokeId}-${style.stars}`)
 }
+
+/** Original game sleep-style order, independent of per-island generated row IDs. */
+export function sleepStyleInternalId(style: { pokeId: number, stars: number, styleId?: number }): number {
+  return style.styleId ?? bySpeciesAndStars.get(`${style.pokeId}-${style.stars}`)?.id ?? Number.MAX_SAFE_INTEGER
+}

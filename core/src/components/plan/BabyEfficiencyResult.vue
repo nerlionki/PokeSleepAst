@@ -17,7 +17,7 @@ const range = (min: number, max: number | null) => max === null ? `≥ ${format(
     </header>
     <p v-if="!optimum.intervals.length" class="muted">本次搜索没有遇到目标的方案。</p>
     <template v-else>
-      <p class="muted">{{ precision === 'high' ? '已穷举全部拆分与能量临界区间' : '近似搜索结果，可用高精度核对' }} · {{ optimum.intervals.length }} 个并列最佳区间</p>
+      <p class="muted">{{ precision === 'high' ? '已比较全部拆分比例与能量候选点' : '近似搜索结果，可用高精度核对' }} · {{ optimum.intervals.length }} 个推荐方案</p>
       <article v-for="(interval, index) in visible" :key="index" class="efficiency-interval stack">
         <div class="row result-header"><strong>{{ interval.island }}</strong><span class="chip">{{ interval.sleeps.length === 1 ? '整觉' : '拆成两觉' }}</span></div>
         <p class="energy-range"><span class="muted">卡比兽能量</span><strong>{{ range(interval.min, interval.max) }}</strong></p>
@@ -27,7 +27,7 @@ const range = (min: number, max: number | null) => max === null ? `≥ ${format(
           <span class="sleep-types">{{ sleep.sleepTypes.join(' / ') }}<small v-if="sleep.sleepTypes.length > 1" class="muted">（任选）</small></span>
         </div>
       </article>
-      <button v-if="visibleCount < optimum.intervals.length" class="btn ghost" type="button" @click="visibleCount += 20">显示更多区间（剩余 {{ optimum.intervals.length - visibleCount }}）</button>
+      <button v-if="visibleCount < optimum.intervals.length" class="btn ghost" type="button" @click="visibleCount += 20">显示更多方案（剩余 {{ optimum.intervals.length - visibleCount }}）</button>
     </template>
   </section>
 </template>

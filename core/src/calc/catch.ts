@@ -142,8 +142,8 @@ export function recommendIslands(
   })
 }
 
-export function recommendThree(goals: CatchGoal[], discovered: readonly string[] = []) {
-  return CATCH_MODES.map((mode) => ({
+export function recommendThree(goals: CatchGoal[], discovered: readonly string[] = [], modes: readonly string[] = CATCH_MODES.map((mode) => mode.id)) {
+  return CATCH_MODES.filter((mode) => modes.includes(mode.id)).map((mode) => ({
     id: mode.id,
     name: mode.name,
     results: recommendIslands(goals.filter((goal) => mode.purposes.includes(goal.purpose)), mode.weights, discovered),

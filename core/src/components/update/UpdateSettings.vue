@@ -12,6 +12,7 @@ const store = useUpdateStore()
         {{ store.phase === 'checking' ? '正在检查…' : '检查更新' }}
       </button>
     </div>
+    <a href="https://github.com/nerlionki/PokeSleepAst/releases" target="_blank" rel="noopener noreferrer">前往发布页下载</a>
     <p v-if="store.message" class="muted" role="status">{{ store.message }}</p>
   </section>
 </template>

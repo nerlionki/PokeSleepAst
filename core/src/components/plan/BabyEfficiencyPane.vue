@@ -45,16 +45,16 @@ watch(busy, async (value, _previous, onCleanup) => {
       <label class="row"><input v-model="options.eventMix" type="checkbox"> 活动期间跨睡眠类型出现</label>
       <div class="efficiency-fields">
         <div class="field"><label for="baby-iterations">计算次数</label><input id="baby-iterations" v-model.number="options.iterations" type="number" min="100" max="100000" step="100" inputmode="numeric"></div>
-        <div class="field"><label for="baby-precision">计算精度</label><select id="baby-precision" v-model="options.precision"><option value="low">低 · 快速搜索</option><option value="medium">中 · 细化搜索</option><option value="high">高 · 穷举全部区间</option></select></div>
+        <div class="field"><label for="baby-precision">计算精度</label><select id="baby-precision" v-model="options.precision"><option value="low">低 · 快速搜索</option><option value="medium">中 · 细化搜索</option><option value="high">高 · 密集搜索</option></select></div>
       </div>
-      <p class="muted">计算次数用于每个候选抽取状态的模拟；精度控制能量区间和拆分比例的搜索细度。高精度耗时较长，可随时取消。</p>
+      <p class="muted">计算次数用于每个候选抽取状态的模拟；精度控制能量候选点和拆分比例的搜索细度。高精度耗时较长，可随时取消。</p>
       <button ref="calculateButton" class="btn sage" type="button" :disabled="busy" @click="calculate">计算宝宝效率</button>
     </article>
     <p v-if="error" class="amber" role="alert">{{ error }}</p>
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
     <template v-if="result">
       <p v-if="dirty" class="amber">参数已修改，请重新计算更新结果。</p>
-      <p class="muted">{{ resultName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }}{{ result.options.eventMix ? ' · 跨类型活动' : '' }}。预期收益只计普通睡眠研究；最高值相同的方案均列出。</p>
+      <p class="muted">{{ resultName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }}{{ result.options.eventMix ? ' · 跨类型活动' : '' }}。预期收益只计普通睡眠研究；列出本次搜索中收益最高的方案。</p>
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-catch`" title="捕捉只数最多" unit="只" :optimum="result.catch" :precision="result.options.precision" />
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-candy`" title="家族糖果最多" unit="颗" :optimum="result.candy" :precision="result.options.precision" />
     </template>

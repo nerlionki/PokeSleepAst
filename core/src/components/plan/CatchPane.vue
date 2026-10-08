@@ -2,7 +2,7 @@
 import { newUid } from '../../calc/uid'
 import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
-import { recommendThree, type CatchGoal, type CatchPurpose } from '../../calc/catch'
+import { CATCH_MODES, recommendThree, type CatchGoal, type CatchPurpose } from '../../calc/catch'
 import { resolvedSleepdex, sleepdexState } from '../../calc/sleep'
 import { usePlanStore } from '../../stores/plans'
 import PokePicker from '../shared/PokePicker.vue'
@@ -11,9 +11,11 @@ const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
 const columns = shallowRef<ReturnType<typeof recommendThree> | null>(null)
 const stamped = shallowRef('')
+const selectedMode = shallowRef('all')
 
 const discovered = computed(() => resolvedSleepdex(plan.value))
 const fingerprint = computed(() => JSON.stringify({
+  recommendation: selectedMode.value,
   goals: plan.value.catchGoals,
   mode: plan.value.sleepdexMode,
   dex: plan.value.sleepdex,
@@ -55,7 +57,7 @@ function coverage(pokeId: number) {
 }
 
 function generate() {
-  columns.value = recommendThree(plan.value.catchGoals, discovered.value)
+  columns.value = recommendThree(plan.value.catchGoals, discovered.value, [selectedMode.value])
   stamped.value = fingerprint.value
 }
 
@@ -68,12 +70,18 @@ function purposeLabel(purpose: CatchPurpose) {
 
 <template>
   <div class="stack">
-    <p class="muted">上面的目标优先。综合列捕捉 ×1.2、刷糖 ×1，睡姿按命中星级 ×0.8～0.9。已在睡姿图鉴发现的星级会自动跳过。萌绿之岛和 EX 排在其他岛后面。</p>
+    <p class="muted">上面的目标优先。综合推荐捕捉 ×1.2、刷糖 ×1，睡姿按命中星级 ×0.8～0.9。已在睡姿图鉴发现的星级会自动跳过。萌绿之岛和 EX 排在其他岛后面。</p>
+    <div class="field">
+      <label for="catch-recommendation">推荐类型</label>
+      <select id="catch-recommendation" v-model="selectedMode">
+        <option v-for="mode in CATCH_MODES" :key="mode.id" :value="mode.id">{{ mode.name }}</option>
+      </select>
+    </div>
     <div class="row">
       <button class="btn" type="button" @click="addGoal">新增目标</button>
-      <button class="btn sage" type="button" :disabled="!plan.catchGoals.length" @click="generate">生成三列推荐</button>
+      <button class="btn sage" type="button" :disabled="!plan.catchGoals.length" @click="generate">生成推荐</button>
     </div>
-    <p v-if="columns && dirty" class="amber">目标已修改，点击生成更新推荐</p>
+    <p v-if="columns && dirty" class="amber">目标或推荐类型已修改，请重新生成</p>
     <article v-for="(goal, index) in plan.catchGoals" :key="goal.id" class="card plan-goal">
       <div class="plan-goal-top">
         <span class="muted">{{ index + 1 }}</span>

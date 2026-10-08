@@ -3,7 +3,7 @@ import { familyOf } from './candyPlan'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES, type SleepStyleRow } from './data'
 import { evolutionStages } from './evolution'
 import { EVENT_BONUSES, EVENT_OTHER_SHARE, fallbackStyle, RANK_ORDER, rankStrength, SPECIAL_POKEMON, styleUnlockIndex } from './sleep'
-import { sleepReward } from './sleepRewards'
+import { sleepReward, sleepStyleInternalId } from './sleepRewards'
 import { drawStateKey, efficiencyRandom, simulateEfficiencyState, type EfficiencyBucket, type EfficiencyDrawState, type EfficiencyReward } from './babyEfficiencyDraw'
 
 export type EfficiencyPrecision = 'low' | 'medium' | 'high'
@@ -25,6 +25,8 @@ export interface EfficiencyStyle extends EfficiencyReward {
   special: boolean
   unlockStrength: number
   dpr: number
+  belly?: boolean
+  order?: number
 }
 export interface EfficiencyIsland {
   id: IslandId
@@ -78,8 +80,9 @@ export function efficiencyIslands(pokeId: number): EfficiencyIsland[] {
         sleepType: style.sleepType as SleepType,
         special: SPECIAL_POKEMON.has(style.pokeId),
         unlockStrength: rankStrength(island.id as IslandId, RANK_ORDER[styleUnlockIndex(island.id as IslandId, style)]!),
-        // The existing engine permits 1-star styles without a power requirement.
-        dpr: style.stars === 1 ? 0 : style.dpr,
+        dpr: style.dpr,
+        belly: style.styleName.includes('大肚'),
+        order: sleepStyleInternalId(style),
       })),
     }]
   })
@@ -95,41 +98,45 @@ export function strengthForPower(power: number, score: number, mult: number): nu
 }
 
 interface CurveState { min: number, encounters: number, groups: Group[] }
-interface Group extends EfficiencyReward { sleepType: SleepType, special: boolean, count: number }
+interface Group extends EfficiencyReward { sleepType: SleepType, special: boolean, count: number, dpr: number, belly?: boolean, order?: number }
 
 export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: number): CurveState[] {
-  const unlocks = island.styles.map((style) => ({ style, at: Math.max(1, style.unlockStrength, strengthForPower(style.dpr, score, mult)) }))
+  const unlocks = island.styles.map((style) => ({ style, at: Math.max(1, style.unlockStrength) }))
     .sort((a, b) => a.at - b.at)
   const bands = island.bands.map((band) => ({ count: band.count, at: strengthForPower(band.min, score, mult) }))
-  const starts = [...new Set([1, ...unlocks.map((row) => row.at), ...bands.map((row) => row.at)])].sort((a, b) => a - b)
+  const maxCount = Math.max(3, ...island.bands.map((band) => band.count))
+  const costs = [...new Set(island.styles.map((style) => style.dpr))]
+  const budgetPoints = costs.flatMap((cost) => Array.from({ length: maxCount }, (_, i) => strengthForPower(cost * (i + 1), score, mult)))
+  const starts = [...new Set([1, strengthForPower(90_000, score, mult), ...budgetPoints, ...unlocks.map((row) => row.at), ...bands.map((row) => row.at)])].sort((a, b) => a - b)
   const groups = new Map<string, Group>()
   let unlocked = 0
   return starts.map((min) => {
     while (unlocked < unlocks.length && unlocks[unlocked]!.at <= min) {
       const style = unlocks[unlocked++]!.style
-      const key = `${style.sleepType}|${Number(style.special)}|${style.catch}|${style.candy}`
+      const key = `${style.sleepType}|${Number(style.special)}|${style.catch}|${style.candy}|${style.dpr}|${style.belly}`
       const group = groups.get(key)
-      if (group) group.count++
-      else groups.set(key, { sleepType: style.sleepType, special: style.special, catch: style.catch, candy: style.candy, count: 1 })
+      if (group) { group.count++; group.order = Math.min(group.order ?? Infinity, style.order ?? Infinity) }
+      else groups.set(key, { sleepType: style.sleepType, special: style.special, catch: style.catch, candy: style.candy, dpr: style.dpr, belly: style.belly, order: style.order, count: 1 })
     }
     const encounters = bands.reduce((n, band) => band.at <= min ? Math.max(n, band.count) : n, 3)
     return { min, encounters, groups: [...groups.values()].map((group) => ({ ...group })) }
   })
 }
 
-export function efficiencyDrawState(island: EfficiencyIsland, state: CurveState, type: SleepType, eventMix: boolean): EfficiencyDrawState {
+export function efficiencyDrawState(island: EfficiencyIsland, state: CurveState, type: SleepType, eventMix: boolean, power: number): EfficiencyDrawState {
   const mixed = eventMix && type !== '没有特征'
   const buckets = new Map<string, EfficiencyBucket>()
   for (const group of state.groups) {
     const typed = type === '没有特征' || type === group.sleepType
     if (!mixed && !typed) continue
-    const key = `${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}`
+    const key = `${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}|${group.dpr}|${group.belly}`
     const existing = buckets.get(key)
-    if (existing) existing.count += group.count
-    else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, count: group.count })
+    if (existing) { existing.count += group.count; existing.order = Math.min(existing.order ?? Infinity, group.order ?? Infinity) }
+    else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, dpr: group.dpr, belly: group.belly, order: group.order, count: group.count })
   }
   return {
     buckets: [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, bucket]) => bucket),
+    power: Math.min(power, Math.max(90_000, ...state.groups.map((group) => group.dpr * state.encounters))),
     encounters: state.encounters,
     otherSlots: mixed ? state.encounters - Math.floor(state.encounters * EVENT_OTHER_SHARE) : 0,
     typedFallback: island.fallbacks[type],
@@ -203,12 +210,12 @@ export function searchBabyEfficiency(
     const sessionCache = new Map<string, { catch: { value: number, types: SleepType[] }, candy: { value: number, types: SleepType[] } }>()
     const sessionAt = (score: number, min: number) => {
       const state = stateAt(curveOf(score), min)
-      const sessionKey = `${score}:${state.min}`
+      const sessionKey = `${score}:${min}`
       const known = sessionCache.get(sessionKey)
       if (known) return known
       const result = { catch: { value: -1, types: [] as SleepType[] }, candy: { value: -1, types: [] as SleepType[] } }
       for (const type of EFFICIENCY_SLEEP_TYPES) {
-        const draw = efficiencyDrawState(island, state, type, options.eventMix)
+        const draw = efficiencyDrawState(island, state, type, options.eventMix, score * min * options.eventMult)
         const key = drawStateKey(draw)
         let metric = cache.get(key)
         if (!metric) {
@@ -235,7 +242,9 @@ export function searchBabyEfficiency(
         if (checked.has(index)) return values.get(index)
         checked.add(index)
         const min = starts[index]!
-        const max = starts[index + 1] == null ? null : starts[index + 1]! - 1
+        // Budget depletion can change within unlock intervals. Only report sampled
+        // energies; the final point is beyond all unlocks and the maximum total cost.
+        const max = starts[index + 1] == null ? null : min
         const a = sessionAt(first, min)
         const b = second ? sessionAt(second, min) : null
         const totals = { catch: a.catch.value + (b?.catch.value ?? 0), candy: a.candy.value + (b?.candy.value ?? 0) }

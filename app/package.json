@@ -1,14 +1,14 @@
 {
   "name": "pokesleep-ast",
   "private": true,
-  "version": "1.0.3.2",
+  "version": "1.0.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:update": "vitest run src/update/release.test.ts src/stores/update.test.ts",
+    "test:update": "vitest run src/update/release.test.ts src/update/request.test.ts src/stores/update.test.ts",
     "test:mobile": "vitest run src/navigation/back.test.ts src/composables/usePageTab.test.ts src/calc/ocrCompletion.test.ts src/calc/ocrBox.test.ts src/calc/boxio.test.ts src/stores/box.test.ts",
     "icons:source": "node scripts/render-app-icon.mjs",
     "icons:android": "npm run icons:source && capacitor-assets generate --android --assetPath assets",

@@ -65,7 +65,6 @@ for (const file of walk(core)) {
     text = text.replace('async function wipe()', `async function importFile() {\n  try { incoming.value = await importBackupText(); msg.value = '文件已读取，请选择合并或覆盖导入' }\n  catch (error) { msg.value = error instanceof Error ? error.message : '文件选择取消或失败' }\n}\n\nasync function wipe()`)
     text = text.replace('<WxTextarea', '<button class="btn ghost" @click="importFile">选择备份 JSON 文件</button><WxTextarea')
   }
-  if (rel === 'components/pokemon/BoxPane.vue') text = text.replace('从截图导入</button>', '从截图导入（体验版）</button>')
   if (rel === 'components/shared/SubskillIcon.vue') {
     text = `<script setup lang="ts">
 import { computed } from 'vue'
