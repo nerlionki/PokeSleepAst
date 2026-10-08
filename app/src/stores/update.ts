@@ -1,6 +1,7 @@
 import { computed, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
-import { CapacitorHttp } from '@capacitor/core'
+import { requestJson } from '../update/request'
+import { fallbackUpdate } from '../update/fallback'
 import { loadJson, saveJson } from '../storage'
 import { AppUpdater, supportsUpdates, type DownloadProgress } from '../update/native'
 import { LATEST_RELEASE_API, localDate, manifestAsset, releaseVersion, shouldPrompt, validateUpdate,
@@ -10,14 +11,6 @@ import { compareVersions } from '../update/version'
 const KEY = 'app-update-reminders'
 type Phase = 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'ready'
 
-async function requestJson(url: string, allowMissing = false): Promise<unknown> {
-  const response = await CapacitorHttp.get({ url, headers: { Accept: 'application/json' },
-    connectTimeout: 15_000, readTimeout: 20_000, responseType: 'json' })
-  if (allowMissing && response.status === 404) return null
-  if (response.status === 403 || response.status === 429) throw new Error('更新服务请求过于频繁，请稍后重试')
-  if (response.status !== 200) throw new Error(`无法获取更新信息（${response.status}），请稍后重试`)
-  return typeof response.data === 'string' ? JSON.parse(response.data) : response.data
-}
 
 export const useUpdateStore = defineStore('app-update', () => {
   const supported = supportsUpdates()
@@ -48,17 +41,23 @@ export const useUpdateStore = defineStore('app-update', () => {
       reminders = await loadJson<ReminderState>(KEY, {})
       const info = await AppUpdater.getInfo()
       currentVersion.value = info.version
-      const release = await requestJson(LATEST_RELEASE_API, true) as GitHubRelease | null
-      const version = release && releaseVersion(release)
-      if (!release || !version || compareVersions(version, info.version) <= 0) {
+      let release: GitHubRelease | null = null
+      let fallback: AvailableUpdate | null = null
+      try { release = await requestJson(LATEST_RELEASE_API, true) as GitHubRelease | null }
+      catch (cause) {
+        try { fallback = await fallbackUpdate() }
+        catch { throw cause }
+      }
+      const version = fallback?.version ?? (release && releaseVersion(release))
+      if (!version || compareVersions(version, info.version) <= 0) {
         update.value = null
         phase.value = 'idle'
-        if (manual) message.value = release ? '当前已是最新版本' : '暂无已发布的正式版本'
+        if (manual) message.value = release || fallback ? '当前已是最新版本' : '暂无已发布的正式版本'
         return
       }
-      const manifest = manifestAsset(release)
-      if (!manifest) throw new Error('最新版本尚未提供完整的 Android 更新产物，请稍后重试')
-      const next = validateUpdate(release, await requestJson(manifest.browser_download_url))
+      const manifest = release && manifestAsset(release)
+      if (!manifest && !fallback) throw new Error('最新版本尚未提供完整的 Android 更新产物，请稍后重试')
+      const next = fallback ?? validateUpdate(release!, await requestJson(manifest!.browser_download_url))
       const sameDownloadedVersion = update.value?.version === next.version && previousPhase === 'ready'
       update.value = next
       phase.value = sameDownloadedVersion ? 'ready' : 'available'

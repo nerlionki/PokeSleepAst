@@ -31,6 +31,23 @@ beforeEach(() => {
 })
 
 describe('update flow', () => {
+  it('falls back to official Release assets when the anonymous API is rate limited', async () => {
+    mocks.get.mockImplementation(({ url }) => Promise.resolve(url.includes('api.github.com')
+      ? { status: 403 } : { status: 200, data: manifest }))
+    const store = useUpdateStore()
+    await store.check()
+    expect(store.visible).toBe(true)
+    expect(store.update?.url).toBe(assetUrl('v1.1.0', manifest.fileName))
+    expect(store.update?.sha256).toBe(manifest.sha256)
+  })
+  it('does not trust malformed manifests on the fallback path', async () => {
+    mocks.get.mockImplementation(({ url }) => Promise.resolve(url.includes('api.github.com')
+      ? { status: 403 } : { status: 200, data: { ...manifest, sha256: 'bad' } }))
+    const store = useUpdateStore()
+    await store.check()
+    expect(store.visible).toBe(false)
+    expect(store.update).toBeNull()
+  })
   it('checks once at startup, records prompt day and does not repeat the same day', async () => {
     const store = useUpdateStore()
     await store.initialize()
@@ -62,7 +79,7 @@ describe('update flow', () => {
     expect(store.visible).toBe(false)
     expect(store.message).toBe('')
     await store.check()
-    expect(store.message).toBe('网络不可用')
+    expect(store.message).toContain('检查网络')
     mocks.get.mockResolvedValue({ status: 404 })
     await store.check()
     expect(store.message).toBe('暂无已发布的正式版本')

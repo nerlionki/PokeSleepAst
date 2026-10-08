@@ -135,8 +135,8 @@ const activeFilters = computed(() => filterCount(query))
 <template>
   <div class="stack">
     <div class="row">
-      <button class="btn" type="button" @click="picking = true">从宝可梦新建</button>
-      <button class="btn" type="button" :disabled="ocrBusy" @click="pickShots">从截图导入</button>
+      <button class="btn" type="button" @click="picking = true">新增宝可梦</button>
+      <button class="btn" type="button" :disabled="ocrBusy" @click="pickShots">导入</button>
       <button v-if="box.pokemon.length" class="btn" type="button" :class="{ on: activeFilters }" @click="filtering = true">{{ activeFilters ? `筛选 ${activeFilters}` : '筛选' }}</button>
     </div>
     <p v-if="ocrMsg" class="amber">{{ ocrMsg }}</p>

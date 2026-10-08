@@ -1,6 +1,6 @@
 {
   "name": "pokesleep-wxapp",
-  "version": "1.0.3.2",
+  "version": "1.0.4",
   "private": true,
   "scripts": {
     "prepare:weapp": "node scripts/prepare.mjs",

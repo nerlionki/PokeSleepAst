@@ -1,7 +1,9 @@
+import { selectSleepStyle } from './sleepSelection'
+import { foldText } from './text'
 import snorlaxRanks from '../data/snorlax-ranks.json'
 import type { IslandId, SleepType } from '../types'
 import { ENCOUNTER_BANDS, FALLBACKS, ISLANDS, islandById, POKEDEX, pokeById, SLEEP_STYLES } from './data'
-import { sleepReward } from './sleepRewards'
+import { sleepReward, sleepStyleInternalId } from './sleepRewards'
 
 type BandKey = keyof typeof ENCOUNTER_BANDS
 
@@ -225,17 +227,6 @@ export function sleepdexState(pokeId: number, discovered: readonly string[]) {
   return { stars, missing, complete: stars.length > 0 && missing.length === 0 }
 }
 
-function pickWeighted<T>(items: T[], weight: (item: T) => number, rng: () => number): T | undefined {
-  const total = items.reduce((s, i) => s + weight(i), 0)
-  if (total <= 0) return items[0]
-  let roll = rng() * total
-  for (const item of items) {
-    roll -= weight(item)
-    if (roll <= 0) return item
-  }
-  return items[items.length - 1]
-}
-
 /** 该岛 RAE 地图上的睡姿（含进化型），按评级和睡意之力过滤。 */
 export function unlockedStyles(island: IslandId, sleepType: SleepType, dp: number, rank: string, mode: 'normal' | 'map') {
   const need = rankIndex(rank)
@@ -243,7 +234,7 @@ export function unlockedStyles(island: IslandId, sleepType: SleepType, dp: numbe
     if (s.limited || s.island !== island) return false
     if (mode === 'normal' && sleepType !== '没有特征' && s.sleepType !== sleepType) return false
     if (styleUnlockIndex(island, s) > need) return false
-    return s.dpr <= Math.max(1, dp) || s.stars === 1
+    return s.dpr <= Math.max(0, dp)
   })
 }
 
@@ -262,7 +253,7 @@ export function fallbackStyle(island: IslandId, sleepType: SleepType): DrawnStyl
     : sleepType === '淺淺入夢' ? 'dozing'
       : sleepType === '安然入睡' ? 'snoozing'
         : 'slumbering'
-  const named = POKEDEX.find((poke) => poke.name === (fb?.[key] ?? '') && species.has(poke.id))
+  const named = POKEDEX.find((poke) => foldText(poke.name) === foldText(fb?.[key] ?? '') && species.has(poke.id))
   const poke = named ?? pokeById(allowed[0] ?? 0)
   return {
     pokeId: poke?.id ?? 0,
@@ -288,14 +279,16 @@ export function sleepDraw(
   const shinyRate = opts.shinyUp ? SHINY_EVENT : SHINY_BASE
   const allowRare = opts.rare ?? true
   const eventMix = !!opts.eventMix && sleepType !== '没有特征' && (opts.mode ?? mode) !== 'map'
-  const typed = (opts.pool ?? unlockedStyles(island, sleepType, dp, opts.rank ?? rank, opts.mode ?? mode)).slice()
+  const typed = (opts.pool ?? unlockedStyles(island, sleepType, Infinity, opts.rank ?? rank, opts.mode ?? mode)).map((style) => ({ ...style, order: sleepStyleInternalId(style) }))
   const open = eventMix
-    ? (opts.openPool ?? unlockedStyles(island, '没有特征', dp, opts.rank ?? rank, 'normal')).slice()
+    ? (opts.openPool ?? unlockedStyles(island, '没有特征', Infinity, opts.rank ?? rank, 'normal')).map((style) => ({ ...style, order: sleepStyleInternalId(style) }))
     : typed
   const otherSlots = eventMix ? n - Math.floor(n * EVENT_OTHER_SHARE) : 0
   const pools = [...new Set([typed, open])]
   const got: DrawnStyle[] = []
   let specialGot = false
+  let bellyGot = false
+  let remaining = Math.max(0, dp)
 
   const strip = (match: (pokeId: number, styleId: number) => boolean) => {
     for (const list of pools) {
@@ -309,18 +302,20 @@ export function sleepDraw(
 
   for (let i = 0; i < n; i++) {
     const src = i < otherSlots ? open : typed
-    const usable = specialGot ? src.filter((style) => !SPECIAL_POKEMON.has(style.pokeId)) : src
+    const usable = src.filter((style) => (!specialGot || !SPECIAL_POKEMON.has(style.pokeId))
+      && (!bellyGot || !style.styleName.includes('大肚')))
     let picked: DrawnStyle | undefined
-    const item = pickWeighted(usable, (s) => {
+    const item = selectSleepStyle(usable, remaining, i === n - 1, rng, (s) => {
       const missing = boost && !discovered.has(styleKey(s.pokeId, s.stars, s.styleId))
       return missing ? UNDISCOVERED_WEIGHT : 1
-    }, rng)
+    }, dp < 90_000)
     if (item) {
       const missing = boost && !discovered.has(styleKey(item.pokeId, item.stars, item.styleId))
       const rare = SPECIAL_POKEMON.has(item.pokeId)
       picked = { ...item, undiscovered: missing, rare }
       if (rare) specialGot = true
-      strip((pokeId, styleId) => styleId === item.id || (rare && SPECIAL_POKEMON.has(pokeId)))
+      if (item.styleName.includes('大肚')) bellyGot = true
+      remaining = Math.max(0, remaining - item.dpr)
     }
     if (!picked) picked = fallbackStyle(island, i < otherSlots ? '没有特征' : sleepType)
     picked.shiny = rng() < shinyRate
@@ -339,8 +334,8 @@ export function sleepExpect(
 ) {
   const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()
   const rank = opts.rank ?? '大师1'
-  const pool = unlockedStyles(island, sleepType, dp, rank, mode)
-  const openPool = opts.eventMix ? unlockedStyles(island, '没有特征', dp, rank, 'normal') : pool
+  const pool = unlockedStyles(island, sleepType, Infinity, rank, mode)
+  const openPool = opts.eventMix ? unlockedStyles(island, '没有特征', Infinity, rank, 'normal') : pool
   let randomState = (opts.seed ?? 0) >>> 0
   const rng = () => {
     randomState = (randomState + 0x6D2B79F5) >>> 0

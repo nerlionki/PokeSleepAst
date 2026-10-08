@@ -15,8 +15,9 @@ const mode = shallowRef<'native' | 'sdrice'>('native')
 const SOURCES = [
   {
     name: 'RaenonX',
-    note: '图鉴、树果与食材能量、食谱、主技能等级、性格修正、经验、活力，以及睡姿名称和各地图出没。',
+    note: '资料与研究来源：RaenonX Pokémon Sleep 攻略及其研究团队。引用图鉴、树果与食材能量、食谱、主技能、性格、经验、活力、睡姿与地图资料，以及 DPR 和睡姿抽选规则；食材率与技能率原始研究来自 RP Model。',
     links: [
+      { label: '来源署名说明', href: 'https://pks.raenonx.cc/zh/docs/view/site/credits' },
       { label: '资料站', href: 'https://pks.raenonx.cc/zh' },
       { label: '图鉴', href: 'https://pks.raenonx.cc/zh/pokedex' },
       { label: '树果', href: 'https://pks.raenonx.cc/zh/berry/info' },
@@ -34,7 +35,7 @@ const SOURCES = [
   },
   {
     name: 'PokeSleepCalc',
-    note: '帮忙间隔、持有上限、食材率、技能率、遇见只数，以及睡姿抽取。食材率与技能率该站注明来自 RaenonX。',
+    note: '帮忙间隔、持有上限、遇见只数与实现参考。经该站整理的食材率、技能率，原始来源为 RaenonX / RP Model。',
     links: [
       { label: '睡眠计算', href: 'https://sdrice.name/pokesleepcalc/zh/sleepcalc' },
       { label: '抽取实现', href: 'https://github.com/bennyhe/pokeSleepCalc' },
@@ -116,8 +117,7 @@ async function wipe() {
     </article>
     <article class="card"><UpdateSettings /></article>
     <article class="card stack">
-      <h3>数值引用</h3>
-      <p class="muted">计算在本机完成，不读取这些网站。下面是整理数值时对照过的页面。哎呀球菇一家普通岛睡意之力需求已按 RAE 核验；其余图鉴 DPR 按星级估算。DPR 与 RAE 的 SPO 数值单位不同。</p>
+      <h3>数据来源与致谢</h3>
       <section v-for="source in SOURCES" :key="source.name" class="source-block">
         <strong>{{ source.name }}</strong>
         <p class="muted">{{ source.note }}</p>

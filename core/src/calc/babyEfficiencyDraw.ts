@@ -1,22 +1,22 @@
-/** Ordinary-weight draws can group equivalent styles without changing their distribution. */
+import { createSleepSelector } from './sleepSelection'
 export interface EfficiencyReward { catch: number, candy: number }
 export interface EfficiencyBucket extends EfficiencyReward {
   count: number
   typed: boolean
   special: boolean
+  dpr: number
+  belly?: boolean
+  order?: number
 }
 export interface EfficiencyDrawState {
   buckets: EfficiencyBucket[]
+  power: number
   encounters: number
   otherSlots: number
   typedFallback: EfficiencyReward
   openFallback: EfficiencyReward
 }
-
-export function drawStateKey(state: EfficiencyDrawState): string {
-  return JSON.stringify(state)
-}
-
+export function drawStateKey(state: EfficiencyDrawState): string { return JSON.stringify(state) }
 export function efficiencyRandom(seed: number): () => number {
   let value = seed >>> 0
   return () => {
@@ -27,61 +27,32 @@ export function efficiencyRandom(seed: number): () => number {
     return ((x ^ (x >>> 14)) >>> 0) / 0x100000000
   }
 }
-
-/** Return integer totals to make ties independent of floating point addition. */
-export function simulateEfficiencyState(
-  state: EfficiencyDrawState,
-  iterations: number,
-  rng: () => number = efficiencyRandom(1),
-): EfficiencyReward {
+/** Same DPR selection as sleepDraw, grouping only equivalent rewards and costs. */
+export function simulateEfficiencyState(state: EfficiencyDrawState, iterations: number, rng = efficiencyRandom(1)): EfficiencyReward {
+  const result = { catch: 0, candy: 0 }
   if (state.buckets.every((bucket) => !bucket.catch && !bucket.candy)
     && !state.typedFallback.catch && !state.typedFallback.candy
-    && !state.openFallback.catch && !state.openFallback.candy) return { catch: 0, candy: 0 }
-
-  const counts = new Int32Array(state.buckets.length)
-  const initial = Int32Array.from(state.buckets, (bucket) => bucket.count)
-  const totalOpen = state.buckets.reduce((sum, bucket) => sum + bucket.count, 0)
-  const totalTyped = state.buckets.reduce((sum, bucket) => sum + (bucket.typed ? bucket.count : 0), 0)
-  let caught = 0
-  let candy = 0
+    && !state.openFallback.catch && !state.openFallback.candy) return result
+  // Precompute type, special and belly restriction combinations, outside the Monte Carlo loop.
+  const pools = Array.from({ length: 8 }, (_, mask) => state.buckets.filter((bucket) =>
+    (mask & 1 || bucket.typed) && (!(mask & 2) || !bucket.special) && (!(mask & 4) || !bucket.belly)))
+  const selectors = pools.map((pool) => createSleepSelector(pool, (bucket) => bucket.count))
   for (let run = 0; run < iterations; run++) {
-    counts.set(initial)
-    let open = totalOpen
-    let typed = totalTyped
+    let remaining = state.power
+    let special = false, belly = false
     for (let slot = 0; slot < state.encounters; slot++) {
       const anyType = slot < state.otherSlots
-      const total = anyType ? open : typed
-      if (total === 0) {
-        const fallback = anyType ? state.openFallback : state.typedFallback
-        caught += fallback.catch
-        candy += fallback.candy
-        continue
-      }
-      let roll = rng() * total
-      for (let index = 0; index < counts.length; index++) {
-        const bucket = state.buckets[index]!
-        if (!counts[index] || (!anyType && !bucket.typed)) continue
-        roll -= counts[index]!
-        if (roll > 0) continue
-        caught += bucket.catch
-        candy += bucket.candy
-        if (bucket.special) {
-          // A special draw removes every special style from both shared pools.
-          for (let other = 0; other < counts.length; other++) {
-            const candidate = state.buckets[other]!
-            if (!candidate.special) continue
-            open -= counts[other]!
-            if (candidate.typed) typed -= counts[other]!
-            counts[other] = 0
-          }
-        } else {
-          counts[index] = counts[index]! - 1
-          open--
-          if (bucket.typed) typed--
-        }
-        break
+      const select: ReturnType<typeof createSleepSelector<EfficiencyBucket>> = selectors[Number(anyType) + Number(special) * 2 + Number(belly) * 4]!
+      const item: EfficiencyBucket | undefined = select(remaining, slot === state.encounters - 1, rng, state.power < 90_000)
+      const reward = item ?? (anyType ? state.openFallback : state.typedFallback)
+      result.catch += reward.catch
+      result.candy += reward.candy
+      if (item) {
+        remaining = Math.max(0, remaining - item.dpr)
+        special ||= item.special
+        belly ||= !!item.belly
       }
     }
   }
-  return { catch: caught, candy }
+  return result
 }
