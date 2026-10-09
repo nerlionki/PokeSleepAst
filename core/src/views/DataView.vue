@@ -25,7 +25,7 @@ const tab = usePageTab(['island', 'berry', 'ing', 'recipe', 'skill', 'nature', '
       <button type="button" :class="{ on: tab === 'recipe' }" @click="tab = 'recipe'">食谱</button>
       <button type="button" :class="{ on: tab === 'skill' }" @click="tab = 'skill'">技能</button>
       <button type="button" :class="{ on: tab === 'nature' }" @click="tab = 'nature'">性格</button>
-      <button type="button" :class="{ on: tab === 'pot' }" @click="tab = 'pot'">开锅</button>
+      <button type="button" :class="{ on: tab === 'pot' }" @click="tab = 'pot'">锅容量</button>
       <button type="button" :class="{ on: tab === 'item' }" @click="tab = 'item'">道具</button>
       <button type="button" :class="{ on: tab === 'flower' }" @click="tab = 'flower'">彩庆花</button>
     </div>
