@@ -331,6 +331,7 @@ export function sleepExpect(
   n = 4000,
   mode: 'normal' | 'map' = 'normal',
   opts: DrawOpts & { seed?: number } = {},
+  onProgress?: (completed: number) => void,
 ) {
   const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()
   const rank = opts.rank ?? '大师1'
@@ -358,6 +359,8 @@ export function sleepExpect(
       if (s.rare) cur.rare += 1
       freq.set(key, cur)
     }
+    // Bound message traffic to one update per 100 simulations.
+    if ((i + 1) % 100 === 0 || i + 1 === n) onProgress?.(i + 1)
   }
   return [...freq.values()].sort((a, b) => b.count - a.count)
 }

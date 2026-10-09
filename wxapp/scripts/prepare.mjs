@@ -145,6 +145,7 @@ write(path.join(wxRoot, 'src/app.config.ts'), `export default defineAppConfig(${
 const esbuild = require('esbuild')
 fs.mkdirSync(path.join(wxRoot, 'src/workers'), { recursive: true })
 await esbuild.build({ stdin: { contents: `import { searchBabyEfficiency } from './core/src/calc/babyEfficiency';\nworker.onMessage(({options}) => { try { const result = searchBabyEfficiency(options, progress => worker.postMessage({type:'progress',progress})); worker.postMessage({type:'result',result}); } catch(error) { worker.postMessage({type:'error',message:error.message || '计算失败'}); } });`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/baby.js'), bundle: true, platform: 'neutral', format: 'iife', target: 'es2020', minify: true })
+await esbuild.build({ stdin: { contents: `import { simulateSleep } from './core/src/calc/sleepSimulation'; worker.onMessage(request => simulateSleep(request, message => worker.postMessage(message)));`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/sleep.js'), bundle: true, platform: 'neutral', format: 'iife', target: 'es2020', minify: true })
 // Read ONNX protobuf metadata directly; preparing WeChat does not require Web inference.
 function fields(data) {
   let offset = 0

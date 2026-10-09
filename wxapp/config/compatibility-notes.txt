@@ -1,0 +1,11 @@
+Minimum supported mini program release: 1.0.4
+Minimum production base library: 2.27.3
+Development tool base library: 3.14.3 (project.config.json libVersion).
+
+wx.preDownloadSubpackage requires 2.27.3. Experimental workers require 2.13.0.
+Official definitions: https://github.com/wechat-miniprogram/api-typings/blob/master/types/wx/lib.wx.api.d.ts
+
+IMPORTANT: libVersion controls the developer tools; it does not set a production minimum.
+Set the production base library minimum to 2.27.3 in WeChat MP console Settings / Basic Settings / Minimum base library version.
+The repository policy and runtime guard enforce these requirements for all background sleep simulation and baby efficiency tasks.
+No published release has been changed by this local configuration.

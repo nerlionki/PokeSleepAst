@@ -5,12 +5,16 @@ import { createHash } from 'node:crypto'
 import { runInNewContext } from 'node:vm'
 const root = path.resolve(import.meta.dirname, '..')
 const dist = path.join(root, 'dist')
+const compatibility = JSON.parse(fs.readFileSync(path.join(root, 'config/compatibility.json')))
+const packageVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).version
+if (compatibility.minimumMiniProgramVersion !== packageVersion || compatibility.minimumBaseLibraryVersion !== '2.27.3') throw Error('Invalid minimum supported versions')
 const config = JSON.parse(fs.readFileSync(path.join(dist, 'app.json')))
 const project = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json')))
 if (project.appid !== 'wxa305c12ee6676e08') throw Error('Incorrect AppID')
 if (config.pages.length !== 5) throw Error('Missing feature pages')
 const walk = d => fs.readdirSync(d, {withFileTypes:true}).flatMap(f => f.isDirectory() ? walk(path.join(d,f.name)) : [path.join(d,f.name)])
 const files = walk(dist)
+for (const worker of ['baby.js', 'sleep.js']) if (!fs.existsSync(path.join(dist, 'workers', worker))) throw Error('Missing background calculation worker: ' + worker)
 const require = createRequire(import.meta.url)
 const compressedJson = require('../config/compressed-json.cjs')
 for (const file of walk(path.resolve(root, '../core/src/data')).filter(file => file.endsWith('.json'))) {
