@@ -8,7 +8,7 @@ describe('WeChat worker lifecycle', () => {
   it('does not start a worker when cancelled during subpackage loading', async () => {
     let loaded = () => {}
     const createWorker = vi.fn()
-    vi.stubGlobal('wx', { preDownloadSubpackage: ({ success }: { success: () => void }) => { loaded = success }, createWorker })
+    vi.stubGlobal('wx', { getAppBaseInfo: () => ({ SDKVersion: '2.27.3' }), preDownloadSubpackage: ({ success }: { success: () => void }) => { loaded = success }, createWorker })
     const scope = effectScope()
     const state = scope.run(() => useBabyEfficiency(ref<BabyEfficiencyOptions>({ ...DEFAULT_BABY_EFFICIENCY })))!
     const pending = state.calculate()
@@ -22,7 +22,7 @@ describe('WeChat worker lifecycle', () => {
   it('terminates a running worker and ignores its late messages', async () => {
     let message: (event: unknown) => void = () => {}
     const worker = { onMessage: (callback: typeof message) => { message = callback }, onProcessKilled: vi.fn(), postMessage: vi.fn(), terminate: vi.fn() }
-    vi.stubGlobal('wx', { preDownloadSubpackage: ({ success }: { success: () => void }) => success(), createWorker: () => worker })
+    vi.stubGlobal('wx', { getAppBaseInfo: () => ({ SDKVersion: '2.27.3' }), preDownloadSubpackage: ({ success }: { success: () => void }) => success(), createWorker: () => worker })
     const scope = effectScope()
     const state = scope.run(() => useBabyEfficiency(ref<BabyEfficiencyOptions>({ ...DEFAULT_BABY_EFFICIENCY })))!
     await state.calculate()

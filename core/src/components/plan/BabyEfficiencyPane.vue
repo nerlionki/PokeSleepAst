@@ -64,7 +64,7 @@ watch(busy, async (value, _previous, onCleanup) => {
           <div class="loading-spinner" aria-hidden="true" />
           <h3 id="baby-loading-title">正在计算宝宝效率</h3>
           <p>{{ progress.island || '准备候选方案' }} · {{ percent }}%</p>
-          <progress class="loading-progress" :value="percent" max="100" aria-label="计算进度" />
+          <div class="loading-progress" role="progressbar" aria-label="计算进度" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100"><div :style="{ width: percent + '%' }" style="height: 100%; background: var(--sage)" /></div>
           <p class="muted">已模拟 {{ progress.evaluatedStates.toLocaleString('zh-CN') }} 个抽取状态</p>
           <button ref="cancelButton" class="btn ghost" type="button" @click="cancel">取消计算</button>
         </section>
@@ -77,7 +77,7 @@ watch(busy, async (value, _previous, onCleanup) => {
 .efficiency-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .efficiency-loading { z-index: 55; place-items: center; padding: 20px; backdrop-filter: blur(4px); }
 .loading-card { width: min(100%, 380px); text-align: center; justify-items: center; box-shadow: var(--shadow); }
-.loading-progress { width: 100%; height: 10px; accent-color: var(--sage); }
+.loading-progress { width: 100%; height: 10px; overflow: hidden; border-radius: 5px; background: var(--line); }
 .loading-spinner { width: 38px; height: 38px; border: 3px solid var(--line); border-top-color: var(--sage); border-radius: 50%; animation: efficiency-spin 1s linear infinite; }
 @keyframes efficiency-spin { to { transform: rotate(360deg); } }
 @media (max-width: 400px) { .efficiency-fields { grid-template-columns: 1fr; } }

@@ -62,6 +62,22 @@ describe('WeChat form value contracts', () => {
     expect(events[1]).toBe(true); toggle.app.unmount()
   })
 
+  it('locks native sliders and time pickers while busy, then restores editing', async () => {
+    for (const [type, tag] of [['range', 'slider'], ['time', 'picker']]) {
+      const disabled = ref(true), events: unknown[] = []
+      const instance = mount(defineComponent({ setup: () => () => h(WxInput, { type, disabled: disabled.value, modelValue: 20, 'onUpdate:modelValue': (value: unknown) => events.push(value) }) }))
+      const control = instance.find(tag!)
+      expect(control.props.disabled).toBe(true)
+      ;(control.props.onChange as (e: unknown) => void)({ detail: { value: 30 } })
+      expect(events).toEqual([])
+      disabled.value = false; await nextTick()
+      expect(control.props.disabled).toBe(false)
+      ;(control.props.onChange as (e: unknown) => void)({ detail: { value: 30 } })
+      expect(events).toEqual([30])
+      instance.app.unmount()
+    }
+  })
+
   it('scales fractional area bonuses to the native integer slider', () => {
     const events: unknown[] = []
     const instance = mount(defineComponent({ setup: () => () => h(WxInput, { type: 'range', modelValue: 0.2, min: 0, max: 0.85, step: 0.01, 'onUpdate:modelValue': (value: unknown) => events.push(value) }) }))

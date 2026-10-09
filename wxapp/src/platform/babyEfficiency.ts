@@ -1,3 +1,4 @@
+import { requireWorkerSupport } from './compatibility'
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { validateBabyEfficiency, type BabyEfficiencyOptions, type BabyEfficiencyResult, type EfficiencyProgress } from '../../../core/src/calc/babyEfficiency'
 import type { BabyEfficiencyMessage } from '../../../core/src/calc/babyEfficiencyMessages'
@@ -18,6 +19,7 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
     const active = ++generation
     busy.value = true
     try {
+      requireWorkerSupport()
       await new Promise<void>((resolve, reject) => wx.preDownloadSubpackage({ packageType: 'workers', success: () => resolve(), fail: reject }))
       if (active !== generation) return
       const current = wx.createWorker('workers/baby.js', { useExperimentalWorker: true })
@@ -31,7 +33,7 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
       })
       current.onProcessKilled(() => { if (worker === current) { error.value = '后台计算被微信终止，请重试'; stop() } })
       current.postMessage({ options: { ...options.value } })
-    } catch { if (active === generation) { error.value = '无法启动后台计算，请在真机或新版微信中重试'; stop() } }
+    } catch (cause) { if (active === generation) { error.value = cause instanceof Error ? cause.message : '无法启动后台计算，请在真机或新版微信中重试'; stop() } }
   }
   onScopeDispose(stop)
   return { busy, error, notice, result, progress, dirty, calculate, cancel }
