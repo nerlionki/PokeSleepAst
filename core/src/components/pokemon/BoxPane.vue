@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, shallowRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import BoxOverview from './BoxOverview.vue'
 import { FILTER_CATALOG, boxLabel, boxMatches, EMPTY_BOX_QUERY, filterCount, type BoxQuery } from '../../calc/boxFilter'
 import { defaultTune } from '../../calc/member'
 import { importScreenshotSelection } from '#platform/screenshots'
@@ -20,6 +22,17 @@ import { normalizeOcrMissing } from '../../calc/ocrCompletion'
 
 const TYPES = SPECIALTY_FILTERS
 
+const route = useRoute()
+const router = useRouter()
+const overviewOpen = computed(() => route.query.boxOverview === '1')
+function openOverview() { void router.push({ path: route.path, query: { ...route.query, tab: 'box', boxOverview: '1' } }) }
+function closeOverview() {
+  const query = { ...route.query }
+  delete query.boxOverview
+  if ('replace' in router && typeof router.replace === 'function') void router.replace({ path: route.path, query })
+  else void router.push({ path: route.path, query })
+}
+function completeFromOverview(uids: string[]) { closeOverview(); completionQueue.value = uids }
 const box = useBoxStore()
 const picking = shallowRef(false)
 const ocrBusy = shallowRef(false)
@@ -133,8 +146,10 @@ const activeFilters = computed(() => filterCount(query))
 </script>
 
 <template>
-  <div class="stack">
+  <BoxOverview v-if="overviewOpen" @back="closeOverview" @complete="completeFromOverview" />
+  <div v-else class="stack">
     <div class="row">
+      <button class="btn" type="button" @click="openOverview">Box 概览</button>
       <button class="btn" type="button" @click="picking = true">新增宝可梦</button>
       <button class="btn" type="button" :disabled="ocrBusy" @click="pickShots">导入</button>
       <button v-if="box.pokemon.length" class="btn" type="button" :class="{ on: activeFilters }" @click="filtering = true">{{ activeFilters ? `筛选 ${activeFilters}` : '筛选' }}</button>
