@@ -7,6 +7,8 @@ export interface EfficiencyBucket extends EfficiencyReward {
   dpr: number
   belly?: boolean
   order?: number
+  unlockRank?: number
+  weight?: number
 }
 export interface EfficiencyDrawState {
   buckets: EfficiencyBucket[]
@@ -36,14 +38,14 @@ export function simulateEfficiencyState(state: EfficiencyDrawState, iterations: 
   // Precompute type, special and belly restriction combinations, outside the Monte Carlo loop.
   const pools = Array.from({ length: 8 }, (_, mask) => state.buckets.filter((bucket) =>
     (mask & 1 || bucket.typed) && (!(mask & 2) || !bucket.special) && (!(mask & 4) || !bucket.belly)))
-  const selectors = pools.map((pool) => createSleepSelector(pool, (bucket) => bucket.count))
+  const selectors = pools.map((pool) => createSleepSelector(pool, (bucket) => bucket.count * (bucket.weight ?? 1)))
   for (let run = 0; run < iterations; run++) {
     let remaining = state.power
     let special = false, belly = false
     for (let slot = 0; slot < state.encounters; slot++) {
       const anyType = slot < state.otherSlots
       const select: ReturnType<typeof createSleepSelector<EfficiencyBucket>> = selectors[Number(anyType) + Number(special) * 2 + Number(belly) * 4]!
-      const item: EfficiencyBucket | undefined = select(remaining, slot === state.encounters - 1, rng, state.power < 90_000)
+      const item: EfficiencyBucket | undefined = select(remaining, slot === state.encounters - 1, rng)
       const reward = item ?? (anyType ? state.openFallback : state.typedFallback)
       result.catch += reward.catch
       result.candy += reward.candy

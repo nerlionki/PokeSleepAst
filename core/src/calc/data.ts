@@ -57,6 +57,8 @@ export interface SleepStyleRow {
   dpr: number
   dprSource?: string
   dprSettled?: boolean
+  /** User-approved EX2 fallback or an explicitly unverified legacy estimate. */
+  dprEstimated?: boolean
   /** 同一星级有多条睡姿时的睡姿 id。百变怪四星、五星特殊睡姿用它拆开。 */
   styleId?: number
   /** 五星活动限定睡姿。每张地图都展示，不进入平时抽选。 */

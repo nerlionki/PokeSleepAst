@@ -22,3 +22,5 @@ app/release/
 .env.development.local
 .env.test.local
 .env.production.local
+
+!/抽选逻辑前后差异以及示例.md

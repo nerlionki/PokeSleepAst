@@ -12,6 +12,8 @@ npm ci
 npm run build:weapp
 ```
 
+编译使用 Node 24（与 CI 一致）。使用 nvm 时先执行 nvm use 24.14.1（未安装时执行 nvm install 24.14.1），再通过 node -v 确认生效；当前 Tailwind／PostCSS 依赖不兼容 Node 20.17。
+
 开发监听：`npm run dev:weapp`。修改 core 中的界面源文件后重新执行准备/编译命令；生成目录不手动维护。
 
 类型检查：`npm run typecheck`（先执行 `npm run prepare:weapp`）。共享逻辑与 Android 回归：在 `app` 目录执行 `npm ci`、`npm test -- --maxWorkers=1`。

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
+import { useSettingsStore } from '../../stores/settings'
 import { computed, nextTick, useTemplateRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { BABY_POKEMON_IDS } from '../../calc/babyEfficiency'
@@ -12,9 +14,15 @@ import BabyEfficiencyResult from './BabyEfficiencyResult.vue'
 
 const { plan } = storeToRefs(usePlanStore())
 const options = computed(() => plan.value.babyEfficiency)
+const { settings } = storeToRefs(useSettingsStore())
+const otherTypes = computed({
+  get: () => normalizeEventMix(options.value.eventMix) !== 'off',
+  set: (value: boolean) => { options.value.eventMix = value },
+})
+const simulationOptions = computed(() => ({ ...options.value, eventMix: otherTypes.value ? settings.value.sleepEventMix : 'off' as const }))
 const family = computed(() => POKEDEX.filter((poke) => familyOf(poke.id) === familyOf(options.value.pokeId)).map((poke) => poke.name).join('、'))
 const targetName = computed(() => pokeById(options.value.pokeId)?.name ?? '')
-const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(options)
+const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions)
 const resultName = computed(() => result.value ? pokeById(result.value.options.pokeId)?.name : '')
 const percent = computed(() => Math.min(100, Math.floor(progress.value.percent)))
 const cancelButton = useTemplateRef<HTMLButtonElement>('cancelButton')
@@ -42,7 +50,7 @@ watch(busy, async (value, _previous, onCleanup) => {
       <div class="field"><label for="baby-event">活动睡意之力倍率</label>
         <select id="baby-event" v-model.number="options.eventMult"><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select>
       </div>
-      <label class="row"><input v-model="options.eventMix" type="checkbox"> 活动期间跨睡眠类型出现</label>
+      <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox"> 活动期间遇到一些其他类型宝可梦</label>
       <div class="efficiency-fields">
         <div class="field"><label for="baby-iterations">计算次数</label><input id="baby-iterations" v-model.number="options.iterations" type="number" min="100" max="100000" step="100" inputmode="numeric"></div>
         <div class="field"><label for="baby-precision">计算精度</label><select id="baby-precision" v-model="options.precision"><option value="low">低 · 快速搜索</option><option value="medium">中 · 细化搜索</option><option value="high">高 · 密集搜索</option></select></div>
@@ -54,7 +62,7 @@ watch(busy, async (value, _previous, onCleanup) => {
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
     <template v-if="result">
       <p v-if="dirty" class="amber">参数已修改，请重新计算更新结果。</p>
-      <p class="muted">{{ resultName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }}{{ result.options.eventMix ? ' · 跨类型活动' : '' }}。预期收益只计普通睡眠研究；列出本次搜索中收益最高的方案。</p>
+      <p class="muted">{{ resultName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }}。预期收益只计普通睡眠研究；列出本次搜索中收益最高的方案。</p>
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-catch`" title="捕捉只数最多" unit="只" :optimum="result.catch" :precision="result.options.precision" />
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-candy`" title="家族糖果最多" unit="颗" :optimum="result.candy" :precision="result.options.precision" />
     </template>

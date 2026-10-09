@@ -24,10 +24,10 @@ const fixture: EfficiencyIsland = {
 describe('baby efficiency draw distribution', () => {
   it('counts all target faces and family rewards using ordinary weights', () => {
     const totals = simulateEfficiencyState({
-      buckets: [{ count: 2, dpr: 0, typed: true, special: false, catch: 1, candy: 4 }, { count: 10, dpr: 0, typed: true, special: false, catch: 0, candy: 0 }],
+      buckets: [{ count: 2, dpr: 0, order: 1, typed: true, special: false, catch: 1, candy: 4 }, { count: 10, dpr: 0, order: 2, typed: true, special: false, catch: 0, candy: 0 }],
       power: 100_000, encounters: 3, otherSlots: 0, typedFallback: zero, openFallback: zero,
     }, 20000)
-    expect(totals.catch / 20000).toBeCloseTo(0.5, 1)
+    expect(totals.catch / 20000).toBeCloseTo(1 + 2 * (2 / 12), 1)
     expect(totals.candy).toBe(totals.catch * 4)
   })
 
@@ -99,7 +99,7 @@ describe('energy intervals and exhaustive sleep allocation', () => {
   })
 
   it('matches a direct integer-energy scan and returns all optimal energy coverage', () => {
-    const options = { ...DEFAULT_BABY_EFFICIENCY, precision: 'high' as const, iterations: 100 }
+    const options = { ...DEFAULT_BABY_EFFICIENCY, eventMix: 'off' as const, precision: 'high' as const, iterations: 100 }
     const result = searchBabyEfficiency(options, () => {}, [fixture])
     const directAt = (strength: number) => {
       const sessions = new Map<number, EfficiencyReward>()
@@ -137,7 +137,7 @@ describe('energy intervals and exhaustive sleep allocation', () => {
 
   it('represents a permanent optimal plateau without an artificial upper bound', () => {
     const fixed: EfficiencyIsland = { ...fixture, bands: [{ count: 3, min: 0 }], styles: [fixture.styles[0]!] }
-    const result = searchBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, precision: 'high', iterations: 100 }, () => {}, [fixed])
+    const result = searchBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, eventMix: 'off' as const, precision: 'high', iterations: 100 }, () => {}, [fixed])
     expect(result.catch.value).toBe(6)
     expect(result.catch.intervals.some((interval) => interval.max === null && interval.sleeps.length === 2)).toBe(true)
   })
@@ -149,7 +149,7 @@ describe('energy intervals and exhaustive sleep allocation', () => {
       ...Array.from({ length: 50 }, () => ({ sleepType: '深深入眠' as const, special: false, catch: 0, candy: 0, unlockStrength: 1, dpr: 112 })),
       ...Array.from({ length: 100 }, () => ({ sleepType: '安然入睡' as const, special: false, catch: 0, candy: 0, unlockStrength: 1, dpr: 0 })),
     ] }
-    const result = searchBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, precision: 'high', iterations: 100 }, () => {}, [mixedTypes])
+    const result = searchBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, eventMix: 'off' as const, precision: 'high', iterations: 100 }, () => {}, [mixedTypes])
     expect(result.candy.value).toBe(72)
     expect(result.candy.intervals.some((interval) => interval.sleeps.length === 2
       && interval.sleeps.every((sleep) => sleep.sleepTypes.includes('深深入眠')))).toBe(true)
@@ -159,7 +159,7 @@ describe('energy intervals and exhaustive sleep allocation', () => {
     const fixed: EfficiencyIsland = { ...fixture, bands: [{ count: 3, min: 0 }], styles: [fixture.styles[0]!,
       ...Array.from({ length: 12 }, (_, index) => ({ sleepType: '安然入睡' as const, special: false, catch: 0, candy: 0, unlockStrength: index + 2, dpr: 0 })),
     ] }
-    const result = searchBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, precision: 'low', iterations: 100 }, () => {}, [fixed])
+    const result = searchBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, eventMix: 'off' as const, precision: 'low', iterations: 100 }, () => {}, [fixed])
     expect(result.catch.intervals.some((interval) => interval.max === null)).toBe(true)
     expect(result.catch.value).toBe(6)
     expect(result.catch.intervals.every((interval) => interval.max === null || interval.max >= interval.min)).toBe(true)

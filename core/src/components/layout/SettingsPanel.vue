@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MIX_OPTIONS } from '../../calc/sleepRules'
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { BERRIES, ISLANDS, RECIPES } from '../../calc/data'
@@ -169,6 +170,13 @@ function setRecipeLevel(name: string, level: number) {
           <option :value="4">满月 4</option>
         </select>
       </div>
+      <div class="field">
+        <label for="sleep-event-mix">活动跨类型出现数量（睡姿模拟／宝宝效率）</label>
+        <select id="sleep-event-mix" v-model="settings.sleepEventMix">
+          <option v-for="option in MIX_OPTIONS.filter(option => option.value !== 'off')" :key="option.value" :value="option.value">{{ option.label }}</option>
+        </select>
+      </div>
+      <p class="muted">开启页面中的活动开关后生效。</p>
       <div class="field">
         <label>分析周期</label>
         <select v-model="settings.period">

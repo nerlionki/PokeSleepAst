@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { applySleepDpr } from './sleep-dpr-data.mjs'
 
 const root = path.resolve(import.meta.dirname, '../..')
 const mdPath = path.join(root, 'Sleep游戏资料.md')
@@ -450,6 +451,7 @@ const mainSkills = {
 const meta = {
   version: '2026-10-03',
   source: 'Sleep游戏资料.md',
+  sleepDprSource: 'RAE 各地图参考值；EX2 缺项按 EX1 ×1.0351 估算；5 条普通睡姿保留未核验旧估算',
   pokedex: pokedex.length,
   recipes: recipes.length,
   islands: islands.length,
@@ -459,6 +461,10 @@ const meta = {
 function write(name, data) {
   fs.writeFileSync(path.join(outDir, name), `${JSON.stringify(data, null, 2)}\n`)
 }
+
+const dprSnapshot = JSON.parse(fs.readFileSync(path.join(outDir, 'sleep-dpr-source.json'), 'utf8'))
+const calibratedSleepStyles = applySleepDpr(sleepStyles, dprSnapshot)
+meta.version = dprSnapshot.verifiedAt
 
 write('berries.json', berries)
 write('ingredients.json', ingredients)
@@ -472,7 +478,7 @@ write('candy-drops.json', candyDrops)
 write('meal-recovery.json', mealRecovery)
 write('pot-tiers.json', potTiers)
 write('ranks.json', rankThresholds)
-write('sleep-styles.json', sleepStyles)
+write('sleep-styles.json', calibratedSleepStyles)
 write('natures.json', natures)
 write('subskills.json', subskills)
 write('main-skills.json', mainSkills)

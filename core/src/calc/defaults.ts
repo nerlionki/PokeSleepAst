@@ -23,6 +23,7 @@ export const defaultSettings = (): Settings => ({
   potSize: 15,
   period: 'day',
   eventMult: 1,
+  sleepEventMix: 'some',
   recipeLevels: {},
   whistleHelps: 0,
   shinyUp: false,
@@ -67,6 +68,7 @@ export function mergeSettings(saved: (Partial<Settings> & { recipeLevel?: number
   const merged: Settings = {
     ...base,
     ...rest,
+    sleepEventMix: saved.sleepEventMix === 'all' ? 'all' : 'some',
     berries: saved.berries?.length ? saved.berries : base.berries,
     recipeLevels: { ...(saved.recipeLevels ?? {}) },
   }

@@ -1,8 +1,10 @@
+import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix } from './sleepRules'
+import { compareSleepPriority } from './sleepSelection'
 import type { IslandId, SleepType } from '../types'
 import { familyOf } from './candyPlan'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES, type SleepStyleRow } from './data'
 import { evolutionStages } from './evolution'
-import { EVENT_BONUSES, EVENT_OTHER_SHARE, fallbackStyle, RANK_ORDER, rankStrength, SPECIAL_POKEMON, styleUnlockIndex } from './sleep'
+import { EVENT_BONUSES, fallbackStyle, RANK_ORDER, rankStrength, SPECIAL_POKEMON, styleUnlockIndex } from './sleep'
 import { sleepReward, sleepStyleInternalId } from './sleepRewards'
 import { drawStateKey, efficiencyRandom, simulateEfficiencyState, type EfficiencyBucket, type EfficiencyDrawState, type EfficiencyReward } from './babyEfficiencyDraw'
 
@@ -10,7 +12,7 @@ export type EfficiencyPrecision = 'low' | 'medium' | 'high'
 export interface BabyEfficiencyOptions {
   pokeId: number
   eventMult: number
-  eventMix: boolean
+  eventMix: EventMix | boolean
   iterations: number
   precision: EfficiencyPrecision
 }
@@ -27,6 +29,8 @@ export interface EfficiencyStyle extends EfficiencyReward {
   dpr: number
   belly?: boolean
   order?: number
+  unlockRank?: number
+  pokeId?: number
 }
 export interface EfficiencyIsland {
   id: IslandId
@@ -56,6 +60,7 @@ export function validateBabyEfficiency(options: BabyEfficiencyOptions): string |
   if (!BABY_POKEMON_IDS.includes(options.pokeId)) return '请选择进化链的一阶段宝可梦'
   if (!Number.isInteger(options.iterations) || options.iterations < 100 || options.iterations > 100000) return '计算次数需为 100–100000 的整数'
   if (!EVENT_BONUSES.some((bonus) => bonus.mult === options.eventMult)) return '请选择有效的活动倍率'
+  if (![false, true, 'off', 'some', 'all'].includes(options.eventMix)) return '请选择有效的跨睡眠类型模式'
   if (!['low', 'medium', 'high'].includes(options.precision)) return '请选择有效的搜索精度'
   return null
 }
@@ -77,6 +82,8 @@ export function efficiencyIslands(pokeId: number): EfficiencyIsland[] {
       fallbacks: Object.fromEntries(EFFICIENCY_SLEEP_TYPES.map((type) => [type, rewardOf(fallbackStyle(island.id as IslandId, type))])) as Record<SleepType, EfficiencyReward>,
       styles: styles.map((style: SleepStyleRow) => ({
         ...rewardOf(style),
+        pokeId: style.pokeId,
+        unlockRank: styleUnlockIndex(island.id as IslandId, style),
         sleepType: style.sleepType as SleepType,
         special: SPECIAL_POKEMON.has(style.pokeId),
         unlockStrength: rankStrength(island.id as IslandId, RANK_ORDER[styleUnlockIndex(island.id as IslandId, style)]!),
@@ -98,7 +105,7 @@ export function strengthForPower(power: number, score: number, mult: number): nu
 }
 
 interface CurveState { min: number, encounters: number, groups: Group[] }
-interface Group extends EfficiencyReward { sleepType: SleepType, special: boolean, count: number, dpr: number, belly?: boolean, order?: number }
+interface Group extends EfficiencyReward { sleepType: SleepType, special: boolean, count: number, dpr: number, belly?: boolean, order?: number, unlockRank?: number, weight?: number }
 
 export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: number): CurveState[] {
   const unlocks = island.styles.map((style) => ({ style, at: Math.max(1, style.unlockStrength) }))
@@ -107,38 +114,39 @@ export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: n
   const maxCount = Math.max(3, ...island.bands.map((band) => band.count))
   const costs = [...new Set(island.styles.map((style) => style.dpr))]
   const budgetPoints = costs.flatMap((cost) => Array.from({ length: maxCount }, (_, i) => strengthForPower(cost * (i + 1), score, mult)))
-  const starts = [...new Set([1, strengthForPower(90_000, score, mult), ...budgetPoints, ...unlocks.map((row) => row.at), ...bands.map((row) => row.at)])].sort((a, b) => a - b)
+  const starts = [...new Set([1, ...budgetPoints, ...unlocks.map((row) => row.at), ...bands.map((row) => row.at)])].sort((a, b) => a - b)
   const groups = new Map<string, Group>()
   let unlocked = 0
   return starts.map((min) => {
     while (unlocked < unlocks.length && unlocks[unlocked]!.at <= min) {
       const style = unlocks[unlocked++]!.style
-      const key = `${style.sleepType}|${Number(style.special)}|${style.catch}|${style.candy}|${style.dpr}|${style.belly}`
+      const weight = pokemonSleepWeight(style.pokeId ?? 0, mult)
+      const key = `${weight}|${style.sleepType}|${Number(style.special)}|${style.catch}|${style.candy}|${style.dpr}|${style.belly}`
       const group = groups.get(key)
-      if (group) { group.count++; group.order = Math.min(group.order ?? Infinity, style.order ?? Infinity) }
-      else groups.set(key, { sleepType: style.sleepType, special: style.special, catch: style.catch, candy: style.candy, dpr: style.dpr, belly: style.belly, order: style.order, count: 1 })
+      if (group) { group.count++; if (compareSleepPriority(style, group) < 0) { group.order = style.order; group.unlockRank = style.unlockRank } }
+      else groups.set(key, { sleepType: style.sleepType, special: style.special, catch: style.catch, candy: style.candy, dpr: style.dpr, belly: style.belly, order: style.order, unlockRank: style.unlockRank, weight, count: 1 })
     }
     const encounters = bands.reduce((n, band) => band.at <= min ? Math.max(n, band.count) : n, 3)
     return { min, encounters, groups: [...groups.values()].map((group) => ({ ...group })) }
   })
 }
 
-export function efficiencyDrawState(island: EfficiencyIsland, state: CurveState, type: SleepType, eventMix: boolean, power: number): EfficiencyDrawState {
-  const mixed = eventMix && type !== '没有特征'
+export function efficiencyDrawState(island: EfficiencyIsland, state: CurveState, type: SleepType, eventMix: EventMix | boolean, power: number): EfficiencyDrawState {
+  const mixed = normalizeEventMix(eventMix) !== 'off' && type !== '没有特征'
   const buckets = new Map<string, EfficiencyBucket>()
   for (const group of state.groups) {
     const typed = type === '没有特征' || type === group.sleepType
     if (!mixed && !typed) continue
-    const key = `${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}|${group.dpr}|${group.belly}`
+    const key = `${group.weight}|${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}|${group.dpr}|${group.belly}`
     const existing = buckets.get(key)
-    if (existing) { existing.count += group.count; existing.order = Math.min(existing.order ?? Infinity, group.order ?? Infinity) }
-    else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, dpr: group.dpr, belly: group.belly, order: group.order, count: group.count })
+    if (existing) { existing.count += group.count; if (compareSleepPriority(group, existing) < 0) { existing.order = group.order; existing.unlockRank = group.unlockRank } }
+    else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, dpr: group.dpr, belly: group.belly, order: group.order, unlockRank: group.unlockRank, weight: group.weight, count: group.count })
   }
   return {
     buckets: [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, bucket]) => bucket),
-    power: Math.min(power, Math.max(90_000, ...state.groups.map((group) => group.dpr * state.encounters))),
+    power: Math.min(power, Math.max(0, ...state.groups.map((group) => group.dpr * state.encounters))),
     encounters: state.encounters,
-    otherSlots: mixed ? state.encounters - Math.floor(state.encounters * EVENT_OTHER_SHARE) : 0,
+    otherSlots: mixed ? openSleepSlots(state.encounters, eventMix) : 0,
     typedFallback: island.fallbacks[type],
     openFallback: island.fallbacks[mixed ? '没有特征' : type],
   }

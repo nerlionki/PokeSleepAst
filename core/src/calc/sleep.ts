@@ -1,8 +1,9 @@
+import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix, type PokemonUps } from './sleepRules'
 import { selectSleepStyle } from './sleepSelection'
 import { foldText } from './text'
 import snorlaxRanks from '../data/snorlax-ranks.json'
 import type { IslandId, SleepType } from '../types'
-import { ENCOUNTER_BANDS, FALLBACKS, ISLANDS, islandById, POKEDEX, pokeById, SLEEP_STYLES } from './data'
+import { ENCOUNTER_BANDS, FALLBACKS, ISLANDS, islandById, POKEDEX, pokeById, SLEEP_STYLES, type SleepStyleRow } from './data'
 import { sleepReward, sleepStyleInternalId } from './sleepRewards'
 
 type BandKey = keyof typeof ENCOUNTER_BANDS
@@ -136,13 +137,21 @@ export function maxEncounters(island: IslandId, score: number, strength: number,
   return { single, best, next, extra }
 }
 
-/** pokeSleepCalc actRandomNum：前 (1 − 0.3) 的只数从全部睡眠类型里抽，其余仍按所选类型。 */
-export const EVENT_OTHER_SHARE = 0.3
+/** Wiki 少量跨类型：末尾 floor(n × 0.4) 只固定同类型。 */
+export const EVENT_OTHER_SHARE = 0.4
 
 /** 一场睡眠里最多一只。平日必须睡姿类型与所选类型一致。 */
 export const SPECIAL_POKEMON = new Set([243, 244, 245, 488, 380, 381, 150])
 
+type PreparedStyle = SleepStyleRow & { order: number, unlockRank: number }
+function prepareStyles(island: IslandId, pool: SleepStyleRow[]): PreparedStyle[] {
+  return pool.map(style => ({ ...style, order: sleepStyleInternalId(style), unlockRank: styleUnlockIndex(island, style) }))
+}
+
 export interface DrawOpts {
+  /** Reused immutable metadata during a simulation batch. */
+  preparedPool?: PreparedStyle[]
+  preparedOpenPool?: PreparedStyle[]
   rank?: string
   mode?: 'normal' | 'map'
   discovered?: string[]
@@ -150,7 +159,9 @@ export interface DrawOpts {
   rare?: boolean
   shinyUp?: boolean
   /** 活动期间，一部分遭遇可以是其他睡眠类型。 */
-  eventMix?: boolean
+  eventMix?: EventMix | boolean
+  eventMult?: number
+  pokemonUps?: PokemonUps
   rng?: () => number
   pool?: ReturnType<typeof unlockedStyles>
   openPool?: ReturnType<typeof unlockedStyles>
@@ -278,12 +289,12 @@ export function sleepDraw(
   const boost = opts.undiscoveredBoost ?? true
   const shinyRate = opts.shinyUp ? SHINY_EVENT : SHINY_BASE
   const allowRare = opts.rare ?? true
-  const eventMix = !!opts.eventMix && sleepType !== '没有特征' && (opts.mode ?? mode) !== 'map'
-  const typed = (opts.pool ?? unlockedStyles(island, sleepType, Infinity, opts.rank ?? rank, opts.mode ?? mode)).map((style) => ({ ...style, order: sleepStyleInternalId(style) }))
+  const eventMix = normalizeEventMix(opts.eventMix) !== 'off' && sleepType !== '没有特征' && (opts.mode ?? mode) !== 'map'
+  const typed = [...(opts.preparedPool ?? prepareStyles(island, opts.pool ?? unlockedStyles(island, sleepType, Infinity, opts.rank ?? rank, opts.mode ?? mode)))]
   const open = eventMix
-    ? (opts.openPool ?? unlockedStyles(island, '没有特征', Infinity, opts.rank ?? rank, 'normal')).map((style) => ({ ...style, order: sleepStyleInternalId(style) }))
+    ? [...(opts.preparedOpenPool ?? prepareStyles(island, opts.openPool ?? unlockedStyles(island, '没有特征', Infinity, opts.rank ?? rank, 'normal')))]
     : typed
-  const otherSlots = eventMix ? n - Math.floor(n * EVENT_OTHER_SHARE) : 0
+  const otherSlots = eventMix ? openSleepSlots(n, opts.eventMix) : 0
   const pools = [...new Set([typed, open])]
   const got: DrawnStyle[] = []
   let specialGot = false
@@ -307,8 +318,8 @@ export function sleepDraw(
     let picked: DrawnStyle | undefined
     const item = selectSleepStyle(usable, remaining, i === n - 1, rng, (s) => {
       const missing = boost && !discovered.has(styleKey(s.pokeId, s.stars, s.styleId))
-      return missing ? UNDISCOVERED_WEIGHT : 1
-    }, dp < 90_000)
+      return (missing ? UNDISCOVERED_WEIGHT : 1) * pokemonSleepWeight(s.pokeId, opts.eventMult, opts.pokemonUps)
+    })
     if (item) {
       const missing = boost && !discovered.has(styleKey(item.pokeId, item.stars, item.styleId))
       const rare = SPECIAL_POKEMON.has(item.pokeId)
@@ -336,7 +347,9 @@ export function sleepExpect(
   const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()
   const rank = opts.rank ?? '大师1'
   const pool = unlockedStyles(island, sleepType, Infinity, rank, mode)
-  const openPool = opts.eventMix ? unlockedStyles(island, '没有特征', Infinity, rank, 'normal') : pool
+  const openPool = normalizeEventMix(opts.eventMix) !== 'off' ? unlockedStyles(island, '没有特征', Infinity, rank, 'normal') : pool
+  const preparedPool = prepareStyles(island, pool)
+  const preparedOpenPool = openPool === pool ? preparedPool : prepareStyles(island, openPool)
   let randomState = (opts.seed ?? 0) >>> 0
   const rng = () => {
     randomState = (randomState + 0x6D2B79F5) >>> 0
@@ -346,7 +359,7 @@ export function sleepExpect(
     return ((x ^ (x >>> 14)) >>> 0) / 0x100000000
   }
   for (let i = 0; i < n; i++) {
-    const draw = sleepDraw(island, sleepType, dp, rank, mode, rng, { ...opts, pool, openPool })
+    const draw = sleepDraw(island, sleepType, dp, rank, mode, rng, { ...opts, pool, openPool, preparedPool, preparedOpenPool })
     for (const s of draw) {
       const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
       const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }

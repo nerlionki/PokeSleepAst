@@ -458,9 +458,10 @@ describe('sleep draw realism', () => {
   })
 
   it('draws Raikou on greenex only when the sleep type matches', () => {
-    const dozing = sleepExpect('greenex', '淺淺入夢', 9_999_999, 200, 'normal', { rare: true, seed: 8, undiscoveredBoost: false })
+    const power = Math.max(...SLEEP_STYLES.filter(s => s.island === 'greenex' && s.pokeId === 243).map(s => s.dpr))
+    const dozing = sleepExpect('greenex', '淺淺入夢', power, 200, 'normal', { rare: true, seed: 8, undiscoveredBoost: false })
     expect(dozing.some((row) => row.pokeId === 243)).toBe(false)
-    const snooze = sleepExpect('greenex', '安然入睡', 9_999_999, 600, 'normal', { rare: true, seed: 9, undiscoveredBoost: false })
+    const snooze = sleepExpect('greenex', '安然入睡', power, 600, 'normal', { rare: true, seed: 9, undiscoveredBoost: false })
     expect(snooze.some((row) => row.rare && row.name === '雷公')).toBe(true)
   })
 })
