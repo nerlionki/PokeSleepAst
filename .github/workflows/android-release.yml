@@ -54,7 +54,7 @@ jobs:
       - name: Test back navigation and OCR import
         run: npm run test:mobile
       - name: Test baby efficiency planner
-        run: npm test -- src/calc/babyEfficiency.test.ts src/calc/sleepSelection.test.ts src/calc/sleepSimulation.test.ts src/composables/sleepSimulationTask.test.ts src/platform/wechatSleepSimulation.test.ts src/composables/useBabyEfficiency.test.ts src/stores/plans.test.ts
+        run: npm test -- src/calc/babyEfficiency.test.ts src/calc/sleepSelection.test.ts src/calc/sleepSimulation.test.ts src/calc/boxOverview.test.ts src/composables/sleepSimulationTask.test.ts src/platform/wechatSleepSimulation.test.ts src/composables/useBabyEfficiency.test.ts src/stores/plans.test.ts
       - name: Test hotfix import and sleep rewards
         run: npm test -- src/calc/hotfix.test.ts
       - name: Prepare signing key
