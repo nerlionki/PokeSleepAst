@@ -34,6 +34,15 @@ const SOURCES = [
     ],
   },
   {
+    name: '日文 Wiki 睡姿研究',
+    note: '末位与耗尽保底排序、少量／大量跨睡眠类型抽选。普通出现率尚未完全确定。',
+    links: [
+      { label: '睡姿出现场景与保底', href: 'https://wikiwiki.jp/poke_sleep/睡眠リサーチ/ねむけパワー/寝顔出現の法則' },
+      { label: '跨睡眠类型验证', href: 'https://wikiwiki.jp/poke_sleep/検証/他の睡眠タイプのポケモンの出現確率' },
+      { label: '睡姿图鉴', href: 'https://wikiwiki.jp/poke_sleep/寝顔図鑑' },
+    ],
+  },
+  {
     name: 'PokeSleepCalc',
     note: '帮忙间隔、持有上限、遇见只数与实现参考。经该站整理的食材率、技能率，原始来源为 RaenonX / RP Model。',
     links: [

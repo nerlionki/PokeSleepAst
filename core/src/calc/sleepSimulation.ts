@@ -6,7 +6,7 @@ export interface SleepSimulationRequest {
   powers: number[]
   iterations: number
   seed: number
-  options: Pick<DrawOpts, 'rank' | 'discovered' | 'undiscoveredBoost' | 'rare' | 'shinyUp' | 'eventMix'>
+  options: Pick<DrawOpts, 'rank' | 'discovered' | 'undiscoveredBoost' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps'>
 }
 export type SleepSimulationRows = ReturnType<typeof sleepExpect>
 export type SleepSimulationMessage = { type: 'progress', completed: number, total: number }

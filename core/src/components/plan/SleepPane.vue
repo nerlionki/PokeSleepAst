@@ -2,7 +2,7 @@
 import { computed, nextTick, shallowRef, useTemplateRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ISLANDS } from '../../calc/data'
-import { drowsyPower, energyLost, EVENT_BONUSES, EVENT_OTHER_SHARE, expectSpecies, maxEncounters, RANK_ORDER, rankFromStrength, rankStrength, rankToNext, resolvedSleepdex, sleepClock, strengthToNext } from '../../calc/sleep'
+import { drowsyPower, energyLost, EVENT_BONUSES, expectSpecies, maxEncounters, RANK_ORDER, rankFromStrength, rankStrength, rankToNext, resolvedSleepdex, sleepClock, strengthToNext } from '../../calc/sleep'
 import PokeSprite from '../shared/PokeSprite.vue'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
@@ -49,8 +49,8 @@ const nextCatch = computed(() => strengthToNext(
 const sameMult = (mult: number) => Math.abs(settings.value.eventMult - mult) < 0.001
 
 const BATCH = 4000
-const eventMix = shallowRef(false)
-const otherShare = Math.round((1 - EVENT_OTHER_SHARE) * 100)
+const otherTypes = shallowRef(false)
+const eventMix = computed(() => otherTypes.value ? settings.value.sleepEventMix : 'off')
 const { busy, error: simulationError, notice, progress, result: seen, calculate: startSimulation, cancel, reset } = useSleepSimulation()
 const cancelButton = useTemplateRef<HTMLButtonElement>('cancelButton')
 watch(busy, async (value) => { if (value) { await nextTick(); cancelButton.value?.focus?.() } })
@@ -74,6 +74,7 @@ function calculate() {
     rare: plan.value.rare,
     shinyUp: plan.value.shinyUp || settings.value.shinyUp,
     eventMix: eventMix.value,
+    eventMult: settings.value.eventMult,
   }
   const scores = whole.value ? [plan.value.sleepScore] : [result.value.best.a, result.value.best.b]
   void startSimulation({ island: island.value, sleepType: plan.value.sleepType as SleepType,
@@ -155,7 +156,8 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
       </select>
     </div>
     <label class="row"><input :disabled="busy" v-model="plan.campTicket" type="checkbox"> 露营券 +1（只加第一觉）</label>
-    <label class="row"><input :disabled="busy" v-model="eventMix" type="checkbox"> 活动期间遇到一些其他类型宝可梦（{{ otherShare }}%）</label>
+    <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox"> 活动期间遇到一些其他类型宝可梦</label>
+    <label class="row"><input :disabled="busy" v-model="plan.undiscoveredBoost" type="checkbox"> 优先遇到未发现睡姿</label>
     <p class="muted">
       {{ ISLANDS.find((i) => i.id === island)?.name }}评级 {{ rank }}<template v-if="nextRank">，再 {{ nextRank.need.toLocaleString('zh-CN') }} 能量升到 {{ nextRank.rank }}</template>。
       露营券加 1 只。分数按满睡眠 8 小时 30 分 = 100 分换算。

@@ -32,6 +32,7 @@ export interface Settings {
   potSize: number
   period: Period
   eventMult: number
+  sleepEventMix: import('./calc/sleepRules').EventMix
   recipeLevels: Record<string, number>
   whistleHelps: number
   shinyUp: boolean
