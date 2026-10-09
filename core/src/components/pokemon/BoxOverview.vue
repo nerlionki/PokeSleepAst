@@ -86,6 +86,7 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
 </template>
 <style scoped>
 .overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.overview-heading .btn { flex-shrink: 0; width: auto; margin: 0; white-space: nowrap; }
 .overview-heading h2 { margin: 0; font-size: 22px; }
 .bonus-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .favored-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }

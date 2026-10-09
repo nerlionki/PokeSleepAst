@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { completeOcrFields, normalizeOcrMissing, ocrChoices } from './ocrCompletion'
+import { completeOcrFields, confirmEditedOcrField, normalizeOcrMissing, ocrChoices } from './ocrCompletion'
 import { parseCard, planImports } from './ocrBox'
 import { parseBoxImport } from './boxio'
 import type { BoxPokemon } from '../types'
@@ -79,5 +79,33 @@ describe('OCR missing fields', () => {
     const pokemon = incomplete()
     expect(parseBoxImport({ schemaVersion: 1, pokemon: [pokemon] }).pokemon[0]?.ocrMissing).toEqual(pokemon.ocrMissing)
     expect(normalizeOcrMissing(['level', 'level', 'bad', null, 'constructor'])).toEqual(['level'])
+  })
+})
+
+
+describe('manual edits confirm OCR fields', () => {
+  it('keeps manual values and clears only explicitly confirmed fields, including the last marker', () => {
+    const mon = { ...incomplete(), ocrMissing: ['level', 'nature'] as BoxPokemon['ocrMissing'], level: 50, nature: '坦率', name: '手动编辑' }
+    const nature = confirmEditedOcrField(mon, 'nature')
+    expect(nature.ocrMissing).toEqual(['level'])
+    expect(nature.nature).toBe('坦率')
+    expect(nature.level).toBe(50)
+    expect(nature.name).toBe('手动编辑')
+    const complete = confirmEditedOcrField(nature, 'level')
+    expect(complete.ocrMissing).toBeUndefined()
+    expect(mon.ocrMissing).toEqual(['level', 'nature'])
+  })
+  it('permits explicitly confirming the existing placeholder but never confirms untouched fields', () => {
+    const mon = incomplete()
+    const confirmed = confirmEditedOcrField(mon, 'level')
+    expect(confirmed.ocrMissing).not.toContain('level')
+    expect(confirmed.ocrMissing).toContain('nature')
+    expect(confirmEditedOcrField(mon, 'ingredient0')).toBe(mon)
+  })
+  it('keeps invalid selections and duplicate subskills unresolved', () => {
+    const mon = { ...incomplete(), subskills: ['helpS', 'helpS', '', '', ''], level: NaN }
+    expect(confirmEditedOcrField(mon, 'level').ocrMissing).toContain('level')
+    expect(confirmEditedOcrField(mon, 'subskill0').ocrMissing).toContain('subskill0')
+    expect(confirmEditedOcrField(mon, 'subskill2').ocrMissing).toContain('subskill2')
   })
 })

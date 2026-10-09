@@ -65,3 +65,13 @@ export function completeOcrFields(pokemon: BoxPokemon, selections: OcrSelections
   if (!result.ocrMissing.length) delete result.ocrMissing
   return result
 }
+
+/** Confirm only the field explicitly touched in the manual editor; untouched OCR defaults stay unresolved. */
+export function confirmEditedOcrField<T extends BoxPokemon>(pokemon: T, field: OcrMissingField): T {
+  if (!normalizeOcrMissing(pokemon.ocrMissing).includes(field)) return pokemon
+  const value = field.startsWith('subskill') ? pokemon.subskills[Number(field.at(-1))]
+    : field.startsWith('ingredient') ? pokemon.ingredientSlots[Number(field.at(-1)) as 0 | 1 | 2]
+    : pokemon[field as 'level' | 'nature' | 'skillLevel']
+  const selection = value == null && field.startsWith('ingredient') ? 'empty' : String(value ?? '')
+  return completeOcrFields(pokemon, { [field]: selection }) as T
+}

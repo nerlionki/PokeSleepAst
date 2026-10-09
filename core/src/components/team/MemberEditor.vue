@@ -7,7 +7,7 @@ import { skillMaxFor } from '../../calc/mainSkills'
 import { RIBBON_HOURS, ribbonBonus, stagesLeft } from '../../calc/ribbon'
 import { isAllRounder } from '../../calc/specialty'
 import { POKEMON_LEVEL_MAX } from '../../calc/xp'
-import type { CarryMode } from '../../types'
+import type { CarryMode, OcrMissingField } from '../../types'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import MainSkillIcon from '../shared/MainSkillIcon.vue'
@@ -15,7 +15,7 @@ import SubskillIcon from '../shared/SubskillIcon.vue'
 
 const model = defineModel<MemberDraft>({ required: true })
 const props = withDefaults(defineProps<{ actions?: boolean, shiny?: boolean }>(), { actions: true, shiny: false })
-const emit = defineEmits<{ copy: [], remove: [] }>()
+const emit = defineEmits<{ copy: [], remove: [], confirm: [field: OcrMissingField] }>()
 
 const LEVELS = [1, 10, 25, 30, 50, 60, 70, 80, 100]
 const MODES: { id: CarryMode, label: string }[] = [
@@ -41,6 +41,8 @@ const subChoices = computed(() => exclusiveSubskills(SUBSKILLS, model.value.subs
 
 function patch(partial: Partial<MemberDraft>) {
   model.value = { ...model.value, ...partial }
+  if ('level' in partial) emit('confirm', 'level')
+  if ('nature' in partial) emit('confirm', 'nature')
 }
 
 function patchTune(partial: Partial<MemberTune>) {
@@ -57,6 +59,7 @@ function setSub(index: number, id: string) {
   if (id && next.some((current, slot) => current === id && slot !== index)) return
   next[index] = id
   patch({ subskills: next })
+  emit('confirm', `subskill${index}` as OcrMissingField)
   subPick.value = null
 }
 
@@ -68,22 +71,28 @@ function chooseIngredient(column: number, lineIndex: number) {
   if (!poke.value) return
   const next = setIngredientChoice(poke.value.ingredients.length, model.value.ingredientSlots, column, lineIndex)
   if (next) patch({ ingredientSlots: next })
+  emit('confirm', `ingredient${column}` as OcrMissingField)
 }
 
 function clearIngredient(column: number) {
   if (!poke.value) return
   const next = clearIngredientSlot(poke.value.id, model.value.ingredientSlots, column)
   if (next) patch({ ingredientSlots: next })
+  emit('confirm', `ingredient${column}` as OcrMissingField)
 }
 
 function setSkill(level: number) {
   const next = stepSkillLevel({ skillLevel: model.value.skillLevel, goldSeeds: model.value.tune.goldSeeds }, level, skillMax.value)
   model.value = { ...model.value, skillLevel: next.skillLevel, tune: { ...model.value.tune, goldSeeds: next.goldSeeds } }
+  emit('confirm', 'skillLevel')
 }
 
 function stepGold(delta: number) {
   const next = stepGoldSeed({ skillLevel: model.value.skillLevel, goldSeeds: model.value.tune.goldSeeds }, delta, skillMax.value)
-  if (next) model.value = { ...model.value, skillLevel: next.skillLevel, tune: { ...model.value.tune, goldSeeds: next.goldSeeds } }
+  if (next) {
+    model.value = { ...model.value, skillLevel: next.skillLevel, tune: { ...model.value.tune, goldSeeds: next.goldSeeds } }
+    emit('confirm', 'skillLevel')
+  }
 }
 
 function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number) {

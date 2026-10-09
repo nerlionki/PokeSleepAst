@@ -7,7 +7,8 @@
     "build:weapp": "npm run prepare:weapp && taro build --type weapp && node scripts/check-build.mjs",
     "dev:weapp": "npm run prepare:weapp && taro build --type weapp --watch",
     "typecheck": "vue-tsc --noEmit",
-    "test:ocr": "node --test scripts/test-ocr.mjs"
+    "test:ocr": "node --test scripts/test-ocr.mjs",
+    "test:styles": "node --test scripts/test-native-styles.mjs"
   },
   "dependencies": {
     "@tarojs/components": "4.3.0",
@@ -31,7 +32,9 @@
     "esbuild": "^0.28.2",
     "miniprogram-api-typings": "^4.1.0",
     "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
-    "vue-tsc": "^3.3.11"
+    "vue-tsc": "^3.3.11",
+    "weapp-tailwindcss": "^5.6.0"
   }
 }

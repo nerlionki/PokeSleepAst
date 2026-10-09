@@ -92,6 +92,27 @@ describe('OCR pending persistence', () => {
     expect(restored.pokemon[0]?.ocrMissing).toEqual(['nature'])
     restored.update('pending', { nature: '固执', ocrMissing: [] })
     expect(restored.pokemon).toHaveLength(1)
-    expect(restored.pokemon[0]?.ocrMissing).toEqual([])
+    expect(restored.pokemon[0]?.ocrMissing).toBeUndefined()
+  })
+})
+
+
+describe('manual OCR save merging', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+  it('explicitly removes old OCR markers while retaining edited values', () => {
+    const box = useBoxStore()
+    box.create({ ...member('incomplete', 10), ocrMissing: ['level', 'nature'] })
+    box.update('incomplete', { level: 50, nature: '坦率', ocrMissing: [] })
+    expect(box.pokemon[0]?.level).toBe(50)
+    expect(box.pokemon[0]?.nature).toBe('坦率')
+    expect(box.pokemon[0]?.ocrMissing).toBeUndefined()
+  })
+  it('preserves untouched markers on ordinary patches and supports partial confirmation', () => {
+    const box = useBoxStore()
+    box.create({ ...member('incomplete', 10), ocrMissing: ['level', 'nature'] })
+    box.update('incomplete', { name: 'edited' })
+    expect(box.pokemon[0]?.ocrMissing).toEqual(['level', 'nature'])
+    box.update('incomplete', { level: 30, ocrMissing: ['nature'] })
+    expect(box.pokemon[0]?.ocrMissing).toEqual(['nature'])
   })
 })

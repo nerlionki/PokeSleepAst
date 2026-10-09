@@ -65,9 +65,15 @@ export const useBoxStore = defineStore('box', () => {
   function update(uid: string, patch: Partial<BoxPokemon>) {
     const current = pokemon.value.find((p) => p.uid === uid)
     if (!current) return
+    const next = { ...current, ...patch, uid }
+    if ('ocrMissing' in patch) {
+      const missing = normalizeOcrMissing(patch.ocrMissing)
+      if (missing.length) next.ocrMissing = missing
+      else delete next.ocrMissing
+    }
     pokemon.value = [
       ...pokemon.value.filter((p) => p.uid !== uid),
-      { ...current, ...patch, uid },
+      next,
     ]
   }
 

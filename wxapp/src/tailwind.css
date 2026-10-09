@@ -1,0 +1,11 @@
+/* Utilities only: keep the app's existing resets and design tokens. */
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme) prefix(tw);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(tw) source(none);
+@source "./generated";
+@source "./components";
+
+/* Inline spacing survives native HTML style transformation. */
+@theme inline {
+  --spacing: 0.25rem;
+}
