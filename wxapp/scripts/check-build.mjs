@@ -117,3 +117,13 @@ for (const [name, info] of Object.entries(models)) {
 console.log('WeChat build verified: pages, AppID, package sizes and profile scope.')
 console.log(`Verified ${Object.keys(images).length} PNG images and the native async loader.`)
 console.log(`Verified native image require paths from ${importingChunks.length} importing chunks.`)
+
+// Native WXML cannot match Vue attribute scopes; verify Tailwind output as well.
+const nativeCss = files.filter(file => file.endsWith('.wxss')).map(file => fs.readFileSync(file, 'utf8')).join('\n')
+if (/\[data-v-[^\]]+\]/.test(nativeCss)) throw Error('Native CSS contains unsupported Vue attribute scopes')
+if (!nativeCss.includes('wx-s-')) throw Error('Missing native class scopes')
+const nativeJs = files.filter(file => file.endsWith('.js') && !/asset-pack|ocr-pack/.test(file)).map(file => fs.readFileSync(file, 'utf8')).join('\n')
+for (const scope of new Set(nativeCss.match(/wx-s-[a-f0-9]{10}/g))) if (!nativeJs.includes(scope)) throw Error('Style scope is not attached to native elements: ' + scope)
+if (!/tw[^{}]*flex[^{}]*\{[^}]*display\s*:\s*flex/.test(nativeCss)) throw Error('Missing compiled Tailwind flex utilities')
+if (nativeCss.includes('var(--tw-spacing)') && !/--tw-spacing\s*:/.test(nativeCss)) throw Error('Tailwind spacing variable is missing')
+console.log('Verified native class scopes, compiled Tailwind utilities and spacing variables.')

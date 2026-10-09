@@ -1,0 +1,10 @@
+Tailwind CSS 4 + weapp-tailwindcss 5 (Taro Webpack 5).
+Entry: src/tailwind.css. Utilities use the tw: prefix, e.g. tw:flex tw:gap-2.
+The prefix is transformed to native-safe class names by the webpack adapter.
+No Tailwind preflight reset is enabled; existing app.css remains authoritative.
+rem2rpx converts Tailwind units. Inline --spacing compiles gaps directly to rpx,
+without depending on theme variables removed by the native HTML transform.
+Shared scoped Vue styles use native class scopes instead of data-v-* attributes.
+Run npm run test:styles and npm run build:weapp to verify CSS, classes and spacing variables.
+Reference: https://tw.weapp.dev/docs/quick-start/frameworks/taro
+Reference: https://tw.weapp.dev/docs/issues/use-with-nutui

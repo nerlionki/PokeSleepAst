@@ -7,7 +7,7 @@ import { defaultTune } from '../../calc/member'
 import { importScreenshotSelection } from '#platform/screenshots'
 import { hasShiny } from '../../calc/raeImage'
 import { useBoxStore } from '../../stores/box'
-import type { BoxPokemon, MemberTune } from '../../types'
+import type { BoxPokemon, MemberTune, OcrMissingField } from '../../types'
 import BerryIcon from '../shared/BerryIcon.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import SpeciesSheet from '../shared/SpeciesSheet.vue'
@@ -18,7 +18,7 @@ import ShinyMark from '../shared/ShinyMark.vue'
 import MemberEditor from '../team/MemberEditor.vue'
 import { SPECIALTY_FILTERS } from '../../calc/specialty'
 import OcrCompletionDialog from './OcrCompletionDialog.vue'
-import { normalizeOcrMissing } from '../../calc/ocrCompletion'
+import { confirmEditedOcrField, normalizeOcrMissing } from '../../calc/ocrCompletion'
 
 const TYPES = SPECIALTY_FILTERS
 
@@ -106,7 +106,12 @@ function pickSpecies(id: number) {
   editing.value = blank(id)
 }
 
+function confirmEditingField(field: OcrMissingField) {
+  if (editing.value) editing.value = confirmEditedOcrField(editing.value, field)
+}
+
 function openEdit(pokemon: BoxPokemon) {
+  completionQueue.value = []
   editing.value = {
     ...pokemon,
     subskills: [...pokemon.subskills],
@@ -119,7 +124,7 @@ function save() {
   const draft = editing.value
   if (!draft) return
   if (!draft.uid) box.create({ ...draft })
-  else box.update(draft.uid, draft)
+  else box.update(draft.uid, { ...draft, ocrMissing: draft.ocrMissing ?? [] })
   editing.value = null
 }
 
@@ -245,13 +250,14 @@ const activeFilters = computed(() => filterCount(query))
           <h3>{{ editing.uid ? '编辑个体' : '新建个体' }}<ShinyMark v-if="editing.shiny" /></h3>
           <button class="btn ghost" type="button" @click="editing = null">取消</button>
         </div>
-        <MemberEditor v-model="editing" :actions="false" :shiny="editing.shiny" />
+        <MemberEditor v-model="editing" :actions="false" :shiny="editing.shiny" @confirm="confirmEditingField" />
+        <p v-if="editing.ocrMissing?.length" class="amber">还有 {{ editing.ocrMissing.length }} 项待确认；请点选对应字段。未修改的识别占位值仍会保留待补全标记。</p>
         <div class="field"><label>名称</label><input v-model="editing.name" placeholder="留空则显示宝可梦名"></div>
         <label v-if="hasShiny(editing.pokeId)" class="row"><input v-model="editing.shiny" type="checkbox"> 闪光<ShinyMark v-if="editing.shiny" /></label>
         <label class="row"><input v-model="editing.napping" type="checkbox"> 寄放午睡岛</label>
         <button class="btn" type="button" @click="save">保存</button>
       </section>
     </div>
-    <OcrCompletionDialog v-if="completing" :key="completing.uid" :pokemon="completing" :remaining="completionQueue.length" @save="saveCompletion" @pause="pauseCompletion" />
+    <OcrCompletionDialog v-if="completing && !editing" :key="completing.uid" :pokemon="completing" :remaining="completionQueue.length" @save="saveCompletion" @pause="pauseCompletion" />
   </div>
 </template>

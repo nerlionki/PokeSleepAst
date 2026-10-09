@@ -32,6 +32,7 @@ jobs:
       - run: npm run build:weapp
       - run: npm run typecheck
       - run: npm run test:ocr
+      - run: npm run test:styles
       - run: node scripts/package-release.mjs
       - uses: actions/upload-artifact@v4
         with:

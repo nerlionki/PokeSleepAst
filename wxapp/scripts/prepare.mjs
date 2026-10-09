@@ -7,6 +7,7 @@ const wxRoot = path.join(root, 'wxapp')
 const core = path.join(root, 'core/src')
 const generated = path.join(wxRoot, 'src/generated')
 const require = createRequire(path.join(wxRoot, 'package.json'))
+const { nativeScopedStyles } = require('./config/native-scoped-styles.cjs')
 const write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, value) }
 const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(f => f.isDirectory() ? walk(path.join(dir, f.name)) : [path.join(dir, f.name)])
 function clean(dir) {
@@ -78,8 +79,21 @@ const src = computed(() => subskillImageUrl(props.id))
 <template><WxImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="skill.name" /></template>
 `
   }
+  // Use Tailwind layout utilities only in native Box views; App keeps its grid.
+  if (['components/pokemon/BoxOverview.vue', 'components/pokemon/OverviewRankRow.vue'].includes(rel)) {
+    if (rel.endsWith('BoxOverview.vue')) {
+      text = text.replace('class="overview-heading"', 'class="overview-heading tw:flex tw:items-center tw:justify-between tw:gap-2"')
+        .replace('class="berry-heading"', 'class="berry-heading tw:flex tw:items-center tw:gap-2"')
+    } else {
+      text = text.replace('class="overview-rank"', 'class="overview-rank tw:flex tw:items-center tw:gap-2"')
+        .replace('class="rank-details"', 'class="rank-details tw:flex-1 tw:min-w-0"')
+        .replace('class="rank-portrait"', 'class="rank-portrait tw:shrink-0"')
+        .replace('class="rank-amount"', 'class="rank-amount tw:shrink-0"')
+        .replace('display: grid; grid-template-columns: 20px 48px minmax(0, 1fr) auto;', 'display: flex;')
+    }
+  }
   if (imports.length) text = text.replace(/(<script setup[^>]*>)/, '$1\n' + imports.join('\n'))
-  write(dest, text)
+  write(dest, nativeScopedStyles(text, rel))
 }
 // Native async modules cross package boundaries; image components cannot reference
 // another package's raw files. PNG payloads are materialized in USER_DATA_PATH.

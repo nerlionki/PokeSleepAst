@@ -1,6 +1,7 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import { defineConfig } from '@tarojs/cli'
+import { WeappTailwindcss } from 'weapp-tailwindcss/webpack'
 import { NativeImageLoaderPlugin } from './native-image-loader.cjs'
 
 export default defineConfig({
@@ -27,7 +28,10 @@ export default defineConfig({
   ] },
   mini: {
     compile: { include: [path.resolve(__dirname, '../../core')] },
-    postcss: { pxtransform: { enable: true }, cssModules: { enable: false } },
+    postcss: {
+      pxtransform: { enable: true }, cssModules: { enable: false },
+      htmltransform: { enable: true, config: { removeCursorStyle: false } },
+    },
     webpackChain(chain) {
       chain.resolve.modules.add(path.resolve(__dirname, '../node_modules'))
       chain.module.rule('compressed-core-data')
@@ -37,6 +41,11 @@ export default defineConfig({
         .use('compressed-json').loader(path.resolve(__dirname, 'compressed-json.cjs'))
       chain.externals({ '#image-loader': 'commonjs ./image-loader.js' })
       chain.plugin('native-image-loader-paths').use(NativeImageLoaderPlugin)
+      chain.plugin('weapp-tailwindcss').use(WeappTailwindcss, [{
+        tailwindcssBasedir: path.resolve(__dirname, '..'),
+        cssEntries: [path.resolve(__dirname, '../src/tailwind.css')],
+        cssOptions: { rem2rpx: true, injectAdditionalCssVarScope: true, cssPreflight: false, cssSelectorReplacement: { root: 'page' } },
+      }])
     },
   },
 })

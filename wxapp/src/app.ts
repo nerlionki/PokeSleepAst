@@ -2,6 +2,7 @@ import { requireWorkerSupport } from './platform/compatibility'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import Taro from '@tarojs/taro'
+import './tailwind.css'
 import './app.css'
 const app = createApp({
   onLaunch() {
