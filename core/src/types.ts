@@ -20,6 +20,10 @@ export interface Settings {
   island: IslandId
   berries: string[]
   areaBonus: number
+  islandBonuses?: Partial<Record<IslandId, number>>
+  exBuff?: boolean
+  exDebuff?: boolean
+  exWeeklyBonus?: 'none' | 'berries' | 'ingredients' | 'skills'
   sleepStart: string
   sleepEnd: string
   sleepScore: number

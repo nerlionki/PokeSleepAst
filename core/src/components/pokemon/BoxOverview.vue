@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive, shallowRef } from 'vue'
-import { calculateBoxOverview, defaultOverviewBonuses } from '../../calc/boxOverview'
-import { BERRIES } from '../../calc/data'
+import { computed, reactive, shallowRef, onMounted, watch } from 'vue'
+import { calculateBoxOverview, defaultOverviewBonuses, type OverviewBonuses } from '../../calc/boxOverview'
+import { loadJson, saveJson } from '../../storage'
+import { normalizeEx2Berries, canPickBerries } from '../../calc/defaults'
+import type { Settings } from '../../types'
+import EnvironmentFields from '../shared/EnvironmentFields.vue'
+import { BERRIES, ISLANDS } from '../../calc/data'
 import { useBoxStore } from '../../stores/box'
 import BerryIcon from '../shared/BerryIcon.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
@@ -11,6 +15,32 @@ const emit = defineEmits<{ back: []; complete: [uids: string[]] }>()
 const box = useBoxStore()
 const tab = shallowRef<'berries' | 'ingredients'>('berries')
 const bonuses = reactive(defaultOverviewBonuses())
+const loaded = shallowRef(false)
+onMounted(async () => {
+  const saved = await loadJson<Partial<OverviewBonuses>>('boxOverviewBonuses', {})
+  Object.assign(bonuses, defaultOverviewBonuses(), saved)
+  if (!ISLANDS.some(island => island.id === bonuses.island)) bonuses.island = 'greengrass'
+  bonuses.helpingBonus = Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0)))
+  bonuses.areaBonus = Math.min(0.85, Math.max(0, Number(bonuses.areaBonus) || 0))
+  bonuses.favoredBerries = [...new Set(Array.isArray(bonuses.favoredBerries) ? bonuses.favoredBerries.filter(name => BERRIES.some(berry => berry.name === name)) : [])].slice(0, 3)
+  if (bonuses.island === 'cyanex') bonuses.favoredBerries = normalizeEx2Berries(bonuses.favoredBerries)
+  loaded.value = true
+})
+watch(bonuses, value => { if (loaded.value) void saveJson('boxOverviewBonuses', value) }, { deep: true })
+const environment = computed(() => ({ island: bonuses.island ?? 'greengrass', berries: bonuses.favoredBerries, helpingBonus: bonuses.helpingBonus, exBuff: bonuses.exBuff, exDebuff: bonuses.exDebuff, exWeeklyBonus: bonuses.exWeeklyBonus }))
+function setEnvironment(patch: Partial<Pick<Settings, 'island' | 'berries' | 'helpingBonus' | 'exBuff' | 'exDebuff' | 'exWeeklyBonus'>>) {
+  if (patch.island) {
+    bonuses.island = patch.island
+    if (!canPickBerries(patch.island)) bonuses.favoredBerries = [...(ISLANDS.find(island => island.id === patch.island)?.berries ?? [])]
+    if (patch.island === 'cyanex') bonuses.favoredBerries = normalizeEx2Berries(bonuses.favoredBerries)
+    if (patch.island === 'greenex' && !bonuses.favoredBerries.length) bonuses.favoredBerries = [BERRIES[0]!.name]
+  }
+  if (patch.berries) bonuses.favoredBerries = patch.berries
+  if (patch.helpingBonus != null) bonuses.helpingBonus = patch.helpingBonus
+  if (patch.exBuff != null) bonuses.exBuff = patch.exBuff
+  if (patch.exDebuff != null) bonuses.exDebuff = patch.exDebuff
+  if (patch.exWeeklyBonus != null) bonuses.exWeeklyBonus = patch.exWeeklyBonus
+}
 const adjusting = shallowRef(false)
 const ingredientId = shallowRef<number | null>(null)
 const visibleRanks = shallowRef(20)
@@ -19,10 +49,7 @@ const excluded = computed(() => tab.value === 'berries' ? overview.value.exclude
 const selected = computed(() => overview.value.ingredients.find((ingredient) => ingredient.id === ingredientId.value))
 const rankedBerries = computed(() => overview.value.berries.filter((berry) => berry.rows.length))
 const emptyBerryCount = computed(() => overview.value.berries.length - rankedBerries.value.length)
-const customized = computed(() => bonuses.areaBonus > 0 || bonuses.goodCamp || bonuses.helpingBonus > 0 || bonuses.favoredBerries.length > 0)
-function toggleBerry(name: string) {
-  bonuses.favoredBerries = bonuses.favoredBerries.includes(name) ? bonuses.favoredBerries.filter((berry) => berry !== name) : [...bonuses.favoredBerries, name]
-}
+const customized = computed(() => bonuses.island !== 'greengrass' || bonuses.areaBonus > 0 || bonuses.goodCamp || bonuses.helpingBonus > 0 || bonuses.favoredBerries.length > 0)
 function openIngredient(id: number) { ingredientId.value = id; visibleRanks.value = 20 }
 function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
 </script>
@@ -31,18 +58,16 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
     <div class="overview-heading">
       <button class="btn ghost" type="button" @click="emit('back')">返回 Box</button>
       <h2>Box 概览</h2>
-      <button class="btn ghost" type="button" :class="{ on: customized }" :aria-expanded="adjusting" @click="adjusting = !adjusting">调整加成</button>
+      <button class="btn ghost" type="button" :class="{ on: customized }" :disabled="!loaded" :aria-expanded="adjusting" @click="adjusting = !adjusting">调整加成</button>
     </div>
     <p class="muted">当前培养状态 · 全天满活 · {{ box.pokemon.length }} 只宝可梦</p>
     <section v-if="adjusting" class="card stack" aria-label="概览计算加成">
       <div class="bonus-fields">
         <div class="field"><label for="overview-area">营地加成（%）</label><input id="overview-area" v-model.number="bonuses.areaBonus" type="range" min="0" max="0.85" step="0.01"><span class="muted">{{ Math.round(bonuses.areaBonus * 100) }}%</span></div>
-        <div class="field"><label for="overview-help">其他队员的帮手奖励层数</label><input id="overview-help" v-model.number="bonuses.helpingBonus" type="number" min="0" max="5" step="1"></div>
       </div>
       <label class="row"><input v-model="bonuses.goodCamp" type="checkbox">优质露营券</label>
       <p class="muted">保留个体自身的帮手奖励和缎带；帮手奖励最多叠加 5 层。加成仅用于本页。</p>
-      <p>喜好树果（能量 ×2）</p>
-      <div class="favored-grid"><button v-for="berry in BERRIES" :key="berry.name" class="favored-choice" type="button" :class="{ on: bonuses.favoredBerries.includes(berry.name) }" :aria-pressed="bonuses.favoredBerries.includes(berry.name)" @click="toggleBerry(berry.name)"><BerryIcon :name="berry.name" small /><span>{{ berry.name }}</span></button></div>
+      <EnvironmentFields :value="environment" @change="setEnvironment" />
       <button class="btn ghost" type="button" @click="resetBonuses">恢复基础口径</button>
     </section>
     <p v-if="customized" class="muted">营地加成 {{ Math.round(Math.min(0.85, Math.max(0, bonuses.areaBonus)) * 100) }}% · 其他队员帮手奖励 {{ Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0))) }} 层{{ bonuses.goodCamp ? ' · 优质露营券' : '' }}{{ bonuses.favoredBerries.length ? ' · 已设置喜好树果' : '' }}</p>

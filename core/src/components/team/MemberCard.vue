@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { skillMaxFor } from '../../calc/mainSkills'
+import { exEffects } from '../../calc/exEffects'
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ingredientByName, natureByName, pokeById } from '../../calc/data'
@@ -74,6 +76,7 @@ const seconds = computed(() => {
     settings.value.island,
     settings.value.berries.includes(mon.berry),
     ribbon.speedCut,
+    exEffects(settings.value, mon.berry).speed,
   )
 })
 
@@ -84,7 +87,7 @@ const carry = computed(() => {
   return carryLimit(mon.carry, subs.value, settings.value.goodCamp, props.carryMode, ribbon.carry)
 })
 
-const skillLv = computed(() => effectiveSkillLevel(props.level, props.skillLevel, props.subskills, poke.value?.mainSkill ?? ''))
+const skillLv = computed(() => Math.min(skillMaxFor(poke.value?.mainSkill ?? ''), effectiveSkillLevel(props.level, props.skillLevel, props.subskills, poke.value?.mainSkill ?? '') + exEffects(settings.value, poke.value?.berry ?? '').skillLevels))
 
 function bandFactor(asleep: boolean) {
   const points = props.result.curve.filter((point) => point.asleep === asleep)
@@ -166,7 +169,7 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <b>{{ Math.round(row.energy).toLocaleString('zh-CN') }}</b>
     </p>
     <p class="member-line skill">
-      <span><MainSkillIcon :name="poke.mainSkill" /> 技能 LV{{ skillLv }} {{ poke.mainSkill }} {{ (rate(poke.skillRate, 'skill', 'skillS', 'skillM') * 100).toFixed(1) }}%</span>
+      <span><MainSkillIcon :name="poke.mainSkill" /> 技能 LV{{ skillLv }} {{ poke.mainSkill }} {{ (Math.min(1, rate(poke.skillRate, 'skill', 'skillS', 'skillM') * exEffects(settings, poke.berry).skillMultiplier) * 100).toFixed(1) }}%</span>
     </p>
     <p class="member-line quiet">
       <span>{{ result.skillProcs.toFixed(2) }} 次</span>

@@ -1,4 +1,6 @@
 import type { ProduceInput, ProduceResult, Settings } from '../types'
+import { exEffects } from './exEffects'
+import { skillMaxFor } from './mainSkills'
 import { berryEnergyAt } from './berry'
 import { pokeById } from './data'
 import { instantInterval } from './helpSpeed'
@@ -66,6 +68,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))
   const energy = Math.min(150, Math.max(0, input.wakeEnergy ?? settings.sleepScore))
   const favored = settings.berries.includes(poke.berry)
+  const ex = exEffects(settings, poke.berry, poke.specialty)
   const seconds = instantInterval(
     poke.interval,
     input.level,
@@ -77,23 +80,24 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
     settings.island,
     favored,
     ribbon.speedCut,
+    ex.speed,
   )
   const days = settings.period === 'week' ? 7 : 1
   const helps = seconds > 0 ? (86400 * days) / seconds : 0
   const ingRate = findingRate(poke.ingredientRate, input.nature, 'ingredient', subs, 'ingS', 'ingM')
-  const skillRate = findingRate(poke.skillRate, input.nature, 'skill', subs, 'skillS', 'skillM')
+  const skillRate = Math.min(1, findingRate(poke.skillRate, input.nature, 'skill', subs, 'skillS', 'skillM') * ex.skillMultiplier)
   const per = berryPerHelp(poke.specialty, subs)
   const snacking = input.carryMode === 'full'
   const unlocked = input.level >= 60 ? 3 : input.level >= 30 ? 2 : 1
   const slots = input.ingredientSlots.slice(0, unlocked).flatMap((lineIndex, slot) => {
     if (lineIndex == null) return []
     const drop = slotDrop(poke.ingredients, slot, lineIndex)
-    return drop ? [{ name: drop.name, amount: drop.amount }] : []
+    return drop ? [{ name: drop.name, amount: drop.amount + ex.ingredientExtra }] : []
   })
   const split = splitHelps(helps, ingRate, skillRate, slots, snacking)
   const berries = cutDecimal(split.berryHelps * per, 1)
-  const unit = berryEnergyAt(poke.berry, input.level) * (favored ? 2 : 1) * (1 + settings.areaBonus)
-  const skillLv = effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill)
+  const unit = berryEnergyAt(poke.berry, input.level) * ex.berryMultiplier * (1 + settings.areaBonus)
+  const skillLv = Math.min(skillMaxFor(poke.mainSkill), effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill) + ex.skillLevels)
   return {
     helps,
     berries,

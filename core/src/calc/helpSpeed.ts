@@ -42,9 +42,10 @@ export function instantInterval(
   islandId: IslandId,
   favored: boolean,
   ribbonCut = 0,
+  exOverride?: number,
 ): number {
   const island = islandById(islandId)
-  const ex = favored ? island?.helpFavored ?? 1 : island?.helpUnfavored ?? 1
+  const ex = exOverride ?? (favored ? island?.helpFavored ?? 1 : island?.helpUnfavored ?? 1)
   const camp = goodCamp ? 0.8 : 1
   const ribbon = 1 - Math.min(0.25, Math.max(0, ribbonCut))
   return Math.max(1, Math.round(levelInterval(base, level, nature, subskills, helpingBonus) * energyMultiplier(energy) * camp * ex * ribbon))

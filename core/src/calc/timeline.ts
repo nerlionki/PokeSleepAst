@@ -1,4 +1,6 @@
 import type { BoxPokemon, EnergyPoint, ProduceInput, ProduceResult, Settings, TeamProduceResult } from '../types'
+import { exEffects } from './exEffects'
+import { skillMaxFor } from './mainSkills'
 import { berryEnergyAt } from './berry'
 import { pokeById } from './data'
 import { cookMeals } from './cook'
@@ -13,7 +15,7 @@ import { ACCEL_FACTOR, ACCEL_MINUTES, chargeStrength, skillKind, skillValue } fr
 
 export function teamHelpingBonus(roster: BoxPokemon[], fallback: number): number {
   const n = roster.filter((p) => unlockedSubskills(p.level, p.subskills).includes('helpingBonus')).length
-  return n > 0 ? n : fallback
+  return Math.min(5, n + Math.max(0, Math.floor(Number(fallback) || 0)))
 }
 
 export function clockOf(minute: number): string {
@@ -107,9 +109,10 @@ export function simulateTeam(
     const poke = pokeById(input.pokeId)
     if (!poke) continue
     const favored = settings.berries.includes(poke.berry)
+    const ex = exEffects(settings, poke.berry, poke.specialty)
     const subs = unlockedSubskills(input.level, input.subskills)
     const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))
-    const skillLv = effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill)
+    const skillLv = Math.min(skillMaxFor(poke.mainSkill), effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill) + ex.skillLevels)
     members.push({
       input,
       poke,
@@ -126,10 +129,10 @@ export function simulateTeam(
       ingRate: poke.ingredientRate * natureStatFactor(input.nature, 'ingredient')
         * (1 + (subs.includes('ingS') ? 0.18 : 0) + (subs.includes('ingM') ? 0.36 : 0)),
       skillRate: poke.skillRate * natureStatFactor(input.nature, 'skill')
-        * (1 + (subs.includes('skillS') ? 0.18 : 0) + (subs.includes('skillM') ? 0.36 : 0)),
+        * (1 + (subs.includes('skillS') ? 0.18 : 0) + (subs.includes('skillM') ? 0.36 : 0)) * ex.skillMultiplier,
       skillLv,
       fill: chargeStrength(poke.mainSkill, skillLv),
-      unitBerry: berryEnergyAt(poke.berry, input.level) * (favored ? 2 : 1) * (1 + settings.areaBonus),
+      unitBerry: berryEnergyAt(poke.berry, input.level) * ex.berryMultiplier * (1 + settings.areaBonus),
       result: { helps: 0, berries: 0, berryEnergy: 0, ingredients: {}, skillProcs: 0, skillEnergy: 0, sneaky: 0, curve: [] },
       curve: [],
     })
@@ -160,6 +163,7 @@ export function simulateTeam(
       settings.island,
       m.favored,
       ribbonBonus(m.input.ribbonHours ?? 0, stagesLeft(m.poke.id)).speedCut,
+      exEffects(settings, m.poke.berry).speed,
     ) * accel
   }
 
@@ -210,8 +214,10 @@ export function simulateTeam(
       const lineIndex = m.input.ingredientSlots[slot]
       const drop = lineIndex == null ? null : slotDrop(m.poke.ingredients, slot, lineIndex)
       if (drop) {
-        m.result.ingredients[drop.name] = (m.result.ingredients[drop.name] ?? 0) + drop.amount
-        m.held += drop.amount
+        const ex = exEffects(settings, m.poke.berry, m.poke.specialty)
+        const extra = fromSupport ? 0 : ex.ingredientExtra > 0 ? 1 + (ex.ingredientExtra > 1 && roll(seed + 13) < 0.5 ? 1 : 0) : 0
+        m.result.ingredients[drop.name] = (m.result.ingredients[drop.name] ?? 0) + drop.amount + extra
+        m.held += drop.amount + extra
       }
       else {
         m.result.berries += m.perHelp

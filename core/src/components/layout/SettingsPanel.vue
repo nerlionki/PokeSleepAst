@@ -2,23 +2,17 @@
 import { MIX_OPTIONS } from '../../calc/sleepRules'
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { BERRIES, ISLANDS, RECIPES } from '../../calc/data'
-import { canPickBerries, EX_MAIN } from '../../calc/defaults'
+import { RECIPES } from '../../calc/data'
 import { categoryLabel, RECIPE_LEVEL_MAX, recipeLevelOf } from '../../calc/cook'
-import BerryIcon from '../shared/BerryIcon.vue'
+import EnvironmentFields from '../shared/EnvironmentFields.vue'
 import MealIcon from '../shared/MealIcon.vue'
-import UpdateSettings from '../update/UpdateSettings.vue'
 import { useSettingsStore } from '../../stores/settings'
 import type { MealCategory } from '../../types'
 
+const props = defineProps<{ embedded?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const store = useSettingsStore()
 const { settings, summary } = storeToRefs(store)
-
-const pickBerries = computed(() => canPickBerries(settings.value.island))
-const islandBerries = computed(() => ISLANDS.find((i) => i.id === settings.value.island)?.berries ?? [])
-
-const secondaryBerries = computed(() => BERRIES.filter(berry => berry.name !== settings.value.berries[0]))
 
 const recipeGroups = computed(() => (['curry', 'salad', 'dessert'] as MealCategory[]).map((c) => ({
   id: c,
@@ -35,14 +29,13 @@ function setRecipeLevel(name: string, level: number) {
 </script>
 
 <template>
-  <div v-back="() => emit('close')" class="overlay" @click.self="emit('close')">
-    <section class="sheet stack">
-      <div class="row">
+  <div v-back="() => emit('close')" :class="props.embedded ? 'stack' : 'overlay'" @click.self="!props.embedded && emit('close')">
+    <section :class="props.embedded ? 'card stack' : 'sheet stack'">
+      <div v-if="!props.embedded" class="row">
         <h2>全局设置</h2>
         <button class="btn ghost" type="button" @click="emit('close')">关闭</button>
       </div>
       <p class="muted">{{ summary }}</p>
-      <UpdateSettings />
       <div class="row">
         <button class="btn ghost" type="button" @click="store.applyPreset('default')">默认作息</button>
         <button class="btn ghost" type="button" @click="store.applyPreset('ideal')">理想满睡</button>
@@ -51,47 +44,7 @@ function setRecipeLevel(name: string, level: number) {
         <button class="btn ghost" type="button" @click="store.applyPreset('work18')">18h 工作</button>
         <button class="btn ghost" type="button" @click="store.applyPreset('helpMax')">帮手 MAX</button>
       </div>
-      <div class="field">
-        <label>当前岛屿</label>
-        <select :value="settings.island" @change="store.applyIsland(($event.target as HTMLSelectElement).value as typeof settings.island)">
-          <option v-for="i in ISLANDS" :key="i.id" :value="i.id">{{ i.name }}</option>
-        </select>
-      </div>
-      <div v-if="settings.island === 'cyanex'" class="stack">
-        <p class="muted">主树果（三选一）</p>
-        <div class="seg seg-3">
-          <button v-for="name in EX_MAIN" :key="name" type="button" :class="{ on: settings.berries[0] === name }" @click="store.setEx2MainBerry(name)">
-            <BerryIcon :name="name" small />{{ name }}
-          </button>
-        </div>
-        <p class="muted">副树果 {{ settings.berries.length - 1 }}/2 · 从其余 {{ secondaryBerries.length }} 种中任选两种</p>
-        <div class="picker-opts">
-          <button v-for="b in secondaryBerries" :key="b.name" type="button" :class="{ on: settings.berries.slice(1).includes(b.name) }" @click="store.toggleBerry(b.name)">
-            <BerryIcon :name="b.name" />{{ b.name }}
-          </button>
-        </div>
-      </div>
-      <div v-else-if="pickBerries" class="stack">
-        <p class="muted">树果喜好 {{ settings.berries.length }}/3 · 仅 1 岛 / EX / EX2 可改</p>
-        <div class="picker-opts">
-          <button
-            v-for="b in BERRIES"
-            :key="b.name"
-            type="button"
-            :class="{ on: settings.berries.includes(b.name) }"
-            @click="store.toggleBerry(b.name)"
-          >
-            <BerryIcon :name="b.name" />{{ b.name }}
-          </button>
-        </div>
-      </div>
-      <p v-else class="muted berry-inline">
-        本岛固定喜好：
-        <template v-if="islandBerries.length">
-          <span v-for="name in islandBerries" :key="name" class="berry-name"><BerryIcon :name="name" small />{{ name }}</span>
-        </template>
-        <template v-else>无</template>
-      </p>
+      <EnvironmentFields :value="settings" @change="store.setEnvironment" />
       <div class="field">
         <label>营地加成 {{ Math.round(settings.areaBonus * 100) }}%</label>
         <input v-model.number="settings.areaBonus" type="range" min="0" max="0.85" step="0.01">
@@ -122,10 +75,6 @@ function setRecipeLevel(name: string, level: number) {
       <div class="field">
         <label>哨子额外帮忙</label>
         <input v-model.number="settings.whistleHelps" type="number" min="0" max="20">
-      </div>
-      <div class="field">
-        <label>帮手奖励次数（个体对比；MAX=5）</label>
-        <input v-model.number="settings.helpingBonus" type="number" min="0" max="5">
       </div>
       <div class="field">
         <label>本周喜好料理</label>
