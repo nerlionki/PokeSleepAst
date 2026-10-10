@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, shallowRef } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
 import { useRosterStore } from '../../stores/roster'
 import { useSettingsStore } from '../../stores/settings'
-import SettingsPanel from './SettingsPanel.vue'
 import UpdateDialog from '../update/UpdateDialog.vue'
 import { useUpdateStore } from '../../stores/update'
 
@@ -19,7 +18,6 @@ const titles: Record<string, string> = {
 
 const route = useRoute()
 const title = computed(() => titles[String(route.name)] ?? '宝睡助手')
-const open = shallowRef(false)
 const settings = useSettingsStore()
 const updater = useUpdateStore()
 
@@ -41,7 +39,6 @@ onMounted(async () => {
         <small>CAMP RESEARCH</small>
         <h1>{{ title }}</h1>
       </div>
-      <button class="gear" type="button" aria-label="设置" @click="open = true">⚙</button>
     </header>
     <main class="page">
       <RouterView />
@@ -68,7 +65,6 @@ onMounted(async () => {
         我的
       </RouterLink>
     </nav>
-    <SettingsPanel v-if="open" @close="open = false" />
     <UpdateDialog />
   </div>
 </template>

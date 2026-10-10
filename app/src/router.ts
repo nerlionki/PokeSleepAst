@@ -13,6 +13,6 @@ export const router = createRouter({
     { path: '/plan', name: 'plan', component: PlanView, meta: { backTabs: ['sleep', 'catch', 'baby', 'candy', 'train'] } },
     { path: '/team', name: 'team', component: TeamView, meta: { backTabs: ['team', 'cmp'] } },
     { path: '/data', name: 'data', component: DataView, meta: { backTabs: ['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot'] } },
-    { path: '/profile', name: 'profile', component: ProfileView, meta: { backTabs: [] } },
+    { path: '/profile', name: 'profile', component: ProfileView, meta: { backTabs: ['home', 'backup', 'settings', 'credits', 'update'] } },
   ],
 })

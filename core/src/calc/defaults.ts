@@ -11,6 +11,10 @@ export const defaultSettings = (): Settings => ({
   island: 'greengrass',
   berries: ['金枕果', '柿仔果', '萄葡果'],
   areaBonus: 0,
+  islandBonuses: {},
+  exBuff: true,
+  exDebuff: true,
+  exWeeklyBonus: 'none',
   sleepStart: '23:00',
   sleepEnd: '07:30',
   sleepScore: 100,
@@ -72,6 +76,10 @@ export function mergeSettings(saved: (Partial<Settings> & { recipeLevel?: number
     berries: saved.berries?.length ? saved.berries : base.berries,
     recipeLevels: { ...(saved.recipeLevels ?? {}) },
   }
+  merged.exWeeklyBonus = ['berries', 'ingredients', 'skills'].includes(saved.exWeeklyBonus ?? '') ? saved.exWeeklyBonus : 'none'
+  merged.islandBonuses = { ...saved.islandBonuses }
+  if (merged.islandBonuses[merged.island] == null) merged.islandBonuses[merged.island] = Math.min(0.85, Math.max(0, merged.areaBonus || 0))
+  merged.areaBonus = Math.min(0.85, Math.max(0, merged.islandBonuses[merged.island] ?? 0))
   if (merged.island === 'cyanex') merged.berries = normalizeEx2Berries(merged.berries)
   return merged
 }

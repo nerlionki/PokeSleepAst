@@ -2,12 +2,14 @@
 import { computed, ref, shallowRef } from 'vue'
 import { ISLANDS, type PokeRow } from '../../calc/data'
 import { formatDp, islandBands, islandPokemon, islandUnlock } from '../../calc/islandMeta'
+import { useSettingsStore } from '../../stores/settings'
 import { textHit } from '../../calc/text'
 import type { IslandId } from '../../types'
 import BerryIcon from '../shared/BerryIcon.vue'
 import DataRow from '../shared/DataRow.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 
+const store = useSettingsStore()
 const props = defineProps<{ q: string }>()
 const openId = shallowRef<IslandId | ''>('')
 const view = shallowRef<'band' | 'spread'>('band')
@@ -57,6 +59,10 @@ function groups(id: string) {
         </template>
       </DataRow>
       <div v-if="openId === i.id" class="acc-body plain">
+        <label class="field">
+          <span>营地加成 {{ Math.round(store.islandBonus(i.id as IslandId) * 100) }}%{{ store.settings.island === i.id ? ' · 当前营地' : '' }}</span>
+          <input type="range" min="0" max="0.85" step="0.01" :value="store.islandBonus(i.id as IslandId)" @change="store.setIslandBonus(i.id as IslandId, Number(($event.target as HTMLInputElement).value))">
+        </label>
         <p class="muted berry-inline">
           {{ islandUnlock(i.id as IslandId) }} · {{ i.id === 'cyanex' ? '主树果三选一' : '喜好' }}
           <template v-if="i.berries.length">

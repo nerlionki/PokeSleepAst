@@ -51,6 +51,7 @@ const sameMult = (mult: number) => Math.abs(settings.value.eventMult - mult) < 0
 const BATCH = 4000
 const otherTypes = shallowRef(false)
 const eventMix = computed(() => otherTypes.value ? settings.value.sleepEventMix : 'off')
+const resultTab = shallowRef<'encounters' | 'candies'>('encounters')
 const { busy, error: simulationError, notice, progress, result: seen, calculate: startSimulation, cancel, reset } = useSleepSimulation()
 const cancelButton = useTemplateRef<HTMLButtonElement>('cancelButton')
 watch(busy, async (value) => { if (value) { await nextTick(); cancelButton.value?.focus?.() } })
@@ -77,6 +78,7 @@ function calculate() {
     eventMult: settings.value.eventMult,
   }
   const scores = whole.value ? [plan.value.sleepScore] : [result.value.best.a, result.value.best.b]
+  resultTab.value = 'encounters'
   void startSimulation({ island: island.value, sleepType: plan.value.sleepType as SleepType,
     powers: scores.map((score) => drowsyPower(score, plan.value.snorlaxStrength, settings.value.eventMult)),
     iterations: BATCH, seed: drawSeed, options: opts })
@@ -174,7 +176,11 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
         <p><span>每次方案平均研究 EXP</span><strong>{{ average(perSleep.researchExp) }}</strong></p>
         <p><span>每次方案平均梦之碎片</span><strong>{{ average(perSleep.shards) }}</strong></p>
       </div>
-      <div v-if="candies.length" class="sleep-candy-summary">
+      <div v-if="seenTotal" class="seg" role="tablist" aria-label="模拟结果">
+        <button type="button" role="tab" :aria-selected="resultTab === 'encounters'" :class="{ on: resultTab === 'encounters' }" @click="resultTab = 'encounters'">遭遇</button>
+        <button type="button" role="tab" :aria-selected="resultTab === 'candies'" :class="{ on: resultTab === 'candies' }" @click="resultTab = 'candies'">糖果</button>
+      </div>
+      <div v-if="resultTab === 'candies' && candies.length" class="sleep-candy-summary">
         <p class="muted">每次方案平均糖果（同一进化链合并）</p>
         <div v-for="candy in candies" :key="candy.pokeId" class="sleep-candy-line">
           <PokeSprite :id="candy.pokeId" :name="candy.name" />
@@ -182,7 +188,7 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
         </div>
       </div>
       <p v-if="seenTotal && plan.campTicket" class="muted">奖励基于基础睡姿抽取；露营券增加的遭遇未计入。</p>
-      <div v-if="board.length" class="expect-list">
+      <div v-if="resultTab === 'encounters' && board.length" class="expect-list">
         <div v-for="item in board" :key="item.pokeId" class="expect-line">
           <PokeSprite :id="item.pokeId" :name="item.name" />
           <strong>{{ item.name }}</strong>
