@@ -1,11 +1,11 @@
 {
   "name": "pokesleep-ast",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.4.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vue-tsc -b && vite build && node scripts/build-native-calculation.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:update": "vitest run src/update/release.test.ts src/update/request.test.ts src/stores/update.test.ts",

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { resolveMemberSkill } from '../../calc/mew'
 import { skillMaxFor } from '../../calc/mainSkills'
 import { exEffects } from '../../calc/exEffects'
 import { computed } from 'vue'
@@ -24,6 +25,7 @@ const props = defineProps<{
   subskills: string[]
   ingredientSlots: [number | null, number | null, number | null]
   skillLevel: number
+  mewSkill?: number
   result: ProduceResult
   carryMode?: CarryMode
   wakeEnergy?: number
@@ -35,7 +37,12 @@ const props = defineProps<{
 const { settings } = storeToRefs(useSettingsStore())
 const STAT: Record<string, string> = { help: '帮忙', energy: '活力', ingredient: '食材', skill: '技能', exp: '经验' }
 
-const poke = computed(() => pokeById(props.pokeId))
+const poke = computed(() => {
+  const species = pokeById(props.pokeId)
+  if (!species) return undefined
+  const selected = resolveMemberSkill(species, props)
+  return { ...species, mainSkill: selected.name, skillRate: selected.rate }
+})
 const nature = computed(() => natureByName(props.nature))
 const subs = computed(() => unlockedSubskills(props.level, props.subskills))
 const lines = computed(() => {
@@ -51,14 +58,16 @@ const ingRows = computed(() => Object.entries(props.result.ingredients).map(([na
   return { name, id: item?.id ?? 0, count, energy: count * (item?.energy ?? 0) }
 }))
 const ingEnergy = computed(() => ingRows.value.reduce((sum, row) => sum + row.energy, 0))
-const totalEnergy = computed(() => props.result.berryEnergy + ingEnergy.value + props.result.skillEnergy)
+const skillFoodEnergy = computed(() => Object.entries(props.result.skillIngredients ?? {}).reduce((sum, [name, count]) => sum + count * (ingredientByName(name)?.energy ?? 0), 0))
+const foodScore = computed(() => props.result.cooking?.energy ?? ingEnergy.value)
+const totalEnergy = computed(() => props.result.berryEnergy + foodScore.value + props.result.skillEnergy)
 
 function share(part: number) {
   return totalEnergy.value > 0 ? Math.round(part / totalEnergy.value * 100) : 0
 }
 
 const berryShare = computed(() => share(props.result.berryEnergy))
-const ingShare = computed(() => share(ingEnergy.value))
+const ingShare = computed(() => share(foodScore.value))
 const skillShare = computed(() => Math.max(0, 100 - berryShare.value - ingShare.value))
 
 const seconds = computed(() => {
@@ -140,7 +149,7 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <span v-if="nature.down">{{ STAT[nature.down] }}↓</span>
     </p>
     <p class="member-total">{{ Math.round(totalEnergy).toLocaleString('zh-CN') }}</p>
-    <div class="mix-bar" :title="`树果 ${berryShare}% · 食材 ${ingShare}% · 技能 ${skillShare}%`">
+    <div class="mix-bar" :title="`树果 ${berryShare}% · ${result.cooking ? '料理' : '食材'} ${ingShare}% · 技能 ${skillShare}%`">
       <i class="berry" :style="{ width: `${berryShare}%` }" />
       <i class="ing" :style="{ width: `${ingShare}%` }" />
       <i class="skill" :style="{ width: `${skillShare}%` }" />
@@ -164,6 +173,7 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <span>食材 {{ (rate(poke.ingredientRate, 'ingredient', 'ingS', 'ingM') * 100).toFixed(1) }}%</span>
       <b>{{ Math.round(ingEnergy).toLocaleString('zh-CN') }}</b>
     </p>
+    <p v-if="result.cooking" class="member-line ing"><span>实际料理期望</span><b>{{ Math.round(result.cooking.energy).toLocaleString('zh-CN') }}</b></p>
     <p v-for="row in ingRows" :key="row.name" class="member-line quiet">
       <span><IngredientIcon :id="row.id" :name="row.name" small /> {{ row.count.toFixed(2) }}</span>
       <b>{{ Math.round(row.energy).toLocaleString('zh-CN') }}</b>
@@ -171,6 +181,7 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
     <p class="member-line skill">
       <span><MainSkillIcon :name="poke.mainSkill" /> 技能 LV{{ skillLv }} {{ poke.mainSkill }} {{ (Math.min(1, rate(poke.skillRate, 'skill', 'skillS', 'skillM') * exEffects(settings, poke.berry).skillMultiplier) * 100).toFixed(1) }}%</span>
     </p>
+    <p v-if="pokeId === 151" class="member-line quiet"><span>十项全能 Lv{{ skillLevel }} · 所选效果 Lv{{ skillLv }}</span></p>
     <p class="member-line quiet">
       <span>{{ result.skillProcs.toFixed(2) }} 次</span>
       <b>{{ Math.round(result.skillEnergy).toLocaleString('zh-CN') }}</b>
@@ -179,5 +190,13 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <span>持有 {{ carry }}</span>
       <b>满包 {{ result.sneaky }}</b>
     </p>
+    <p v-if="result.rewards" class="member-line quiet">
+      <span>期望奖励：糖果 {{ result.rewards.candies.toFixed(2) }} · 梦之碎片 {{ result.rewards.dreamShards.toFixed(2) }} · 树果汁 {{ result.rewards.berryJuice.toFixed(2) }}</span>
+    </p>
+    <p v-if="result.cooking" class="member-line quiet"><span>剩余食材：{{ Object.entries(result.cooking.remain).filter(([, count]) => count > 0).map(([name, count]) => `${name} ×${count.toFixed(2)}`).join('、') || '无' }}</span></p>
+    <template v-if="result.cooking && result.skillIngredients">
+      <p class="member-line ing"><span>技能食材原始能量（不计总分）</span><b>{{ Math.round(skillFoodEnergy).toLocaleString('zh-CN') }}</b></p>
+      <p v-for="(count, name) in result.skillIngredients" :key="name" class="member-line quiet"><span>{{ name }}</span><b>{{ count.toFixed(2) }}</b></p>
+    </template>
   </article>
 </template>

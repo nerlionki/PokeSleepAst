@@ -1,3 +1,4 @@
+import { normalizeMewSkill } from './mew'
 import type { BoxPokemon } from '../types'
 import { INGREDIENTS, NATURES, POKEDEX, SUBSKILLS, pokeById } from './data'
 import { foldText } from './text'
@@ -238,6 +239,7 @@ function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
       subskills: Array.isArray(o.subskills) ? o.subskills.map(String) : ['', '', '', '', ''],
       ingredientSlots: nativeSlots(o.ingredientSlots),
       skillLevel: Number(o.skillLevel) || 1,
+      ...(o.pokeId === 151 ? { mewSkill: normalizeMewSkill(o.mewSkill) } : {}),
       name: String(o.name ?? o.note ?? ''),
       napping: Boolean(o.napping),
       ...(normalizeOcrMissing(o.ocrMissing).length ? { ocrMissing: normalizeOcrMissing(o.ocrMissing) } : {}),

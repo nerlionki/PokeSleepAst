@@ -335,7 +335,9 @@ export function sleepDraw(
   return got
 }
 
-export function sleepExpect(
+export interface SleepExpectRow { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }
+export interface SleepExpectCheckpoint { completed: number, randomState: number, rows: SleepExpectRow[] }
+export function* sleepExpectSteps(
   island: IslandId,
   sleepType: SleepType,
   dp: number,
@@ -343,14 +345,16 @@ export function sleepExpect(
   mode: 'normal' | 'map' = 'normal',
   opts: DrawOpts & { seed?: number } = {},
   onProgress?: (completed: number) => void,
+  checkpoint?: SleepExpectCheckpoint,
 ) {
   const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()
+  for (const row of checkpoint?.rows ?? []) freq.set(`${row.pokeId}-${row.stars}-${row.rare ? 'r' : 'n'}`, { ...row })
   const rank = opts.rank ?? '大师1'
   const pool = unlockedStyles(island, sleepType, Infinity, rank, mode)
   const openPool = normalizeEventMix(opts.eventMix) !== 'off' ? unlockedStyles(island, '没有特征', Infinity, rank, 'normal') : pool
   const preparedPool = prepareStyles(island, pool)
   const preparedOpenPool = openPool === pool ? preparedPool : prepareStyles(island, openPool)
-  let randomState = (opts.seed ?? 0) >>> 0
+  let randomState = (checkpoint?.randomState ?? opts.seed ?? 0) >>> 0
   const rng = () => {
     randomState = (randomState + 0x6D2B79F5) >>> 0
     let x = randomState
@@ -358,7 +362,7 @@ export function sleepExpect(
     x ^= x + Math.imul(x ^ (x >>> 7), x | 61)
     return ((x ^ (x >>> 14)) >>> 0) / 0x100000000
   }
-  for (let i = 0; i < n; i++) {
+  for (let i = checkpoint?.completed ?? 0; i < n; i++) {
     const draw = sleepDraw(island, sleepType, dp, rank, mode, rng, { ...opts, pool, openPool, preparedPool, preparedOpenPool })
     for (const s of draw) {
       const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
@@ -373,9 +377,19 @@ export function sleepExpect(
       freq.set(key, cur)
     }
     // Bound message traffic to one update per 100 simulations.
-    if ((i + 1) % 100 === 0 || i + 1 === n) onProgress?.(i + 1)
+    if ((i + 1) % 100 === 0 || i + 1 === n) {
+      onProgress?.(i + 1)
+      yield { completed: i + 1, randomState, rows: [...freq.values()].map((row) => ({ ...row })) }
+    }
   }
   return [...freq.values()].sort((a, b) => b.count - a.count)
+}
+
+export function sleepExpect(island: IslandId, sleepType: SleepType, dp: number, n = 4000, mode: 'normal' | 'map' = 'normal', opts: DrawOpts & { seed?: number } = {}, onProgress?: (completed: number) => void) {
+  const steps = sleepExpectSteps(island, sleepType, dp, n, mode, opts, onProgress)
+  let next = steps.next()
+  while (!next.done) next = steps.next()
+  return next.value
 }
 
 /** 当前睡意之力相对下一档睡姿需求的覆盖比例。池子里的睡姿都已解锁时为 1。 */

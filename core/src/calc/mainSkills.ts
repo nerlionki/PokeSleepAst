@@ -139,8 +139,8 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 30, group: '活力', name: '蹭蹭脸颊（活力疗愈S）', aliases: ['蹭蹭臉頰（活力療癒S）'], maxLevel: 6,
-    summary: '回复活力，并让同伴立刻发动技能。',
-    detail: '回复随机一名同伴，并让一名同伴立刻帮忙发动主技能。',
+    summary: '回复活力，并给予仅抽选技能的额外帮忙。',
+    detail: '回复随机一名同伴；额外帮忙只抽选技能，不产生树果和食材，不保证触发。配队按至少触发一次的概率估算。',
     ...rows(['活力', '技能帮忙'], [[9, 12, 16, 20, 27, 35], [2, 3, 4, 5, 6, 7]]),
   },
   {
@@ -169,8 +169,8 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 10, group: '额外掉落', name: '食材获取S', aliases: ['食材獲取S'], maxLevel: 7,
-    summary: '随机获得自己携带的食材。',
-    detail: '从当前携带的食材里随机获得表中的个数。',
+    summary: '随机获得已解锁的食材。',
+    detail: '从账号已解锁的食材中随机获得表中的个数；本项目默认全部解锁。',
     ...one('食材', MAGNET),
   },
   {
@@ -199,8 +199,8 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 26, group: '额外掉落', name: '正电（食材获取S）', aliases: ['正電（食材獲取S）'], maxLevel: 7,
-    summary: '获得携带食材；属性一致时再追加一份。',
-    detail: '先按食材获取的方式拿携带食材。和自己属性一致的队友还会再拿到右侧的固定食材。另一条正电的追加数量不同。',
+    summary: '获取食材；队伍有正电或负电技能时追加第一食材。',
+    detail: '从已解锁食材中抽选，队伍中有正电／负电技能时，再追加发动者的第一食材。挥指使用普通正电的追加数量。',
     ...rows(['携带', '一致追加'], [[5, 7, 9, 11, 13, 16, 18], [6, 7, 8, 9, 10, 11, 12]]),
   },
   {
@@ -289,15 +289,15 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 34, group: '特殊', name: '十项全能', aliases: ["十項全能"], maxLevel: 8,
-    summary: '每次从一组主技能里随机发动，并获得糖果。',
-    detail: '默认会随机到挥指，也可能变成能量填充、食材获取、疗愈、料理等技能。每一级必定获得 1 颗糖果，6 级起还有追加糖果。',
+    summary: '使用当前习得的主技能，并获得糖果。',
+    detail: '初始技能为挥指，可改为习得的能量、食材、疗愈、料理等技能。每次获得 1 颗糖果；6–8 级有 30% 概率额外获得 1–3 颗。',
     ...rows(['糖果', '追加'], [[1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 1, 2, 3]]),
   },
 ]
 
 export function skillByPokedexName(name: string): MainSkill | undefined {
   const folded = foldText(name)
-  return MAIN_SKILLS.find((skill) => skill.aliases.some((alias) => foldText(alias) === folded))
+  return MAIN_SKILLS.find((skill) => foldText(skill.name) === folded || skill.aliases.some((alias) => foldText(alias) === folded))
 }
 
 export function skillMaxFor(name: string): number {

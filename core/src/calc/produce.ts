@@ -1,6 +1,8 @@
+import { resolveMemberSkill } from './mew'
+import { simulateTeam } from './timeline'
 import type { ProduceInput, ProduceResult, Settings } from '../types'
 import { exEffects } from './exEffects'
-import { skillMaxFor } from './mainSkills'
+import { skillMaxFor, skillByPokedexName } from './mainSkills'
 import { berryEnergyAt } from './berry'
 import { pokeById } from './data'
 import { instantInterval } from './helpSpeed'
@@ -62,8 +64,16 @@ export function splitHelps(
  * 产量拆法对齐 pokeSleepCalc 的 getOneDayHelpCount / getOneDayEnergy。
  */
 export function produce(settings: Settings, input: ProduceInput, helpingBonus = settings.helpingBonus): ProduceResult {
-  const poke = pokeById(input.pokeId)
+  const species = pokeById(input.pokeId)
+  const selected = species ? resolveMemberSkill(species, input) : null
+  const poke = species && selected ? { ...species, mainSkill: selected.name, skillRate: selected.rate } : undefined
   if (!poke) return { ...EMPTY }
+  if (input.pokeId === 151 || skillByPokedexName(poke.mainSkill)?.id === 12) {
+    const sim = simulateTeam(settings, [input], helpingBonus, { excludeSkillFoodFromCooking: true, fixedEnergy: input.wakeEnergy ?? 100 })
+    const result = sim.members[0]!
+    const ingredients = Object.fromEntries(Object.entries(result.ingredients).map(([name, count]) => [name, Math.max(0, count - (result.skillIngredients?.[name] ?? 0))] as const).filter(([, count]) => count > 1e-8))
+    return { ...result, ingredients, cooking: { energy: sim.meals.reduce((sum, meal) => sum + meal.energy, 0), remain: sim.remain } }
+  }
   const subs = unlockedSubskills(input.level, input.subskills)
   const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))
   const energy = Math.min(150, Math.max(0, input.wakeEnergy ?? settings.sleepScore))

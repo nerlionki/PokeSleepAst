@@ -28,7 +28,7 @@ export function createSleepSimulationTask(createWorker: (isActive: () => boolean
         if (worker !== current || active !== generation) return
         if (message.type === 'progress') progress.value = { completed: message.completed, total: message.total }
         else if (message.type === 'result') { result.value = message.result; stop() }
-        else { error.value = message.message; stop() }
+        else if (message.type === 'error') { error.value = message.message; stop() }
       })
       current.onError(() => { if (worker === current) { error.value = '后台模拟中断，请重试'; stop() } })
       current.postMessage(snapshot)
