@@ -202,6 +202,7 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
         <section class="card stack loading-card" role="status" aria-live="polite">
           <div class="loading-spinner" aria-hidden="true" />
           <h3 id="sleep-loading-title">正在模拟睡姿</h3>
+          <p v-if="notice" class="muted">{{ notice }}</p>
           <p>{{ percent }}%（{{ progress.completed.toLocaleString('zh-CN') }} / {{ progress.total.toLocaleString('zh-CN') }}）</p>
           <div role="progressbar" aria-label="睡姿模拟进度" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100" class="loading-track">
             <div :style="{ width: percent + '%' }" class="loading-fill" />

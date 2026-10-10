@@ -1,6 +1,6 @@
 {
   "name": "pokesleep-wxapp",
-  "version": "1.0.4",
+  "version": "1.0.4.1",
   "private": true,
   "scripts": {
     "preprepare:weapp": "node scripts/check-runtime.mjs",

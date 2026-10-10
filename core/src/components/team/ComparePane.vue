@@ -29,6 +29,7 @@ interface CompareRow {
   subskills: string[]
   ingredientSlots: [number | null, number | null, number | null]
   skillLevel: number
+  mewSkill?: number
   carryMode?: MemberDraft['tune']['carryMode']
   ribbonHours?: number
   bonus: number
@@ -80,6 +81,7 @@ function draftOf(uid: string): MemberDraft | null {
     subskills: [...owned.subskills],
     ingredientSlots: [owned.ingredientSlots[0], owned.ingredientSlots[1], owned.ingredientSlots[2]],
     skillLevel: owned.skillLevel,
+    mewSkill: owned.mewSkill,
     tune: { ...defaultTune(), ...owned.tune },
   }
 }
@@ -129,6 +131,7 @@ function updateEditing(next: MemberDraft) {
     subskills: next.subskills,
     ingredientSlots: next.ingredientSlots,
     skillLevel: next.skillLevel,
+    mewSkill: next.mewSkill,
     tune: next.tune,
   })
 }
@@ -161,6 +164,7 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
     subskills: source.subskills,
     ingredientSlots: source.ingredientSlots,
     skillLevel: source.skillLevel,
+    mewSkill: source.mewSkill,
     carryMode: tune?.carryMode,
     ribbonHours: tune?.ribbonHours,
     bonus,
@@ -170,7 +174,7 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
 
 function strength(row: CompareRow) {
   const ingredients = Object.entries(row.r.ingredients).reduce((sum, [name, count]) => sum + count * (ingredientByName(name)?.energy ?? 0), 0)
-  return row.r.berryEnergy + ingredients + row.r.skillEnergy
+  return row.r.berryEnergy + (row.r.cooking?.energy ?? ingredients) + row.r.skillEnergy
 }
 
 const peak = computed(() => Math.max(0, ...rows.value.map(strength)))
@@ -195,6 +199,7 @@ function saveCustomToBox() {
     subskills: [...draft.subskills],
     ingredientSlots: [draft.ingredientSlots[0], draft.ingredientSlots[1], draft.ingredientSlots[2]],
     skillLevel: draft.skillLevel,
+    mewSkill: draft.mewSkill,
     name: '',
     napping: false,
     tune: { ...draft.tune },
@@ -216,7 +221,7 @@ function saveCustomToBox() {
       <button type="button" :class="{ on: settings.period === 'day' }" @click="settings.period = 'day'">每日</button>
       <button type="button" :class="{ on: settings.period === 'week' }" @click="settings.period = 'week'">每周</button>
     </div>
-    <p class="muted">并排比较个体产量，同一行里最高的数字会高亮。按全天满活力计算；自身有帮手奖励时按 5 层。不算三餐。</p>
+    <p class="muted">并排比较个体产量，同一行里最高的数字会高亮。按全天满活力计算；自身有帮手奖励时按 5 层。</p>
     <div class="cmp-board">
       <article v-for="row in rows" :key="row.uid" class="card cmp-col">
         <MemberCard
@@ -226,6 +231,7 @@ function saveCustomToBox() {
           :subskills="row.subskills"
           :ingredient-slots="row.ingredientSlots"
           :skill-level="row.skillLevel"
+          :mew-skill="row.mewSkill"
           :result="row.r"
           :carry-mode="row.carryMode"
           :ribbon-hours="row.ribbonHours"

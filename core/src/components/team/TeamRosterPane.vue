@@ -50,6 +50,7 @@ function toInput(member: SlotMember): ProduceInput & { uid: string, name: string
     subskills: member.subskills,
     ingredientSlots: member.ingredientSlots,
     skillLevel: member.skillLevel,
+    mewSkill: member.mewSkill,
     name: member.name,
     napping: member.napping,
     carryMode: member.tune.carryMode,
@@ -89,6 +90,7 @@ const editingDraft = computed({
         subskills: next.subskills,
         ingredientSlots: next.ingredientSlots,
         skillLevel: next.skillLevel,
+    mewSkill: next.mewSkill,
         tune: next.tune,
       })
       roster.setTune(uid, next.tune)
@@ -148,6 +150,7 @@ function saveCustomToBox() {
     subskills: [...draft.subskills],
     ingredientSlots: [draft.ingredientSlots[0], draft.ingredientSlots[1], draft.ingredientSlots[2]],
     skillLevel: draft.skillLevel,
+    mewSkill: draft.mewSkill,
     name: '',
     napping: false,
     tune: { ...draft.tune },
@@ -179,6 +182,7 @@ function saveCustomToBox() {
       <div class="big amber">{{ Math.round(result.totalEnergy).toLocaleString() }}</div>
       <p>树果 {{ Math.round(result.berryEnergy).toLocaleString() }} · 料理 {{ Math.round(result.cookEnergy).toLocaleString() }} · 技能 {{ Math.round(result.skillEnergy).toLocaleString() }}</p>
       <p class="muted">帮手奖励 {{ result.helpingBonus }} 层</p>
+      <p class="muted">技能食材、活力与扩锅采用期望状态近似，料理暴击保留概率分支。挥指按 26 种候选等概率估算；道具奖励单列，不自动使用。</p>
     </article>
 
     <div class="slot-grid">
@@ -192,6 +196,7 @@ function saveCustomToBox() {
             :subskills="member.subskills"
             :ingredient-slots="member.ingredientSlots"
             :skill-level="member.skillLevel"
+            :mew-skill="member.mewSkill"
             :result="slotResult[idx]!"
             :carry-mode="member.tune.carryMode"
             :ribbon-hours="member.tune.ribbonHours"
@@ -221,7 +226,8 @@ function saveCustomToBox() {
       </article>
       <article class="card">
         <h3>三餐</h3>
-        <p v-for="(meal, i) in result.meals.slice(0, settings.period === 'week' ? 21 : 3)" :key="i">{{ meal.name }} · {{ meal.energy.toLocaleString() }}</p>
+        <p class="muted">每天 08:00／12:00／18:00，最多每周 21 顿。餐点与睡眠重叠时无法做饭，请调整全局睡眠时间。</p>
+        <p v-for="(meal, i) in result.meals.slice(0, settings.period === 'week' ? 21 : 3)" :key="i">第 {{ Math.floor((meal.minute ?? 0) / 1440) + 1 }} 天 {{ clockOf(meal.minute ?? 0) }} · {{ meal.name }} · {{ meal.energy.toLocaleString() }} · 锅 {{ meal.potSize }} · 暴击 {{ ((meal.critChance ?? 0) * 100).toFixed(1) }}%</p>
       </article>
     </template>
 

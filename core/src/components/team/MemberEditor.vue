@@ -3,6 +3,7 @@ import { computed, shallowRef } from 'vue'
 import { NATURES, SUBSKILLS, pokeById } from '../../calc/data'
 import { clearIngredientSlot, ingredientColumns, setIngredientChoice } from '../../calc/ingredients'
 import { exclusiveSubskills, stepGoldSeed, stepSkillLevel, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
+import { MEW_SKILLS, normalizeMewSkill } from '../../calc/mew'
 import { skillMaxFor } from '../../calc/mainSkills'
 import { RIBBON_HOURS, ribbonBonus, stagesLeft } from '../../calc/ribbon'
 import { isAllRounder } from '../../calc/specialty'
@@ -110,6 +111,14 @@ function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number)
         <p class="muted"><MainSkillIcon :name="poke.mainSkill" /> {{ poke.mainSkill }}</p>
       </div>
     </div>
+
+    <label v-if="poke?.id === 151" class="field">
+      <span>十项全能 · 当前习得技能</span>
+      <select :value="normalizeMewSkill(model.mewSkill)" @change="patch({ mewSkill: Number(($event.target as HTMLSelectElement).value) })">
+        <option v-for="skill in MEW_SKILLS" :key="skill.id" :value="skill.id">{{ skill.name }} · {{ (skill.rate * 100).toFixed(2) }}%</option>
+      </select>
+      <small class="muted">保留十项全能等级，效果按所选技能等级上限计算。数据来源：RaenonX。</small>
+    </label>
 
     <div class="lv-row">
       <span class="muted">LV</span>

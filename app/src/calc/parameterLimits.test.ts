@@ -15,7 +15,7 @@ afterEach(() => vi.restoreAllMocks())
 describe('recipe level limit', () => {
   it('calculates level 70 and clamps higher saved levels', () => {
     expect(RECIPE_LEVELS.at(-1)).toBe(70)
-    expect(recipeLevelMult(70)).toBeCloseTo(2.38)
+    expect(recipeLevelMult(70)).toBeCloseTo(3.58)
     expect(recipeLevelMult(100)).toBe(recipeLevelMult(70))
     expect(recipeLevelOf({ ...defaultSettings(), recipeLevels: { test: 100 } }, 'test')).toBe(70)
     expect(cookEnergy('特選蘋果咖哩', 0, false, 70)).toBeGreaterThan(cookEnergy('特選蘋果咖哩', 0, false, 60))
@@ -76,7 +76,7 @@ describe('skill storage during sleep', () => {
   it.each([['技能型', 2], ['全部', 2], ['树果型', 1], ['食材型', 1]] as const)('stores at most %s capacity and flushes it after waking', (specialty, limit) => {
     expect(skillStorageLimit(specialty)).toBe(limit)
     const poke = coreData.POKEDEX.find(row => row.id === 181)!
-    vi.spyOn(coreData, 'pokeById').mockReturnValue({ ...poke, specialty, interval: 60, skillRate: 1, ingredientRate: 0 })
+    vi.spyOn(coreData, 'pokeById').mockReturnValue({ ...poke, specialty, interval: 120, skillRate: 1, ingredientRate: 0 })
     const input = { pokeId: poke.id, level: 1, nature: '勤奋', subskills: [], ingredientSlots: [0, 0, 0] as [number, number, number], skillLevel: 7, wakeEnergy: 0, carryMode: 'unlimited' as const }
     const result = simulateTeam({ ...defaultSettings(), sleepStart: '00:00', sleepEnd: '23:59', meals: false }, [input], 0, { alwaysProc: true })
     expect(result.events).toHaveLength(limit)

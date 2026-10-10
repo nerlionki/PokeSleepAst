@@ -25,6 +25,18 @@ function member(uid: string, level: number) {
 describe('box update order', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
+  it('keeps Mew skill selection and omni level through export and hydration', async () => {
+    const box = useBoxStore()
+    const mew = box.create({ ...member('mew', 60), pokeId: 151, skillLevel: 8 })
+    expect(mew.mewSkill).toBe(12)
+    box.update('mew', { mewSkill: 8 })
+    stored.box = box.exportFile()
+    setActivePinia(createPinia())
+    const restored = useBoxStore()
+    await restored.hydrate()
+    expect(restored.pokemon[0]).toMatchObject({ pokeId: 151, mewSkill: 8, skillLevel: 8 })
+  })
+
   it('moves an edited member to the newest end of storage order', () => {
     const box = useBoxStore()
     box.create(member('first', 10))

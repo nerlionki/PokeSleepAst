@@ -55,6 +55,8 @@ export interface BoxPokemon {
   subskills: string[]
   ingredientSlots: IngredientSlots
   skillLevel: number
+  /** 梦幻十项全能当前习得技能 ID；缺省为挥指。 */
+  mewSkill?: number
   /** 空字符串表示用宝可梦中文名。 */
   name: string
   napping: boolean
@@ -93,6 +95,8 @@ export interface ProduceInput {
   subskills: string[]
   ingredientSlots: IngredientSlots
   skillLevel: number
+  /** 梦幻十项全能当前习得技能 ID；缺省为挥指。 */
+  mewSkill?: number
   /** 预设跟随营地票，一般不用票，全时满包，持有无上限。 */
   carryMode?: CarryMode
   /** 覆盖起床活力。不填则用睡眠分数。 */
@@ -111,6 +115,11 @@ export interface EnergyPoint {
 }
 
 export interface ProduceResult {
+  /** 技能直接获取及额外帮忙获取的食材，包含在总产物中。 */
+  skillIngredients?: Record<string, number>
+  /** 梦幻／挥指单只模拟：总分计实际料理，技能食材与剩余食材单列。 */
+  cooking?: { energy: number, remain: Record<string, number> }
+  rewards?: { dreamShards: number, candies: number, berryJuice: number }
   helps: number
   berries: number
   berryEnergy: number
@@ -122,6 +131,9 @@ export interface ProduceResult {
 }
 
 export interface CookMeal {
+  minute?: number
+  critChance?: number
+  potSize?: number
   name: string
   mix: boolean
   potUsed: number

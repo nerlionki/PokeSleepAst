@@ -1,0 +1,51 @@
+{
+  "measuredAt": "2026-10-10T03:49:12.088Z",
+  "baselineCommit": "4a88a3979163a5fdad8b344e71441cbbfbd8ae23",
+  "node": "v24.14.1",
+  "cpu": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+  "iterations": 100,
+  "precision": "medium",
+  "repeats": 3,
+  "eventMix": "off",
+  "rows": [
+    {
+      "pokeId": 439,
+      "name": "魔尼尼",
+      "variants": [
+        {
+          "label": "修改前",
+          "medianMs": 16248.1535,
+          "samplesMs": [
+            15871.2716,
+            16248.1535,
+            17031.854699999996
+          ],
+          "states": 35219,
+          "result": {
+            "catch": 2,
+            "candy": 11.1
+          }
+        },
+        {
+          "label": "修改后默认",
+          "medianMs": 10996.0318,
+          "samplesMs": [
+            10215.1348,
+            10996.0318,
+            12039.099000000002
+          ],
+          "states": 17666,
+          "result": {
+            "catch": 2,
+            "candy": 11.1
+          }
+        }
+      ],
+      "firstAvailableIsland": "cyan"
+    }
+  ],
+  "island": "all",
+  "sleepType": "all",
+  "splitSleep": true,
+  "comparison": "修改前默认搜索全部睡眠类型、整觉及拆觉；修改后默认为自身类型/没有特征、仅拆觉。"
+}

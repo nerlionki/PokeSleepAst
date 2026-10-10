@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import type { CandyRow } from '../calc/candyPlan'
 import type { CatchGoal } from '../calc/catch'
 import { DEFAULT_BABY_EFFICIENCY, validateBabyEfficiency, type BabyEfficiencyOptions } from '../calc/babyEfficiency'
+import { DEFAULT_WHISTLE, normalizeWhistleOptions, type WhistleOptions } from '../calc/whistle'
 import { loadJson, saveJson } from '../storage'
 
 interface PlanState {
@@ -23,6 +24,7 @@ interface PlanState {
   candyRows: CandyRow[]
   candyStocks: Record<string, number>
   babyEfficiency: BabyEfficiencyOptions
+  whistle: WhistleOptions
 }
 
 const empty: PlanState = {
@@ -42,10 +44,11 @@ const empty: PlanState = {
   candyRows: [],
   candyStocks: {},
   babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY },
+  whistle: { ...DEFAULT_WHISTLE },
 }
 
 export const usePlanStore = defineStore('plans', () => {
-  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY } })
+  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY }, whistle: { ...DEFAULT_WHISTLE } })
   const ready = ref(false)
 
   async function hydrate() {
@@ -60,6 +63,7 @@ export const usePlanStore = defineStore('plans', () => {
       catchGoals: saved.catchGoals ?? [],
       candyRows: saved.candyRows ?? [],
       candyStocks: saved.candyStocks ?? {},
+      whistle: normalizeWhistleOptions(saved.whistle),
       babyEfficiency: validateBabyEfficiency(babyEfficiency) ? { ...DEFAULT_BABY_EFFICIENCY } : babyEfficiency,
     }
     ready.value = true

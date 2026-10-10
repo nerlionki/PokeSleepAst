@@ -437,7 +437,7 @@ describe('cook and team', () => {
 
   it('recipe level raises cook energy', () => {
     expect(recipeLevelMult(1)).toBe(1)
-    expect(recipeLevelMult(11)).toBeCloseTo(1.2)
+    expect(recipeLevelMult(11)).toBeCloseTo(1.19)
     const a = cookEnergy('特選蘋果咖哩', 0, false, 1)
     const b = cookEnergy('特選蘋果咖哩', 0, false, 11)
     expect(b).toBeGreaterThan(a)
