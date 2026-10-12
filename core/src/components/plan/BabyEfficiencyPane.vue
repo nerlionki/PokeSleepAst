@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import ProgressDialog from '../shared/ProgressDialog.vue'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useSettingsStore } from '../../stores/settings'
-import { computed, nextTick, useTemplateRef, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { BABY_POKEMON_IDS, babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { ISLANDS, POKEDEX, pokeById } from '../../calc/data'
@@ -30,20 +31,6 @@ const targetName = computed(() => pokeById(options.value.pokeId)?.name ?? '')
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions)
 const resultName = computed(() => result.value ? pokeById(result.value.options.pokeId)?.name : '')
 const percent = computed(() => Math.min(100, Math.floor(progress.value.percent)))
-const cancelButton = useTemplateRef<HTMLButtonElement>('cancelButton')
-const calculateButton = useTemplateRef<HTMLButtonElement>('calculateButton')
-watch(busy, async (value, _previous, onCleanup) => {
-  if (!value) {
-    await nextTick()
-    calculateButton.value?.focus({ preventScroll: true })
-    return
-  }
-  const overflow = document.body.style.overflow
-  document.body.style.overflow = 'hidden'
-  onCleanup(() => { document.body.style.overflow = overflow })
-  await nextTick()
-  if (busy.value) cancelButton.value?.focus()
-})
 </script>
 
 <template>
@@ -68,7 +55,7 @@ watch(busy, async (value, _previous, onCleanup) => {
         <div class="field"><label for="baby-precision">计算精度</label><select id="baby-precision" v-model="options.precision"><option value="low">低 · 快速搜索</option><option value="medium">中 · 细化搜索</option><option value="high">高 · 密集搜索</option></select></div>
       </div>
       <p class="muted">计算次数用于每个候选抽取状态的模拟；精度控制能量候选点和拆分比例的搜索细度。每一觉最多搜索50亿睡意之力。高精度耗时较长，可随时取消。</p>
-      <button ref="calculateButton" class="btn sage" type="button" :disabled="busy" @click="calculate">计算宝宝效率</button>
+      <button class="btn sage" type="button" :disabled="busy" @click="calculate">计算宝宝效率</button>
     </article>
     <p v-if="error" class="amber" role="alert">{{ error }}</p>
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
@@ -78,29 +65,13 @@ watch(busy, async (value, _previous, onCleanup) => {
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-catch`" title="捕捉只数最多" unit="只" :optimum="result.catch" :precision="result.options.precision" />
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-candy`" title="家族糖果最多" unit="颗" :optimum="result.candy" :precision="result.options.precision" />
     </template>
-    <Teleport to="body">
-      <div v-if="busy" v-back="cancel" class="overlay efficiency-loading" role="dialog" aria-modal="true" aria-labelledby="baby-loading-title" @keydown.esc="cancel" @keydown.tab.prevent="cancelButton?.focus()">
-        <section class="card stack loading-card" role="status" aria-live="polite">
-          <div class="loading-spinner" aria-hidden="true" />
-          <h3 id="baby-loading-title">正在计算宝宝效率</h3>
-          <p v-if="notice" class="muted">{{ notice }}</p>
-          <p>{{ progress.island || '准备候选方案' }} · {{ percent }}%</p>
-          <div class="loading-progress" role="progressbar" aria-label="计算进度" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100"><div :style="{ width: percent + '%' }" style="height: 100%; background: var(--sage)" /></div>
-          <p class="muted">已模拟 {{ progress.evaluatedStates.toLocaleString('zh-CN') }} 个抽取状态</p>
-          <button ref="cancelButton" class="btn ghost" type="button" @click="cancel">取消计算</button>
-        </section>
-      </div>
-    </Teleport>
+    <ProgressDialog :open="busy" title="正在计算宝宝效率" :progress="percent" :stage="progress.island || '准备候选方案'" :notice="notice"
+      :detail="'已模拟 ' + progress.evaluatedStates.toLocaleString('zh-CN') + ' 个抽取状态'" cancellable cancel-text="取消计算" @cancel="cancel" />
   </div>
 </template>
 
 <style scoped>
 .efficiency-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.efficiency-loading { z-index: 55; place-items: center; padding: 20px; backdrop-filter: blur(4px); }
-.loading-card { width: min(100%, 380px); text-align: center; justify-items: center; box-shadow: var(--shadow); }
-.loading-progress { width: 100%; height: 10px; overflow: hidden; border-radius: 5px; background: var(--line); }
-.loading-spinner { width: 38px; height: 38px; border: 3px solid var(--line); border-top-color: var(--sage); border-radius: 50%; animation: efficiency-spin 1s linear infinite; }
-@keyframes efficiency-spin { to { transform: rotate(360deg); } }
 @media (max-width: 400px) { .efficiency-fields { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: reduce) { .loading-spinner { animation: none; } }
 </style>
+

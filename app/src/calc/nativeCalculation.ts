@@ -1,15 +1,20 @@
 import { babyEfficiencySteps } from '../../../core/src/calc/babyEfficiency'
 import { sleepSimulationSteps, type SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
 import type { BabyEfficiencyRequest } from '../../../core/src/calc/babyEfficiencyMessages'
+import { scoreSearchSteps } from '../../../core/src/calc/scoreSearch'
+import type { ScoreRequest } from '../../../core/src/calc/scorePlan'
+let scoreSteps: ReturnType<typeof scoreSearchSteps> | null = null
 let steps: ReturnType<typeof babyEfficiencySteps> | null = null
 let progress: unknown = null
 let sleepSteps: ReturnType<typeof sleepSimulationSteps> | null = null
 let total = 0, iterations = 0
-export function beginTask(kind: 'baby' | 'sleep', request: BabyEfficiencyRequest | SleepSimulationRequest) {
-  steps = null; sleepSteps = null; progress = null
+export function beginTask(kind: 'baby' | 'sleep' | 'score', request: BabyEfficiencyRequest | SleepSimulationRequest | ScoreRequest) {
+  steps = null; sleepSteps = null; scoreSteps = null; progress = null
   if (kind === 'baby') {
     const baby = request as BabyEfficiencyRequest
     steps = babyEfficiencySteps(baby.options, (value) => { progress = value }, undefined, baby.checkpoint)
+  } else if (kind === 'score') {
+    scoreSteps = scoreSearchSteps(request as ScoreRequest)
   } else {
     const sleep = request as SleepSimulationRequest
     sleepSteps = sleepSimulationSteps(sleep); total = sleep.iterations * sleep.powers.length; iterations = sleep.iterations
@@ -17,6 +22,12 @@ export function beginTask(kind: 'baby' | 'sleep', request: BabyEfficiencyRequest
 }
 export function nextTask(): string {
   try {
+    if (scoreSteps) {
+      const next = scoreSteps.next()
+      if (next.done) return JSON.stringify({ type: 'result', result: next.value })
+      const state = next.value
+      return JSON.stringify({ type: 'progress', completed: state.phase === 'search' ? state.index : state.policies.length + state.index, total: state.policies.length + 5 })
+    }
     if (steps) {
       const next = steps.next()
       return JSON.stringify(next.done ? { type: 'result', result: next.value } : { type: 'progress', progress })

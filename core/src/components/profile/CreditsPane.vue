@@ -12,6 +12,7 @@ const SOURCES = [
       { label: '食谱', href: 'https://pks.raenonx.cc/zh/meal' },
       { label: '主技能', href: 'https://pks.raenonx.cc/zh/mainskill/info' },
       { label: '副技能', href: 'https://pks.raenonx.cc/zh/stats/subskill' },
+      { label: '副技能抽选概率（研究推定）', href: 'https://pks.raenonx.cc/zh/docs/view/mechanics/subskill-probability' },
       { label: '十项全能', href: 'https://pks.raenonx.cc/zh/mainskill/info/34' },
       { label: '进化道具来源', href: 'https://pks.raenonx.cc/zh/item/source/21' },
       { label: '三周年活动资料', href: 'https://pks.raenonx.cc/zh/event/list/3rdAnniv' },
@@ -76,6 +77,7 @@ const SOURCES = [
     note: '游戏版本更新、机制调整与活动规则的优先参考，包括等级与糖果经验、技能种子、午睡岛及三周年彩庆花活动。资料存在冲突时，按官方公告、RaenonX、Wiki 的顺序采用。',
     links: [
       { label: '游戏公告', href: 'https://www.pokemonsleep.net/zh/news/' },
+      { label: '友情徽章与金色副技能规则', href: 'https://www.pokemonsleep.net/zh/news/323537323733323635393039363631363937/' },
       { label: '小卡比兽的午睡岛', href: 'https://www.pokemonsleep.net/zh/news/343231333934393334303030353137313236/' },
       { label: '官方三周年活动说明', href: 'https://www.pokemonsleep.net/news/343138353434383532363837333838363733/' },
     ],

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { taskNavigationLocked } from '../../../../core/src/composables/taskNavigationLock'
 import { computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useBoxStore } from '../../stores/box'
@@ -43,7 +44,7 @@ onMounted(async () => {
     <main class="page">
       <RouterView />
     </main>
-    <nav class="tabbar">
+    <nav class="tabbar" :inert="taskNavigationLocked" :aria-disabled="taskNavigationLocked">
       <RouterLink :to="{ name: 'pokemon' }">
         <span class="tab-ico" aria-hidden="true">●</span>
         宝可梦

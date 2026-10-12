@@ -43,7 +43,7 @@ describe('WeChat background sleep simulation', () => {
     expect(state.error.value).toContain('2.27.3')
     expect(download).not.toHaveBeenCalled()
     vi.stubGlobal('wx', { getAppBaseInfo: () => ({ SDKVersion: '3.14.3' }), getAccountInfoSync: () => ({ miniProgram: { version: '1.0.3', envVersion: 'release' } }) })
-    expect(requireWorkerSupport).toThrow('1.0.4')
+    expect(requireWorkerSupport).toThrow('1.0.5')
     scope.stop()
   })
   it('compares numeric components and permits development with no release version', () => {

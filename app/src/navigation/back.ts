@@ -1,3 +1,4 @@
+import { handleTaskNavigationBack } from '../../../core/src/composables/taskNavigationLock'
 import type { ObjectDirective } from 'vue'
 import type { Router } from 'vue-router'
 
@@ -36,7 +37,7 @@ export function installAndroidBack(router: Router, target: Pick<Window, 'addEven
   let navigating = false
   const stop = router.afterEach(() => { navigating = false })
   const onBack = () => {
-    if (backStack.handle() || navigating) return
+    if (handleTaskNavigationBack() || backStack.handle() || navigating) return
     const current = router.currentRoute.value
     const tabs = current.meta.backTabs
     const mainTab = Array.isArray(tabs)

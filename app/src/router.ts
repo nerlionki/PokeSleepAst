@@ -1,3 +1,4 @@
+import { taskNavigationLocked } from '../../core/src/composables/taskNavigationLock'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import DataView from './views/DataView.vue'
 import PlanView from './views/PlanView.vue'
@@ -11,8 +12,10 @@ export const router = createRouter({
     { path: '/', redirect: '/pokemon' },
     { path: '/pokemon', name: 'pokemon', component: PokemonView, meta: { backTabs: ['dex', 'box', 'wall'] } },
     { path: '/plan', name: 'plan', component: PlanView, meta: { backTabs: ['sleep', 'catch', 'baby', 'candy', 'train'] } },
-    { path: '/team', name: 'team', component: TeamView, meta: { backTabs: ['team', 'cmp'] } },
+    { path: '/team', name: 'team', component: TeamView, meta: { backTabs: ['team', 'cmp', 'score'] } },
     { path: '/data', name: 'data', component: DataView, meta: { backTabs: ['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot'] } },
     { path: '/profile', name: 'profile', component: ProfileView, meta: { backTabs: ['home', 'backup', 'settings', 'credits', 'update'] } },
   ],
 })
+
+router.beforeEach(() => !taskNavigationLocked.value)

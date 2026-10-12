@@ -7,13 +7,13 @@ export interface CalculationWorker<Request, Message> {
 }
 interface NativeMessage { id: string, sequence: number, message: unknown }
 interface BackgroundCalculationPlugin {
-  start(options: { id: string, kind: 'baby' | 'sleep', request: unknown }): Promise<void>
+  start(options: { id: string, kind: 'baby' | 'sleep' | 'score', request: unknown }): Promise<void>
   cancel(options: { id: string }): Promise<void>
   status(options: { id: string }): Promise<NativeMessage | { id: string }>
   addListener(event: 'calculationMessage', listener: (event: NativeMessage) => void): Promise<PluginListenerHandle>
 }
 const native = registerPlugin<BackgroundCalculationPlugin>('BackgroundCalculation')
-export function createCalculationWorker<Request, Message>(kind: 'baby' | 'sleep', browserWorker: () => Worker, onFallback: (notice: string) => void = () => {}): CalculationWorker<Request, Message> {
+export function createCalculationWorker<Request, Message>(kind: 'baby' | 'sleep' | 'score', browserWorker: () => Worker, onFallback: (notice: string) => void = () => {}): CalculationWorker<Request, Message> {
   if (Capacitor.getPlatform() !== 'android') {
     const worker = browserWorker()
     const adapter: CalculationWorker<Request, Message> = { onmessage: null, onerror: null,

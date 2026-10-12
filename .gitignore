@@ -2,6 +2,7 @@ ocrTest/
 docs/
 *.md
 !/AGENTS.md
+!/core/src/data/subskill-draw.md
 !/app/RELEASE.md
 dist
 ios
@@ -27,3 +28,5 @@ app/release/
 !/抽选逻辑前后差异以及示例.md
 
 /app/android/app/src/main/assets/calculation.js
+
+/.impeccable/
