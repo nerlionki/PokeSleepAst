@@ -1,9 +1,11 @@
+import { taskNavigationLocked } from '../../../core/src/composables/taskNavigationLock'
 import { reactive } from 'vue'
 import Taro from '@tarojs/taro'
 export const route = reactive({ path: '/pokemon', name: 'pokemon', query: {} as Record<string, string> })
 export function useRoute() { return route }
 export function useRouter() {
   async function navigate(target: { path?: string; name?: string; query?: Record<string, string> }) {
+    if (taskNavigationLocked.value) return
     const page = target.name ?? target.path?.replace(/^\//, '') ?? route.name
     const previous = route.name
     route.path = '/' + page; route.name = page; route.query = target.query ?? {}

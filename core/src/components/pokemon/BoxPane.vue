@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, shallowRef } from 'vue'
+import ProgressDialog from '../shared/ProgressDialog.vue'
+import type { ImportProgress } from '../../calc/ocrImportCore'
 import { useRoute, useRouter } from 'vue-router'
 import BoxOverview from './BoxOverview.vue'
 import { FILTER_CATALOG, boxLabel, boxMatches, EMPTY_BOX_QUERY, filterCount, type BoxQuery } from '../../calc/boxFilter'
@@ -37,6 +39,7 @@ const box = useBoxStore()
 const picking = shallowRef(false)
 const ocrBusy = shallowRef(false)
 const ocrMsg = shallowRef('')
+const ocrProgress = shallowRef<ImportProgress>({ stage: '请选择截图', completed: 0, total: 0, percent: 0 })
 const filtering = shallowRef(false)
 const query = reactive<BoxQuery>({ ...EMPTY_BOX_QUERY, ingredients: [], subskills: [] })
 
@@ -84,10 +87,12 @@ function blank(pokeId: number): BoxDraft {
 }
 
 async function pickShots() {
+  if (ocrBusy.value) return
+  ocrProgress.value = { stage: '请选择截图', completed: 0, total: 0, percent: 0 }
   ocrBusy.value = true
   ocrMsg.value = '正在识别…'
   try {
-    const result = await importScreenshotSelection(box.pokemon)
+    const result = await importScreenshotSelection(box.pokemon, value => { ocrProgress.value = value })
     if (!result) { ocrMsg.value = ''; return }
     const imported = result.accepted.map((pokemon) => box.create(pokemon))
     completionQueue.value = imported.filter((pokemon) => normalizeOcrMissing(pokemon.ocrMissing).length).map((pokemon) => pokemon.uid)
@@ -151,8 +156,11 @@ const activeFilters = computed(() => filterCount(query))
 </script>
 
 <template>
+  <ProgressDialog :open="ocrBusy" title="正在导入 Box 截图" :progress="ocrProgress.total ? ocrProgress.percent : null" :stage="ocrProgress.stage"
+    :detail="ocrProgress.total ? '已处理 ' + ocrProgress.completed + ' / ' + ocrProgress.total + ' 张' : ''"
+    hint="导入完成后可切换页面，请保持当前页面。" />
   <BoxOverview v-if="overviewOpen" @back="closeOverview" @complete="completeFromOverview" />
-  <div v-else class="stack">
+  <div v-else class="stack" :inert="ocrBusy">
     <div class="row">
       <button class="btn" type="button" @click="openOverview">Box 概览</button>
       <button class="btn" type="button" @click="picking = true">新增宝可梦</button>

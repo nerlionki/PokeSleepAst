@@ -26,38 +26,12 @@ page { background: #081018; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-switch {
-  appearance: none;
-  -webkit-appearance: none;
-  position: relative;
-  flex: none;
-  align-self: center;
-  width: 44px;
-  height: 24px;
-  margin: 0;
-  border-radius: 999px;
-  background: #bdbdbd;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-switch::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  box-sizing: border-box;
-  width: 24px;
-  height: 24px;
-  border: 2px solid #b0b0b0;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s, border-color 0.2s;
-}
-switch:checked { background: var(--amber); }
-switch:checked::before { transform: translateX(20px); border-color: var(--amber); }
-switch:disabled { opacity: 0.45; cursor: not-allowed; }
-switch:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
+
+
+
+
+
+
 .shiny-mark {
   width: 1.1em;
   height: 1.1em;

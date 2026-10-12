@@ -6,18 +6,18 @@ import type { ProduceInput, ProduceResult } from '../types'
 
 /** 用户确认：验证 Wiki 的 26 个候选等概率，未确认的技能不进入池。 */
 export const METRONOME_POOL = [1,5,2,15,20,39,9,10,31,23,24,29,26,4,30,7,8,17,32,11,13,25,3,6,14,21] as const
-const BOOST = [[2,2,3,4,6],[3,3,4,5,7],[3,3,5,6,8],[4,4,6,7,9],[4,5,7,8,10],[5,6,8,9,11]]
-const CRESCENT_SELF = [[5,7,9,12,14],[9,12,15,16,19],[13,17,18,20,24],[17,19,25,28,29],[21,24,27,28,30],[25,29,30,31,32]]
-const CRESCENT_TEAM = [[1,1,1,1,2],[1,1,1,2,3],[1,1,2,3,4],[1,2,2,3,5],[1,2,3,5,7],[1,2,4,6,9]]
+export const BOOST = [[2,2,3,4,6],[3,3,4,5,7],[3,3,5,6,8],[4,4,6,7,9],[4,5,7,8,10],[5,6,8,9,11]]
+export const CRESCENT_SELF = [[5,7,9,12,14],[9,12,15,16,19],[13,17,18,20,24],[17,19,25,28,29],[21,24,27,28,30],[25,29,30,31,32]]
+export const CRESCENT_TEAM = [[1,1,1,1,2],[1,1,1,2,3],[1,1,2,3,4],[1,2,2,3,5],[1,2,3,5,7],[1,2,4,6,9]]
 
 // RAE 验证概率，非官方公布值：https://pks.raenonx.cc/en/mainskill/info/16
 export const DISGUISE_CRIT_CHANCE = 0.185
 // 完整档位：https://wikiwiki.jp/poke_sleep/メインスキル/きのみバースト/りゅうせいぐん
-const DRACO_SELF = [[12,14,18,18,20],[21,24,29,30,33],[29,29,35,37,41],[38,39,42,45,49],[43,44,48,49,53],[48,50,55,55,58]]
-const DRACO_TEAM = [[1,1,1,2,2],[1,1,1,2,2],[1,2,2,3,3],[1,2,3,4,4],[2,3,4,5,5],[3,4,4,5,5]]
+export const DRACO_SELF = [[12,14,18,18,20],[21,24,29,30,33],[29,29,35,37,41],[38,39,42,45,49],[43,44,48,49,53],[48,50,55,55,58]]
+export const DRACO_TEAM = [[1,1,1,2,2],[1,1,1,2,2],[1,2,2,3,3],[1,2,3,4,4],[2,3,4,5,5],[3,4,4,5,5]]
 // 用户确认按 RAE 验证值，Wiki 的 25% 不覆盖该值：https://pks.raenonx.cc/en/mainskill/info/15
 export const SPIT_UP_CHANCE = 0.265
-const SELECT_POOLS: Record<number, number[]> = { 28: [4,10,19], 33: [9,10,16], 36: [4,16,18], 38: [6,7,11] }
+export const SELECT_POOLS: Record<number, number[]> = { 28: [4,10,19], 33: [9,10,16], 36: [4,16,18], 38: [6,7,11] }
 
 export interface EffectActor {
   poke: { id: number, mainSkill: string, berry: string }

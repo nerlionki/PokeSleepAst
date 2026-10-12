@@ -7,7 +7,7 @@ let loading: Promise<OcrSessions> | null = null
 
 function asset(path: string): string {
   const base = import.meta.env.BASE_URL || '/'
-  return new URL(path, new URL(base, window.location.href)).toString()
+  return new URL(path, new URL(base, globalThis.location.href)).toString()
 }
 
 export function loadOcr(): Promise<OcrSessions> {

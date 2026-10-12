@@ -7,7 +7,7 @@ const wxRoot = path.join(root, 'wxapp')
 const core = path.join(root, 'core/src')
 const generated = path.join(wxRoot, 'src/generated')
 const require = createRequire(path.join(wxRoot, 'package.json'))
-const { nativeScopedStyles } = require('./config/native-scoped-styles.cjs')
+const { nativeScopedStyles, stripWebCheckboxStyles } = require('./config/native-scoped-styles.cjs')
 const write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, value) }
 const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(f => f.isDirectory() ? walk(path.join(dir, f.name)) : [path.join(dir, f.name)])
 function clean(dir) {
@@ -28,7 +28,6 @@ for (const file of walk(core)) {
   let text = fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n')
   text = text.replace(/import UpdateSettings from[^\n]*\n/g, '').replace(/<UpdateSettings\s*\/>/g, '')
   text = text.replace('<article class="card"></article>', '')
-  if (rel === 'components/plan/BabyEfficiencyPane.vue') text = text.replace(/watch\(busy,[\s\S]*?\n\}\)\n/, '')
   text = text.replace(/\s+v-back="[^"]*"/g, '')
   text = text.replace(/<Teleport\b[^>]*>/g, '').replace(/<\/Teleport>/g, '')
   // Native text nodes cannot host image children. Preserve inline icon rows
@@ -158,18 +157,31 @@ write(path.join(wxRoot, 'src/app.config.ts'), `export default defineAppConfig(${
 // Native Worker gets its own pure-core bundle; no Vue or platform code enters it.
 const esbuild = require('esbuild')
 fs.mkdirSync(path.join(wxRoot, 'src/workers'), { recursive: true })
+// Share one CommonJS calculation module to keep the worker subpackage below 2 MB.
 await esbuild.build({ stdin: { contents: `import { babyEfficiencySteps } from './core/src/calc/babyEfficiency';
-worker.onMessage(({options, checkpoint}) => {
-  const steps = babyEfficiencySteps(options, progress => worker.postMessage({type:'progress',progress}), undefined, checkpoint);
-  const tick = () => { try { const next = steps.next(); if(next.done) worker.postMessage({type:'result',result:next.value}); else { worker.postMessage({type:'checkpoint',checkpoint:next.value}); setTimeout(tick, 0); } } catch(error) { worker.postMessage({type:'error',message:error.message || '计算失败'}); } };
-  tick();
-});`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/baby.js'), bundle: true, platform: 'neutral', format: 'iife', target: 'es2020', minify: true })
-await esbuild.build({ stdin: { contents: `import { sleepSimulationSteps } from './core/src/calc/sleepSimulation';
-worker.onMessage(request => {
+import { sleepSimulationSteps } from './core/src/calc/sleepSimulation';
+import { scoreSearchSteps } from './core/src/calc/scoreSearch';
+  export { installImportWorker } from './core/src/calc/ocrWorker';
+export function runBaby({options, checkpoint}) {
+ const steps = babyEfficiencySteps(options, progress => worker.postMessage({type:'progress',progress}), undefined, checkpoint);
+ run(steps, state => worker.postMessage({type:'checkpoint',checkpoint:state}));
+}
+export function runSleep(request) {
  const steps = sleepSimulationSteps(request);
- const tick = () => { try { const next = steps.next(); if(next.done) worker.postMessage({type:'result',result:next.value}); else { worker.postMessage({type:'checkpoint',checkpoint:next.value}); worker.postMessage({type:'progress',completed:next.value.powerIndex*request.iterations+(next.value.session?.completed||0),total:request.iterations*request.powers.length}); setTimeout(tick, 0); } } catch(error) { worker.postMessage({type:'error',message:error.message || '模拟失败'}); } };
+ run(steps, state => { worker.postMessage({type:'checkpoint',checkpoint:state}); worker.postMessage({type:'progress',completed:state.powerIndex*request.iterations+(state.session?.completed||0),total:request.iterations*request.powers.length}); });
+}
+export function runScore(request) {
+ run(scoreSearchSteps(request), state => { worker.postMessage({type:'checkpoint',checkpoint:state}); worker.postMessage({type:'progress',completed:state.phase==='search'?state.index:state.policies.length+state.index,total:state.policies.length+5}); });
+}
+function run(steps, checkpoint) {
+ const tick = () => { try { const next = steps.next(); if(next.done) worker.postMessage({type:'result',result:next.value}); else { checkpoint(next.value); setTimeout(tick,0); } } catch(error) { worker.postMessage({type:'error',message:error.message||'计算失败'}); } };
  tick();
-});`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/sleep.js'), bundle: true, platform: 'neutral', format: 'iife', target: 'es2020', minify: true })
+}`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/calculation.js'), bundle: true, platform: 'neutral', format: 'cjs', target: 'es2020', minify: true,
+plugins: [{ name: 'calculation-images', setup(build) { build.onResolve({ filter: /^#platform\/images$/ }, () => ({ path: 'images', namespace: 'calculation' })); build.onLoad({ filter: /.*/, namespace: 'calculation' }, () => ({ contents: 'export const localImage = () => ""', loader: 'js' })); } }] })
+for (const [name, handler] of [['baby', 'runBaby'], ['sleep', 'runSleep'], ['score', 'runScore']]) {
+  write(path.join(wxRoot, `src/workers/${name}.js`), `const { ${handler} } = require('./calculation.js'); worker.onMessage(${handler});\n`)
+}
+write(path.join(wxRoot, 'src/workers/ocr.js'), "const { installImportWorker } = require('./calculation.js'); installImportWorker(worker, handler => worker.onMessage(handler));\n")
 // Read ONNX protobuf metadata directly; preparing WeChat does not require Web inference.
 function fields(data) {
   let offset = 0
@@ -195,6 +207,6 @@ for (const name of ['det', 'rec']) {
 }
 write(path.join(wxRoot, 'src/platform/ocr-models.json'), JSON.stringify(models))
 write(path.join(wxRoot, 'src/platform/ocr-dict.json'), JSON.stringify(fs.readFileSync(path.join(root, 'core/public/ocr/keys.txt'), 'utf8').replace(/^\uFEFF/, '').trimEnd().split(/\r?\n/)))
-let css = fs.readFileSync(path.join(core, 'style.css'), 'utf8').replace(/\bbody\s*\{[\s\S]*?\n\}/, 'body { background: #081018; }').replaceAll(':root', 'page').replace(/html, body, #app/g, 'page').replace(/\bbody\b/g, 'page').replaceAll('input[type="checkbox"]', 'switch')
+let css = stripWebCheckboxStyles(fs.readFileSync(path.join(core, 'style.css'), 'utf8')).replace(/\bbody\s*\{[\s\S]*?\n\}/, 'body { background: #081018; }').replaceAll(':root', 'page').replace(/html, body, #app/g, 'page').replace(/\bbody\b/g, 'page')
 write(path.join(wxRoot, 'src/app.css'), css + '\npage{padding:0;box-sizing:border-box;font-size:16px;min-height:100vh;background:#081018;background-image:none} view,text,button,input,picker,textarea{box-sizing:border-box} .page{width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding-left:16px;padding-right:16px} .wx-control{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:16px;color:var(--text)} .wx-input{height:44px;line-height:24px;padding:10px 12px} .wx-select{padding:10px 12px;min-height:44px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere} .wx-inline{display:inline-flex;align-items:center;gap:4px;min-width:0} .wx-sub-ico{background:transparent;mask-image:none;-webkit-mask-image:none} .wx-textarea{padding:10px 12px} image{display:inline-block} button{line-height:1.5;margin:0} textarea{width:100%;min-height:100px} .source-link{color:#7fcec0;margin-right:12px} .wx-settings{margin-bottom:14px}\n')
 console.log(`Prepared shared views and ${pack + 1} asset subpackages (${assets.length} images).`)

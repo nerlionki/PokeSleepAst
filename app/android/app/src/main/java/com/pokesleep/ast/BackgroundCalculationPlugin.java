@@ -26,7 +26,7 @@ public class BackgroundCalculationPlugin extends Plugin {
     @PluginMethod public void start(PluginCall call) {
         String id = call.getString("id"), kind = call.getString("kind");
         JSObject request = call.getObject("request");
-        if (id == null || request == null || !("baby".equals(kind) || "sleep".equals(kind))) {
+        if (id == null || request == null || !("baby".equals(kind) || "sleep".equals(kind) || "score".equals(kind))) {
             call.reject("计算参数无效"); return;
         }
         if (Build.VERSION.SDK_INT < 26 || !JavaScriptSandbox.isSupported()) {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, shallowRef, useTemplateRef, watch } from 'vue'
+import ProgressDialog from '../shared/ProgressDialog.vue'
+import { computed, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ISLANDS } from '../../calc/data'
 import { drowsyPower, energyLost, EVENT_BONUSES, expectSpecies, maxEncounters, RANK_ORDER, rankFromStrength, rankStrength, rankToNext, resolvedSleepdex, sleepClock, strengthToNext } from '../../calc/sleep'
@@ -68,9 +69,7 @@ const firstResearchExtras = shallowRef(0)
 const eventMix = computed(() => otherTypes.value ? settings.value.sleepEventMix : 'off')
 const resultTab = shallowRef<'encounters' | 'candies'>('encounters')
 const { busy, error: simulationError, notice, progress, result: seen, calculate: startSimulation, cancel, reset } = useSleepSimulation()
-const cancelButton = useTemplateRef<HTMLButtonElement>('cancelButton')
 watch(() => [researchBonuses.value, focusIncense.value, luckIncense.value, incenseSession.value], () => reset(), { deep: true, flush: 'sync' })
-watch(busy, async (value) => { if (value) { await nextTick(); cancelButton.value?.focus?.() } })
 const percent = computed(() => progress.value.total ? Math.floor(progress.value.completed / progress.value.total * 100) : 0)
 let drawSeed = 1
 
@@ -230,30 +229,7 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
         </div>
       </div>
     </article>
-    <Teleport to="body">
-      <div v-if="busy" v-back="cancel" class="overlay sleep-loading" role="dialog" aria-modal="true" aria-labelledby="sleep-loading-title" @keydown.esc="cancel" @keydown.tab.prevent="cancelButton?.focus?.()">
-        <section class="card stack loading-card" role="status" aria-live="polite">
-          <div class="loading-spinner" aria-hidden="true" />
-          <h3 id="sleep-loading-title">正在模拟睡姿</h3>
-          <p v-if="notice" class="muted">{{ notice }}</p>
-          <p>{{ percent }}%（{{ progress.completed.toLocaleString('zh-CN') }} / {{ progress.total.toLocaleString('zh-CN') }}）</p>
-          <div role="progressbar" aria-label="睡姿模拟进度" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100" class="loading-track">
-            <div :style="{ width: percent + '%' }" class="loading-fill" />
-          </div>
-          <p class="muted">模拟期间参数已锁定</p>
-          <button ref="cancelButton" class="btn ghost" type="button" @click="cancel">取消模拟</button>
-        </section>
-      </div>
-    </Teleport>
+    <ProgressDialog :open="busy" title="正在模拟睡姿" :progress="percent" :notice="notice" hint="模拟期间参数已锁定"
+      :detail="'已模拟 ' + progress.completed.toLocaleString('zh-CN') + ' / ' + progress.total.toLocaleString('zh-CN') + ' 次'" cancellable cancel-text="取消模拟" @cancel="cancel" />
   </div>
 </template>
-
-<style scoped>
-.sleep-loading { z-index: 55; place-items: center; padding: 20px; backdrop-filter: blur(4px); }
-.loading-card { width: min(100%, 380px); text-align: center; justify-items: center; box-shadow: var(--shadow); }
-.loading-track { width: 100%; height: 8px; overflow: hidden; border-radius: 4px; background: var(--line); }
-.loading-fill { height: 100%; background: var(--sage); }
-.loading-spinner { width: 38px; height: 38px; border: 3px solid var(--line); border-top-color: var(--sage); border-radius: 50%; animation: sleep-spin 1s linear infinite; }
-@keyframes sleep-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .loading-spinner { animation: none; } }
-</style>
