@@ -5,6 +5,7 @@ export type SkillKind = 'charge' | 'healAll' | 'healOne' | 'healSelf' | 'support
 /** 能量填充一类技能直接加到卡比兽身上的能量。 */
 export function chargeStrength(mainSkill: string, level: number): number {
   const skill = skillByPokedexName(mainSkill)
+  if (skill?.id === 18 || skill?.id === 19) return mainSkillValue('能量填充S', level, '能量')
   if (skill?.id === 5) {
     return (mainSkillValue(mainSkill, level, '最低') + mainSkillValue(mainSkill, level, '最高')) / 2
   }
@@ -42,10 +43,10 @@ export const SUBSKILL_NOTES: Record<string, string> = {
   berryS: '每次帮忙的树果数量 +1',
   sleepExp: '睡眠获得的 EXP +14%',
   helpingBonus: '全队帮忙间隔 −5%（最多叠加 5 次）',
-  researchExp: '研究 EXP +6%',
+  researchExp: '研究 EXP +9%',
   shardBonus: '梦之碎片 +6%',
   skillLevelM: '主技能等级 +2',
-  energyRecover: '活力回复量 +14%',
+  energyRecover: '全队睡眠活力回复量 +14%，自身睡眠回复上限 105',
   helpM: '帮忙间隔 −14%',
   ingM: '食材发现率 +36%',
   invL: '持有上限 +18',

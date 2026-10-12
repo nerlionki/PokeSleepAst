@@ -13,6 +13,10 @@ import * as data from './data'
 import * as baby from './babyEfficiency'
 import * as candyPlan from './candyPlan'
 import * as sleepCandy from './sleepCandy'
+import * as sleepRewards from '../../../core/src/calc/sleepRewards'
+import * as train from './train'
+import { useBoxStore } from '../stores/box'
+import { useRosterStore } from '../../../core/src/stores/roster'
 import { useSettingsStore } from '../stores/settings'
 import { usePlanStore } from '../stores/plans'
 import type { BabyEfficiencyOptions } from '../calc/babyEfficiency'
@@ -25,6 +29,8 @@ function compilePage(name: string) {
   const modules: Record<string, unknown> = {
     vue: Vue, pinia: Pinia, '../../calc/sleepRules': rules, '../../calc/sleep': sleep, '../../calc/data': data,
     '../../calc/babyEfficiency': baby, '../../calc/candyPlan': candyPlan, '../../calc/sleepCandy': sleepCandy,
+    '../../calc/sleepRewards': sleepRewards, '../../calc/train': train,
+    '../../stores/box': { useBoxStore }, '../../stores/roster': { useRosterStore },
     '../../stores/settings': { useSettingsStore }, '../../stores/plans': { usePlanStore },
     '../../composables/useBabyEfficiency': { useBabyEfficiency: (options: Ref<BabyEfficiencyOptions>) => {
       captured.options = options
@@ -40,10 +46,17 @@ function compilePage(name: string) {
   }, exports)
   return exports.default!
 }
-const SleepPane = compilePage('SleepPane'), BabyEfficiencyPane = compilePage('BabyEfficiencyPane')
+const SleepPane = compilePage('SleepPane'), BabyEfficiencyPane = compilePage('BabyEfficiencyPane'), TrainPane = compilePage('TrainPane')
 const renderPage = (component: Vue.Component) => { const app = createSSRApp(component); app.directive('back', {}); return renderToString(app) }
 beforeEach(() => { setActivePinia(createPinia()); captured.options = null })
 describe('activity switches on calculation pages', () => {
+  it('renders training and the functional research incense controls without audit notes', async () => {
+    expect(await renderPage(TrainPane)).toContain('经验性格')
+    const html = await renderPage(SleepPane)
+    expect(html).toContain('专注薰香（研究 EXP ×2）')
+    expect(html).toContain('幸运薰香（研究梦碎 ×2）')
+    expect(html).not.toContain('核对')
+  })
   it('shows the sleep activity switch and hides calculation weights', async () => {
     const settings = useSettingsStore().settings
     settings.sleepEventMix = 'all'; settings.eventMult = 1.5

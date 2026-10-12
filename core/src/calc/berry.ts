@@ -3,12 +3,17 @@ import { POKEMON_LEVEL_MAX } from './xp'
 
 const SNAP = [1, 10, 25, 30, 50, 60, 70, 80, 100] as const
 
-/** 每级 ×1.025 后取整。energyHigh 是 70 级的值，70 级以后继续按同一复利涨到等级上限。 */
+/** Wiki：线性与复利取较大值再四舍五入；71～100 级为用户保留的规划推算。 */
 export function berryEnergyAt(name: string, level: number): number {
   const b = berryByName(name)
   if (!b) return 30
   const lv = Math.min(POKEMON_LEVEL_MAX, Math.max(1, level))
-  return Math.round(b.energyLv1 * 1.025 ** (lv - 1))
+  return Math.round(Math.max(b.energyLv1 + lv - 1, b.energyLv1 * 1.025 ** (lv - 1)))
+}
+
+/** 每颗先向上取整营地加成，再乘喜好树果倍率。 */
+export function berryUnitEnergy(name: string, level: number, areaBonus: number, favoredMultiplier: number): number {
+  return Math.ceil(berryEnergyAt(name, level) * (1 + areaBonus)) * favoredMultiplier
 }
 
 export function berryEnergySnaps(name: string) {

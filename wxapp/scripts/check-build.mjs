@@ -14,7 +14,7 @@ if (project.appid !== 'wxa305c12ee6676e08') throw Error('Incorrect AppID')
 if (config.pages.length !== 5) throw Error('Missing feature pages')
 const walk = d => fs.readdirSync(d, {withFileTypes:true}).flatMap(f => f.isDirectory() ? walk(path.join(d,f.name)) : [path.join(d,f.name)])
 const files = walk(dist)
-for (const worker of ['baby.js', 'sleep.js']) if (!fs.existsSync(path.join(dist, 'workers', worker))) throw Error('Missing background calculation worker: ' + worker)
+for (const worker of ['baby.js', 'sleep.js', 'ocr.js']) if (!fs.existsSync(path.join(dist, 'workers', worker))) throw Error('Missing background calculation worker: ' + worker)
 const require = createRequire(import.meta.url)
 const compressedJson = require('../config/compressed-json.cjs')
 for (const file of walk(path.resolve(root, '../core/src/data')).filter(file => file.endsWith('.json'))) {
@@ -52,7 +52,15 @@ const bridge = fs.readFileSync(path.join(dist, 'image-loader.js'), 'utf8')
 if (!bridge.includes('require.async(') || bridge.includes('wx.loadSubpackage')) throw Error('Invalid native async image bridge')
 const literalImports = new Set([...bridge.matchAll(/require\.async\(\s*["']\.\/(asset-pack\d+)\/images\.js["']\s*\)/g)].map(match => match[1]))
 for (const item of Object.values(manifest)) if (!literalImports.has(item.pack)) throw Error(`Native image package needs a literal async dependency: ${item.pack}`)
-const wxss = fs.readFileSync(path.join(dist, 'app.wxss'), 'utf8')
+function readWxss(file, seen = new Set()) {
+  if (seen.has(file)) return ''
+  seen.add(file)
+  const source = fs.readFileSync(file, 'utf8')
+  // Taro may extract app styles into imported files; verify the effective styles.
+  return source + [...source.matchAll(/@import\s+["']([^"']+)["']/g)]
+    .map(match => readWxss(path.resolve(path.dirname(file), match[1]), seen)).join('\n')
+}
+const wxss = readWxss(path.join(dist, 'app.wxss'))
 const pageRules = [...wxss.matchAll(/(?:^|})\s*page\s*\{([^}]*)\}/g)].map(match => match[1])
 if (pageRules.some(rule => rule.includes('gradient(')) || !pageRules.some(rule => /background-image\s*:\s*none/.test(rule))) throw Error('WeChat page background must be solid')
 for (const file of walk(path.join(root, 'src/generated')).filter(file => file.endsWith('.vue'))) {

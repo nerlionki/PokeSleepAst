@@ -341,7 +341,7 @@ describe('empty ingredient slots', () => {
     const skipped = produce(settings, input)
     const filled = produce(settings, { ...input, ingredientSlots: [1, 0, null] })
     expect(skipped.ingredients['特选蛋']).toBeGreaterThan(0)
-    expect(skipped.ingredients['粗枝大葱']).toBeUndefined()
+    expect(skipped.ingredients['粗枝大葱'] ?? 0).toBeCloseTo(skipped.skillIngredients?.['粗枝大葱'] ?? 0)
     expect(filled.ingredients['粗枝大葱']).toBeGreaterThan(0)
   })
 

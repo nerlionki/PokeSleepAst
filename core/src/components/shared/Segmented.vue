@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T extends string">
+import { taskNavigationLocked } from '../../composables/taskNavigationLock'
 defineProps<{
   options: { id: T, label: string }[]
 }>()
@@ -11,7 +12,7 @@ const model = defineModel<T>({ required: true })
     <button
       v-for="opt in options"
       :key="opt.id"
-      type="button"
+      type="button" :disabled="taskNavigationLocked"
       :class="{ on: model === opt.id }"
       @click="model = opt.id"
     >

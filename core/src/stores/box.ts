@@ -1,3 +1,4 @@
+import { normalizeMewSkill } from '../calc/mew'
 import { newUid } from '../calc/uid'
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
@@ -15,6 +16,7 @@ function adopt(item: BoxPokemon & { note?: string }): BoxPokemon {
     subskills: item.subskills ?? ['', '', '', '', ''],
     ingredientSlots: item.ingredientSlots,
     skillLevel: item.skillLevel,
+    ...(item.pokeId === 151 ? { mewSkill: normalizeMewSkill(item.mewSkill) } : {}),
     name,
     napping: Boolean(item.napping),
     ...(item.shiny ? { shiny: true } : {}),
@@ -52,6 +54,7 @@ export const useBoxStore = defineStore('box', () => {
       subskills: partial.subskills,
       ingredientSlots: partial.ingredientSlots,
       skillLevel: partial.skillLevel,
+      ...(partial.pokeId === 151 ? { mewSkill: normalizeMewSkill(partial.mewSkill) } : {}),
       name: partial.name ?? '',
       napping: partial.napping,
       ...(partial.shiny ? { shiny: true } : {}),

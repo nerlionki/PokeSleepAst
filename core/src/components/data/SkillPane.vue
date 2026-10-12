@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { POKEDEX, SUBSKILLS } from '../../calc/data'
 import { MAIN_SKILLS, SKILL_GROUPS, type MainSkill } from '../../calc/mainSkills'
 import { RARITY_LABEL, SUBSKILL_NOTES } from '../../calc/skills'
@@ -14,7 +15,12 @@ import SkillLevels from './SkillLevels.vue'
 const props = defineProps<{ q: string }>()
 const part = shallowRef<'main' | 'sub'>('main')
 const open = shallowRef(0)
-const detailId = shallowRef<number | null>(null)
+const route = useRoute()
+const router = useRouter()
+const detailId = computed<number | null>({
+  get: () => MAIN_SKILLS.some(skill => skill.id === Number(route.query.skill)) ? Number(route.query.skill) : null,
+  set: value => { const query = { ...route.query }; if (value == null) delete query.skill; else query.skill = String(value); void (value == null ? router.replace({ query }) : router.push({ query })) },
+})
 
 function matches(skill: MainSkill) {
   return textHit([skill.name, skill.group, skill.summary, skill.detail, ...skill.aliases].join(' '), props.q)

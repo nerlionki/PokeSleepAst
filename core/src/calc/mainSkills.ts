@@ -79,14 +79,14 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 22, group: '能量', name: '梦魇（能量填充M）', aliases: ['夢魘（能量填充M）'], maxLevel: 7,
-    summary: '增加能量，并让属性不一致的队友活力下降。',
-    detail: '给予卡比兽能量。属性与自己不同的队友活力 −12。',
+    summary: '增加能量，并让非恶属性成员活力下降。',
+    detail: '给予卡比兽能量。全队非恶属性宝可梦活力固定 −12，最低为 0。',
     ...one('能量', [2640, 3753, 5178, 7149, 9870, 13638, 18515]),
   },
   {
     id: 40, group: '能量', name: '精神击破（树果领域）', aliases: ['精神擊破（樹果領域）'], maxLevel: 6,
-    summary: '增加能量，并提高树果领域的树果出现率。',
-    detail: '同时给卡比兽能量，并按等级提高树果领域的追加出现率。',
+    summary: '增加能量，并提升超能力属性树果的能量。',
+    detail: '领域每次发动叠加，最多提升 24%，持续到迁移岛屿，移出超梦不会清除。',
     ...rows(['能量', '树果领域'], [[1408, 2002, 2762, 3813, 5264, 7274], [0.006, 0.008, 0.01, 0.012, 0.016, 0.02].map(pct)]),
   },
   {
@@ -139,8 +139,8 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 30, group: '活力', name: '蹭蹭脸颊（活力疗愈S）', aliases: ['蹭蹭臉頰（活力療癒S）'], maxLevel: 6,
-    summary: '回复活力，并让同伴立刻发动技能。',
-    detail: '回复随机一名同伴，并让一名同伴立刻帮忙发动主技能。',
+    summary: '回复活力，并给予仅抽选技能的额外帮忙。',
+    detail: '回复随机一名同伴；额外帮忙只抽选技能，不产生树果和食材，不保证触发。配队按至少触发一次的概率估算。',
     ...rows(['活力', '技能帮忙'], [[9, 12, 16, 20, 27, 35], [2, 3, 4, 5, 6, 7]]),
   },
   {
@@ -153,7 +153,7 @@ export const MAIN_SKILLS: MainSkill[] = [
     id: 35, group: '活力', name: '治愈波动（活力疗愈S）', aliases: ['治癒波動（活力療癒S）'], maxLevel: 6,
     summary: '回复两名同伴，并追加帮忙。',
     detail: '回复随机两名同伴。拉帝欧斯在场时，帮忙次数还会再增加。',
-    ...rows(['活力', '帮忙'], [[6, 8, 10, 13, 17, 22], [1, 2, 2, 3, 4, 4]]),
+    ...rows(['活力', '帮忙', '组合追加'], [[6, 8, 10, 13, 17, 22], [1, 2, 2, 3, 4, 4], [1, 1, 2, 2, 2, 3]]),
   },
   {
     id: 9, group: '额外帮忙', name: '帮手支援S', aliases: ['幫手支援S'], maxLevel: 7,
@@ -169,14 +169,14 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 10, group: '额外掉落', name: '食材获取S', aliases: ['食材獲取S'], maxLevel: 7,
-    summary: '随机获得自己携带的食材。',
-    detail: '从当前携带的食材里随机获得表中的个数。',
+    summary: '随机获得已解锁的食材。',
+    detail: '从账号已解锁的食材中随机获得表中的个数；本项目默认全部解锁。',
     ...one('食材', MAGNET),
   },
   {
     id: 16, group: '额外掉落', name: '画皮（树果骤增）', aliases: ['畫皮（樹果遽增）'], maxLevel: 6,
     summary: '掉落树果，并可能暴击追加。',
-    detail: '基础树果必定获得，暴击时再追加右侧的数量。',
+    detail: '自己获得基础数量，其他队友各获得追加数量。大成功时所有数量变为 3 倍；大成功后，直到下次睡眠研究或手动登记前不会再次大成功。',
     ...rows(['基础', '追加'], [[8, 10, 15, 17, 19, 21], [1, 2, 2, 3, 4, 5]]),
   },
   {
@@ -199,8 +199,8 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 26, group: '额外掉落', name: '正电（食材获取S）', aliases: ['正電（食材獲取S）'], maxLevel: 7,
-    summary: '获得携带食材；属性一致时再追加一份。',
-    detail: '先按食材获取的方式拿携带食材。和自己属性一致的队友还会再拿到右侧的固定食材。另一条正电的追加数量不同。',
+    summary: '获取食材；队伍有正电或负电技能时追加第一食材。',
+    detail: '从已解锁食材中抽选，队伍中有正电／负电技能时，再追加发动者的第一食材。挥指使用普通正电的追加数量。',
     ...rows(['携带', '一致追加'], [[5, 7, 9, 11, 13, 16, 18], [6, 7, 8, 9, 10, 11, 12]]),
   },
   {
@@ -247,8 +247,8 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 37, group: '额外掉落', name: '流星群（树果骤增）', aliases: ['流星群（樹果遽增）', '流星群（樹果增）'], maxLevel: 6,
-    summary: '按同属性只数掉落树果，拉帝亚斯额外获得。',
-    detail: '同属性越多，自己的树果越多。拉帝亚斯还会再拿到右侧的追加树果。',
+    summary: '按同属性不同种类掉落树果，有拉帝亚斯时自己额外获得。',
+    detail: '不同种类的同属性成员越多，自己和队友的树果越多。拉帝亚斯在队时，发动者额外获得右侧数量。',
     ...rows(['1 只', '5 只', '拉帝亚斯'], [[12, 21, 29, 38, 43, 48], [20, 33, 41, 49, 53, 58], [2, 4, 6, 8, 9, 10]]),
   },
   {
@@ -260,14 +260,16 @@ export const MAIN_SKILLS: MainSkill[] = [
   {
     id: 18, group: '额外技能', name: '变身（技能复制）', aliases: ['變身（技能複製）'], maxLevel: 7,
     summary: '复制场上另一只宝可梦的主技能。',
-    detail: '变成同伴正在使用的主技能并按自己的技能等级结算。',
+    detail: '随机选择另一只队友，按自己的技能等级和被复制技能的等级上限结算，使用自己的属性与食材。抽到特殊宝可梦、复制技能或没有队友时失败，发动能量填充S。配队按队友等概率估算。',
     columns: [], levels: [],
+    extra: [{ title: '复制失败：能量填充S', ...one('能量', [400, 569, 785, 1083, 1496, 2066, 3212]) }],
   },
   {
     id: 19, group: '额外技能', name: '模仿（技能复制）', aliases: ['模仿（技能複製）'], maxLevel: 7,
-    summary: '复制最近发动过的主技能。',
-    detail: '模仿队伍里刚刚发动的主技能，按自己的技能等级结算。',
+    summary: '随机复制另一只队友的主技能。',
+    detail: '随机选择另一只队友，规则与变身相同。抽到特殊宝可梦、复制技能或没有队友时失败，发动能量填充S。配队按队友等概率估算。',
     columns: [], levels: [],
+    extra: [{ title: '复制失败：能量填充S', ...one('能量', [400, 569, 785, 1083, 1496, 2066, 3212]) }],
   },
   {
     id: 11, group: '料理', name: '料理强化S', aliases: ['料理強化S'], maxLevel: 7,
@@ -283,21 +285,41 @@ export const MAIN_SKILLS: MainSkill[] = [
   },
   {
     id: 25, group: '料理', name: '负电（料理强化S）', aliases: ['負電（料理強化S）'], maxLevel: 7,
-    summary: '增加锅容量，并回复属性不一致的同伴。',
-    detail: '锅容量增加得比料理强化S少，同时让属性不同的随机同伴回复活力。',
+    summary: '增加锅容量，有组合伙伴时回复随机一名成员。',
+    detail: '自己以外至少一名成员持有正电或负电时，额外回复随机一名成员，与属性无关。',
     ...rows(['锅容量', '活力'], [[5, 7, 9, 12, 16, 20, 24], [8, 10, 13, 17, 23, 30, 35]]),
   },
   {
     id: 34, group: '特殊', name: '十项全能', aliases: ["十項全能"], maxLevel: 8,
-    summary: '每次从一组主技能里随机发动，并获得糖果。',
-    detail: '默认会随机到挥指，也可能变成能量填充、食材获取、疗愈、料理等技能。每一级必定获得 1 颗糖果，6 级起还有追加糖果。',
+    summary: '使用当前习得的主技能，并获得糖果。',
+    detail: '初始技能为挥指，可改为习得的能量、食材、疗愈、料理等技能。每次获得 1 颗糖果；6–8 级有 30% 概率额外获得 1–3 颗。',
     ...rows(['糖果', '追加'], [[1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 1, 2, 3]]),
   },
 ]
 
-export function skillByPokedexName(name: string): MainSkill | undefined {
+const exactSkills = new Map<string, MainSkill>()
+const foldedSkills = new Map<string, MainSkill>()
+for (const skill of MAIN_SKILLS) {
+  for (const name of [skill.name, ...skill.aliases]) {
+    if (!exactSkills.has(name)) exactSkills.set(name, skill)
+    const folded = foldText(name)
+    if (!foldedSkills.has(folded)) foldedSkills.set(folded, skill)
+  }
+}
+const SELECT_ALIAS = foldText('食材精選S')
+const PLUS_ALIAS = foldText('正電（食材獲取S）')
+
+export function skillByPokedexName(name: string, pokeId?: number): MainSkill | undefined {
+  // 模拟每次发动会多次查询，固定名称与别名只折叠一次。
+  if (pokeId == null && exactSkills.has(name)) return exactSkills.get(name)
   const folded = foldText(name)
-  return MAIN_SKILLS.find((skill) => skill.aliases.some((alias) => foldText(alias) === folded))
+  // 同名技能依物种分流；使用唯一规范名的复制/挥指保持选中的变体。
+  if (folded === SELECT_ALIAS) {
+    const id = pokeId === 27 || pokeId === 28 ? 36 : pokeId === 742 || pokeId === 743 ? 33 : pokeId === 701 ? 38 : 28
+    return MAIN_SKILLS.find(skill => skill.id === id)
+  }
+  if (folded === PLUS_ALIAS && pokeId === 849) return MAIN_SKILLS.find(skill => skill.id === 27)
+  return exactSkills.get(name) ?? foldedSkills.get(folded)
 }
 
 export function skillMaxFor(name: string): number {

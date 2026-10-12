@@ -1,7 +1,9 @@
+import { resolveMemberSkill } from './mew'
+import { simulateTeam } from './timeline'
 import type { ProduceInput, ProduceResult, Settings } from '../types'
 import { exEffects } from './exEffects'
-import { skillMaxFor } from './mainSkills'
-import { berryEnergyAt } from './berry'
+import { skillMaxFor, skillByPokedexName } from './mainSkills'
+import { berryUnitEnergy } from './berry'
 import { pokeById } from './data'
 import { instantInterval } from './helpSpeed'
 import { slotDrop } from './ingredients'
@@ -30,7 +32,7 @@ function cutDecimal(value: number, places: number): number {
 
 /**
  * 一次帮忙只出一种：树果，或已解锁的某一槽食材。技能不占用这次帮忙。
- * 食材次数、技能次数按期望计算；有概率但不足 1 次时保底 1 次。
+ * 食材次数、技能次数按期望计算，不人为补足一次。
  */
 export function splitHelps(
   helps: number,
@@ -40,10 +42,8 @@ export function splitHelps(
   snacking: boolean,
 ): { berryHelps: number, ingredients: Record<string, number>, skillProcs: number } {
   let skillProcs = cutDecimal(helps * skillRate, 1)
-  if (!snacking && skillRate > 0 && skillProcs < 1) skillProcs = 1
   if (snacking) skillProcs = 0
   let foodHelps = slots.length ? cutDecimal(helps * ingRate, 2) : 0
-  if (!snacking && ingRate > 0 && slots.length && foodHelps < 1) foodHelps = 1
   if (snacking) foodHelps = 0
   const berryHelps = Math.max(0, cutDecimal(helps - foodHelps, 2))
   const ingredients: Record<string, number> = {}
@@ -62,8 +62,16 @@ export function splitHelps(
  * 产量拆法对齐 pokeSleepCalc 的 getOneDayHelpCount / getOneDayEnergy。
  */
 export function produce(settings: Settings, input: ProduceInput, helpingBonus = settings.helpingBonus): ProduceResult {
-  const poke = pokeById(input.pokeId)
+  const species = pokeById(input.pokeId)
+  const selected = species ? resolveMemberSkill(species, input) : null
+  const poke = species && selected ? { ...species, mainSkill: selected.name, skillRate: selected.rate } : undefined
   if (!poke) return { ...EMPTY }
+  // 纯能量/回复技能在固定活力比较中可使用等价快速公式，其余统一技能结算。
+  if (input.carryMode !== 'full' && (input.pokeId === 151 || ![1, 2, 4, 5, 7, 8].includes(skillByPokedexName(poke.mainSkill)?.id ?? 0))) {
+    const sim = simulateTeam(settings, [input], helpingBonus, { expectedProcs: true, fixedEnergy: input.wakeEnergy ?? 100 })
+    const result = sim.members[0]!
+    return { ...result, cooking: { energy: sim.meals.reduce((sum, meal) => sum + meal.energy, 0), remain: sim.remain } }
+  }
   const subs = unlockedSubskills(input.level, input.subskills)
   const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))
   const energy = Math.min(150, Math.max(0, input.wakeEnergy ?? settings.sleepScore))
@@ -96,7 +104,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   })
   const split = splitHelps(helps, ingRate, skillRate, slots, snacking)
   const berries = cutDecimal(split.berryHelps * per, 1)
-  const unit = berryEnergyAt(poke.berry, input.level) * ex.berryMultiplier * (1 + settings.areaBonus)
+  const unit = berryUnitEnergy(poke.berry, input.level, settings.areaBonus, ex.berryMultiplier)
   const skillLv = Math.min(skillMaxFor(poke.mainSkill), effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill) + ex.skillLevels)
   return {
     helps,

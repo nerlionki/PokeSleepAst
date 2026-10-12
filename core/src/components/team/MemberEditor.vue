@@ -2,7 +2,8 @@
 import { computed, shallowRef } from 'vue'
 import { NATURES, SUBSKILLS, pokeById } from '../../calc/data'
 import { clearIngredientSlot, ingredientColumns, setIngredientChoice } from '../../calc/ingredients'
-import { exclusiveSubskills, stepGoldSeed, stepSkillLevel, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
+import { applySilverSeed, exclusiveSubskills, silverSeedCandidates, stepGoldSeed, stepSkillLevel, subskillLevelBonus, undoSilverSeed, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
+import { MEW_SKILLS, normalizeMewSkill } from '../../calc/mew'
 import { skillMaxFor } from '../../calc/mainSkills'
 import { RIBBON_HOURS, ribbonBonus, stagesLeft } from '../../calc/ribbon'
 import { isAllRounder } from '../../calc/specialty'
@@ -33,6 +34,9 @@ function natureMark(stat: string | null, arrow: string) {
 
 const natureOpen = shallowRef(false)
 const subPick = shallowRef<number | null>(null)
+const silverOpen = shallowRef(false)
+const silverChoices = computed(() => silverSeedCandidates(model.value.level, model.value.subskills))
+const skillBonus = computed(() => subskillLevelBonus(model.value.level, model.value.subskills))
 const poke = computed(() => pokeById(model.value.pokeId))
 const board = computed(() => poke.value ? ingredientColumns(poke.value.ingredients) : [])
 const skillMax = computed(() => skillMaxFor(poke.value?.mainSkill ?? ''))
@@ -58,7 +62,7 @@ function setSub(index: number, id: string) {
   while (next.length < 5) next.push('')
   if (id && next.some((current, slot) => current === id && slot !== index)) return
   next[index] = id
-  patch({ subskills: next })
+  patch({ subskills: next, tune: { ...model.value.tune, silverSeedHistory: [] } })
   emit('confirm', `subskill${index}` as OcrMissingField)
   subPick.value = null
 }
@@ -88,14 +92,23 @@ function setSkill(level: number) {
 }
 
 function stepGold(delta: number) {
-  const next = stepGoldSeed({ skillLevel: model.value.skillLevel, goldSeeds: model.value.tune.goldSeeds }, delta, skillMax.value)
+  const next = stepGoldSeed({ skillLevel: model.value.skillLevel, goldSeeds: model.value.tune.goldSeeds }, delta, skillMax.value, skillBonus.value)
   if (next) {
     model.value = { ...model.value, skillLevel: next.skillLevel, tune: { ...model.value.tune, goldSeeds: next.goldSeeds } }
     emit('confirm', 'skillLevel')
   }
 }
 
-function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number) {
+function stepSilver(index?: number) {
+  const next = index == null ? undoSilverSeed(model.value) : applySilverSeed(model.value, index)
+  if (next) {
+    model.value = next
+    if (index != null) emit('confirm', `subskill${index}` as OcrMissingField)
+  }
+  silverOpen.value = false
+}
+
+function stepTune(key: 'evolutions', delta: number, max: number) {
   const value = Math.min(max, Math.max(0, model.value.tune[key] + delta))
   patchTune({ [key]: value })
 }
@@ -110,6 +123,14 @@ function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number)
         <p class="muted"><MainSkillIcon :name="poke.mainSkill" /> {{ poke.mainSkill }}</p>
       </div>
     </div>
+
+    <label v-if="poke?.id === 151" class="field">
+      <span>十项全能 · 当前习得技能</span>
+      <select :value="normalizeMewSkill(model.mewSkill)" @change="patch({ mewSkill: Number(($event.target as HTMLSelectElement).value) })">
+        <option v-for="skill in MEW_SKILLS" :key="skill.id" :value="skill.id">{{ skill.name }} · {{ (skill.rate * 100).toFixed(2) }}%</option>
+      </select>
+      <small class="muted">保留十项全能等级，效果按所选技能等级上限计算。</small>
+    </label>
 
     <div class="lv-row">
       <span class="muted">LV</span>
@@ -127,7 +148,8 @@ function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number)
     <div class="ing-board">
       <section v-for="(col, colIndex) in board" :key="colIndex" class="ing-col">
         <h3>Lv {{ [1, 30, 60][colIndex] }}</h3>
-        <button v-if="isAllRounder(poke)" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">空</button>
+        <button v-if="isAllRounder(poke) && colIndex > 0" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">空</button>
+        <p v-if="isAllRounder(poke) && colIndex === 0 && model.ingredientSlots[0] == null" class="amber" role="alert">Lv.1 食材不能为空，请选择实际食材。</p>
         <div class="ing-col-items">
           <button
             v-for="(cell, cellIndex) in col"
@@ -143,7 +165,7 @@ function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number)
         </div>
       </section>
     </div>
-    <p class="muted">亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽，第 1 槽固定。</p>
+    <p class="muted">亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽。{{ isAllRounder(poke) ? 'Lv.1 必须选择食材，不能留空。' : '第 1 槽固定。' }}</p>
 
     <div class="tune-row">
       <span>进化次数</span>
@@ -155,11 +177,16 @@ function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number)
       <span>金种子</span>
       <button type="button" :disabled="model.tune.goldSeeds <= 0" @click="stepGold(-1)">−</button>
       <b>{{ model.tune.goldSeeds }}</b>
-      <button type="button" :disabled="model.skillLevel >= skillMax" @click="stepGold(1)">+</button>
+      <button type="button" :disabled="model.skillLevel + skillBonus >= skillMax" @click="stepGold(1)">+</button>
       <span>银种子</span>
-      <button type="button" @click="stepTune('silverSeeds', -1, 9)">−</button>
+      <button type="button" :disabled="model.tune.silverSeeds <= 0" @click="stepSilver()">−</button>
       <b>{{ model.tune.silverSeeds }}</b>
-      <button type="button" @click="stepTune('silverSeeds', 1, 9)">+</button>
+      <button type="button" :disabled="!silverChoices.length || model.tune.silverSeeds >= 9" @click="silverOpen = !silverOpen">+</button>
+    </div>
+    <div v-if="silverOpen" class="picker-opts">
+      <button v-for="choice in silverChoices" :key="choice.index" type="button" @click="stepSilver(choice.index)">
+        Lv.{{ SUBSKILL_GATES[choice.index] }} · {{ subName(choice.from) }} → {{ subName(choice.to) }}
+      </button>
     </div>
     <div class="tune-row">
       <span>技能</span>

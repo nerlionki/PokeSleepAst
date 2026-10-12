@@ -222,8 +222,9 @@ describe('production comparison', () => {
       pokeId: 1, level: 1, nature: '勤奋', subskills: [], ingredientSlots: [0, 0, 0], skillLevel: 1, wakeEnergy: 100,
     }, 0)
     expect(slow.helps * 0.019).toBeLessThan(1)
-    expect(slow.skillProcs).toBe(1)
-    expect(instantInterval(2700, 70, '固执', ['helpS', 'ingM', 'helpingBonus', 'shardBonus'], 5, 100, true, 'taupe', false, 0.05)).toBe(487)
+    expect(slow.skillProcs).toBeGreaterThan(0)
+    expect(slow.skillProcs).toBeLessThan(1)
+    expect(instantInterval(2700, 70, '固执', ['helpS', 'ingM', 'helpingBonus', 'shardBonus'], 5, 100, true, 'taupe', false, 0.05)).toBe(507)
   })
 })
 
@@ -237,20 +238,20 @@ describe('energy', () => {
   })
 
   it('meals restore by current energy band', () => {
-    expect(mealRecover(10)).toBe(19)
-    expect(mealRecover(80)).toBe(7)
+    expect(mealRecover(10)).toBe(9)
+    expect(mealRecover(80)).toBe(2)
     expect(mealRecover(150)).toBe(0)
   })
 
-  it('recovery incense doubles restore, not +5%', () => {
+  it('recovery incense does not amplify meals', () => {
     const input = { pokeId: 1, level: 30, nature: '勤奋', subskills: [] as string[], ingredientSlots: [0, 0, 0] as [number, number, number], skillLevel: 1 }
-    const plain = energyCurve({ ...settings, meals: true, incense: false, sleepScore: 80, sleepStart: '23:00', sleepEnd: '07:00', dailySkillHeal: 0 }, input)
-    const incense = energyCurve({ ...settings, meals: true, incense: true, sleepScore: 80, sleepStart: '23:00', sleepEnd: '07:00', dailySkillHeal: 0 }, input)
+    const plain = energyCurve({ ...settings, meals: true, incense: false, sleepScore: 80, sleepStart: '00:00', sleepEnd: '00:00', dailySkillHeal: 0 }, input)
+    const incense = energyCurve({ ...settings, meals: true, incense: true, sleepScore: 80, sleepStart: '00:00', sleepEnd: '00:00', dailySkillHeal: 0 }, input)
     const mealMin = 12 * 60
     const p = plain.find((x) => !x.asleep && x.minute % 1440 === mealMin)
     const i = incense.find((x) => !x.asleep && x.minute % 1440 === mealMin)
     expect(p && i).toBeTruthy()
-    expect((i?.energy ?? 0) - (p?.energy ?? 0)).toBeGreaterThan(3)
+    expect(i?.energy).toBe(p?.energy)
   })
 })
 
@@ -261,11 +262,9 @@ describe('xp', () => {
     expect(expTo(70)).toBe(82162)
   })
 
-  it('boost doubles exp and multiplies shards', () => {
-    const plain = xpCandy({ from: 1, to: 10, nature: '勤奋' })
-    const boost = xpCandy({ from: 1, to: 10, nature: '勤奋', boost: true })
-    expect(boost.candy).toBeLessThan(plain.candy)
-    expect(boost.shards).toBe(plain.shards * 5)
+  it('boost needs fewer candies and charges shards for each candy at the level it is fed', () => {
+    expect(xpCandy({ from: 1, to: 2, nature: '勤奋' })).toMatchObject({ candy: 2, shards: 28 })
+    expect(xpCandy({ from: 1, to: 2, nature: '勤奋', boost: true })).toMatchObject({ candy: 1, shards: 70 })
   })
 })
 
@@ -311,7 +310,7 @@ describe('nap island', () => {
     }
     expect(trainPlan({ ...base, sleepExpBonus: 0, dailyCandy: 0, sleepIncense: true }).dailyExp).toBe(200)
     expect(trainPlan({ ...base, sleepExpBonus: 2, dailyCandy: 0, sleepIncense: true }).dailyExp).toBeCloseTo(256)
-    expect(trainPlan({ ...base, sleepExpBonus: 0, dailyCandy: 2, sleepIncense: true }).dailyExp).toBe(250)
+    expect(trainPlan({ ...base, sleepExpBonus: 0, dailyCandy: 2, sleepIncense: true }).dailyExp).toBe(280)
   })
 })
 
@@ -437,7 +436,7 @@ describe('cook and team', () => {
 
   it('recipe level raises cook energy', () => {
     expect(recipeLevelMult(1)).toBe(1)
-    expect(recipeLevelMult(11)).toBeCloseTo(1.2)
+    expect(recipeLevelMult(11)).toBeCloseTo(1.19)
     const a = cookEnergy('特選蘋果咖哩', 0, false, 1)
     const b = cookEnergy('特選蘋果咖哩', 0, false, 11)
     expect(b).toBeGreaterThan(a)
