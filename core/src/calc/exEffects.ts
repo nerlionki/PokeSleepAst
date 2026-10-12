@@ -16,5 +16,6 @@ export function exEffects(settings: Settings, berry: string, specialty = '') {
     skillMultiplier: weekly === 'skills' ? 1.25 : 1,
     speed: main && settings.exBuff !== false ? island?.helpFavored ?? 1 : ex && !favored && settings.exDebuff !== false ? island?.helpUnfavored ?? 1 : 1,
     skillLevels: main && settings.exBuff !== false ? 1 : 0,
+    carryExtra: main && settings.island === 'cyanex' && settings.exBuff !== false ? 5 : 0,
   }
 }

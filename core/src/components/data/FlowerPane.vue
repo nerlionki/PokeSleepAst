@@ -20,8 +20,7 @@ const seeds = [
       <div><strong>{{ seed.name }}</strong><p>{{ seed.effect }}</p></div>
     </div>
     <p class="muted">首次种花的教学还可获得净白薄荷 ×1；道具包最多持有 2 个。</p>
-    <p class="muted">以上五色效果依据 2026 年三周年活动规则，非当前常驻加成。</p>
-    <p><a href="https://www.pokemonsleep.net/news/343138353434383532363837333838363733/" target="_blank" rel="noopener noreferrer">官方三周年活动说明</a> · <a href="https://pks.raenonx.cc/zh/event/list/3rdAnniv" target="_blank" rel="noopener noreferrer">RAE 三周年活动资料</a></p>
+    <p class="muted">以上五色效果仅适用于 2026 年三周年活动。</p>
   </div>
 </template>
 

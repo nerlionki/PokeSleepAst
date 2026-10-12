@@ -23,7 +23,7 @@ export function teamHelpingBonus(roster: BoxPokemon[], fallback: number): number
 }
 
 export function clockOf(minute: number): string {
-  const m = ((minute % 1440) + 1440) % 1440
+  const m = Math.floor(((minute % 1440) + 1440) % 1440)
   const hh = String(Math.floor(m / 60)).padStart(2, '0')
   const mm = String(m % 60).padStart(2, '0')
   return `${hh}:${mm}`
@@ -40,15 +40,15 @@ function inSleep(minute: number, start: number, end: number): boolean {
   return minute >= start || minute < end
 }
 
-export function carryLimit(base: number, subskills: string[], goodCamp: boolean, mode?: string, ribbonCarry = 0): number {
+export function carryLimit(base: number, subskills: string[], goodCamp: boolean, mode?: string, ribbonCarry = 0, exCarry = 0): number {
   if (mode === 'unlimited') return 9999
   if (mode === 'full') return 0
-  let extra = ribbonCarry
+  let extra = ribbonCarry + exCarry
   if (subskills.includes('invS')) extra += 6
   if (subskills.includes('invM')) extra += 12
   if (subskills.includes('invL')) extra += 18
   const camp = mode === 'normal' ? false : goodCamp
-  return Math.round((base + extra) * (camp ? 1.2 : 1))
+  return Math.ceil((base + extra) * (camp ? 1.2 : 1))
 }
 
 function berryCount(specialty: string, subskills: string[]): number {
@@ -67,12 +67,16 @@ export interface SkillEvent {
 
 export interface SimOpts {
   alwaysProc?: boolean
+  /** 个体排行使用发动次数期望，不因确定性伪随机采样把低概率技能收益变为 0。 */
+  expectedProcs?: boolean
   excludeSkillFoodFromCooking?: boolean
   /** 个体对比固定活力，不使用回复或衰减改变生产速度。 */
   fixedEnergy?: number
 }
 
 interface Member {
+  disguiseReady?: number
+  stockpile?: number[]
   input: ProduceInput
   poke: NonNullable<ReturnType<typeof pokeById>>
   energy: number
@@ -152,7 +156,7 @@ export function simulateTeam(
       typeAccelUntil: -1,
       factor: natureStatFactor(input.nature, 'energy'),
       favored,
-      carry: carryLimit(poke.carry, subs, settings.goodCamp, input.carryMode, ribbon.carry),
+      carry: carryLimit(poke.carry, subs, settings.goodCamp, input.carryMode, ribbon.carry, ex.carryExtra),
       perHelp: berryCount(poke.specialty, subs),
       ingRate: poke.ingredientRate * natureStatFactor(input.nature, 'ingredient')
         * (1 + (subs.includes('ingS') ? 0.18 : 0) + (subs.includes('ingM') ? 0.36 : 0)),
@@ -167,6 +171,9 @@ export function simulateTeam(
   }
 
   const extraQueue: { minute: number, index: number }[] = []
+  // 每次独立模拟从迁岛后的空领域开始；睡眠与每天切换不重置。
+  let berryZone = 0
+  const baseBerryUnits = members.map(member => member.unitBerry)
   if (settings.whistleHelps) {
     for (let i = 0; i < members.length; i++) {
       for (let w = 0; w < settings.whistleHelps; w++) extraQueue.push({ minute: 1 + w, index: i })
@@ -231,6 +238,12 @@ export function simulateTeam(
       pot: amount => cooking.addPot(amount),
       crit: choices => cooking.addCrit(choices),
       charge: (actor, amount) => { actor.result.skillEnergy += amount * (1 + settings.areaBonus) },
+      zone: amount => {
+        berryZone = Math.min(0.24, berryZone + amount)
+        members.forEach((member, index) => {
+          if (member.poke.berryType === '超能') member.unitBerry = baseBerryUnits[index]! * (1 + berryZone)
+        })
+      },
       skillOnly: (target, helps, probability) => {
         // n 次仅技能帮忙至少触发一次的概率；不产生食材/树果。
         const chance = 1 - (1 - Math.min(1, target.skillRate)) ** helps
@@ -271,8 +284,9 @@ export function simulateTeam(
   }
 
   function triggerSkill(m: Member, minute: number) {
-    m.stock -= 1
-    dispatchSkill(m, minute)
+    const weight = Math.min(1, m.stock)
+    m.stock -= weight
+    dispatchSkill(m, minute, weight)
   }
 
   function applyHelp(m: Member, minute: number, seed: number, fromSupport = false) {
@@ -291,12 +305,13 @@ export function simulateTeam(
       if (drop) {
         const ex = exEffects(settings, m.poke.berry, m.poke.specialty)
         const extra = fromSupport ? 0 : ex.ingredientExtra > 0 ? 1 + (ex.ingredientExtra > 1 && roll(seed + 13) < 0.5 ? 1 : 0) : 0
+        const amount = fromSupport ? drop.amount + extra : Math.min(drop.amount + extra, Math.max(0, m.carry - m.held))
         if (asleepAt(minute)) {
           const held = heldFood.get(m) ?? {}
-          held[drop.name] = (held[drop.name] ?? 0) + drop.amount + extra
+          held[drop.name] = (held[drop.name] ?? 0) + amount
           heldFood.set(m, held)
-        } else creditFood(m, drop.name, drop.amount + extra)
-        m.held += drop.amount + extra
+        } else creditFood(m, drop.name, amount)
+        m.held += amount
       }
       else {
         m.result.berries += m.perHelp
@@ -309,8 +324,8 @@ export function simulateTeam(
       m.result.berryEnergy += m.perHelp * m.unitBerry
       m.held += m.perHelp
     }
-    if (!fromSupport && !full && (opts.alwaysProc || roll(seed + 7) < m.skillRate)) {
-      m.stock = Math.min(skillStorageLimit(m.poke.specialty), m.stock + 1)
+    if (!fromSupport && !full && (opts.expectedProcs || opts.alwaysProc || roll(seed + 7) < m.skillRate)) {
+      m.stock = Math.min(skillStorageLimit(m.poke.specialty), m.stock + (opts.expectedProcs && !opts.alwaysProc ? Math.min(1, m.skillRate) : 1))
     }
     if (!asleepAt(minute) && !fromSupport) {
       const held = heldFood.get(m)
@@ -320,8 +335,25 @@ export function simulateTeam(
     }
   }
 
+  // 活力、睡眠与料理仍在分钟边界更新；两次边界间按真实完成时刻依序结算。
+  // 保留小数分钟，避免每次帮忙都被向上延迟而累积损失。
+  function completeHelps(until: number, inclusive: boolean) {
+    while (true) {
+      let index = -1
+      members.forEach((member, i) => {
+        if ((inclusive ? member.next <= until : member.next < until) && (index < 0 || member.next < members[index]!.next)) index = i
+      })
+      if (index < 0) break
+      const member = members[index]!
+      const minute = member.next
+      applyHelp(member, minute, minute + index * 31)
+      member.next = minute + intervalOf(member, minute) / 60
+    }
+  }
+
   let t = 0
   while (t < endMin) {
+    completeHelps(t, false)
     const clock = t % 1440
     const asleep = asleepAt(t)
     if (opts.fixedEnergy == null) {
@@ -335,6 +367,8 @@ export function simulateTeam(
       }
     }
     if (!asleep && t > 0 && asleepAt(t - 1)) {
+      // 模型在睡眠结束时结算研究，先恢复画皮，再发动睡眠期间储存的技能。
+      for (const m of members) m.disguiseReady = 1
       const teamBonuses = members.filter(m => unlockedSubskills(m.input.level, m.input.subskills).includes('energyRecover')).length
       for (const m of members) {
         if (opts.fixedEnergy == null) {
@@ -362,12 +396,7 @@ export function simulateTeam(
     }
     extraQueue.splice(0, extraQueue.length, ...extraQueue.filter((q) => q.minute > t))
 
-    members.forEach((m, i) => {
-      if (t >= m.next) {
-        applyHelp(m, t, t + i * 31)
-        m.next = t + intervalOf(m, t) / 60
-      }
-    })
+    completeHelps(t, true)
     if (settings.meals && !asleep && [480,720,1080].includes(clock) && meals.length < 21) {
       const sunday = settings.period === 'week' && Math.floor(t / 1440) === 6
       const pot = cooking.potSize(settings.potSize, sunday || settings.sundayPot, settings.goodCamp)
@@ -386,6 +415,7 @@ export function simulateTeam(
     t += 1
   }
 
+  completeHelps(endMin, false)
   for (const m of members) {
     if (m.stock > 0 && !asleepAt(endMin - 1)) triggerSkill(m, endMin - 1)
   }

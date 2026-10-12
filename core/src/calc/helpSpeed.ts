@@ -26,10 +26,14 @@ export function subskillSpeedCut(subskills: string[], helpingBonus: number): num
   return Math.min(0.35, cut)
 }
 
-export function levelInterval(base: number, level: number, nature: string, subskills: string[], helpingBonus: number): number {
+function intervalMultiplier(level: number, nature: string, subskills: string[], helpingBonus: number, ribbonCut: number): number {
   const lv = Math.min(POKEMON_LEVEL_MAX, Math.max(1, level))
-  const raw = base * ((501 - lv) / 500) * natureHelpFactor(nature) * (1 - subskillSpeedCut(subskills, helpingBonus))
-  return Math.max(1, Math.floor(raw))
+  return ((501 - lv) / 500) * natureHelpFactor(nature) * (1 - subskillSpeedCut(subskills, helpingBonus)) * (1 - Math.min(0.25, Math.max(0, ribbonCut)))
+}
+
+/** 显示间隔：勋章与其余显示补正合并后统一向下取整。 */
+export function levelInterval(base: number, level: number, nature: string, subskills: string[], helpingBonus: number, ribbonCut = 0): number {
+  return Math.max(1, Math.floor(base * intervalMultiplier(level, nature, subskills, helpingBonus, ribbonCut)))
 }
 
 export function instantInterval(
@@ -47,7 +51,11 @@ export function instantInterval(
 ): number {
   const island = islandById(islandId)
   const ex = exOverride ?? (favored ? island?.helpFavored ?? 1 : island?.helpUnfavored ?? 1)
-  const camp = goodCamp ? 0.8 : 1
-  const ribbon = 1 - Math.min(0.25, Math.max(0, ribbonCut))
-  return Math.max(1, Math.round(levelInterval(base, level, nature, subskills, helpingBonus) * energyMultiplier(energy) * camp * ex * ribbon))
+  const camp = goodCamp ? 1 / 1.2 : 1
+  // RAE 总倍率先截断四位小数，再向下取整秒数；不复用已经取整的显示间隔。
+  // https://pks.raenonx.cc/en/docs/view/technical/helping-frequency
+  // 露营券：https://hackmd.io/@raenonx-pokemon-sleep/Byb1J4rx-l
+  const multiplier = intervalMultiplier(level, nature, subskills, helpingBonus, ribbonCut) * energyMultiplier(energy) * camp * ex
+  const truncated = Math.floor(multiplier * 10000 + 1e-10) / 10000
+  return Math.max(1, Math.floor(base * truncated + 1e-10))
 }

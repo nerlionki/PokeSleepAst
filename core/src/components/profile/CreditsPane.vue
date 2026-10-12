@@ -2,7 +2,7 @@
 const SOURCES = [
   {
     name: 'RaenonX',
-    note: '资料与研究来源：RaenonX Pokémon Sleep 攻略及其研究团队。引用图鉴、树果与食材能量、食谱、主技能、性格、经验、活力、睡姿与地图资料，以及 DPR 和睡姿抽选规则；食材率与技能率原始研究来自 RP Model。',
+    note: '资料与研究来源：RaenonX Pokémon Sleep 攻略及其研究团队。引用图鉴、树果与食材能量、食谱、主副技能、十项全能、性格、经验、活力、睡姿与地图资料，以及 DPR 和睡姿抽选规则；道具分类、进化道具获取途径与活动资料亦参考该站。食材率与技能率原始研究来自 RP Model。',
     links: [
       { label: '来源署名说明', href: 'https://pks.raenonx.cc/zh/docs/view/site/credits' },
       { label: '资料站', href: 'https://pks.raenonx.cc/zh' },
@@ -11,6 +11,10 @@ const SOURCES = [
       { label: '食材', href: 'https://pks.raenonx.cc/zh/ingredient/info' },
       { label: '食谱', href: 'https://pks.raenonx.cc/zh/meal' },
       { label: '主技能', href: 'https://pks.raenonx.cc/zh/mainskill/info' },
+      { label: '副技能', href: 'https://pks.raenonx.cc/zh/stats/subskill' },
+      { label: '十项全能', href: 'https://pks.raenonx.cc/zh/mainskill/info/34' },
+      { label: '进化道具来源', href: 'https://pks.raenonx.cc/zh/item/source/21' },
+      { label: '三周年活动资料', href: 'https://pks.raenonx.cc/zh/event/list/3rdAnniv' },
       { label: '性格', href: 'https://pks.raenonx.cc/zh/stats/nature' },
       { label: '经验', href: 'https://pks.raenonx.cc/zh/xp' },
       { label: '活力', href: 'https://pks.raenonx.cc/zh/energy' },
@@ -21,13 +25,19 @@ const SOURCES = [
     ],
   },
   {
-    name: '日文 Wiki 睡姿研究',
-    note: '末位与耗尽保底排序、少量／大量跨睡眠类型抽选。普通出现率尚未完全确定。',
+    name: '日文 Wiki',
+    note: '副技能、养成经验、活力与持有数、薰香和哨子规则，以及末位与耗尽保底排序、跨睡眠类型抽选等机制参考。普通出现率尚未完全确定；哨子产物在取整边界附近可能与实测存在少量差异。',
     links: [
       { label: '睡姿出现场景与保底', href: 'https://wikiwiki.jp/poke_sleep/睡眠リサーチ/ねむけパワー/寝顔出現の法則' },
       { label: 'EX 营地效果与研究', href: 'https://wikiwiki.jp/poke_sleep/リサーチフィールド/EXモード' },
       { label: '跨睡眠类型验证', href: 'https://wikiwiki.jp/poke_sleep/検証/他の睡眠タイプのポケモンの出現確率' },
       { label: '睡姿图鉴', href: 'https://wikiwiki.jp/poke_sleep/寝顔図鑑' },
+      { label: '副技能', href: 'https://wikiwiki.jp/poke_sleep/サブスキル' },
+      { label: '等级与经验', href: 'https://wikiwiki.jp/poke_sleep/育成/レベル' },
+      { label: '活力', href: 'https://wikiwiki.jp/poke_sleep/げんき' },
+      { label: '持有上限', href: 'https://wikiwiki.jp/poke_sleep/最大所持数' },
+      { label: '薰香', href: 'https://wikiwiki.jp/poke_sleep/どうぐ/おこう' },
+      { label: '哨子规则与 EX 加成', href: 'https://wikiwiki.jp/poke_sleep/どうぐ/おてつだいホイッスル' },
     ],
   },
   {
@@ -48,10 +58,26 @@ const SOURCES = [
     ],
   },
   {
-    name: '官方',
-    note: '午睡岛每天 150 点经验、放松券额外 450 点，以及未满 7 天领回减半。',
+    name: 'PokéSleep Super Wiki',
+    note: '进化道具的常驻兑换处资料参考。',
     links: [
+      { label: '常驻兑换处', href: 'https://wiki.pokesleep.com/zht/shop' },
+    ],
+  },
+  {
+    name: 'なまけもの的实测记录',
+    note: '帮手哨子产物与取整方式的实测参考。',
+    links: [
+      { label: '吹哨产物实测', href: 'https://namakemono289.hatenablog.com/entry/2025/12/23/011054' },
+    ],
+  },
+  {
+    name: '官方',
+    note: '游戏版本更新、机制调整与活动规则的优先参考，包括等级与糖果经验、技能种子、午睡岛及三周年彩庆花活动。资料存在冲突时，按官方公告、RaenonX、Wiki 的顺序采用。',
+    links: [
+      { label: '游戏公告', href: 'https://www.pokemonsleep.net/zh/news/' },
       { label: '小卡比兽的午睡岛', href: 'https://www.pokemonsleep.net/zh/news/343231333934393334303030353137313236/' },
+      { label: '官方三周年活动说明', href: 'https://www.pokemonsleep.net/news/343138353434383532363837333838363733/' },
     ],
   },
 ] as const

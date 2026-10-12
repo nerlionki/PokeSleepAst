@@ -33,11 +33,48 @@ interface SkillSeeds {
 }
 
 /** 每颗金种子（主技能种子）让主技能 +1，满级后不能再用。 */
-export function stepGoldSeed(current: SkillSeeds, delta: number, skillMax: number): SkillSeeds | null {
+export function stepGoldSeed(current: SkillSeeds, delta: number, skillMax: number, subskillLevels = 0): SkillSeeds | null {
   const goldSeeds = current.goldSeeds + delta
   const skillLevel = current.skillLevel + delta
   if (goldSeeds < 0 || skillLevel < 1 || skillLevel > skillMax) return null
+  if (delta > 0 && skillLevel + subskillLevels > skillMax) return null
   return { skillLevel, goldSeeds }
+}
+
+export function subskillLevelBonus(level: number, subskills: string[]): number {
+  const subs = unlockedSubskills(level, subskills)
+  return (subs.includes('skillLevelS') ? 1 : 0) + (subs.includes('skillLevelM') ? 2 : 0)
+}
+
+const SUBSKILL_UPGRADES: Record<string, string> = {
+  helpS: 'helpM', ingS: 'ingM', skillS: 'skillM', skillLevelS: 'skillLevelM', invS: 'invM', invM: 'invL',
+}
+
+/** 只允许已解锁副技能升一档；目标不能与任何槽位（包括未解锁）重复。 */
+export function silverSeedCandidates(level: number, subskills: string[]) {
+  return subskills.flatMap((from, index) => {
+    const to = SUBSKILL_UPGRADES[from]
+    return to && level >= (SUBSKILL_GATES[index] ?? Infinity) && !subskills.includes(to) ? [{ index, from, to }] : []
+  })
+}
+
+export function applySilverSeed(member: MemberDraft, index: number): MemberDraft | null {
+  const candidate = silverSeedCandidates(member.level, member.subskills).find(item => item.index === index)
+  if (!candidate || member.tune.silverSeeds >= 9) return null
+  const subskills = [...member.subskills]
+  subskills[index] = candidate.to
+  return { ...member, subskills, tune: { ...member.tune, silverSeeds: member.tune.silverSeeds + 1,
+    silverSeedHistory: [...(member.tune.silverSeedHistory ?? []), candidate] } }
+}
+
+export function undoSilverSeed(member: MemberDraft): MemberDraft | null {
+  const history = member.tune.silverSeedHistory ?? []
+  const last = history.at(-1)
+  if (member.tune.silverSeeds <= 0) return null
+  if (last && member.subskills[last.index] !== last.to) return null
+  const subskills = [...member.subskills]
+  if (last) subskills[last.index] = last.from
+  return { ...member, subskills, tune: { ...member.tune, silverSeeds: member.tune.silverSeeds - 1, silverSeedHistory: history.slice(0, -1) } }
 }
 
 /** 金种子提升过的等级不能被降掉，降级时一并退回种子。 */
@@ -48,10 +85,7 @@ export function stepSkillLevel(current: SkillSeeds, level: number, skillMax: num
 
 /** 主技能等级加上已解锁的技能等级提升 S/M，再按该技能表封顶。 */
 export function effectiveSkillLevel(level: number, skillLevel: number, subskills: string[], mainSkill: string): number {
-  const subs = unlockedSubskills(level, subskills)
-  let lv = Math.max(1, skillLevel)
-  if (subs.includes('skillLevelS')) lv += 1
-  if (subs.includes('skillLevelM')) lv += 2
+  const lv = Math.max(1, skillLevel) + subskillLevelBonus(level, subskills)
   return clampSkillLevel(mainSkill, lv)
 }
 

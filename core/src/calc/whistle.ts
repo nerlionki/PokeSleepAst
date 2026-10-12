@@ -60,7 +60,7 @@ export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBo
   const subs = unlockedSubskills(pokemon.level, pokemon.subskills)
   const ribbon = ribbonBonus(pokemon.tune?.ribbonHours ?? 0, stagesLeft(poke.id))
   // Use the displayed team interval, then maximum-energy efficiency. No camp or EX speed modifier.
-  const interval = Math.max(1, Math.floor(levelInterval(poke.interval, pokemon.level, pokemon.nature, subs, helpingBonus) * (1 - ribbon.speedCut)))
+  const interval = levelInterval(poke.interval, pokemon.level, pokemon.nature, subs, helpingBonus, ribbon.speedCut)
   const helps = 10800 / (interval * energyMultiplier(100))
   const unlocked = pokemon.level >= 60 ? 3 : pokemon.level >= 30 ? 2 : 1
   const slots = pokemon.ingredientSlots.slice(0, unlocked).flatMap((index, slot) => {

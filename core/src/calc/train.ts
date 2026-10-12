@@ -1,4 +1,4 @@
-import { xpCandy } from './xp'
+import { advanceTraining, expTo, feedTraining, groupMult, natureExpFactor, xpCandy } from './xp'
 
 export interface TrainInput {
   from: number
@@ -26,13 +26,15 @@ export interface TrainInput {
 export const SLEEP_EXP_BONUS = 0.14
 export const SLEEP_EXP_BONUS_MAX = 5
 
-export function napDailyExp(relax: boolean): number {
-  return relax ? 600 : 150
+export function napDailyExp(relax: boolean, nature = '勤奋'): number {
+  // 午睡岛只有 EXP 上升性格生效，下降性格不会减少所得。
+  return (relax ? 600 : 150) * Math.max(1, natureExpFactor(nature))
 }
 
-export function napTotalExp(days: number, relax: boolean, early: boolean): number {
-  const raw = napDailyExp(relax) * days
-  return early && days < 7 ? Math.floor(raw * 0.5) : raw
+export function napTotalExp(days: number, relax: boolean, _early: boolean, nature = '勤奋'): number {
+  const duration = Math.min(365, Math.max(0, days))
+  const raw = (150 * duration + (relax ? 450 * Math.min(7, duration) : 0)) * Math.max(1, natureExpFactor(nature))
+  return Math.floor(raw * (duration < 7 ? 0.5 : 1))
 }
 
 export function trainPlan(input: TrainInput) {
@@ -43,40 +45,82 @@ export function trainPlan(input: TrainInput) {
     nature: input.nature,
     group: input.group,
   })
-  const usable = Math.max(0, input.ownedCandy - input.reserveCandy)
+  const usable = Math.max(0, Math.floor(input.ownedCandy - input.reserveCandy))
   const bonusFactor = 1 + SLEEP_EXP_BONUS * Math.min(SLEEP_EXP_BONUS_MAX, Math.max(0, Math.floor(input.sleepExpBonus)))
   const sleepFactor = bonusFactor * (input.sleepIncense ? 2 : 1)
-  const dailySleep = input.sleepOnTeam && !input.napping ? input.sleepScore * sleepFactor : 0
-  const dailyNap = input.napping ? napDailyExp(input.relaxTicket) : 0
-  const dailyExp = dailySleep + dailyNap + input.dailyCandy * 25
-  const boostMult = input.boost === 'none' ? 1 : 2
+  const sleepThen = Math.max(0, input.sleepScore) * sleepFactor * natureExpFactor(input.nature)
+  const dailySleep = input.sleepOnTeam && !input.napping ? sleepThen : 0
+  const dailyNap = input.napping ? napDailyExp(input.relaxTicket, input.nature) : 0
+  const dailyCandies = Math.max(0, Math.floor(input.dailyCandy))
   const boostShard = input.boost === 'mini' ? 4 : input.boost === 'normal' ? 5 : 1
-  const feedExp = Math.min(input.boostCandy, usable) * 25 * boostMult
-    + Math.max(0, usable - input.boostCandy) * 25
-  const afterFeed = Math.max(0, gap.exp - feedExp)
-  const days = gap.error ? NaN : dailyExp > 0 ? Math.ceil(afterFeed / dailyExp) : afterFeed > 0 ? Infinity : 0
-  const napExp = input.napping ? napTotalExp(input.napDays || (Number.isFinite(days) ? days : 7), input.relaxTicket, input.earlyRetrieve) : 0
-  const napPlain = napDailyExp(false)
-  const napRelax = napDailyExp(true)
-  const sleepThen = dailySleep || input.sleepScore * sleepFactor
-  const daysOf = (daily: number, leftover = gap.exp) => daily > 0 ? Math.ceil(leftover / daily) : Infinity
+  const initial = { level: input.from, exp: expTo(input.to) * groupMult(input.group) - gap.exp }
+  const fed = { ...initial }
+  const boosted = Math.min(Math.max(0, Math.floor(input.boostCandy)), usable)
+  if (!gap.error) {
+    feedTraining(fed, boosted, input.to, input.nature, input.group, input.boost !== 'none', boostShard)
+    feedTraining(fed, usable - boosted, input.to, input.nature, input.group)
+  }
+  const feedExp = fed.exp - initial.exp
+  const daysOf = (daily: number, progress = initial, candies = 0): number => {
+    if (gap.error) return NaN
+    if (progress.level >= input.to) return 0
+    if (daily <= 0 && candies <= 0) return Infinity
+    if (!candies) return Math.ceil(Math.max(0, expTo(input.to) * groupMult(input.group) - progress.exp) / daily)
+    const next = { ...progress }
+    let days = 0
+    while (next.level < input.to) {
+      advanceTraining(next, daily, input.to, input.group)
+      feedTraining(next, candies, input.to, input.nature, input.group)
+      days++
+    }
+    return days
+  }
+  const stayDays = Math.min(365, Math.max(1, Math.floor(input.napDays) || 7))
+  const daysOnNap = (relax: boolean, progress = initial, candies = 0): number => {
+    if (gap.error) return NaN
+    const next = { ...progress }
+    let days = 0
+    let ticketDays = relax ? 7 : 0
+    while (next.level < input.to) {
+      // 寄放期间不能喂糖；按所选停留时长领回结算，再喂这段期间积累的糖果。
+      const raw = (150 * stayDays + 450 * Math.min(ticketDays, stayDays)) * Math.max(1, natureExpFactor(input.nature))
+      advanceTraining(next, Math.floor(raw * (stayDays < 7 ? 0.5 : 1)), input.to, input.group)
+      feedTraining(next, candies * stayDays, input.to, input.nature, input.group)
+      ticketDays = Math.max(0, ticketDays - stayDays)
+      days += stayDays
+    }
+    return days
+  }
+  const dailyPreview = { ...fed }
+  if (!gap.error && !input.napping) advanceTraining(dailyPreview, dailySleep, input.to, input.group)
+  const candyPreview = gap.error ? 0 : feedTraining(dailyPreview, dailyCandies, input.to, input.nature, input.group).exp
+  const dailyExp = dailySleep + dailyNap + (input.napping ? 0 : candyPreview)
+  const days = input.napping ? daysOnNap(input.relaxTicket, fed, dailyCandies) : daysOf(dailySleep, fed, dailyCandies)
+  const napExp = input.napping ? napTotalExp(input.napDays || (Number.isFinite(days) ? days : 7), input.relaxTicket, input.earlyRetrieve, input.nature) : 0
+  const afterNap = { ...initial }
+  if (!gap.error) advanceTraining(afterNap, napTotalExp(7, false, false, input.nature), input.to, input.group)
+  const plainFeed = { ...initial }
+  if (!gap.error) feedTraining(plainFeed, usable, input.to, input.nature, input.group)
+  const costProgress = { ...initial }
+  const boostedCost = gap.error ? { candies: 0, shards: 0 } : feedTraining(costProgress, boosted, input.to, input.nature, input.group, input.boost !== 'none', boostShard)
+  const normalCost = gap.error ? { candies: 0, shards: 0 } : feedTraining(costProgress, Infinity, input.to, input.nature, input.group)
   return {
     error: gap.error,
     needExp: gap.exp,
-    candy: gap.candy,
-    shards: gap.shards,
+    candy: gap.error ? NaN : boostedCost.candies + normalCost.candies,
+    shards: gap.error ? NaN : boostedCost.shards + normalCost.shards,
     feedExp,
     dailyExp,
     days,
     napExp,
     paths: gap.error ? [] : [
       { name: '只上阵睡觉', days: daysOf(sleepThen) },
-      { name: '只午睡岛（无券）', days: daysOf(napPlain) },
-      { name: '只午睡岛（放松券）', days: daysOf(napRelax) },
-      { name: '午睡岛满 7 天再上阵', days: daysOf(sleepThen, Math.max(0, gap.exp - napTotalExp(7, false, false))) + 7 },
-      { name: '先喂糖再睡', days: daysOf(sleepThen + input.dailyCandy * 25, afterFeed) },
-      { name: '先喂糖再寄放', days: daysOf(napPlain + input.dailyCandy * 25, afterFeed) },
-      { name: '不增强只喂糖', days: usable ? 0 : Infinity },
+      { name: '只午睡岛（无券）', days: daysOnNap(false) },
+      { name: '只午睡岛（放松券）', days: daysOnNap(true) },
+      { name: '午睡岛满 7 天再上阵', days: initial.level >= input.to ? 0 : daysOf(sleepThen, afterNap) + 7 },
+      { name: '先喂糖再睡', days: daysOf(sleepThen, fed, dailyCandies) },
+      { name: '先喂糖再寄放', days: daysOnNap(false, fed, dailyCandies) },
+      { name: '不增强只喂糖', days: daysOf(0, plainFeed, dailyCandies) },
     ],
     boostShard,
   }

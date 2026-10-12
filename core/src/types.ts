@@ -72,6 +72,8 @@ export interface MemberTune {
   evolutions: number
   goldSeeds: number
   silverSeeds: number
+  /** 新规划的银种子升级记录；旧存档只有次数，不反推历史升级。 */
+  silverSeedHistory?: { index: number, from: string, to: string }[]
   sleepHours: number
   carryMode: CarryMode
   exp: number
