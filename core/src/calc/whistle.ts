@@ -1,5 +1,6 @@
 import type { BoxPokemon, Settings } from '../types'
 import { berryByName, NATURES, pokeById } from './data'
+import { berryUnitEnergy as unitEnergy } from './berry'
 import { exEffects } from './exEffects'
 import { energyMultiplier, levelInterval } from './helpSpeed'
 import { berryCount, slotDrop } from './ingredients'
@@ -8,6 +9,7 @@ import { natureStatFactor } from './natureLabels'
 import { normalizeOcrMissing } from './ocrCompletion'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { POKEMON_LEVEL_MAX } from './xp'
+import { nextSpecialTeamState, type SpecialTeamState } from './teamRestrictions'
 
 export interface WhistleOptions {
   currentEnergy: number
@@ -76,9 +78,7 @@ export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBo
   }
   // Berry energy has a linear lower bound at low levels; round area bonus before the favorite multiplier.
   // https://wikiwiki.jp/poke_sleep/きのみ
-  const base = berryByName(poke.berry)?.energyLv1 ?? 30
-  const berryEnergy = Math.round(Math.max(base + pokemon.level - 1, base * 1.025 ** (pokemon.level - 1)))
-  const berryUnitEnergy = Math.ceil(berryEnergy * (1 + settings.areaBonus)) * exEffects(settings, poke.berry, poke.specialty).berryMultiplier
+  const berryUnitEnergy = unitEnergy(poke.berry, pokemon.level, settings.areaBonus, exEffects(settings, poke.berry, poke.specialty).berryMultiplier)
   return { pokemon, helpingBonus: subs.includes('helpingBonus'), interval, helps, ingredientRate, berries,
     berry: poke.berry, berryUnitEnergy, berryEnergy: Math.round(berries * berryUnitEnergy * 5) / 5, ingredients }
 }
@@ -95,7 +95,7 @@ function invalidMember(pokemon: BoxPokemon): string | null {
   if (missing) return '生产相关 OCR 字段尚未确认'
   for (let slot = 0; slot < unlocked; slot++) {
     const index = pokemon.ingredientSlots[slot]
-    if (index == null && poke.specialty === '全部') continue
+    if (index == null && poke.specialty === '全部' && slot > 0) continue
     if (index == null || !Number.isInteger(index) || index < 0 || index >= poke.ingredients.length || !slotDrop(poke.ingredients, slot, index)) return '已解锁食材配置无效'
   }
   return null
@@ -105,10 +105,8 @@ function addIngredients(target: Record<string, number>, source: Record<string, n
   for (const [name, quantity] of Object.entries(source)) target[name] = (target[name] ?? 0) + quantity
 }
 
-/** With a fixed number of Helping Bonus holders, scores are independent and additive.
- * Selecting the best h holders and best (size-h) non-holders in each h group finds the best team,
- * including integer drop rounding, without enumerating every 5-member combination.
- */
+/** 固定帮手奖励人数后，收益独立可加；按人数、奖励人数和特殊宝可梦状态
+ * 动态规划选择合法队伍，保留取整收益，无需穷举所有五人组合。 */
 export function planWhistle(settings: Settings, box: BoxPokemon[], options: WhistleOptions): WhistleResult {
   if ([options.currentEnergy, options.targetEnergy].some(value => !Number.isSafeInteger(value) || value < 0)) {
     throw new Error('当前能量和目标能量必须为非负整数')
@@ -132,13 +130,29 @@ export function planWhistle(settings: Settings, box: BoxPokemon[], options: Whis
     const bonus = Math.min(5, holders + extraBonus)
     const ranked = candidates.map(pokemon => whistleMember(settings, pokemon, bonus))
       .sort((a, b) => b.berryEnergy - a.berryEnergy || a.pokemon.uid.localeCompare(b.pokemon.uid))
-    const withBonus = ranked.filter(member => member.helpingBonus)
-    const withoutBonus = ranked.filter(member => !member.helpingBonus)
-    if (withBonus.length < holders || withoutBonus.length < size - holders) continue
-    const team = [...withBonus.slice(0, holders), ...withoutBonus.slice(0, size - holders)]
-    const energy = team.reduce((sum, member) => sum + member.berryEnergy, 0)
+    interface Selection { team: WhistleMember[], energy: number, holders: number, special: SpecialTeamState }
+    let states = new Map<string, Selection>([['0/0/none', { team: [], energy: 0, holders: 0, special: 'none' }]])
+    for (const member of ranked) {
+      const next = new Map(states)
+      for (const state of states.values()) {
+        const count = state.team.length + 1
+        const h = state.holders + Number(member.helpingBonus)
+        const special = nextSpecialTeamState(state.special, member.pokemon.pokeId)
+        if (count > size || h > holders || special == null) continue
+        const key = `${count}/${h}/${special}`
+        const energy = state.energy + member.berryEnergy
+        if (!next.has(key) || energy > next.get(key)!.energy) next.set(key, { team: [...state.team, member], energy, holders: h, special })
+      }
+      states = next
+    }
+    const feasible = [...states.values()].filter(state => state.holders === holders && state.team.length > 0)
+      .sort((a, b) => b.energy - a.energy || b.team.length - a.team.length)
+    if (!feasible.length) continue
+    const choice = feasible[0]!
     teamsCompared++
-    if (energy > bestEnergy) { best = team; bestEnergy = energy; bestBonus = bonus }
+    if (choice.energy > bestEnergy || choice.energy === bestEnergy && choice.team.length > best.length) {
+      best = choice.team; bestEnergy = choice.energy; bestBonus = bonus
+    }
   }
   best.sort((a, b) => b.berryEnergy - a.berryEnergy || a.pokemon.uid.localeCompare(b.pokemon.uid))
   const berryEnergy = Math.round(Math.max(0, bestEnergy) * 5) / 5

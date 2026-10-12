@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
+import { useRouter } from 'vue-router'
+import { skillByPokedexName } from '../../calc/mainSkills'
 import { storeToRefs } from 'pinia'
 import { BERRIES, POKEDEX } from '../../calc/data'
 import { pokeHit } from '../../calc/pokeSearch'
@@ -15,6 +17,8 @@ import DrawerSheet from '../shared/DrawerSheet.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 
+const router = useRouter()
+function showSkill(name: string) { const skill = skillByPokedexName(name); if (skill) void router.push({ path: '/data', query: { tab: 'skill', skill: String(skill.id) } }) }
 const q = shallowRef('')
 const spec = shallowRef('全部')
 const panel = shallowRef<'none' | 'sleep' | 'berry' | 'skill'>('none')
@@ -88,7 +92,7 @@ function toggle(which: typeof panel.value) {
         </div>
       </div>
       <p>间隔 {{ detail.interval }}s · 持有 {{ detail.carry }} · 食材 {{ (detail.ingredientRate * 100).toFixed(1) }}% · 技能 {{ (detail.skillRate * 100).toFixed(1) }}%</p>
-      <p class="muted"><MainSkillIcon :name="detail.mainSkill" /> {{ detail.mainSkill }}</p>
+      <button type="button" class="btn ghost" @click="showSkill(detail.mainSkill)"><MainSkillIcon :name="detail.mainSkill" /> {{ detail.mainSkill }} ›</button>
       <div class="berry-drop">
         <BerryIcon :name="detail.berry" large />
         <strong>{{ detail.berry }} × {{ berryCount(detail.specialty) }}</strong>

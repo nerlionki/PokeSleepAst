@@ -3,7 +3,9 @@ import { DEFAULT_WHISTLE, normalizeWhistleOptions, planWhistle, whistleMember } 
 import { defaultSettings } from './defaults'
 import { NATURES, pokeById, POKEDEX } from './data'
 import { unlockedSubskills } from '../../../core/src/calc/member'
+import { teamRestrictionError } from '../../../core/src/calc/teamRestrictions'
 import type { BoxPokemon } from '../../../core/src/types'
+import { clearIngredientSlot } from '../../../core/src/calc/ingredients'
 
 function member(uid: string, pokeId = 25, subs: string[] = [], level = 60): BoxPokemon {
   return { uid, pokeId, level, nature: NATURES[20]!.name, subskills: subs,
@@ -12,6 +14,38 @@ function member(uid: string, pokeId = 25, subs: string[] = [], level = 60): BoxP
 const options = { currentEnergy: 1000, targetEnergy: 100000 }
 
 describe('whistle planning', () => {
+  it('requires Lv.1 food for Mew and Darkrai while allowing empty later slots', () => {
+    for (const id of [151, 491]) {
+      expect(clearIngredientSlot(id, [0, 0, 0], 0)).toBeNull()
+      expect(clearIngredientSlot(id, [0, 0, 0], 1)).toEqual([0, null, 0])
+      const valid = { ...member(`valid-${id}`, id), ingredientSlots: [0, null, null] as BoxPokemon['ingredientSlots'] }
+      expect(planWhistle(defaultSettings(), [valid], options).members).toHaveLength(1)
+      const invalid = { ...valid, ingredientSlots: [null, null, null] as BoxPokemon['ingredientSlots'] }
+      expect(planWhistle(defaultSettings(), [invalid], options).excluded[0]?.reason).toBe('已解锁食材配置无效')
+    }
+  })
+  it('matches exhaustive legal search across special pairings and Helping Bonus', () => {
+    const settings = { ...defaultSettings(), areaBonus: .35 }
+    const box = [member('mew', 151, ['helpingBonus', 'berryS']), member('raikou', 243),
+      member('latias', 380, ['helpingBonus']), member('latias2', 380, ['berryS']), member('latios', 381),
+      member('a', 25), member('b', 26, ['helpingBonus']), member('c', 154)]
+    let best = 0
+    for (let mask = 1; mask < 1 << box.length; mask++) {
+      const team = box.filter((_, index) => mask & 1 << index)
+      if (team.length > 5 || teamRestrictionError(team)) continue
+      const bonus = team.filter(p => unlockedSubskills(p.level, p.subskills).includes('helpingBonus')).length
+      best = Math.max(best, team.reduce((sum, p) => sum + whistleMember(settings, p, bonus).berryEnergy, 0))
+    }
+    const result = planWhistle(settings, box, options)
+    expect(teamRestrictionError(result.members.map(member => member.pokemon))).toBe('')
+    expect(result.berryEnergy).toBeCloseTo(best)
+  })
+  it('uses the most productive legal subset when only special members are available', () => {
+    const box = [member('mew', 151, ['berryS']), member('mew2', 151), member('raikou', 243)]
+    const result = planWhistle(defaultSettings(), box, options)
+    expect(result.members).toHaveLength(1)
+    expect(result.berryEnergy).toBe(Math.max(...box.map(p => whistleMember(defaultSettings(), p, 0).berryEnergy)))
+  })
   it('finds the same optimum as exhaustive search including team Helping Bonus', () => {
     const settings = { ...defaultSettings(), areaBonus: 0.35, helpingBonus: 1 }
     const box = [member('a', 25, ['berryS', 'helpM']), member('b', 26, ['helpingBonus']),
@@ -111,7 +145,7 @@ describe('whistle planning', () => {
     expect(actual.excluded).toHaveLength(3)
     expect(planWhistle(settings, [{ ...member('d'), ocrMissing: ['skillLevel'] }], options).members).toHaveLength(1)
     const all = POKEDEX.find(p => p.specialty === '全部')!
-    expect(planWhistle(settings, [{ ...member('e', all.id), ingredientSlots: [null, null, null] }], options).members).toHaveLength(1)
+    expect(planWhistle(settings, [{ ...member('e', all.id), ingredientSlots: [0, null, null] }], options).members).toHaveLength(1)
   })
 
   it('rejects invalid target inputs and restores old or malformed saved settings safely', () => {

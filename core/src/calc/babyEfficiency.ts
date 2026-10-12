@@ -6,7 +6,9 @@ import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES, type SleepStyleRow } f
 import { evolutionStages } from './evolution'
 import { EVENT_BONUSES, fallbackStyle, RANK_ORDER, rankStrength, SPECIAL_POKEMON, styleUnlockIndex } from './sleep'
 import { sleepReward, sleepStyleInternalId } from './sleepRewards'
-import { drawStateKey, efficiencyRandom, simulateEfficiencyState, type EfficiencyBucket, type EfficiencyDrawState, type EfficiencyReward } from './babyEfficiencyDraw'
+import { createDrawStateKey, efficiencyRandom, simulateEfficiencySlots, efficiencyRewardsAfterResearch, type EfficiencySimulation, type EfficiencyBucket, type EfficiencyDrawState, type EfficiencyReward } from './babyEfficiencyDraw'
+
+export const MAX_EFFICIENCY_DROWSY_POWER = 5_000_000_000
 
 export type EfficiencyPrecision = 'low' | 'medium' | 'high'
 export interface BabyEfficiencyOptions {
@@ -131,7 +133,8 @@ export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: n
   const maxCount = Math.max(3, ...island.bands.map((band) => band.count))
   const costs = [...new Set(island.styles.map((style) => style.dpr))]
   const budgetPoints = costs.flatMap((cost) => Array.from({ length: maxCount }, (_, i) => strengthForPower(cost * (i + 1), score, mult)))
-  const starts = [...new Set([1, ...budgetPoints, ...unlocks.map((row) => row.at), ...bands.map((row) => row.at)])].sort((a, b) => a - b)
+  const ceiling = Math.floor(MAX_EFFICIENCY_DROWSY_POWER / (score * mult))
+  const starts = [...new Set([1, ceiling, ...budgetPoints, ...unlocks.map((row) => row.at), ...bands.map((row) => row.at)])].filter(min => min <= ceiling).sort((a, b) => a - b)
   const groups = new Map<string, Group>()
   let unlocked = 0
   let snapshot: Group[] = []
@@ -153,20 +156,29 @@ export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: n
   })
 }
 
+const bucketCache = new WeakMap<CurveState['groups'], Map<string, EfficiencyBucket[]>>()
 export function efficiencyDrawState(island: EfficiencyIsland, state: CurveState, type: SleepType, eventMix: EventMix | boolean, power: number): EfficiencyDrawState {
   const mixed = normalizeEventMix(eventMix) !== 'off' && type !== '没有特征'
-  const buckets = new Map<string, EfficiencyBucket>()
-  for (const group of state.groups) {
-    const typed = type === '没有特征' || type === group.sleepType
-    if (!mixed && !typed) continue
-    const key = `${group.weight}|${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}|${group.dpr}|${group.belly}`
-    const existing = buckets.get(key)
-    if (existing) { existing.count += group.count; if (compareSleepPriority(group, existing) < 0) { existing.order = group.order; existing.unlockRank = group.unlockRank } }
-    else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, dpr: group.dpr, belly: group.belly, order: group.order, unlockRank: group.unlockRank, weight: group.weight, count: group.count })
+  const cacheKey = type + ':' + Number(mixed)
+  let cached = bucketCache.get(state.groups)
+  if (!cached) { cached = new Map(); bucketCache.set(state.groups, cached) }
+  let prepared = cached.get(cacheKey)
+  if (!prepared) {
+    const buckets = new Map<string, EfficiencyBucket>()
+    for (const group of state.groups) {
+      const typed = type === '没有特征' || type === group.sleepType
+      if (!mixed && !typed) continue
+      const key = `${group.weight}|${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}|${group.dpr}|${group.belly}`
+      const existing = buckets.get(key)
+      if (existing) { existing.count += group.count; if (compareSleepPriority(group, existing) < 0) { existing.order = group.order; existing.unlockRank = group.unlockRank } }
+      else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, dpr: group.dpr, belly: group.belly, order: group.order, unlockRank: group.unlockRank, weight: group.weight, count: group.count })
+    }
+    prepared = [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, bucket]) => bucket)
+    cached.set(cacheKey, prepared)
   }
   return {
-    buckets: [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, bucket]) => bucket),
-    power: Math.min(power, Math.max(0, ...[...buckets.values()].map((group) => group.dpr * state.encounters))),
+    buckets: prepared,
+    power: Math.min(power, MAX_EFFICIENCY_DROWSY_POWER, Math.max(0, ...prepared.map((group) => group.dpr * state.encounters))),
     encounters: state.encounters,
     otherSlots: mixed ? openSleepSlots(state.encounters, eventMix) : 0,
     typedFallback: island.fallbacks[type],
@@ -209,7 +221,7 @@ function mergeIntervals(intervals: EfficiencyInterval[]): EfficiencyInterval[] {
 
 interface SplitLeaders { catch: { value: number, splits: number[] }, candy: { value: number, splits: number[] } }
 export interface BabyEfficiencyCheckpoint {
-  version: 1
+  version: 2
   options: BabyEfficiencyOptions
   islandIndex: number
   splitIndex: number
@@ -228,14 +240,15 @@ export function* babyEfficiencySteps(
 ): Generator<BabyEfficiencyCheckpoint, BabyEfficiencyResult> {
   const error = validateBabyEfficiency(options)
   if (error) throw new Error(error)
-  if (checkpoint && (checkpoint.version !== 1 || JSON.stringify(checkpoint.options) !== JSON.stringify(options))) throw new Error('续算参数与检查点不一致')
+  if (checkpoint && (checkpoint.version !== 2 || JSON.stringify(checkpoint.options) !== JSON.stringify(options))) throw new Error('续算参数与检查点不一致')
   islands = islands.filter((island) => !options.island || options.island === 'all' || island.id === options.island)
   if (!islands.length) throw new Error('资料未收录这个家族可参与普通研究的睡姿')
-  const cache = new Map<string, EfficiencyReward>()
+  const cache = new Map<string, EfficiencySimulation>()
+  const drawStateKey = createDrawStateKey()
   const best = checkpoint?.best ?? { catch: { value: 0, intervals: [] as EfficiencyInterval[] }, candy: { value: 0, intervals: [] as EfficiencyInterval[] } }
   const step = options.precision === 'low' ? 10 : options.precision === 'medium' ? 5 : 1
   const stride = options.precision === 'low' ? 8 : options.precision === 'medium' ? 2 : 1
-  const baseSplits = options.splitSleep !== false ? Array.from({ length: 50 / step }, (_, index) => (index + 1) * step) : [100]
+  const baseSplits = options.splitSleep !== false ? Array.from({ length: Math.floor(99 / step) }, (_, index) => (index + 1) * step) : [100]
   const initialStates = checkpoint?.evaluatedStates ?? 0
   const completedStates = () => initialStates + cache.size
   let progressTime = 0
@@ -257,9 +270,9 @@ export function* babyEfficiencySteps(
       return curves.get(score)!
     }
     const sessionCache = new Map<string, { catch: { value: number, types: SleepType[] }, candy: { value: number, types: SleepType[] } }>()
-    const sessionAt = (score: number, min: number) => {
+    const sessionAt = (score: number, min: number, researchedBefore = 0) => {
       const state = stateAt(curveOf(score), min)
-      const sessionKey = `${score}:${min}`
+      const sessionKey = `${score}:${min}:${researchedBefore}`
       const known = sessionCache.get(sessionKey)
       if (known) return known
       const result = { catch: { value: -1, types: [] as SleepType[] }, candy: { value: -1, types: [] as SleepType[] } }
@@ -268,12 +281,13 @@ export function* babyEfficiencySteps(
         const key = drawStateKey(draw)
         let metric = cache.get(key)
         if (!metric) {
-          metric = simulateEfficiencyState(draw, options.iterations, efficiencyRandom(1))
+          metric = simulateEfficiencySlots(draw, options.iterations, efficiencyRandom(1))
           cache.set(key, metric)
         }
+        const rewards = efficiencyRewardsAfterResearch(metric, researchedBefore)
         for (const goal of ['catch', 'candy'] as const) {
-          if (metric[goal] > result[goal].value) result[goal] = { value: metric[goal], types: [type] }
-          else if (metric[goal] === result[goal].value) result[goal].types.push(type)
+          if (rewards[goal] > result[goal].value) result[goal] = { value: rewards[goal], types: [type] }
+          else if (rewards[goal] === result[goal].value) result[goal].types.push(type)
         }
       }
       sessionCache.set(sessionKey, result)
@@ -282,7 +296,11 @@ export function* babyEfficiencySteps(
     const scanSplit = (first: number, position: number, total: number) => {
       const second = first === 100 ? 0 : 100 - first
       const curvesToMerge = second ? [curveOf(first), curveOf(second)] : [curveOf(first)]
-      const starts = [...new Set(curvesToMerge.flatMap((curve) => curve.map((state) => state.min)))].sort((a, b) => a - b)
+      const ceiling = Math.floor(MAX_EFFICIENCY_DROWSY_POWER / (Math.max(first, second) * options.eventMult))
+      const starts = [...new Set([ceiling, ...curvesToMerge.flatMap((curve) => curve.map((state) => state.min))])].filter(min => min <= ceiling).sort((a, b) => a - b)
+      const smallestScore = second ? Math.min(first, second) : first
+      const maxCount = Math.max(3, ...island.bands.map(band => band.count))
+      const stableFrom = Math.max(1, ...island.styles.map(style => Math.max(style.unlockStrength, strengthForPower(style.dpr * maxCount, smallestScore, options.eventMult))), ...island.bands.map(band => strengthForPower(band.min, smallestScore, options.eventMult)))
       const checked = new Set<number>()
       const values = new Map<number, EfficiencyReward>()
       const leaders = { catch: { value: -1, indexes: [] as number[] }, candy: { value: -1, indexes: [] as number[] } }
@@ -292,10 +310,10 @@ export function* babyEfficiencySteps(
         checked.add(index)
         const min = starts[index]!
         // Budget depletion can change within unlock intervals. Only report sampled
-        // energies; the final point is beyond all unlocks and the maximum total cost.
-        const max = starts[index + 1] == null ? null : min
+        // energies, including the finite per-sleep 5-billion-power search ceiling.
+        const max = min >= stableFrom ? ceiling : min
         const a = sessionAt(first, min)
-        const b = second ? sessionAt(second, min) : null
+        const b = second ? sessionAt(second, min, stateAt(curveOf(first), min).encounters) : null
         const totals = { catch: a.catch.value + (b?.catch.value ?? 0), candy: a.candy.value + (b?.candy.value ?? 0) }
         values.set(index, totals)
         for (const goal of ['catch', 'candy'] as const) {
@@ -339,7 +357,7 @@ export function* babyEfficiencySteps(
       return leaders
     }
     const localLeaders = islandIndex === checkpoint?.islandIndex ? checkpoint.leaders : emptyLeaders()
-    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 1, options: { ...options }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
+    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 2, options: { ...options }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
     for (const [index, split] of baseSplits.entries()) {
       if (index < resumeIndex) continue
       const leaders = scanSplit(split, index, baseSplits.length + (options.precision === 'medium' ? 4 : 0))
@@ -351,7 +369,7 @@ export function* babyEfficiencySteps(
     }
     if (options.precision === 'medium' && options.splitSleep !== false) {
       const extra = [...new Set([...localLeaders.catch.splits, ...localLeaders.candy.splits]
-        .flatMap((score) => [score - 1, score + 1]).filter((score) => score >= 1 && score <= 50 && !baseSplits.includes(score)))]
+        .flatMap((score) => [score - 1, score + 1]).filter((score) => score >= 1 && score <= 99 && !baseSplits.includes(score)))]
       for (const [index, split] of extra.entries()) {
         if (baseSplits.length + index < resumeIndex) continue
         scanSplit(split, baseSplits.length + index, baseSplits.length + extra.length)

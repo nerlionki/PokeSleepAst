@@ -4,7 +4,7 @@ import { foldText } from './text'
 import snorlaxRanks from '../data/snorlax-ranks.json'
 import type { IslandId, SleepType } from '../types'
 import { ENCOUNTER_BANDS, FALLBACKS, ISLANDS, islandById, POKEDEX, pokeById, SLEEP_STYLES, type SleepStyleRow } from './data'
-import { sleepReward, sleepStyleInternalId } from './sleepRewards'
+import { dailyResearchReward, sleepReward, sleepStyleInternalId } from './sleepRewards'
 
 type BandKey = keyof typeof ENCOUNTER_BANDS
 
@@ -149,6 +149,9 @@ function prepareStyles(island: IslandId, pool: SleepStyleRow[]): PreparedStyle[]
 }
 
 export interface DrawOpts {
+  researchedBefore?: number
+  researchLimit?: 10 | 11
+  firstResearchExtras?: number
   /** Reused immutable metadata during a simulation batch. */
   preparedPool?: PreparedStyle[]
   preparedOpenPool?: PreparedStyle[]
@@ -364,10 +367,10 @@ export function* sleepExpectSteps(
   }
   for (let i = checkpoint?.completed ?? 0; i < n; i++) {
     const draw = sleepDraw(island, sleepType, dp, rank, mode, rng, { ...opts, pool, openPool, preparedPool, preparedOpenPool })
-    for (const s of draw) {
+    for (const [index, s] of draw.entries()) {
       const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
       const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
-      const reward = sleepReward(s)
+      const reward = dailyResearchReward(sleepReward(s), (opts.researchedBefore ?? 0) + index, opts.researchLimit ?? 10)
       cur.count += 1
       cur.researchExp += reward?.researchExp ?? 0
       cur.shards += reward?.shards ?? 0

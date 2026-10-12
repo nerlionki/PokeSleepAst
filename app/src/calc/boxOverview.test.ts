@@ -51,7 +51,7 @@ describe('Box overview production', () => {
     const boosted = { ...defaultOverviewBonuses(), areaBonus: 0.5, favoredBerries: [species.berry] }
     const seconds = instantInterval(species.interval, 60, '勤奋', [], 0, 100, false, 'greengrass', false)
     const berries = Math.floor(86400 / seconds * 10) / 10
-    expect(berryRow(mon, boosted).amount).toBe(Math.floor(berries * berryEnergyAt(species.berry, 60) * 3))
+    expect(berryRow(mon, boosted).amount).toBe(Math.floor(berries * Math.ceil(berryEnergyAt(species.berry, 60) * 1.5) * 2))
     const plain = calculateBoxOverview([mon]).ingredients.map((ing) => ing.rows.map((row) => row.amount))
     expect(calculateBoxOverview([mon], boosted).ingredients.map((ing) => ing.rows.map((row) => row.amount))).toEqual(plain)
     expect(berryRow(mon, { ...defaultOverviewBonuses(), goodCamp: true }).amount).toBeGreaterThan(berryRow(mon).amount)

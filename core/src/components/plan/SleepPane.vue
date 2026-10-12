@@ -50,6 +50,9 @@ const sameMult = (mult: number) => Math.abs(settings.value.eventMult - mult) < 0
 
 const BATCH = 4000
 const otherTypes = shallowRef(false)
+const researchedBefore = shallowRef(0)
+const specialEncountered = shallowRef(false)
+const firstResearchExtras = shallowRef(0)
 const eventMix = computed(() => otherTypes.value ? settings.value.sleepEventMix : 'off')
 const resultTab = shallowRef<'encounters' | 'candies'>('encounters')
 const { busy, error: simulationError, notice, progress, result: seen, calculate: startSimulation, cancel, reset } = useSleepSimulation()
@@ -61,7 +64,7 @@ let drawSeed = 1
 watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult], () => {
   manualWhole.value = null
 })
-watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, settings.value.shinyUp, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded], () => {
+watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, settings.value.shinyUp, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded, researchedBefore.value, specialEncountered.value, firstResearchExtras.value, plan.value.campTicket], () => {
   reset()
 }, { deep: true, flush: 'sync' })
 
@@ -69,6 +72,9 @@ function calculate() {
   if (busy.value) return
   drawSeed += 1
   const opts = {
+    researchedBefore: Math.max(0, Math.floor(researchedBefore.value)),
+    researchLimit: specialEncountered.value ? 11 as const : 10 as const,
+    firstResearchExtras: Math.max(0, Math.floor(firstResearchExtras.value)) + Number(plan.value.campTicket) + Number(specialEncountered.value),
     rank: rank.value,
     discovered: resolvedSleepdex(plan.value),
     undiscoveredBoost: plan.value.undiscoveredBoost,
@@ -148,6 +154,10 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
       <label>入睡卡比兽能量</label>
       <input :disabled="busy" v-model.number="plan.snorlaxStrength" type="number" min="0">
     </div>
+    <div class="field"><label>本日此前已研究只数</label><input :disabled="busy" v-model.number="researchedBefore" type="number" min="0" max="20"></div>
+    <label class="row"><input :disabled="busy" v-model="specialEncountered" type="checkbox">本日实际遇到特殊UP宝可梦</label>
+    <div v-if="!whole" class="field"><label>第一觉熏香额外遭遇只数（不含露营券、特殊UP）</label><input :disabled="busy" v-model.number="firstResearchExtras" type="number" min="0" max="2"></div>
+    <p class="muted">每日第11只起糖果为1，研究EXP与梦之碎片减半；实际遇到特殊UP时从第12只起减额。按抽选顺序结算，不减少捕捉数量。额外遭遇只计入累计只数，不模拟其奖励。</p>
     <div class="field">
       <label>睡眠类型</label>
       <select :disabled="busy" v-model="plan.sleepType">

@@ -1,4 +1,6 @@
 import { newUid } from '../calc/uid'
+import { teamRestrictionError } from '../calc/teamRestrictions'
+import { useBoxStore } from './box'
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { defaultTune, type MemberTune } from '../calc/member'
@@ -27,6 +29,20 @@ export const useRosterStore = defineStore('roster', () => {
   const customs = ref<TeamCustom[]>([])
   const tunes = ref<Record<string, MemberTune>>({})
   const ready = ref(false)
+  const error = ref('')
+
+  function memberOf(uid: string | null) {
+    return customs.value.find(item => item.uid === uid) ?? useBoxStore().pokemon.find(item => item.uid === uid)
+  }
+
+  function canPlace(index: number, pokeId: number) {
+    const others = slots.value.flatMap((uid, slot) => {
+      const member = slot === index ? undefined : memberOf(uid)
+      return member ? [member] : []
+    })
+    error.value = teamRestrictionError([...others, { pokeId }])
+    return !error.value
+  }
 
   async function hydrate() {
     const saved = await loadJson<RosterFile | (string | null)[] | null>('roster', null)
@@ -45,10 +61,14 @@ export const useRosterStore = defineStore('roster', () => {
   }, { deep: true })
 
   function setSlot(index: number, uid: string | null) {
+    const member = memberOf(uid)
+    if (member && !canPlace(index, member.pokeId)) return false
+    error.value = ''
     const next = [...slots.value]
     next[index] = uid
     slots.value = next
     pruneCustoms()
+    return true
   }
 
   function pruneCustoms() {
@@ -57,6 +77,7 @@ export const useRosterStore = defineStore('roster', () => {
   }
 
   function addCustom(index: number, pokeId: number) {
+    if (!canPlace(index, pokeId)) return null
     const uid = `custom-${newUid()}`
     const member: TeamCustom = {
       uid,
@@ -85,6 +106,7 @@ export const useRosterStore = defineStore('roster', () => {
     const source = customs.value.find((item) => item.uid === uid)
     const empty = slots.value.findIndex((slot) => !slot)
     if (!source || empty < 0) return null
+    if (!canPlace(empty, source.pokeId)) return null
     const copy: TeamCustom = {
       ...source,
       subskills: [...source.subskills],
@@ -97,5 +119,5 @@ export const useRosterStore = defineStore('roster', () => {
     return copy.uid
   }
 
-  return { slots, customs, tunes, ready, hydrate, setSlot, addCustom, updateCustom, setTune, duplicateCustom }
+  return { slots, customs, tunes, ready, error, hydrate, setSlot, addCustom, updateCustom, setTune, duplicateCustom }
 })

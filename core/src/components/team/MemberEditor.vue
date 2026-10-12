@@ -136,7 +136,8 @@ function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number)
     <div class="ing-board">
       <section v-for="(col, colIndex) in board" :key="colIndex" class="ing-col">
         <h3>Lv {{ [1, 30, 60][colIndex] }}</h3>
-        <button v-if="isAllRounder(poke)" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">空</button>
+        <button v-if="isAllRounder(poke) && colIndex > 0" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">空</button>
+        <p v-if="isAllRounder(poke) && colIndex === 0 && model.ingredientSlots[0] == null" class="amber" role="alert">Lv.1 食材不能为空，请选择实际食材。</p>
         <div class="ing-col-items">
           <button
             v-for="(cell, cellIndex) in col"
@@ -152,7 +153,7 @@ function stepTune(key: 'evolutions' | 'silverSeeds', delta: number, max: number)
         </div>
       </section>
     </div>
-    <p class="muted">亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽，第 1 槽固定。</p>
+    <p class="muted">亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽。{{ isAllRounder(poke) ? 'Lv.1 必须选择食材，不能留空。' : '第 1 槽固定。' }}</p>
 
     <div class="tune-row">
       <span>进化次数</span>

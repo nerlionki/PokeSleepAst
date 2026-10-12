@@ -3,7 +3,7 @@ import { simulateTeam } from './timeline'
 import type { ProduceInput, ProduceResult, Settings } from '../types'
 import { exEffects } from './exEffects'
 import { skillMaxFor, skillByPokedexName } from './mainSkills'
-import { berryEnergyAt } from './berry'
+import { berryUnitEnergy } from './berry'
 import { pokeById } from './data'
 import { instantInterval } from './helpSpeed'
 import { slotDrop } from './ingredients'
@@ -32,7 +32,7 @@ function cutDecimal(value: number, places: number): number {
 
 /**
  * 一次帮忙只出一种：树果，或已解锁的某一槽食材。技能不占用这次帮忙。
- * 食材次数、技能次数按期望计算；有概率但不足 1 次时保底 1 次。
+ * 食材次数、技能次数按期望计算，不人为补足一次。
  */
 export function splitHelps(
   helps: number,
@@ -42,10 +42,8 @@ export function splitHelps(
   snacking: boolean,
 ): { berryHelps: number, ingredients: Record<string, number>, skillProcs: number } {
   let skillProcs = cutDecimal(helps * skillRate, 1)
-  if (!snacking && skillRate > 0 && skillProcs < 1) skillProcs = 1
   if (snacking) skillProcs = 0
   let foodHelps = slots.length ? cutDecimal(helps * ingRate, 2) : 0
-  if (!snacking && ingRate > 0 && slots.length && foodHelps < 1) foodHelps = 1
   if (snacking) foodHelps = 0
   const berryHelps = Math.max(0, cutDecimal(helps - foodHelps, 2))
   const ingredients: Record<string, number> = {}
@@ -106,7 +104,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   })
   const split = splitHelps(helps, ingRate, skillRate, slots, snacking)
   const berries = cutDecimal(split.berryHelps * per, 1)
-  const unit = berryEnergyAt(poke.berry, input.level) * ex.berryMultiplier * (1 + settings.areaBonus)
+  const unit = berryUnitEnergy(poke.berry, input.level, settings.areaBonus, ex.berryMultiplier)
   const skillLv = Math.min(skillMaxFor(poke.mainSkill), effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill) + ex.skillLevels)
   return {
     helps,

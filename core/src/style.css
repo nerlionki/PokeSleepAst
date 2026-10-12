@@ -784,12 +784,12 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   padding: 6px 8px;
 }
 .lv-row button.on { color: var(--ink); background: var(--amber); border-color: var(--amber); }
-.slot-grid { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; min-width: 0; }
-.slot-grid > .slot-card { flex: 0 1 calc(50% - 4px); min-width: 0; max-width: 100%; }
+.slot-grid { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; width: 100%; min-width: 0; }
+.roster-slot { width: calc(50% - 4px); flex-shrink: 0; min-width: 0; max-width: 100%; margin-bottom: 8px; }
 .slot-card, .cmp-col {
-  display: grid;
-  justify-items: center;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 6px;
   text-align: center;
   min-height: 132px;
@@ -798,20 +798,21 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px dashed var(--line);
   color: var(--muted);
 }
 .slot-card .row, .cmp-col .row { flex-wrap: wrap; justify-content: center; gap: 6px; }
 .slot-card .btn, .cmp-col .btn { white-space: nowrap; padding: 8px 10px; }
 .cmp-board {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  align-items: stretch;
+  align-items: flex-start;
 }
-.cmp-col { min-width: 0; height: 100%; align-content: start; }
+.cmp-col { flex: 1 1 340px; width: 100%; min-width: 0; height: auto; margin-bottom: 8px; }
 .cmp-meta { white-space: nowrap; }
 .cmp-col p { width: 100%; display: flex; justify-content: space-between; gap: 8px; margin: 0; font-size: 13px; }
 .cmp-col p.best b { color: var(--amber); }
@@ -838,7 +839,7 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
 }
 button.ing-token { border: 0; color: inherit; padding: 0; cursor: pointer; border-radius: 12px; }
 button.ing-token.on { outline: 2px solid var(--amber); background: rgba(240, 162, 2, 0.16); }
-.slot-card.rich { flex: 0 1 100%; display: flex; flex-direction: column; align-items: stretch; text-align: left; }
+.roster-slot.rich { width: 100%; align-items: stretch; text-align: left; }
 .member-card {
   display: flex;
   flex-direction: column;

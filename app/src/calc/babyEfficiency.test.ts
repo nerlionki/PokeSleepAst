@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  babyEfficiencySleepTypes, babyEfficiencySteps, BABY_POKEMON_IDS, DEFAULT_BABY_EFFICIENCY, EFFICIENCY_SLEEP_TYPES, efficiencyCurve, efficiencyDrawState,
+  MAX_EFFICIENCY_DROWSY_POWER, babyEfficiencySleepTypes, babyEfficiencySteps, BABY_POKEMON_IDS, DEFAULT_BABY_EFFICIENCY, EFFICIENCY_SLEEP_TYPES, efficiencyCurve, efficiencyDrawState,
   efficiencyIslands, searchBabyEfficiency, strengthForPower, validateBabyEfficiency,
   type EfficiencyIsland, type EfficiencyStyle,
 } from './babyEfficiency'
@@ -135,11 +135,11 @@ describe('energy intervals and exhaustive sleep allocation', () => {
     expect(result.candy.value).toBeGreaterThanOrEqual(result.catch.value * 4)
   })
 
-  it('represents a permanent optimal plateau without an artificial upper bound', () => {
+  it('reports an optimal plateau within the per-sleep power ceiling', () => {
     const fixed: EfficiencyIsland = { ...fixture, bands: [{ count: 3, min: 0 }], styles: [fixture.styles[0]!] }
     const result = searchBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, splitSleep: true, eventMix: 'off' as const, precision: 'high', iterations: 100 }, () => {}, [fixed])
     expect(result.catch.value).toBe(6)
-    expect(result.catch.intervals.some((interval) => interval.max === null && interval.sleeps.length === 2)).toBe(true)
+    expect(result.catch.intervals.some((interval) => interval.max === MAX_EFFICIENCY_DROWSY_POWER / 50 && interval.sleeps.every(sleep => sleep.score === 50))).toBe(true)
   })
 
   it('selects the highest-reward allowed sleep type for each session with repeated styles', () => {
@@ -160,7 +160,7 @@ describe('energy intervals and exhaustive sleep allocation', () => {
       ...Array.from({ length: 12 }, (_, index) => ({ sleepType: '安然入睡' as const, special: false, catch: 0, candy: 0, unlockStrength: index + 2, dpr: 0 })),
     ] }
     const result = searchBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, splitSleep: true, eventMix: 'off' as const, precision: 'low', iterations: 100 }, () => {}, [fixed])
-    expect(result.catch.intervals.some((interval) => interval.max === null)).toBe(true)
+    expect(result.catch.intervals.every(interval => interval.max !== null && interval.sleeps.every(sleep => interval.max! * sleep.score <= MAX_EFFICIENCY_DROWSY_POWER))).toBe(true)
     expect(result.catch.value).toBe(6)
     expect(result.catch.intervals.every((interval) => interval.max === null || interval.max >= interval.min)).toBe(true)
   })

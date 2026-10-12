@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { sleepSimulationSteps, simulateSleep, type SleepSimulationMessage, type SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
-import { sleepExpect } from './sleep'
+import { encounterCount, sleepExpect } from './sleep'
 const request: SleepSimulationRequest = { island: 'greengrass', sleepType: '淺淺入夢', powers: [1e7, 2e7], iterations: 250, seed: 9,
   options: { rank: '大师20', eventMix: true, discovered: [], undiscoveredBoost: false } }
 describe('background sleep simulation', () => {
@@ -9,7 +9,7 @@ describe('background sleep simulation', () => {
     simulateSleep(request, (message) => messages.push(message))
     const result = messages.at(-1)
     expect(result).toEqual({ type: 'result', result: request.powers.flatMap((power, index) => sleepExpect(request.island, request.sleepType, power,
-      request.iterations, 'normal', { ...request.options, seed: request.seed + index })) })
+      request.iterations, 'normal', { ...request.options, researchedBefore: index ? encounterCount(request.island, request.powers[0]!) : 0, seed: request.seed + index })) })
     const updates = messages.filter((message) => message.type === 'progress')
     expect(updates.map((message) => message.completed)).toEqual([0, 100, 200, 250, 350, 450, 500])
     expect(updates.every((message) => message.total === 500)).toBe(true)
@@ -23,7 +23,7 @@ describe('background sleep simulation', () => {
 
 
 it('resumes both mid-session and between split sessions with the exact seeded result', () => {
-  const full = request.powers.flatMap((power, index) => sleepExpect(request.island, request.sleepType, power, request.iterations, 'normal', { ...request.options, seed: request.seed + index }))
+  const full = request.powers.flatMap((power, index) => sleepExpect(request.island, request.sleepType, power, request.iterations, 'normal', { ...request.options, researchedBefore: index ? encounterCount(request.island, request.powers[0]!) : 0, seed: request.seed + index }))
   for (const completedChunks of [1, 3, 4, 5]) {
     const original = sleepSimulationSteps(request)
     let step = original.next()

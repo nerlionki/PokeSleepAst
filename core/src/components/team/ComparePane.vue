@@ -271,10 +271,10 @@ function saveCustomToBox() {
       <section class="sheet stack">
         <div class="row">
           <h3>{{ customs.some((item) => item.uid === editing) ? '自定义面板' : '编辑个体' }}</h3>
-          <button v-if="customs.some((item) => item.uid === editing)" class="btn" type="button" @click="saveCustomToBox">保存到盒子</button>
-          <button class="btn ghost" type="button" @click="editing = null">完成</button>
         </div>
         <MemberEditor v-model="editingPanel" @copy="duplicateEditing" @remove="remove(editing ?? '')" />
+        <button v-if="customs.some((item) => item.uid === editing)" class="btn" type="button" :disabled="[151, 491].includes(editingPanel.pokeId) && editingPanel.ingredientSlots[0] == null" @click="saveCustomToBox">保存到盒子</button>
+        <button class="btn" type="button" :disabled="[151, 491].includes(editingPanel.pokeId) && editingPanel.ingredientSlots[0] == null" @click="editing = null">完成</button>
       </section>
     </div>
   </div>

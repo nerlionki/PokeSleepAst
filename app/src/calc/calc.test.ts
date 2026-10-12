@@ -222,7 +222,8 @@ describe('production comparison', () => {
       pokeId: 1, level: 1, nature: '勤奋', subskills: [], ingredientSlots: [0, 0, 0], skillLevel: 1, wakeEnergy: 100,
     }, 0)
     expect(slow.helps * 0.019).toBeLessThan(1)
-    expect(slow.skillProcs).toBe(1)
+    expect(slow.skillProcs).toBeGreaterThan(0)
+    expect(slow.skillProcs).toBeLessThan(1)
     expect(instantInterval(2700, 70, '固执', ['helpS', 'ingM', 'helpingBonus', 'shardBonus'], 5, 100, true, 'taupe', false, 0.05)).toBe(487)
   })
 })
@@ -237,20 +238,20 @@ describe('energy', () => {
   })
 
   it('meals restore by current energy band', () => {
-    expect(mealRecover(10)).toBe(19)
-    expect(mealRecover(80)).toBe(7)
+    expect(mealRecover(10)).toBe(9)
+    expect(mealRecover(80)).toBe(2)
     expect(mealRecover(150)).toBe(0)
   })
 
-  it('recovery incense doubles restore, not +5%', () => {
+  it('recovery incense does not amplify meals', () => {
     const input = { pokeId: 1, level: 30, nature: '勤奋', subskills: [] as string[], ingredientSlots: [0, 0, 0] as [number, number, number], skillLevel: 1 }
-    const plain = energyCurve({ ...settings, meals: true, incense: false, sleepScore: 80, sleepStart: '23:00', sleepEnd: '07:00', dailySkillHeal: 0 }, input)
-    const incense = energyCurve({ ...settings, meals: true, incense: true, sleepScore: 80, sleepStart: '23:00', sleepEnd: '07:00', dailySkillHeal: 0 }, input)
+    const plain = energyCurve({ ...settings, meals: true, incense: false, sleepScore: 80, sleepStart: '00:00', sleepEnd: '00:00', dailySkillHeal: 0 }, input)
+    const incense = energyCurve({ ...settings, meals: true, incense: true, sleepScore: 80, sleepStart: '00:00', sleepEnd: '00:00', dailySkillHeal: 0 }, input)
     const mealMin = 12 * 60
     const p = plain.find((x) => !x.asleep && x.minute % 1440 === mealMin)
     const i = incense.find((x) => !x.asleep && x.minute % 1440 === mealMin)
     expect(p && i).toBeTruthy()
-    expect((i?.energy ?? 0) - (p?.energy ?? 0)).toBeGreaterThan(3)
+    expect(i?.energy).toBe(p?.energy)
   })
 })
 

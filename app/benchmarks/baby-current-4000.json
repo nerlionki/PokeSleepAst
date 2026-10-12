@@ -1,0 +1,17 @@
+{
+  "node": "v24.14.1",
+  "cpu": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+  "measuredAt": "2026-10-12T01:11:15.737Z",
+  "note": "After includes daily candy reduction and both split orders; every point uses full iterations.",
+  "rows": [
+    {
+      "label": "after",
+      "precision": "medium",
+      "iterations": 4000,
+      "ms": 141916.1741,
+      "states": 37647,
+      "catch": 1.657,
+      "candy": 6.52025
+    }
+  ]
+}
