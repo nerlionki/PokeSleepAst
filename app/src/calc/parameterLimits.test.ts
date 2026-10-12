@@ -63,7 +63,7 @@ describe('main skill table limits and values', () => {
     const seven = produce(settings, { ...input, subskills: [] })
     const eight = produce(settings, { ...input, subskills: [], skillLevel: 8 })
     const boosted = produce(settings, input)
-    expect(eight.skillEnergy).toBe(Math.floor(eight.skillProcs * 2042))
+    expect(eight.skillEnergy).toBeCloseTo(eight.skillProcs * 2042)
     expect(eight.skillEnergy).toBeGreaterThan(seven.skillEnergy)
     expect(boosted.skillEnergy).toBe(eight.skillEnergy)
     const team = simulateTeam(settings, [input], 0, { alwaysProc: true })

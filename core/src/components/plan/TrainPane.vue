@@ -15,7 +15,6 @@ const nature = shallowRef('勤奋')
 const sleepOnTeam = shallowRef(true)
 const napping = shallowRef(false)
 const napDays = shallowRef(7)
-const early = shallowRef(false)
 const relax = shallowRef(false)
 const sleepExpBonus = shallowRef(0)
 const sleepIncense = shallowRef(false)
@@ -37,6 +36,7 @@ watch(uid, (id) => {
   from.value = p.level
   nature.value = p.nature
   napping.value = p.napping
+  remaining.value = p.tune?.exp ?? 0
 })
 
 const result = computed(() => trainPlan({
@@ -47,7 +47,7 @@ const result = computed(() => trainPlan({
   sleepOnTeam: sleepOnTeam.value && !napping.value,
   napping: napping.value,
   napDays: napDays.value,
-  earlyRetrieve: early.value,
+  earlyRetrieve: napDays.value < 7,
   relaxTicket: relax.value,
   sleepScore: settings.value.sleepScore,
   sleepExpBonus: sleepExpBonus.value,
@@ -105,8 +105,7 @@ const result = computed(() => trainPlan({
     <template v-if="napping">
       <div class="field"><label>寄放天数</label><input v-model.number="napDays" type="number" min="1"></div>
       <label class="row"><input v-model="relax" type="checkbox"> 午睡放松券 +450</label>
-      <label class="row"><input v-model="early" type="checkbox"> 未满 7 天领回（EXP 减半）</label>
-      <p class="muted">每天 {{ napDailyExp(relax) }} EXP。寄放中每 24h 回 15 活力，产量仍按未寄放仿真。捡拾箱不计入产糖。</p>
+      <p class="muted">每天 {{ napDailyExp(relax, nature) }} EXP。寄放中每 24h 回 15 活力，产量仍按未寄放仿真。捡拾箱不计入产糖。</p>
     </template>
     <div class="row">
       <div class="field"><label>已有糖果</label><input v-model.number="owned" type="number"></div>

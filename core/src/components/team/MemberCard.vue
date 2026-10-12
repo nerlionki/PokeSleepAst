@@ -93,7 +93,7 @@ const carry = computed(() => {
   const mon = poke.value
   if (!mon) return 0
   const ribbon = ribbonBonus(props.ribbonHours ?? 0, stagesLeft(mon.id))
-  return carryLimit(mon.carry, subs.value, settings.value.goodCamp, props.carryMode, ribbon.carry)
+  return carryLimit(mon.carry, subs.value, settings.value.goodCamp, props.carryMode, ribbon.carry, exEffects(settings.value, mon.berry).carryExtra)
 })
 
 const skillLv = computed(() => Math.min(skillMaxFor(poke.value?.mainSkill ?? ''), effectiveSkillLevel(props.level, props.skillLevel, props.subskills, poke.value?.mainSkill ?? '') + exEffects(settings.value, poke.value?.berry ?? '').skillLevels))

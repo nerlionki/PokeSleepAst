@@ -81,7 +81,6 @@ const interval = (seconds: number) => `${Math.floor(seconds / 60)}分${seconds %
         <p v-for="(item, index) in result.excluded" :key="index" class="muted">{{ item.name }}：{{ item.reason }}</p>
       </article>
     </template>
-    <p class="muted">计算规则参考：<a href="https://namakemono289.hatenablog.com/entry/2025/12/23/011054" target="_blank" rel="noopener noreferrer">吹哨产物实测</a>、<a href="https://wikiwiki.jp/poke_sleep/どうぐ/おてつだいホイッスル" target="_blank" rel="noopener noreferrer">哨子规则与 EX 加成</a>。食材发现率来自项目资料，接近取整边界时可能与实测相差少量产物。</p>
   </div>
 </template>
 

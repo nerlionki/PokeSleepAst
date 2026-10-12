@@ -66,11 +66,11 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   const selected = species ? resolveMemberSkill(species, input) : null
   const poke = species && selected ? { ...species, mainSkill: selected.name, skillRate: selected.rate } : undefined
   if (!poke) return { ...EMPTY }
-  if (input.pokeId === 151 || skillByPokedexName(poke.mainSkill)?.id === 12) {
-    const sim = simulateTeam(settings, [input], helpingBonus, { excludeSkillFoodFromCooking: true, fixedEnergy: input.wakeEnergy ?? 100 })
+  // 纯能量/回复技能在固定活力比较中可使用等价快速公式，其余统一技能结算。
+  if (input.carryMode !== 'full' && (input.pokeId === 151 || ![1, 2, 4, 5, 7, 8].includes(skillByPokedexName(poke.mainSkill)?.id ?? 0))) {
+    const sim = simulateTeam(settings, [input], helpingBonus, { expectedProcs: true, fixedEnergy: input.wakeEnergy ?? 100 })
     const result = sim.members[0]!
-    const ingredients = Object.fromEntries(Object.entries(result.ingredients).map(([name, count]) => [name, Math.max(0, count - (result.skillIngredients?.[name] ?? 0))] as const).filter(([, count]) => count > 1e-8))
-    return { ...result, ingredients, cooking: { energy: sim.meals.reduce((sum, meal) => sum + meal.energy, 0), remain: sim.remain } }
+    return { ...result, cooking: { energy: sim.meals.reduce((sum, meal) => sum + meal.energy, 0), remain: sim.remain } }
   }
   const subs = unlockedSubskills(input.level, input.subskills)
   const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))

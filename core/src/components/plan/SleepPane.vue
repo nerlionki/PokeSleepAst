@@ -9,9 +9,21 @@ import { useSettingsStore } from '../../stores/settings'
 import type { SleepType } from '../../types'
 import { useSleepSimulation } from '../../composables/useSleepSimulation'
 import { candyExpectation } from '../../calc/sleepCandy'
+import { teamResearchBonuses } from '../../calc/sleepRewards'
+import { useRosterStore } from '../../stores/roster'
+import { useBoxStore } from '../../stores/box'
 
 const settingsStore = useSettingsStore()
 const planStore = usePlanStore()
+const roster = useRosterStore()
+const box = useBoxStore()
+const researchBonuses = computed(() => teamResearchBonuses(roster.slots.flatMap(uid => {
+  const member = roster.customs.find(item => item.uid === uid) ?? box.pokemon.find(item => item.uid === uid)
+  return member ? [member] : []
+})))
+const focusIncense = shallowRef(false)
+const luckIncense = shallowRef(false)
+const incenseSession = shallowRef<0 | 1>(0)
 const { settings } = storeToRefs(settingsStore)
 const { plan } = storeToRefs(planStore)
 
@@ -57,6 +69,7 @@ const eventMix = computed(() => otherTypes.value ? settings.value.sleepEventMix 
 const resultTab = shallowRef<'encounters' | 'candies'>('encounters')
 const { busy, error: simulationError, notice, progress, result: seen, calculate: startSimulation, cancel, reset } = useSleepSimulation()
 const cancelButton = useTemplateRef<HTMLButtonElement>('cancelButton')
+watch(() => [researchBonuses.value, focusIncense.value, luckIncense.value, incenseSession.value], () => reset(), { deep: true, flush: 'sync' })
 watch(busy, async (value) => { if (value) { await nextTick(); cancelButton.value?.focus?.() } })
 const percent = computed(() => progress.value.total ? Math.floor(progress.value.completed / progress.value.total * 100) : 0)
 let drawSeed = 1
@@ -72,6 +85,10 @@ function calculate() {
   if (busy.value) return
   drawSeed += 1
   const opts = {
+    ...researchBonuses.value,
+    focusIncense: focusIncense.value,
+    luckIncense: luckIncense.value,
+    incenseSession: whole.value ? 0 as const : incenseSession.value,
     researchedBefore: Math.max(0, Math.floor(researchedBefore.value)),
     researchLimit: specialEncountered.value ? 11 as const : 10 as const,
     firstResearchExtras: Math.max(0, Math.floor(firstResearchExtras.value)) + Number(plan.value.campTicket) + Number(specialEncountered.value),
@@ -168,6 +185,12 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
       </select>
     </div>
     <label class="row"><input :disabled="busy" v-model="plan.campTicket" type="checkbox"> 露营券 +1（只加第一觉）</label>
+    <label class="row"><input :disabled="busy" v-model="focusIncense" type="checkbox"> 专注薰香（研究 EXP ×2）</label>
+    <label class="row"><input :disabled="busy" v-model="luckIncense" type="checkbox"> 幸运薰香（研究梦碎 ×2）</label>
+    <label v-if="!whole && (focusIncense || luckIncense)" class="field">
+      <span>薰香使用时段</span>
+      <select v-model.number="incenseSession" :disabled="busy"><option :value="0">第一觉</option><option :value="1">第二觉</option></select>
+    </label>
     <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox"> 活动期间遇到一些其他类型宝可梦</label>
     <label class="row"><input :disabled="busy" v-model="plan.undiscoveredBoost" type="checkbox"> 优先遇到未发现睡姿</label>
     <p class="muted">

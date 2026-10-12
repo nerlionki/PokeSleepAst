@@ -49,14 +49,14 @@ describe('Mew editable skill', () => {
     expect(result.cooking!.energy).toBeGreaterThan(0)
     expect(produce(defaultSettings(), { ...input, pokeId: 25 }).cooking).toBeUndefined()
   })
-  it('excludes direct and extra-help skill food only from solo cooking', () => {
+  it('includes direct and extra-help skill food in solo production and cooking', () => {
     const settings = { ...defaultSettings(), sleepStart: '00:00', sleepEnd: '00:00' }
     const mew = data.pokeById(151)!
     vi.spyOn(data, 'pokeById').mockReturnValue({ ...mew, ingredientRate: 0 })
     const input = { ...actor(10).input, mewSkill: 10 }
     const solo = produce(settings, input)
-    expect(solo.cooking!.energy).toBe(0)
-    expect(Object.values(solo.ingredients).reduce((a, b) => a + b, 0)).toBeCloseTo(0)
+    expect(solo.cooking!.energy).toBeGreaterThan(0)
+    expect(Object.values(solo.ingredients).reduce((a, b) => a + b, 0)).toBeCloseTo(Object.values(solo.skillIngredients!).reduce((a, b) => a + b, 0))
     expect(Object.values(solo.skillIngredients!).reduce((a, b) => a + b, 0)).toBeGreaterThan(0)
     expect(simulateTeam(settings, [input], 0).meals.reduce((sum, m) => sum + m.energy, 0)).toBeGreaterThan(0)
     vi.mocked(data.pokeById).mockReturnValue({ ...mew, ingredientRate: 1 })

@@ -224,7 +224,7 @@ describe('production comparison', () => {
     expect(slow.helps * 0.019).toBeLessThan(1)
     expect(slow.skillProcs).toBeGreaterThan(0)
     expect(slow.skillProcs).toBeLessThan(1)
-    expect(instantInterval(2700, 70, '固执', ['helpS', 'ingM', 'helpingBonus', 'shardBonus'], 5, 100, true, 'taupe', false, 0.05)).toBe(487)
+    expect(instantInterval(2700, 70, '固执', ['helpS', 'ingM', 'helpingBonus', 'shardBonus'], 5, 100, true, 'taupe', false, 0.05)).toBe(507)
   })
 })
 
@@ -262,11 +262,9 @@ describe('xp', () => {
     expect(expTo(70)).toBe(82162)
   })
 
-  it('boost doubles exp and multiplies shards', () => {
-    const plain = xpCandy({ from: 1, to: 10, nature: '勤奋' })
-    const boost = xpCandy({ from: 1, to: 10, nature: '勤奋', boost: true })
-    expect(boost.candy).toBeLessThan(plain.candy)
-    expect(boost.shards).toBe(plain.shards * 5)
+  it('boost needs fewer candies and charges shards for each candy at the level it is fed', () => {
+    expect(xpCandy({ from: 1, to: 2, nature: '勤奋' })).toMatchObject({ candy: 2, shards: 28 })
+    expect(xpCandy({ from: 1, to: 2, nature: '勤奋', boost: true })).toMatchObject({ candy: 1, shards: 70 })
   })
 })
 
@@ -312,7 +310,7 @@ describe('nap island', () => {
     }
     expect(trainPlan({ ...base, sleepExpBonus: 0, dailyCandy: 0, sleepIncense: true }).dailyExp).toBe(200)
     expect(trainPlan({ ...base, sleepExpBonus: 2, dailyCandy: 0, sleepIncense: true }).dailyExp).toBeCloseTo(256)
-    expect(trainPlan({ ...base, sleepExpBonus: 0, dailyCandy: 2, sleepIncense: true }).dailyExp).toBe(250)
+    expect(trainPlan({ ...base, sleepExpBonus: 0, dailyCandy: 2, sleepIncense: true }).dailyExp).toBe(280)
   })
 })
 

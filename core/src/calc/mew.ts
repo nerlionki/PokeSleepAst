@@ -1,5 +1,5 @@
 import type { ProduceInput } from '../types'
-import { MAIN_SKILLS } from './mainSkills'
+import { MAIN_SKILLS, skillByPokedexName } from './mainSkills'
 
 /** 出处：https://pks.raenonx.cc/zh/mainskill/info/34 */
 export const MEW_SKILLS = [
@@ -14,7 +14,7 @@ export function normalizeMewSkill(id: unknown): number {
 }
 
 export function resolveMemberSkill(poke: { id: number, mainSkill: string, skillRate: number }, input: Pick<ProduceInput, 'mewSkill'>) {
-  if (poke.id !== 151) return { name: poke.mainSkill, rate: poke.skillRate }
+  if (poke.id !== 151) return { name: skillByPokedexName(poke.mainSkill, poke.id)?.name ?? poke.mainSkill, rate: poke.skillRate }
   const choice = MEW_SKILLS.find(skill => skill.id === normalizeMewSkill(input.mewSkill))!
   return { name: choice.name, rate: choice.rate }
 }

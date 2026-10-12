@@ -4,7 +4,7 @@ import { foldText } from './text'
 import snorlaxRanks from '../data/snorlax-ranks.json'
 import type { IslandId, SleepType } from '../types'
 import { ENCOUNTER_BANDS, FALLBACKS, ISLANDS, islandById, POKEDEX, pokeById, SLEEP_STYLES, type SleepStyleRow } from './data'
-import { dailyResearchReward, sleepReward, sleepStyleInternalId } from './sleepRewards'
+import { boostedResearchReward, dailyResearchReward, sleepReward, sleepStyleInternalId, type ResearchBonuses } from './sleepRewards'
 
 type BandKey = keyof typeof ENCOUNTER_BANDS
 
@@ -148,7 +148,7 @@ function prepareStyles(island: IslandId, pool: SleepStyleRow[]): PreparedStyle[]
   return pool.map(style => ({ ...style, order: sleepStyleInternalId(style), unlockRank: styleUnlockIndex(island, style) }))
 }
 
-export interface DrawOpts {
+export interface DrawOpts extends ResearchBonuses {
   researchedBefore?: number
   researchLimit?: 10 | 11
   firstResearchExtras?: number
@@ -370,7 +370,7 @@ export function* sleepExpectSteps(
     for (const [index, s] of draw.entries()) {
       const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
       const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
-      const reward = dailyResearchReward(sleepReward(s), (opts.researchedBefore ?? 0) + index, opts.researchLimit ?? 10)
+      const reward = boostedResearchReward(dailyResearchReward(sleepReward(s), (opts.researchedBefore ?? 0) + index, opts.researchLimit ?? 10), opts)
       cur.count += 1
       cur.researchExp += reward?.researchExp ?? 0
       cur.shards += reward?.shards ?? 0
