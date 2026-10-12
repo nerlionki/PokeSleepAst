@@ -23,7 +23,7 @@ export async function importScreenshotSelection(existing: BoxPokemon[], progress
     postMessage: message => native.postMessage(message),
     terminate: () => { if (!terminated) { terminated = true; native.terminate() } },
   }
-  native.onMessage(data => worker.onmessage?.({ data: data as Parameters<NonNullable<ImportWorker['onmessage']>>[0]['data'] }))
+  native.onMessage(data => worker.onmessage?.({ data: data as unknown as Parameters<NonNullable<ImportWorker['onmessage']>>[0]['data'] }))
   native.onProcessKilled(() => worker.onerror?.())
   try {
     return await runImportWorker(worker, files, existing, importAssets(), { fileToImage, loadUrl, loadOcr }, progress) }
