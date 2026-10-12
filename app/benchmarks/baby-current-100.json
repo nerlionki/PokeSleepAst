@@ -1,0 +1,44 @@
+{
+  "node": "v24.14.1",
+  "cpu": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+  "measuredAt": "2026-10-12T01:06:46.754Z",
+  "note": "After includes daily candy reduction and both split orders; every point uses full iterations.",
+  "rows": [
+    {
+      "label": "before",
+      "precision": "medium",
+      "iterations": 100,
+      "ms": 9913.6762,
+      "states": 17666,
+      "catch": 2,
+      "candy": 11.1
+    },
+    {
+      "label": "after",
+      "precision": "medium",
+      "iterations": 100,
+      "ms": 3938.6785,
+      "states": 33252,
+      "catch": 2,
+      "candy": 8
+    },
+    {
+      "label": "before",
+      "precision": "high",
+      "iterations": 100,
+      "ms": 93710.3452,
+      "states": 159646,
+      "catch": 2.01,
+      "candy": 11.1
+    },
+    {
+      "label": "after",
+      "precision": "high",
+      "iterations": 100,
+      "ms": 51168.79199999999,
+      "states": 300432,
+      "catch": 2.01,
+      "candy": 8.19
+    }
+  ]
+}

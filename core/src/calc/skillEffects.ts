@@ -1,5 +1,6 @@
 import { INGREDIENTS, pokeById } from './data'
 import { MAIN_SKILLS, clampSkillLevel, mainSkillValue, skillByPokedexName } from './mainSkills'
+import { SPECIAL_TEAM_POKEMON } from './teamRestrictions'
 import { chargeStrength } from './skills'
 import type { ProduceInput, ProduceResult } from '../types'
 
@@ -37,7 +38,15 @@ function reward(actor: EffectActor, key: 'dreamShards' | 'candies' | 'berryJuice
 export function applyMainSkill(actor: EffectActor, team: EffectActor[], context: EffectContext, weight = 1) {
   const selected = skillByPokedexName(actor.poke.mainSkill)
   if (!selected || weight <= 0) return false
-  const choices = selected.id === 12 ? METRONOME_POOL.map(id => ({ id, probability: 1 / METRONOME_POOL.length })) : [{ id: selected.id, probability: 1 }]
+  const expand = (id: number, probability: number) => id === 12
+    ? METRONOME_POOL.map(id => ({ id, probability: probability / METRONOME_POOL.length })) : [{ id, probability }]
+  const copying = selected.id === 18 || selected.id === 19
+  const candidates = copying ? team.filter(target => target !== actor) : []
+  const choices = copying ? (candidates.length ? candidates.flatMap(target => {
+    const skill = skillByPokedexName(target.poke.mainSkill)
+    const failed = SPECIAL_TEAM_POKEMON.has(target.poke.id) || !skill || [18,19,22,35,37,40].includes(skill.id)
+    return expand(failed ? 1 : skill!.id, 1 / candidates.length)
+  }) : [{ id: 1, probability: 1 }]) : expand(selected.id, 1)
   const crit: { amount: number, probability: number }[] = []
   for (const choice of choices) {
     const name = MAIN_SKILLS.find(skill => skill.id === choice.id)!.name

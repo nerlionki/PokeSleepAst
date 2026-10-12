@@ -1,6 +1,7 @@
 import type { EnergyPoint, Settings, ProduceInput } from '../types'
 import { MEAL_RECOVERY } from './data'
 import { energyMultiplier } from './helpSpeed'
+import { unlockedSubskills } from './member'
 import { natureStatFactor } from './natureLabels'
 
 function parseHm(hhmm: string): number {
@@ -15,21 +16,27 @@ function inSleep(minute: number, start: number, end: number): boolean {
 }
 
 export function mealRecover(energy: number): number {
-  const row = MEAL_RECOVERY.find((r) => energy >= r.min && energy <= r.max)
+  const row = MEAL_RECOVERY.find((r) => energy >= r.min && energy < r.max)
   return row?.recover ?? 0
 }
 
-export function recoveryFactor(input: ProduceInput, incense: boolean): number {
+/** 仅睡眠回活：全队回复奖励按层数相加，回复熏香不影响料理或技能。 */
+export function recoveryFactor(input: ProduceInput, incense: boolean, teamBonuses = Number(unlockedSubskills(input.level, input.subskills).includes('energyRecover'))): number {
   let f = natureStatFactor(input.nature, 'energy')
-  if (input.subskills.includes('energyRecover')) f *= 1.14
+  f *= 1 + 0.14 * Math.min(5, Math.max(0, teamBonuses))
   if (incense) f *= 2
   return f
+}
+
+export function sleepRecoveredEnergy(energy: number, score: number, input: ProduceInput, incense: boolean, teamBonuses?: number): number {
+  const cap = unlockedSubskills(input.level, input.subskills).includes('energyRecover') ? 105 : 100
+  return Math.max(energy, Math.min(cap, energy + score * recoveryFactor(input, incense, teamBonuses)))
 }
 
 export function energyCurve(settings: Settings, input: ProduceInput, days = 1): EnergyPoint[] {
   const start = parseHm(settings.sleepStart)
   const end = parseHm(settings.sleepEnd)
-  const factor = recoveryFactor(input, settings.incense)
+  const skillFactor = natureStatFactor(input.nature, 'energy')
   const skillPerTick = settings.dailySkillHeal / 144
   const points: EnergyPoint[] = []
   let energy = Math.min(150, Math.max(0, settings.sleepScore))
@@ -38,15 +45,14 @@ export function energyCurve(settings: Settings, input: ProduceInput, days = 1): 
   for (let i = 0; i < ticks; i++) {
     const minute = (i * 10) % 1440
     const asleep = inSleep(minute, start, end)
+    const wasAsleep = i > 0 && inSleep((minute + 1430) % 1440, start, end)
+    if (i > 0) energy = Math.max(0, energy - 1)
+    if (wasAsleep && !asleep) energy = sleepRecoveredEnergy(energy, settings.sleepScore, input, settings.incense)
     if (!asleep) {
-      energy = Math.max(0, energy - 1)
-      energy = Math.min(150, energy + skillPerTick * factor)
+      energy = Math.min(150, energy + skillPerTick * skillFactor)
     }
-    if (settings.meals && !asleep && (minute === 4 * 60 || minute === 12 * 60 || minute === 18 * 60)) {
-      energy = Math.min(150, energy + mealRecover(energy) * factor)
-    }
-    if (asleep && minute === end) {
-      energy = Math.min(100, energy + settings.sleepScore * factor)
+    if (settings.meals && !asleep && (minute === 8 * 60 || minute === 12 * 60 || minute === 18 * 60)) {
+      energy = Math.min(150, energy + mealRecover(energy))
     }
     points.push({
       minute: i * 10,

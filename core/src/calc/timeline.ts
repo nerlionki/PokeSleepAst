@@ -1,13 +1,14 @@
 import { applyMainSkill, type EffectActor } from './skillEffects'
 import { CookingSkillState } from './cookingSkillState'
+import { teamRestrictionError } from './teamRestrictions'
 import { resolveMemberSkill } from './mew'
 import type { BoxPokemon, EnergyPoint, ProduceInput, ProduceResult, Settings, TeamProduceResult } from '../types'
 import { exEffects } from './exEffects'
 import { skillMaxFor } from './mainSkills'
-import { berryEnergyAt } from './berry'
+import { berryUnitEnergy } from './berry'
 import { pokeById } from './data'
 import { cookMeals } from './cook'
-import { mealRecover, recoveryFactor } from './energy'
+import { mealRecover, sleepRecoveredEnergy } from './energy'
 import { energyMultiplier, instantInterval } from './helpSpeed'
 import { slotDrop } from './ingredients'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
@@ -75,6 +76,7 @@ interface Member {
   input: ProduceInput
   poke: NonNullable<ReturnType<typeof pokeById>>
   energy: number
+  lastDecay: number
   next: number
   held: number
   stock: number
@@ -104,6 +106,8 @@ export function simulateTeam(
   helpingBonus: number,
   opts: SimOpts = {},
 ): { members: ProduceResult[], events: SkillEvent[], meals: ReturnType<typeof cookMeals>['meals'], bag: Record<string, number>, remain: Record<string, number> } {
+  const restriction = teamRestrictionError(roster)
+  if (restriction) throw new Error(restriction)
   const days = settings.period === 'week' ? 7 : 1
   const endMin = days * 1440
   const sleepStart = parseHm(settings.sleepStart)
@@ -140,12 +144,13 @@ export function simulateTeam(
       input,
       poke,
       energy: Math.min(150, Math.max(0, opts.fixedEnergy ?? input.wakeEnergy ?? settings.sleepScore)),
+      lastDecay: 0,
       next: 0,
       held: 0,
       stock: 0,
       accelUntil: -1,
       typeAccelUntil: -1,
-      factor: recoveryFactor({ ...input, subskills: subs }, settings.incense),
+      factor: natureStatFactor(input.nature, 'energy'),
       favored,
       carry: carryLimit(poke.carry, subs, settings.goodCamp, input.carryMode, ribbon.carry),
       perHelp: berryCount(poke.specialty, subs),
@@ -155,7 +160,7 @@ export function simulateTeam(
         * (1 + (subs.includes('skillS') ? 0.18 : 0) + (subs.includes('skillM') ? 0.36 : 0)) * ex.skillMultiplier,
       skillLv,
       fill: chargeStrength(poke.mainSkill, skillLv),
-      unitBerry: berryEnergyAt(poke.berry, input.level) * ex.berryMultiplier * (1 + settings.areaBonus),
+      unitBerry: berryUnitEnergy(poke.berry, input.level, settings.areaBonus, ex.berryMultiplier),
       result: { helps: 0, berries: 0, berryEnergy: 0, ingredients: {}, skillProcs: 0, skillEnergy: 0, sneaky: 0, curve: [] },
       curve: [],
     })
@@ -210,6 +215,7 @@ export function simulateTeam(
 
   function dispatchSkill(m: Member, minute: number, weight = 1, depth = 0) {
     if (weight < 1e-8 || depth > 12) return
+    const previousEnergy = members.map(member => member.energy)
     m.result.skillProcs += weight
     if (m.input.pokeId === 151) {
       const ex = exEffects(settings, m.poke.berry, m.poke.specialty)
@@ -258,6 +264,9 @@ export function simulateTeam(
         }
       }
     }
+    members.forEach((member, index) => {
+      if (member.energy > previousEnergy[index]!) member.lastDecay = minute
+    })
     if (depth === 0) events.push({ minute, name: m.input.displayName || m.poke.name, kind, actor: m.input.pokeId, note: `${kind} +${value}` })
   }
 
@@ -312,22 +321,27 @@ export function simulateTeam(
   }
 
   let t = 0
-  let lastDecay = 0
   while (t < endMin) {
     const clock = t % 1440
     const asleep = asleepAt(t)
-    if (opts.fixedEnergy == null && !asleep && t - lastDecay >= 10) {
+    if (opts.fixedEnergy == null) {
       for (const m of members) {
+        if (t - m.lastDecay < 10) continue
         m.energy = Math.max(0, m.energy - 1)
-        if (settings.dailySkillHeal) {
+        m.lastDecay = t
+        if (!asleep && settings.dailySkillHeal) {
           m.energy = Math.min(150, m.energy + (settings.dailySkillHeal / 144) * m.factor)
         }
       }
-      lastDecay = t
     }
-    if (!asleep && clock === sleepEnd) {
+    if (!asleep && t > 0 && asleepAt(t - 1)) {
+      const teamBonuses = members.filter(m => unlockedSubskills(m.input.level, m.input.subskills).includes('energyRecover')).length
       for (const m of members) {
-        if (opts.fixedEnergy == null) m.energy = Math.min(100, m.energy + settings.sleepScore * m.factor)
+        if (opts.fixedEnergy == null) {
+          const recovered = sleepRecoveredEnergy(m.energy, settings.sleepScore, m.input, settings.incense, teamBonuses)
+          if (recovered > m.energy) m.lastDecay = t
+          m.energy = recovered
+        }
         const held = heldFood.get(m)
         if (held) { for (const [name, amount] of Object.entries(held)) creditFood(m, name, amount); heldFood.delete(m) }
         m.held = 0
@@ -362,7 +376,11 @@ export function simulateTeam(
         const cooked = cookMeals(bag, settings, 1, sunday, { pot, multiplier: crit.multiplier })
         meals.push({ ...cooked.meals[0]!, minute: t, critChance: crit.chance, potSize: pot })
         for (const name of Object.keys(bag)) bag[name] = cooked.remain[name] ?? 0
-        for (const m of members) m.energy = Math.min(150, m.energy + mealRecover(m.energy) * m.factor)
+        for (const m of members) {
+          const recovered = Math.min(150, m.energy + mealRecover(m.energy))
+          if (recovered > m.energy) m.lastDecay = t
+          m.energy = recovered
+        }
       } else meals.push({ name: '无可用食材', mix: true, potUsed: 0, energy: 0, minute: t, potSize: pot, critChance: 0 })
     }
     t += 1
@@ -375,17 +393,13 @@ export function simulateTeam(
     const target = members[q.index]
     if (target) applyHelp(target, Math.min(endMin - 1, q.minute), q.minute + q.index * 17, true)
   }
-  for (const m of members) {
-    const gathered = m.result.helps - m.result.sneaky
-    if (m.input.carryMode !== 'full' && m.skillRate > 0 && m.result.skillProcs < 1 && gathered > 0) {
-      dispatchSkill(m, endMin - 1, 1 - m.result.skillProcs)
-    }
-    m.result.curve = m.curve
-  }
+  for (const m of members) m.result.curve = m.curve
   return { members: members.map((m) => m.result), events, meals, bag: produced, remain: bag }
 }
 
 export function teamTimeline(settings: Settings, roster: BoxPokemon[]) {
+  const restriction = teamRestrictionError(roster.slice(0, 5))
+  if (restriction) throw new Error(restriction)
   const active = roster.filter((p) => !p.napping).slice(0, 5)
   const hb = teamHelpingBonus(active, settings.helpingBonus)
   const sim = simulateTeam(settings, active, hb)

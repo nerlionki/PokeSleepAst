@@ -54,13 +54,14 @@ export function trainPlan(input: TrainInput) {
   const feedExp = Math.min(input.boostCandy, usable) * 25 * boostMult
     + Math.max(0, usable - input.boostCandy) * 25
   const afterFeed = Math.max(0, gap.exp - feedExp)
-  const days = dailyExp > 0 ? Math.ceil(afterFeed / dailyExp) : afterFeed > 0 ? Infinity : 0
+  const days = gap.error ? NaN : dailyExp > 0 ? Math.ceil(afterFeed / dailyExp) : afterFeed > 0 ? Infinity : 0
   const napExp = input.napping ? napTotalExp(input.napDays || (Number.isFinite(days) ? days : 7), input.relaxTicket, input.earlyRetrieve) : 0
   const napPlain = napDailyExp(false)
   const napRelax = napDailyExp(true)
   const sleepThen = dailySleep || input.sleepScore * sleepFactor
   const daysOf = (daily: number, leftover = gap.exp) => daily > 0 ? Math.ceil(leftover / daily) : Infinity
   return {
+    error: gap.error,
     needExp: gap.exp,
     candy: gap.candy,
     shards: gap.shards,
@@ -68,7 +69,7 @@ export function trainPlan(input: TrainInput) {
     dailyExp,
     days,
     napExp,
-    paths: [
+    paths: gap.error ? [] : [
       { name: '只上阵睡觉', days: daysOf(sleepThen) },
       { name: '只午睡岛（无券）', days: daysOf(napPlain) },
       { name: '只午睡岛（放松券）', days: daysOf(napRelax) },

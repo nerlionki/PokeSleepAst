@@ -122,12 +122,13 @@ const result = computed(() => trainPlan({
       </select>
     </div>
     <div class="field"><label>增强期喂糖</label><input v-model.number="boostCandy" type="number"></div>
-    <article class="card stack">
+    <p v-if="result.error" class="amber" role="alert">无法计算：{{ result.error }}</p>
+    <article v-else class="card stack">
       <p>总需求 EXP {{ result.needExp.toLocaleString() }}</p>
       <p class="amber">约 {{ result.days === Infinity ? '∞' : result.days }} 天</p>
       <p>糖果 {{ result.candy }} · 梦碎 {{ result.shards }}</p>
     </article>
-    <article class="card stack">
+    <article v-if="!result.error" class="card stack">
       <h3>路径对照</h3>
       <p v-for="p in result.paths" :key="p.name">{{ p.name }}：{{ p.days === Infinity ? '—' : p.days + ' 天' }}</p>
     </article>

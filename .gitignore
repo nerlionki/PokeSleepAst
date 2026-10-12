@@ -1,6 +1,7 @@
 ocrTest/
 docs/
 *.md
+!/AGENTS.md
 !/app/RELEASE.md
 dist
 ios

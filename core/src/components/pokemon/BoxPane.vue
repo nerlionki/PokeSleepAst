@@ -255,7 +255,7 @@ const activeFilters = computed(() => filterCount(query))
         <div class="field"><label>名称</label><input v-model="editing.name" placeholder="留空则显示宝可梦名"></div>
         <label v-if="hasShiny(editing.pokeId)" class="row"><input v-model="editing.shiny" type="checkbox"> 闪光<ShinyMark v-if="editing.shiny" /></label>
         <label class="row"><input v-model="editing.napping" type="checkbox"> 寄放午睡岛</label>
-        <button class="btn" type="button" @click="save">保存</button>
+        <button class="btn" type="button" :disabled="[151, 491].includes(editing.pokeId) && editing.ingredientSlots[0] == null" @click="save">保存</button>
       </section>
     </div>
     <OcrCompletionDialog v-if="completing && !editing" :key="completing.uid" :pokemon="completing" :remaining="completionQueue.length" @save="saveCompletion" @pause="pauseCompletion" />

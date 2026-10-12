@@ -24,3 +24,9 @@ export function sleepReward(style: { pokeId: number, stars: number, styleId?: nu
 export function sleepStyleInternalId(style: { pokeId: number, stars: number, styleId?: number }): number {
   return style.styleId ?? bySpeciesAndStars.get(`${style.pokeId}-${style.stars}`)?.id ?? Number.MAX_SAFE_INTEGER
 }
+
+/** 当日按抽选顺序累计；特殊UP实际出现时完整奖励上限为11。 */
+export function dailyResearchReward(reward: SleepReward | undefined, index: number, limit = 10): SleepReward | undefined {
+  if (!reward || index < limit) return reward
+  return { candy: 1, shards: reward.shards / 2, researchExp: reward.researchExp / 2 }
+}

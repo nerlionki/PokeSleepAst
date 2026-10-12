@@ -3,10 +3,11 @@ import { islandById, natureByName } from './data'
 import { POKEMON_LEVEL_MAX } from './xp'
 
 export function energyMultiplier(energy: number): number {
-  if (energy >= 80) return 0.45
-  if (energy >= 60) return 0.52
-  if (energy >= 40) return 0.58
-  if (energy >= 20) return 0.66
+  if (energy > 80) return 0.45
+  if (energy > 60) return 0.52
+  if (energy > 40) return 0.58
+  // 用户确认：0～1 的小数活力暂按正活力档；Wiki 对此边界仍待验证。
+  if (energy > 0) return 0.66
   return 1
 }
 

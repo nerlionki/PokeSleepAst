@@ -58,7 +58,7 @@ const interval = (seconds: number) => `${Math.floor(seconds / 60)}分${seconds %
       <article v-if="result.members.length" class="card stack">
         <h3>推荐队伍 · {{ result.members.length }} 只</h3>
         <p class="muted">帮手奖励 {{ result.helpingBonus }} 层（含全局额外设置）；已比较 {{ result.teamsCompared }} 种可行的帮手奖励人数配置。</p>
-        <p v-if="result.members.length < 5" class="amber">有效 Box 个体不足 5 只，按现有 {{ result.members.length }} 只计算。</p>
+        <p v-if="result.members.length < 5" class="amber">考虑有效个体与同队限制，按收益最高的合法 {{ result.members.length }} 只队伍计算。</p>
         <div v-for="member in result.members" :key="member.pokemon.uid" class="whistle-member">
           <PokeSprite :id="member.pokemon.pokeId" :name="boxLabel(member.pokemon)" :shiny="member.pokemon.shiny" />
           <div class="stack whistle-description">

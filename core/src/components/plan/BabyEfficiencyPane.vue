@@ -67,14 +67,14 @@ watch(busy, async (value, _previous, onCleanup) => {
         <div class="field"><label for="baby-iterations">计算次数</label><input id="baby-iterations" v-model.number="options.iterations" type="number" min="100" max="100000" step="100" inputmode="numeric"></div>
         <div class="field"><label for="baby-precision">计算精度</label><select id="baby-precision" v-model="options.precision"><option value="low">低 · 快速搜索</option><option value="medium">中 · 细化搜索</option><option value="high">高 · 密集搜索</option></select></div>
       </div>
-      <p class="muted">计算次数用于每个候选抽取状态的模拟；精度控制能量候选点和拆分比例的搜索细度。高精度耗时较长，可随时取消。</p>
+      <p class="muted">计算次数用于每个候选抽取状态的模拟；精度控制能量候选点和拆分比例的搜索细度。每一觉最多搜索50亿睡意之力。高精度耗时较长，可随时取消。</p>
       <button ref="calculateButton" class="btn sage" type="button" :disabled="busy" @click="calculate">计算宝宝效率</button>
     </article>
     <p v-if="error" class="amber" role="alert">{{ error }}</p>
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
     <template v-if="result">
       <p v-if="dirty" class="amber">参数已修改，请重新计算更新结果。</p>
-      <p class="muted">{{ resultName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }} · {{ result.options.island === 'all' ? '全部岛屿' : ISLANDS.find((island) => island.id === result?.options.island)?.name }} · {{ result.options.splitSleep ? '拆觉' : '整觉' }} · {{ result.options.sleepType === 'all' ? '睡眠类型自动择优' : result.options.sleepType }}。预期收益只计普通睡眠研究；列出本次搜索中收益最高的方案。</p>
+      <p class="muted">{{ resultName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }} · {{ result.options.island === 'all' ? '全部岛屿' : ISLANDS.find((island) => island.id === result?.options.island)?.name }} · {{ result.options.splitSleep ? '拆觉' : '整觉' }} · {{ result.options.sleepType === 'all' ? '睡眠类型自动择优' : result.options.sleepType }}。预期收益只计普通睡眠研究；第11只起家族糖果按每只1颗结算，捕捉数量不减少；列出本次搜索中收益最高的方案。</p>
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-catch`" title="捕捉只数最多" unit="只" :optimum="result.catch" :precision="result.options.precision" />
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-candy`" title="家族糖果最多" unit="颗" :optimum="result.candy" :precision="result.options.precision" />
     </template>
