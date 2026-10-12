@@ -5,6 +5,7 @@ import { boxLabel } from '../../calc/boxFilter'
 import { defaultTune, type MemberDraft } from '../../calc/member'
 import { teamProduce } from '../../calc/team'
 import { clockOf } from '../../calc/timeline'
+import { teamRestrictionError } from '../../calc/teamRestrictions'
 import { useBoxStore } from '../../stores/box'
 import { useRosterStore, type TeamCustom } from '../../stores/roster'
 import { useSettingsStore } from '../../stores/settings'
@@ -50,6 +51,7 @@ function toInput(member: SlotMember): ProduceInput & { uid: string, name: string
     subskills: member.subskills,
     ingredientSlots: member.ingredientSlots,
     skillLevel: member.skillLevel,
+    mewSkill: member.mewSkill,
     name: member.name,
     napping: member.napping,
     carryMode: member.tune.carryMode,
@@ -59,7 +61,8 @@ function toInput(member: SlotMember): ProduceInput & { uid: string, name: string
 }
 
 const analyzed = computed(() => members.value.flatMap((member) => (member && !member.napping ? [toInput(member)] : [])))
-const result = computed(() => teamProduce(settings.value, analyzed.value))
+const teamError = computed(() => teamRestrictionError(members.value.flatMap(member => member ? [member] : [])))
+const result = computed(() => teamProduce(settings.value, teamError.value ? [] : analyzed.value))
 
 const slotResult = computed(() => {
   let cursor = 0
@@ -89,6 +92,7 @@ const editingDraft = computed({
         subskills: next.subskills,
         ingredientSlots: next.ingredientSlots,
         skillLevel: next.skillLevel,
+    mewSkill: next.mewSkill,
         tune: next.tune,
       })
       roster.setTune(uid, next.tune)
@@ -109,7 +113,7 @@ function kindLabel(kind: string) {
 
 function put(uid: string) {
   if (picking.value == null) return
-  roster.setSlot(picking.value, uid)
+  if (!roster.setSlot(picking.value, uid)) return
   picking.value = null
 }
 
@@ -117,6 +121,7 @@ function pickSpecies(id: number) {
   if (adding.value == null) return
   const uid = roster.addCustom(adding.value, id)
   adding.value = null
+  if (!uid) return
   editing.value = uid
 }
 
@@ -148,6 +153,7 @@ function saveCustomToBox() {
     subskills: [...draft.subskills],
     ingredientSlots: [draft.ingredientSlots[0], draft.ingredientSlots[1], draft.ingredientSlots[2]],
     skillLevel: draft.skillLevel,
+    mewSkill: draft.mewSkill,
     name: '',
     napping: false,
     tune: { ...draft.tune },
@@ -159,6 +165,7 @@ function saveCustomToBox() {
 
 <template>
   <div class="stack">
+    <p v-if="teamError || roster.error" class="amber" role="alert">{{ teamError || roster.error }}请调整队伍后计算。</p>
     <div class="lv-row">
       <span class="muted">LV</span>
       <button type="button" :class="{ on: level === null }" @click="level = null">原级</button>
@@ -174,15 +181,16 @@ function saveCustomToBox() {
       <button type="button" :class="{ on: view === 'time' }" @click="view = 'time'">时间</button>
     </div>
 
-    <article v-if="view === 'overview'" class="card stack">
+    <article v-if="view === 'overview' && !teamError" class="card stack">
       <p class="muted">卡比兽能量 · {{ settings.period === 'week' ? '周' : '日' }}{{ level == null ? '' : ` · 按 Lv.${level}` }}</p>
       <div class="big amber">{{ Math.round(result.totalEnergy).toLocaleString() }}</div>
       <p>树果 {{ Math.round(result.berryEnergy).toLocaleString() }} · 料理 {{ Math.round(result.cookEnergy).toLocaleString() }} · 技能 {{ Math.round(result.skillEnergy).toLocaleString() }}</p>
       <p class="muted">帮手奖励 {{ result.helpingBonus }} 层</p>
+      <p class="muted">技能食材、活力与扩锅采用期望状态近似，料理暴击保留概率分支。挥指按 26 种候选等概率估算；道具奖励单列，不自动使用。变身／模仿按队友等概率估算，抽到特殊宝可梦或复制技能时失败并使用能量填充S。</p>
     </article>
 
     <div class="slot-grid">
-      <article v-for="(member, idx) in members" :key="idx" class="slot-card" :class="{ rich: member }">
+      <article v-for="(member, idx) in members" :key="idx" class="slot-card roster-slot" :class="{ rich: member }">
         <template v-if="member">
           <MemberCard
             v-if="slotResult[idx]"
@@ -192,13 +200,14 @@ function saveCustomToBox() {
             :subskills="member.subskills"
             :ingredient-slots="member.ingredientSlots"
             :skill-level="member.skillLevel"
+            :mew-skill="member.mewSkill"
             :result="slotResult[idx]!"
             :carry-mode="member.tune.carryMode"
             :ribbon-hours="member.tune.ribbonHours"
             :helping-bonus="result.helpingBonus"
             :label="boxLabel(member)"
           />
-          <p v-else class="muted">{{ boxLabel(member) }} 在午睡岛，不计入产量。</p>
+          <p v-else class="muted">{{ boxLabel(member) }}{{ teamError ? '：队伍不符合限制，已暂停计算。' : ' 在午睡岛，不计入产量。' }}</p>
           <div class="row">
             <button class="btn ghost" type="button" @click="editing = member.uid">编辑</button>
             <button class="btn ghost" type="button" @click="copySlot(idx)">复制</button>
@@ -221,7 +230,8 @@ function saveCustomToBox() {
       </article>
       <article class="card">
         <h3>三餐</h3>
-        <p v-for="(meal, i) in result.meals.slice(0, settings.period === 'week' ? 21 : 3)" :key="i">{{ meal.name }} · {{ meal.energy.toLocaleString() }}</p>
+        <p class="muted">每天 08:00／12:00／18:00，最多每周 21 顿。餐点与睡眠重叠时无法做饭，请调整全局睡眠时间。</p>
+        <p v-for="(meal, i) in result.meals.slice(0, settings.period === 'week' ? 21 : 3)" :key="i">第 {{ Math.floor((meal.minute ?? 0) / 1440) + 1 }} 天 {{ clockOf(meal.minute ?? 0) }} · {{ meal.name }} · {{ meal.energy.toLocaleString() }} · 锅 {{ meal.potSize }} · 暴击 {{ ((meal.critChance ?? 0) * 100).toFixed(1) }}%</p>
       </article>
     </template>
 
@@ -234,6 +244,7 @@ function saveCustomToBox() {
     <div v-if="picking !== null" v-back="() => { picking = null }" class="overlay" @click.self="picking = null">
       <section class="sheet stack">
         <h3>放入槽位 {{ picking + 1 }}</h3>
+        <p v-if="roster.error" class="amber" role="alert">{{ roster.error }}</p>
         <button v-for="p in box.pokemon" :key="p.uid" class="data-row" type="button" :disabled="p.napping" @click="put(p.uid)">
           <PokeSprite :id="p.pokeId" :name="boxLabel(p)" :shiny="p.shiny" />
           <span>{{ boxLabel(p) }} Lv.{{ p.level }}{{ p.napping ? '（午睡岛）' : '' }}</span>
@@ -249,10 +260,10 @@ function saveCustomToBox() {
       <section class="sheet stack">
         <div class="row">
           <h3>{{ editingDraft && editing?.startsWith('custom-') ? '自定义面板' : '编辑个体' }}</h3>
-          <button v-if="editing?.startsWith('custom-')" class="btn" type="button" @click="saveCustomToBox">保存到盒子</button>
-          <button class="btn ghost" type="button" @click="editing = null">完成</button>
         </div>
         <MemberEditor v-model="editingDraft" @copy="copySlot(roster.slots.indexOf(editing))" @remove="removeSlot(roster.slots.indexOf(editing))" />
+        <button v-if="editing?.startsWith('custom-')" class="btn" type="button" :disabled="[151, 491].includes(editingDraft.pokeId) && editingDraft.ingredientSlots[0] == null" @click="saveCustomToBox">保存到盒子</button>
+        <button class="btn" type="button" :disabled="[151, 491].includes(editingDraft.pokeId) && editingDraft.ingredientSlots[0] == null" @click="editing = null">完成</button>
       </section>
     </div>
   </div>

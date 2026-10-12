@@ -2,7 +2,7 @@ import { newUid } from './uid'
 import growth from '../data/growth-meta.json'
 import type { BoxPokemon } from '../types'
 import { natureByName, pokeById } from './data'
-import { shardsTo } from './xp'
+import { candyExpAtLevel, shardsTo } from './xp'
 
 export type CandyNature = 'flat' | 'up' | 'down'
 export type CandyMethod = 'target' | 'manual'
@@ -34,12 +34,6 @@ export const CANDY_BOOSTS = {
 } as const
 
 export type CandyBoostId = keyof typeof CANDY_BOOSTS
-
-const CANDY_EXP = [
-  { max: 24, exp: 40 },
-  { max: 29, exp: 35 },
-  { max: 99, exp: 25 },
-]
 
 const MAX_LEVEL = 70
 const curves = growth.exp as Record<string, number[]>
@@ -77,16 +71,6 @@ function curveOf(pokeId: number): number[] {
   return curves[String(expTypes[String(pokeId)] ?? 1)] ?? curves['1']
 }
 
-function candyExpAt(level: number): number {
-  return CANDY_EXP.find((band) => level <= band.max)?.exp ?? 25
-}
-
-function natureRate(nature: CandyNature): number {
-  if (nature === 'up') return 118
-  if (nature === 'down') return 82
-  return 100
-}
-
 function levelGap(exp: number[], level: number): number {
   if (level >= MAX_LEVEL) return 0
   return (exp[level + 1] ?? 0) - (exp[level] ?? 0)
@@ -117,10 +101,10 @@ export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: 
   let current = (exp[level] ?? 0) + (required - remaining)
   let candies = 0
   let shards = 0
-  const rate = natureRate(row.nature)
+  const nature = row.nature === 'up' ? '胆小' : row.nature === 'down' ? '勇敢' : '勤奋'
   while (level < MAX_LEVEL && (row.method === 'target' ? level < row.target : candies < use)) {
     shards += shardsTo(level + 1) * boost.shards
-    current += Math.ceil(candyExpAt(level) * rate / 100) * boost.exp
+    current += candyExpAtLevel(level, nature, true)
     candies += 1
     while (level < MAX_LEVEL && current >= (exp[level + 1] ?? Infinity)) level += 1
   }

@@ -12,6 +12,7 @@ import ranks from '../data/ranks.json'
 import recipes from '../data/recipes.json'
 import sleepStyles from '../data/sleep-styles.json'
 import subskills from '../data/subskills.json'
+import subskillDraw from '../data/subskill-draw.json'
 import xp from '../data/xp.json'
 import type { IslandId } from '../types'
 import { foldText } from './text'
@@ -68,6 +69,11 @@ export interface SleepStyleRow {
 export const SLEEP_STYLES = sleepStyles as SleepStyleRow[]
 export const NATURES = natures
 export const SUBSKILLS = subskills
+/** 抽选设定：概率为研究推定；先选颜色，再在同色未选技能中等概率选取。
+ * 完整候选池时每种金/蓝/白分别为 2%/5.5%/13.25%，后续槽位不能直接沿用。
+ * 来源与适用范围见 ../data/subskill-draw.md；此处仅导出设定，不新增随机生成流程。
+ */
+export const SUBSKILL_DRAW = subskillDraw
 
 export function pokeById(id: number) {
   return POKEDEX.find((p) => p.id === id)

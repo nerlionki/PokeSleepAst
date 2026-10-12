@@ -119,7 +119,7 @@ export function setIngredientChoice(
 /** 只有全能型可以把某一格清成空。 */
 export function clearIngredientSlot(pokeId: number, slots: IngredientSlots, column: number): IngredientSlots | null {
   if (!isAllRounderId(pokeId)) return null
-  if (column < 0 || column > 2 || slots[column] == null) return null
+  if (column <= 0 || column > 2 || slots[column] == null) return null
   const next: IngredientSlots = [slots[0], slots[1], slots[2]]
   next[column] = null
   return next

@@ -2,6 +2,11 @@ const { createHash } = require('node:crypto')
 const { parse, compileStyle } = require('@vue/compiler-sfc')
 const { parse: parseTemplate } = require('@vue/compiler-dom')
 
+// Web 的 44×24 自绘开关不能施加给微信原生 52×32 switch，否则文字会覆盖开关。
+exports.stripWebCheckboxStyles = function stripWebCheckboxStyles(css) {
+  return css.replace(/input\[type="checkbox"\][^{]*\{[^}]*\}/g, '')
+}
+
 // Taro's native templates preserve class, but not Vue's data-v-* attributes.
 // Give every template element a stable class and compile scoped selectors to it.
 exports.nativeScopedStyles = function nativeScopedStyles(source, filename) {

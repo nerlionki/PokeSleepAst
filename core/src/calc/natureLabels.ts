@@ -3,7 +3,7 @@ import { natureByName } from './data'
 
 const FACTOR: Record<NatureStat, [number, number]> = {
   help: [1.1, 0.9],
-  energy: [1.2, 0.8],
+  energy: [1.2, 0.88],
   ingredient: [1.2, 0.8],
   skill: [1.2, 0.8],
   exp: [1.18, 0.82],
@@ -37,7 +37,7 @@ export const STAT_UP: Record<NatureStat, string> = {
 
 export const STAT_DOWN: Record<NatureStat, string> = {
   help: '-7.5%',
-  energy: '-20%',
+  energy: '-12%',
   ingredient: '-20%',
   skill: '-20%',
   exp: '-18%',

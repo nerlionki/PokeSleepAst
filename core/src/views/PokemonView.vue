@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { taskNavigationLocked } from '../composables/taskNavigationLock'
 import { useRoute } from 'vue-router'
 import { usePageTab } from '../composables/usePageTab'
 import SleepGallery from '../components/plan/SleepGallery.vue'
@@ -15,6 +16,7 @@ const tab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
     <Segmented
       v-if="!(tab === 'box' && route.query.boxOverview === '1')"
       v-model="tab"
+      :inert="taskNavigationLocked"
       :options="[
         { id: 'dex', label: '图鉴' },
         { id: 'box', label: 'Box' },

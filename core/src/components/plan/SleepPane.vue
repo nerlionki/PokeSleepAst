@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, shallowRef, useTemplateRef, watch } from 'vue'
+import ProgressDialog from '../shared/ProgressDialog.vue'
+import { computed, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ISLANDS } from '../../calc/data'
 import { drowsyPower, energyLost, EVENT_BONUSES, expectSpecies, maxEncounters, RANK_ORDER, rankFromStrength, rankStrength, rankToNext, resolvedSleepdex, sleepClock, strengthToNext } from '../../calc/sleep'
@@ -9,9 +10,21 @@ import { useSettingsStore } from '../../stores/settings'
 import type { SleepType } from '../../types'
 import { useSleepSimulation } from '../../composables/useSleepSimulation'
 import { candyExpectation } from '../../calc/sleepCandy'
+import { teamResearchBonuses } from '../../calc/sleepRewards'
+import { useRosterStore } from '../../stores/roster'
+import { useBoxStore } from '../../stores/box'
 
 const settingsStore = useSettingsStore()
 const planStore = usePlanStore()
+const roster = useRosterStore()
+const box = useBoxStore()
+const researchBonuses = computed(() => teamResearchBonuses(roster.slots.flatMap(uid => {
+  const member = roster.customs.find(item => item.uid === uid) ?? box.pokemon.find(item => item.uid === uid)
+  return member ? [member] : []
+})))
+const focusIncense = shallowRef(false)
+const luckIncense = shallowRef(false)
+const incenseSession = shallowRef<0 | 1>(0)
 const { settings } = storeToRefs(settingsStore)
 const { plan } = storeToRefs(planStore)
 
@@ -50,18 +63,20 @@ const sameMult = (mult: number) => Math.abs(settings.value.eventMult - mult) < 0
 
 const BATCH = 4000
 const otherTypes = shallowRef(false)
+const researchedBefore = shallowRef(0)
+const specialEncountered = shallowRef(false)
+const firstResearchExtras = shallowRef(0)
 const eventMix = computed(() => otherTypes.value ? settings.value.sleepEventMix : 'off')
 const resultTab = shallowRef<'encounters' | 'candies'>('encounters')
 const { busy, error: simulationError, notice, progress, result: seen, calculate: startSimulation, cancel, reset } = useSleepSimulation()
-const cancelButton = useTemplateRef<HTMLButtonElement>('cancelButton')
-watch(busy, async (value) => { if (value) { await nextTick(); cancelButton.value?.focus?.() } })
+watch(() => [researchBonuses.value, focusIncense.value, luckIncense.value, incenseSession.value], () => reset(), { deep: true, flush: 'sync' })
 const percent = computed(() => progress.value.total ? Math.floor(progress.value.completed / progress.value.total * 100) : 0)
 let drawSeed = 1
 
 watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult], () => {
   manualWhole.value = null
 })
-watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, settings.value.shinyUp, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded], () => {
+watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, settings.value.shinyUp, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded, researchedBefore.value, specialEncountered.value, firstResearchExtras.value, plan.value.campTicket], () => {
   reset()
 }, { deep: true, flush: 'sync' })
 
@@ -69,6 +84,13 @@ function calculate() {
   if (busy.value) return
   drawSeed += 1
   const opts = {
+    ...researchBonuses.value,
+    focusIncense: focusIncense.value,
+    luckIncense: luckIncense.value,
+    incenseSession: whole.value ? 0 as const : incenseSession.value,
+    researchedBefore: Math.max(0, Math.floor(researchedBefore.value)),
+    researchLimit: specialEncountered.value ? 11 as const : 10 as const,
+    firstResearchExtras: Math.max(0, Math.floor(firstResearchExtras.value)) + Number(plan.value.campTicket) + Number(specialEncountered.value),
     rank: rank.value,
     discovered: resolvedSleepdex(plan.value),
     undiscoveredBoost: plan.value.undiscoveredBoost,
@@ -148,6 +170,10 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
       <label>入睡卡比兽能量</label>
       <input :disabled="busy" v-model.number="plan.snorlaxStrength" type="number" min="0">
     </div>
+    <div class="field"><label>本日此前已研究只数</label><input :disabled="busy" v-model.number="researchedBefore" type="number" min="0" max="20"></div>
+    <label class="row"><input :disabled="busy" v-model="specialEncountered" type="checkbox">本日实际遇到特殊UP宝可梦</label>
+    <div v-if="!whole" class="field"><label>第一觉熏香额外遭遇只数（不含露营券、特殊UP）</label><input :disabled="busy" v-model.number="firstResearchExtras" type="number" min="0" max="2"></div>
+    <p class="muted">每日第11只起糖果为1，研究EXP与梦之碎片减半；实际遇到特殊UP时从第12只起减额。按抽选顺序结算，不减少捕捉数量。额外遭遇只计入累计只数，不模拟其奖励。</p>
     <div class="field">
       <label>睡眠类型</label>
       <select :disabled="busy" v-model="plan.sleepType">
@@ -158,6 +184,12 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
       </select>
     </div>
     <label class="row"><input :disabled="busy" v-model="plan.campTicket" type="checkbox"> 露营券 +1（只加第一觉）</label>
+    <label class="row"><input :disabled="busy" v-model="focusIncense" type="checkbox"> 专注薰香（研究 EXP ×2）</label>
+    <label class="row"><input :disabled="busy" v-model="luckIncense" type="checkbox"> 幸运薰香（研究梦碎 ×2）</label>
+    <label v-if="!whole && (focusIncense || luckIncense)" class="field">
+      <span>薰香使用时段</span>
+      <select v-model.number="incenseSession" :disabled="busy"><option :value="0">第一觉</option><option :value="1">第二觉</option></select>
+    </label>
     <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox"> 活动期间遇到一些其他类型宝可梦</label>
     <label class="row"><input :disabled="busy" v-model="plan.undiscoveredBoost" type="checkbox"> 优先遇到未发现睡姿</label>
     <p class="muted">
@@ -197,29 +229,7 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
         </div>
       </div>
     </article>
-    <Teleport to="body">
-      <div v-if="busy" v-back="cancel" class="overlay sleep-loading" role="dialog" aria-modal="true" aria-labelledby="sleep-loading-title" @keydown.esc="cancel" @keydown.tab.prevent="cancelButton?.focus?.()">
-        <section class="card stack loading-card" role="status" aria-live="polite">
-          <div class="loading-spinner" aria-hidden="true" />
-          <h3 id="sleep-loading-title">正在模拟睡姿</h3>
-          <p>{{ percent }}%（{{ progress.completed.toLocaleString('zh-CN') }} / {{ progress.total.toLocaleString('zh-CN') }}）</p>
-          <div role="progressbar" aria-label="睡姿模拟进度" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100" class="loading-track">
-            <div :style="{ width: percent + '%' }" class="loading-fill" />
-          </div>
-          <p class="muted">模拟期间参数已锁定</p>
-          <button ref="cancelButton" class="btn ghost" type="button" @click="cancel">取消模拟</button>
-        </section>
-      </div>
-    </Teleport>
+    <ProgressDialog :open="busy" title="正在模拟睡姿" :progress="percent" :notice="notice" hint="模拟期间参数已锁定"
+      :detail="'已模拟 ' + progress.completed.toLocaleString('zh-CN') + ' / ' + progress.total.toLocaleString('zh-CN') + ' 次'" cancellable cancel-text="取消模拟" @cancel="cancel" />
   </div>
 </template>
-
-<style scoped>
-.sleep-loading { z-index: 55; place-items: center; padding: 20px; backdrop-filter: blur(4px); }
-.loading-card { width: min(100%, 380px); text-align: center; justify-items: center; box-shadow: var(--shadow); }
-.loading-track { width: 100%; height: 8px; overflow: hidden; border-radius: 4px; background: var(--line); }
-.loading-fill { height: 100%; background: var(--sage); }
-.loading-spinner { width: 38px; height: 38px; border: 3px solid var(--line); border-top-color: var(--sage); border-radius: 50%; animation: sleep-spin 1s linear infinite; }
-@keyframes sleep-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .loading-spinner { animation: none; } }
-</style>
