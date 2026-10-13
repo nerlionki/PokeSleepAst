@@ -12,7 +12,7 @@ import { natureStatFactor } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { chargeStrength } from './skills'
 
-const EMPTY: ProduceResult = { helps: 0, berries: 0, berryEnergy: 0, ingredients: {}, skillProcs: 0, skillEnergy: 0, sneaky: 0, curve: [] }
+const emptyProduceResult = (): ProduceResult => ({ helps: 0, berries: 0, berryEnergy: 0, ingredients: {}, skillProcs: 0, skillEnergy: 0, sneaky: 0, curve: [] })
 
 function berryPerHelp(specialty: string, subskills: string[]): number {
   let n = specialty === '树果型' || specialty === '全部' ? 2 : 1
@@ -65,7 +65,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   const species = pokeById(input.pokeId)
   const selected = species ? resolveMemberSkill(species, input) : null
   const poke = species && selected ? { ...species, mainSkill: selected.name, skillRate: selected.rate } : undefined
-  if (!poke) return { ...EMPTY }
+  if (!poke) return emptyProduceResult()
   // 纯能量/回复技能在固定活力比较中可使用等价快速公式，其余统一技能结算。
   if (input.carryMode !== 'full' && (input.pokeId === 151 || ![1, 2, 4, 5, 7, 8].includes(skillByPokedexName(poke.mainSkill)?.id ?? 0))) {
     const sim = simulateTeam(settings, [input], helpingBonus, { expectedProcs: true, fixedEnergy: input.wakeEnergy ?? 100 })

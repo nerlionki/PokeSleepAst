@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormField from '../shared/FormField.vue'
 import { newUid } from '../../calc/uid'
 import { computed, ref, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -113,23 +114,14 @@ const presets = CANDY_PRESETS
         <PokePicker v-model="row.pokeId" />
       </div>
       <div class="row">
-        <div class="field">
-          <label>当前糖果</label>
-          <input :value="stockOf(row.pokeId)" type="number" min="0" @change="setStock(row.pokeId, Number(($event.target as HTMLInputElement).value))">
-        </div>
-        <div class="field">
-          <label>输入方式</label>
-          <select v-model="row.method">
+        <FormField v-slot="{ id }" label="当前糖果"><input :id="id" :value="stockOf(row.pokeId)" type="number" min="0" @change="setStock(row.pokeId, Number(($event.target as HTMLInputElement).value))"></FormField>
+        <FormField v-slot="{ id }" label="输入方式"><select :id="id" v-model="row.method">
             <option value="target">目标等级</option>
             <option value="manual">指定糖果</option>
-          </select>
-        </div>
+          </select></FormField>
       </div>
       <div class="row">
-        <div class="field">
-          <label>当前等级</label>
-          <input v-model.number="row.start" type="number" min="1" max="70">
-        </div>
+        <FormField v-slot="{ id }" label="当前等级"><input :id="id" v-model.number="row.start" type="number" min="1" max="70"></FormField>
         <div v-if="row.method === 'target'" class="field">
           <label>目标等级</label>
           <input v-model.number="row.target" type="number" min="1" max="70">
@@ -151,24 +143,18 @@ const presets = CANDY_PRESETS
       </div>
       <label v-else class="row"><input v-model="row.useAll" type="checkbox"> 用光当前剩余糖果</label>
       <div class="row">
-        <div class="field">
-          <label>经验修正</label>
-          <select v-model="row.nature">
+        <FormField v-slot="{ id }" label="经验修正"><select :id="id" v-model="row.nature">
             <option value="flat">无修正</option>
             <option value="up">+EXP</option>
             <option value="down">−EXP</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>升级还需 EXP</label>
-          <input
+          </select></FormField>
+        <FormField v-slot="{ id }" label="升级还需 EXP"><input :id="id"
             :value="row.remaining ?? ''"
             type="number"
             min="0"
             placeholder="留空＝刚到本级"
             @change="setRemaining(row, ($event.target as HTMLInputElement).value)"
-          >
-        </div>
+          ></FormField>
       </div>
       <p v-if="active.results[index] && !active.results[index].error">
         使用 {{ active.results[index].candies.toLocaleString('zh-CN') }} 颗

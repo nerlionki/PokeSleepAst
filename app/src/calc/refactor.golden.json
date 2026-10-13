@@ -1,0 +1,3273 @@
+{
+  "cook": [
+    {
+      "bag": {
+        "粗枝大葱": 0,
+        "品鲜蘑菇": 17,
+        "特选蛋": 34,
+        "窝心洋芋": 51,
+        "特选苹果": 68,
+        "火辣香草": 0,
+        "豆制肉": 17,
+        "哞哞鲜奶": 34,
+        "甜甜蜜": 51,
+        "纯粹油": 68,
+        "暖暖姜": 0,
+        "好眠番茄": 17,
+        "放松可可": 34,
+        "美味尾巴": 51,
+        "萌绿大豆": 68,
+        "萌绿玉米": 0,
+        "醒脑咖啡豆": 17,
+        "沉甸甸南瓜": 34,
+        "嫩亮酪梨": 51,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "curry",
+        "potSize": 21,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": true
+      },
+      "meals": 0,
+      "sunday": true,
+      "options": {
+        "pot": 42,
+        "multiplier": 2.5
+      },
+      "expected": {
+        "meals": [],
+        "remain": {
+          "粗枝大葱": 0,
+          "品鲜蘑菇": 17,
+          "特选蛋": 34,
+          "窝心洋芋": 51,
+          "特选苹果": 68,
+          "火辣香草": 0,
+          "豆制肉": 17,
+          "哞哞鲜奶": 34,
+          "甜甜蜜": 51,
+          "纯粹油": 68,
+          "暖暖姜": 0,
+          "好眠番茄": 17,
+          "放松可可": 34,
+          "美味尾巴": 51,
+          "萌绿大豆": 68,
+          "萌绿玉米": 0,
+          "醒脑咖啡豆": 17,
+          "沉甸甸南瓜": 34,
+          "嫩亮酪梨": 51,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 13,
+        "品鲜蘑菇": 30,
+        "特选蛋": 47,
+        "窝心洋芋": 64,
+        "特选苹果": 81,
+        "火辣香草": 13,
+        "豆制肉": 30,
+        "哞哞鲜奶": 47,
+        "甜甜蜜": 64,
+        "纯粹油": 81,
+        "暖暖姜": 13,
+        "好眠番茄": 30,
+        "放松可可": 47,
+        "美味尾巴": 64,
+        "萌绿大豆": 81,
+        "萌绿玉米": 13,
+        "醒脑咖啡豆": 30,
+        "沉甸甸南瓜": 47,
+        "嫩亮酪梨": 64,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "salad",
+        "potSize": 57,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 1,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "十字切碎丁沙拉",
+            "mix": false,
+            "potUsed": 57,
+            "energy": 12508
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 13,
+          "品鲜蘑菇": 30,
+          "特选蛋": 27,
+          "窝心洋芋": 64,
+          "特选苹果": 81,
+          "火辣香草": 13,
+          "豆制肉": 15,
+          "哞哞鲜奶": 47,
+          "甜甜蜜": 64,
+          "纯粹油": 81,
+          "暖暖姜": 13,
+          "好眠番茄": 20,
+          "放松可可": 47,
+          "美味尾巴": 63,
+          "萌绿大豆": 81,
+          "萌绿玉米": 2,
+          "醒脑咖啡豆": 30,
+          "沉甸甸南瓜": 47,
+          "嫩亮酪梨": 64,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 26,
+        "品鲜蘑菇": 43,
+        "特选蛋": 60,
+        "窝心洋芋": 77,
+        "特选苹果": 9,
+        "火辣香草": 26,
+        "豆制肉": 43,
+        "哞哞鲜奶": 60,
+        "甜甜蜜": 77,
+        "纯粹油": 9,
+        "暖暖姜": 26,
+        "好眠番茄": 43,
+        "放松可可": 60,
+        "美味尾巴": 77,
+        "萌绿大豆": 9,
+        "萌绿玉米": 26,
+        "醒脑咖啡豆": 43,
+        "沉甸甸南瓜": 60,
+        "嫩亮酪梨": 77,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "dessert",
+        "potSize": 81,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 2,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "心跳加速鬼面鬆餅",
+            "mix": false,
+            "potUsed": 122,
+            "energy": 42422
+          },
+          {
+            "name": "土王閃電泡芙",
+            "mix": false,
+            "potUsed": 122,
+            "energy": 38122
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 26,
+          "品鲜蘑菇": 43,
+          "特选蛋": 36,
+          "窝心洋芋": 77,
+          "特选苹果": 9,
+          "火辣香草": 26,
+          "豆制肉": 43,
+          "哞哞鲜奶": 34,
+          "甜甜蜜": 23,
+          "纯粹油": 9,
+          "暖暖姜": 26,
+          "好眠番茄": 14,
+          "放松可可": 30,
+          "美味尾巴": 38,
+          "萌绿大豆": 9,
+          "萌绿玉米": 26,
+          "醒脑咖啡豆": 19,
+          "沉甸甸南瓜": 42,
+          "嫩亮酪梨": 77,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 39,
+        "品鲜蘑菇": 56,
+        "特选蛋": 73,
+        "窝心洋芋": 5,
+        "特选苹果": 22,
+        "火辣香草": 39,
+        "豆制肉": 56,
+        "哞哞鲜奶": 73,
+        "甜甜蜜": 5,
+        "纯粹油": 22,
+        "暖暖姜": 39,
+        "好眠番茄": 56,
+        "放松可可": 73,
+        "美味尾巴": 5,
+        "萌绿大豆": 22,
+        "萌绿玉米": 39,
+        "醒脑咖啡豆": 56,
+        "沉甸甸南瓜": 73,
+        "嫩亮酪梨": 5,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "curry",
+        "potSize": 21,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 3,
+      "sunday": false,
+      "options": {
+        "pot": 42,
+        "multiplier": 2.5
+      },
+      "expected": {
+        "meals": [
+          {
+            "name": "辣味蔥勁十足咖哩",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 27688
+          },
+          {
+            "name": "辣味蔥勁十足咖哩",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 26250
+          },
+          {
+            "name": "健美豆子咖哩",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 23038
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 11,
+          "品鲜蘑菇": 56,
+          "特选蛋": 69,
+          "窝心洋芋": 5,
+          "特选苹果": 22,
+          "火辣香草": 19,
+          "豆制肉": 50,
+          "哞哞鲜奶": 73,
+          "甜甜蜜": 5,
+          "纯粹油": 22,
+          "暖暖姜": 19,
+          "好眠番茄": 56,
+          "放松可可": 73,
+          "美味尾巴": 0,
+          "萌绿大豆": 10,
+          "萌绿玉米": 39,
+          "醒脑咖啡豆": 56,
+          "沉甸甸南瓜": 42,
+          "嫩亮酪梨": 5,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 52,
+        "品鲜蘑菇": 69,
+        "特选蛋": 1,
+        "窝心洋芋": 18,
+        "特选苹果": 35,
+        "火辣香草": 52,
+        "豆制肉": 69,
+        "哞哞鲜奶": 1,
+        "甜甜蜜": 18,
+        "纯粹油": 35,
+        "暖暖姜": 52,
+        "好眠番茄": 69,
+        "放松可可": 1,
+        "美味尾巴": 18,
+        "萌绿大豆": 35,
+        "萌绿玉米": 52,
+        "醒脑咖啡豆": 69,
+        "沉甸甸南瓜": 1,
+        "嫩亮酪梨": 18,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "salad",
+        "potSize": 57,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 4,
+      "sunday": true,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "忍者沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 69182
+          },
+          {
+            "name": "萌綠沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 55870
+          },
+          {
+            "name": "冥想香甜沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 44878
+          },
+          {
+            "name": "濕潤豆腐沙拉",
+            "mix": false,
+            "potUsed": 159,
+            "energy": 32698
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 0,
+          "品鲜蘑菇": 0,
+          "特选蛋": 0,
+          "窝心洋芋": 0,
+          "特选苹果": 0,
+          "火辣香草": 0,
+          "豆制肉": 0,
+          "哞哞鲜奶": 0,
+          "甜甜蜜": 0,
+          "纯粹油": 0,
+          "暖暖姜": 0,
+          "好眠番茄": 0,
+          "放松可可": 0,
+          "美味尾巴": 0,
+          "萌绿大豆": 0,
+          "萌绿玉米": 0,
+          "醒脑咖啡豆": 0,
+          "沉甸甸南瓜": 0,
+          "嫩亮酪梨": 0,
+          "unknown": 0.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 65,
+        "品鲜蘑菇": 82,
+        "特选蛋": 14,
+        "窝心洋芋": 31,
+        "特选苹果": 48,
+        "火辣香草": 65,
+        "豆制肉": 82,
+        "哞哞鲜奶": 14,
+        "甜甜蜜": 31,
+        "纯粹油": 48,
+        "暖暖姜": 65,
+        "好眠番茄": 82,
+        "放松可可": 14,
+        "美味尾巴": 31,
+        "萌绿大豆": 48,
+        "萌绿玉米": 65,
+        "醒脑咖啡豆": 82,
+        "沉甸甸南瓜": 14,
+        "嫩亮酪梨": 31,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "dessert",
+        "potSize": 81,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": true
+      },
+      "meals": 5,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "電光香料可樂",
+            "mix": false,
+            "potUsed": 162,
+            "energy": 51076
+          },
+          {
+            "name": "青草攪拌器冰沙",
+            "mix": false,
+            "potUsed": 162,
+            "energy": 37609
+          },
+          {
+            "name": "大力士豆香甜甜圈",
+            "mix": false,
+            "potUsed": 162,
+            "energy": 33360
+          },
+          {
+            "name": "輕裝豆香蛋糕",
+            "mix": false,
+            "potUsed": 162,
+            "energy": 28289
+          },
+          {
+            "name": "我行我素蔬菜汁",
+            "mix": false,
+            "potUsed": 162,
+            "energy": 24276
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 0,
+          "品鲜蘑菇": 0,
+          "特选蛋": 0,
+          "窝心洋芋": 0,
+          "特选苹果": 6,
+          "火辣香草": 0,
+          "豆制肉": 40,
+          "哞哞鲜奶": 0,
+          "甜甜蜜": 31,
+          "纯粹油": 0,
+          "暖暖姜": 0,
+          "好眠番茄": 0,
+          "放松可可": 0,
+          "美味尾巴": 0,
+          "萌绿大豆": 25,
+          "萌绿玉米": 0,
+          "醒脑咖啡豆": 0,
+          "沉甸甸南瓜": 0,
+          "嫩亮酪梨": 0,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 78,
+        "品鲜蘑菇": 10,
+        "特选蛋": 27,
+        "窝心洋芋": 44,
+        "特选苹果": 61,
+        "火辣香草": 78,
+        "豆制肉": 10,
+        "哞哞鲜奶": 27,
+        "甜甜蜜": 44,
+        "纯粹油": 61,
+        "暖暖姜": 78,
+        "好眠番茄": 10,
+        "放松可可": 27,
+        "美味尾巴": 44,
+        "萌绿大豆": 61,
+        "萌绿玉米": 78,
+        "醒脑咖啡豆": 10,
+        "沉甸甸南瓜": 27,
+        "嫩亮酪梨": 44,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "curry",
+        "potSize": 21,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 0,
+      "sunday": false,
+      "options": {
+        "pot": 42,
+        "multiplier": 2.5
+      },
+      "expected": {
+        "meals": [],
+        "remain": {
+          "粗枝大葱": 78,
+          "品鲜蘑菇": 10,
+          "特选蛋": 27,
+          "窝心洋芋": 44,
+          "特选苹果": 61,
+          "火辣香草": 78,
+          "豆制肉": 10,
+          "哞哞鲜奶": 27,
+          "甜甜蜜": 44,
+          "纯粹油": 61,
+          "暖暖姜": 78,
+          "好眠番茄": 10,
+          "放松可可": 27,
+          "美味尾巴": 44,
+          "萌绿大豆": 61,
+          "萌绿玉米": 78,
+          "醒脑咖啡豆": 10,
+          "沉甸甸南瓜": 27,
+          "嫩亮酪梨": 44,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 6,
+        "品鲜蘑菇": 23,
+        "特选蛋": 40,
+        "窝心洋芋": 57,
+        "特选苹果": 74,
+        "火辣香草": 6,
+        "豆制肉": 23,
+        "哞哞鲜奶": 40,
+        "甜甜蜜": 57,
+        "纯粹油": 74,
+        "暖暖姜": 6,
+        "好眠番茄": 23,
+        "放松可可": 40,
+        "美味尾巴": 57,
+        "萌绿大豆": 74,
+        "萌绿玉米": 6,
+        "醒脑咖啡豆": 23,
+        "沉甸甸南瓜": 40,
+        "嫩亮酪梨": 57,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "salad",
+        "potSize": 57,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 1,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "碎裂酪梨沙拉",
+            "mix": false,
+            "potUsed": 57,
+            "energy": 16851
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 6,
+          "品鲜蘑菇": 23,
+          "特选蛋": 40,
+          "窝心洋芋": 57,
+          "特选苹果": 74,
+          "火辣香草": 6,
+          "豆制肉": 23,
+          "哞哞鲜奶": 40,
+          "甜甜蜜": 57,
+          "纯粹油": 64,
+          "暖暖姜": 6,
+          "好眠番茄": 23,
+          "放松可可": 40,
+          "美味尾巴": 42,
+          "萌绿大豆": 56,
+          "萌绿玉米": 6,
+          "醒脑咖啡豆": 23,
+          "沉甸甸南瓜": 40,
+          "嫩亮酪梨": 43,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 19,
+        "品鲜蘑菇": 36,
+        "特选蛋": 53,
+        "窝心洋芋": 70,
+        "特选苹果": 2,
+        "火辣香草": 19,
+        "豆制肉": 36,
+        "哞哞鲜奶": 53,
+        "甜甜蜜": 70,
+        "纯粹油": 2,
+        "暖暖姜": 19,
+        "好眠番茄": 36,
+        "放松可可": 53,
+        "美味尾巴": 70,
+        "萌绿大豆": 2,
+        "萌绿玉米": 19,
+        "醒脑咖啡豆": 36,
+        "沉甸甸南瓜": 53,
+        "嫩亮酪梨": 70,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "dessert",
+        "potSize": 81,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 2,
+      "sunday": true,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "心跳加速鬼面鬆餅",
+            "mix": false,
+            "potUsed": 243,
+            "energy": 126462
+          },
+          {
+            "name": "土王閃電泡芙",
+            "mix": false,
+            "potUsed": 243,
+            "energy": 86228
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 0,
+          "品鲜蘑菇": 0,
+          "特选蛋": 29,
+          "窝心洋芋": 70,
+          "特选苹果": 2,
+          "火辣香草": 19,
+          "豆制肉": 36,
+          "哞哞鲜奶": 27,
+          "甜甜蜜": 16,
+          "纯粹油": 2,
+          "暖暖姜": 19,
+          "好眠番茄": 7,
+          "放松可可": 0,
+          "美味尾巴": 0,
+          "萌绿大豆": 2,
+          "萌绿玉米": 3,
+          "醒脑咖啡豆": 0,
+          "沉甸甸南瓜": 0,
+          "嫩亮酪梨": 0,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 32,
+        "品鲜蘑菇": 49,
+        "特选蛋": 66,
+        "窝心洋芋": 83,
+        "特选苹果": 15,
+        "火辣香草": 32,
+        "豆制肉": 49,
+        "哞哞鲜奶": 66,
+        "甜甜蜜": 83,
+        "纯粹油": 15,
+        "暖暖姜": 32,
+        "好眠番茄": 49,
+        "放松可可": 66,
+        "美味尾巴": 83,
+        "萌绿大豆": 15,
+        "萌绿玉米": 32,
+        "醒脑咖啡豆": 49,
+        "沉甸甸南瓜": 66,
+        "嫩亮酪梨": 83,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "curry",
+        "potSize": 21,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 3,
+      "sunday": false,
+      "options": {
+        "pot": 42,
+        "multiplier": 2.5
+      },
+      "expected": {
+        "meals": [
+          {
+            "name": "炙燒尾肉咖哩",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 33003
+          },
+          {
+            "name": "柔軟玉米濃湯",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 27419
+          },
+          {
+            "name": "柔軟玉米濃湯",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 27419
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 32,
+          "品鲜蘑菇": 49,
+          "特选蛋": 66,
+          "窝心洋芋": 67,
+          "特选苹果": 15,
+          "火辣香草": 7,
+          "豆制肉": 49,
+          "哞哞鲜奶": 50,
+          "甜甜蜜": 83,
+          "纯粹油": 15,
+          "暖暖姜": 32,
+          "好眠番茄": 49,
+          "放松可可": 66,
+          "美味尾巴": 42,
+          "萌绿大豆": 15,
+          "萌绿玉米": 4,
+          "醒脑咖啡豆": 49,
+          "沉甸甸南瓜": 66,
+          "嫩亮酪梨": 83,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 45,
+        "品鲜蘑菇": 62,
+        "特选蛋": 79,
+        "窝心洋芋": 11,
+        "特选苹果": 28,
+        "火辣香草": 45,
+        "豆制肉": 62,
+        "哞哞鲜奶": 79,
+        "甜甜蜜": 11,
+        "纯粹油": 28,
+        "暖暖姜": 45,
+        "好眠番茄": 62,
+        "放松可可": 79,
+        "美味尾巴": 11,
+        "萌绿大豆": 28,
+        "萌绿玉米": 45,
+        "醒脑咖啡豆": 62,
+        "沉甸甸南瓜": 79,
+        "嫩亮酪梨": 11,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "salad",
+        "potSize": 57,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": true
+      },
+      "meals": 4,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "蘋果酸優格沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 50951
+          },
+          {
+            "name": "忍者沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 45500
+          },
+          {
+            "name": "萌綠沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 38467
+          },
+          {
+            "name": "十字切碎丁沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 33393
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 0,
+          "品鲜蘑菇": 0,
+          "特选蛋": 11,
+          "窝心洋芋": 0,
+          "特选苹果": 0,
+          "火辣香草": 0,
+          "豆制肉": 47,
+          "哞哞鲜奶": 61,
+          "甜甜蜜": 11,
+          "纯粹油": 0,
+          "暖暖姜": 34,
+          "好眠番茄": 15,
+          "放松可可": 0,
+          "美味尾巴": 0,
+          "萌绿大豆": 9,
+          "萌绿玉米": 0,
+          "醒脑咖啡豆": 0,
+          "沉甸甸南瓜": 0,
+          "嫩亮酪梨": 0,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 58,
+        "品鲜蘑菇": 75,
+        "特选蛋": 7,
+        "窝心洋芋": 24,
+        "特选苹果": 41,
+        "火辣香草": 58,
+        "豆制肉": 75,
+        "哞哞鲜奶": 7,
+        "甜甜蜜": 24,
+        "纯粹油": 41,
+        "暖暖姜": 58,
+        "好眠番茄": 75,
+        "放松可可": 7,
+        "美味尾巴": 24,
+        "萌绿大豆": 41,
+        "萌绿玉米": 58,
+        "醒脑咖啡豆": 75,
+        "沉甸甸南瓜": 7,
+        "嫩亮酪梨": 24,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "dessert",
+        "potSize": 81,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 5,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "大爆炸爆米花",
+            "mix": false,
+            "potUsed": 81,
+            "energy": 25570
+          },
+          {
+            "name": "大力士豆香甜甜圈",
+            "mix": false,
+            "potUsed": 81,
+            "energy": 19279
+          },
+          {
+            "name": "橙夢的排毒茶",
+            "mix": false,
+            "potUsed": 81,
+            "energy": 17527
+          },
+          {
+            "name": "橙夢的排毒茶",
+            "mix": false,
+            "potUsed": 81,
+            "energy": 17112
+          },
+          {
+            "name": "我行我素蔬菜汁",
+            "mix": false,
+            "potUsed": 81,
+            "energy": 16266
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 0,
+          "品鲜蘑菇": 0,
+          "特选蛋": 7,
+          "窝心洋芋": 24,
+          "特选苹果": 4,
+          "火辣香草": 58,
+          "豆制肉": 75,
+          "哞哞鲜奶": 0,
+          "甜甜蜜": 24,
+          "纯粹油": 15,
+          "暖暖姜": 36,
+          "好眠番茄": 66,
+          "放松可可": 0,
+          "美味尾巴": 0,
+          "萌绿大豆": 25,
+          "萌绿玉米": 40,
+          "醒脑咖啡豆": 0,
+          "沉甸甸南瓜": 0,
+          "嫩亮酪梨": 0,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 71,
+        "品鲜蘑菇": 3,
+        "特选蛋": 20,
+        "窝心洋芋": 37,
+        "特选苹果": 54,
+        "火辣香草": 71,
+        "豆制肉": 3,
+        "哞哞鲜奶": 20,
+        "甜甜蜜": 37,
+        "纯粹油": 54,
+        "暖暖姜": 71,
+        "好眠番茄": 3,
+        "放松可可": 20,
+        "美味尾巴": 37,
+        "萌绿大豆": 54,
+        "萌绿玉米": 71,
+        "醒脑咖啡豆": 3,
+        "沉甸甸南瓜": 20,
+        "嫩亮酪梨": 37,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "curry",
+        "potSize": 21,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 0,
+      "sunday": true,
+      "options": {
+        "pot": 42,
+        "multiplier": 2.5
+      },
+      "expected": {
+        "meals": [],
+        "remain": {
+          "粗枝大葱": 71,
+          "品鲜蘑菇": 3,
+          "特选蛋": 20,
+          "窝心洋芋": 37,
+          "特选苹果": 54,
+          "火辣香草": 71,
+          "豆制肉": 3,
+          "哞哞鲜奶": 20,
+          "甜甜蜜": 37,
+          "纯粹油": 54,
+          "暖暖姜": 71,
+          "好眠番茄": 3,
+          "放松可可": 20,
+          "美味尾巴": 37,
+          "萌绿大豆": 54,
+          "萌绿玉米": 71,
+          "醒脑咖啡豆": 3,
+          "沉甸甸南瓜": 20,
+          "嫩亮酪梨": 37,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 84,
+        "品鲜蘑菇": 16,
+        "特选蛋": 33,
+        "窝心洋芋": 50,
+        "特选苹果": 67,
+        "火辣香草": 84,
+        "豆制肉": 16,
+        "哞哞鲜奶": 33,
+        "甜甜蜜": 50,
+        "纯粹油": 67,
+        "暖暖姜": 84,
+        "好眠番茄": 16,
+        "放松可可": 33,
+        "美味尾巴": 50,
+        "萌绿大豆": 67,
+        "萌绿玉米": 84,
+        "醒脑咖啡豆": 16,
+        "沉甸甸南瓜": 33,
+        "嫩亮酪梨": 50,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "salad",
+        "potSize": 57,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 1,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "忍者沙拉",
+            "mix": false,
+            "potUsed": 57,
+            "energy": 16031
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 69,
+          "品鲜蘑菇": 4,
+          "特选蛋": 33,
+          "窝心洋芋": 50,
+          "特选苹果": 67,
+          "火辣香草": 84,
+          "豆制肉": 16,
+          "哞哞鲜奶": 33,
+          "甜甜蜜": 50,
+          "纯粹油": 67,
+          "暖暖姜": 73,
+          "好眠番茄": 16,
+          "放松可可": 33,
+          "美味尾巴": 50,
+          "萌绿大豆": 48,
+          "萌绿玉米": 84,
+          "醒脑咖啡豆": 16,
+          "沉甸甸南瓜": 33,
+          "嫩亮酪梨": 50,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 12,
+        "品鲜蘑菇": 29,
+        "特选蛋": 46,
+        "窝心洋芋": 63,
+        "特选苹果": 80,
+        "火辣香草": 12,
+        "豆制肉": 29,
+        "哞哞鲜奶": 46,
+        "甜甜蜜": 63,
+        "纯粹油": 80,
+        "暖暖姜": 12,
+        "好眠番茄": 29,
+        "放松可可": 46,
+        "美味尾巴": 63,
+        "萌绿大豆": 80,
+        "萌绿玉米": 12,
+        "醒脑咖啡豆": 29,
+        "沉甸甸南瓜": 46,
+        "嫩亮酪梨": 63,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "dessert",
+        "potSize": 81,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 2,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "心跳加速鬼面鬆餅",
+            "mix": false,
+            "potUsed": 122,
+            "energy": 42422
+          },
+          {
+            "name": "土王閃電泡芙",
+            "mix": false,
+            "potUsed": 122,
+            "energy": 38122
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 12,
+          "品鲜蘑菇": 29,
+          "特选蛋": 22,
+          "窝心洋芋": 63,
+          "特选苹果": 80,
+          "火辣香草": 12,
+          "豆制肉": 29,
+          "哞哞鲜奶": 20,
+          "甜甜蜜": 9,
+          "纯粹油": 80,
+          "暖暖姜": 12,
+          "好眠番茄": 0,
+          "放松可可": 16,
+          "美味尾巴": 24,
+          "萌绿大豆": 80,
+          "萌绿玉米": 12,
+          "醒脑咖啡豆": 5,
+          "沉甸甸南瓜": 28,
+          "嫩亮酪梨": 63,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 25,
+        "品鲜蘑菇": 42,
+        "特选蛋": 59,
+        "窝心洋芋": 76,
+        "特选苹果": 8,
+        "火辣香草": 25,
+        "豆制肉": 42,
+        "哞哞鲜奶": 59,
+        "甜甜蜜": 76,
+        "纯粹油": 8,
+        "暖暖姜": 25,
+        "好眠番茄": 42,
+        "放松可可": 59,
+        "美味尾巴": 76,
+        "萌绿大豆": 8,
+        "萌绿玉米": 25,
+        "醒脑咖啡豆": 42,
+        "沉甸甸南瓜": 59,
+        "嫩亮酪梨": 76,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "curry",
+        "potSize": 21,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": true
+      },
+      "meals": 3,
+      "sunday": false,
+      "options": {
+        "pot": 42,
+        "multiplier": 2.5
+      },
+      "expected": {
+        "meals": [
+          {
+            "name": "炙燒尾肉咖哩",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 33003
+          },
+          {
+            "name": "柔軟玉米濃湯",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 27419
+          },
+          {
+            "name": "蘑菇孢子咖哩",
+            "mix": false,
+            "potUsed": 42,
+            "energy": 33313
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 25,
+          "品鲜蘑菇": 28,
+          "特选蛋": 59,
+          "窝心洋芋": 59,
+          "特选苹果": 8,
+          "火辣香草": 0,
+          "豆制肉": 42,
+          "哞哞鲜奶": 51,
+          "甜甜蜜": 76,
+          "纯粹油": 8,
+          "暖暖姜": 25,
+          "好眠番茄": 42,
+          "放松可可": 59,
+          "美味尾巴": 28,
+          "萌绿大豆": 8,
+          "萌绿玉米": 11,
+          "醒脑咖啡豆": 42,
+          "沉甸甸南瓜": 59,
+          "嫩亮酪梨": 76,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 38,
+        "品鲜蘑菇": 55,
+        "特选蛋": 72,
+        "窝心洋芋": 4,
+        "特选苹果": 21,
+        "火辣香草": 38,
+        "豆制肉": 55,
+        "哞哞鲜奶": 72,
+        "甜甜蜜": 4,
+        "纯粹油": 21,
+        "暖暖姜": 38,
+        "好眠番茄": 55,
+        "放松可可": 72,
+        "美味尾巴": 4,
+        "萌绿大豆": 21,
+        "萌绿玉米": 38,
+        "醒脑咖啡豆": 55,
+        "沉甸甸南瓜": 72,
+        "嫩亮酪梨": 4,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": true,
+        "helpingBonus": 0,
+        "mealCategory": "salad",
+        "potSize": 57,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 4,
+      "sunday": true,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "忍者沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 75574
+          },
+          {
+            "name": "十字切碎丁沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 53444
+          },
+          {
+            "name": "十字切碎丁沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 49296
+          },
+          {
+            "name": "哞哞起司番茄沙拉",
+            "mix": false,
+            "potUsed": 171,
+            "energy": 37690
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 0,
+          "品鲜蘑菇": 0,
+          "特选蛋": 0,
+          "窝心洋芋": 0,
+          "特选苹果": 21,
+          "火辣香草": 0,
+          "豆制肉": 0,
+          "哞哞鲜奶": 34,
+          "甜甜蜜": 0,
+          "纯粹油": 0,
+          "暖暖姜": 0,
+          "好眠番茄": 0,
+          "放松可可": 0,
+          "美味尾巴": 0,
+          "萌绿大豆": 0,
+          "萌绿玉米": 0,
+          "醒脑咖啡豆": 0,
+          "沉甸甸南瓜": 0,
+          "嫩亮酪梨": 0,
+          "unknown": 7.5
+        }
+      }
+    },
+    {
+      "bag": {
+        "粗枝大葱": 51,
+        "品鲜蘑菇": 68,
+        "特选蛋": 0,
+        "窝心洋芋": 17,
+        "特选苹果": 34,
+        "火辣香草": 51,
+        "豆制肉": 68,
+        "哞哞鲜奶": 0,
+        "甜甜蜜": 17,
+        "纯粹油": 34,
+        "暖暖姜": 51,
+        "好眠番茄": 68,
+        "放松可可": 0,
+        "美味尾巴": 17,
+        "萌绿大豆": 34,
+        "萌绿玉米": 51,
+        "醒脑咖啡豆": 68,
+        "沉甸甸南瓜": 0,
+        "嫩亮酪梨": 17,
+        "unknown": 7.5
+      },
+      "settings": {
+        "island": "greengrass",
+        "berries": [
+          "金枕果",
+          "柿仔果",
+          "萄葡果"
+        ],
+        "areaBonus": 0.25,
+        "islandBonuses": {},
+        "exBuff": true,
+        "exDebuff": true,
+        "exWeeklyBonus": "none",
+        "sleepStart": "23:00",
+        "sleepEnd": "07:30",
+        "sleepScore": 100,
+        "meals": true,
+        "incense": false,
+        "dailySkillHeal": 0,
+        "goodCamp": false,
+        "helpingBonus": 0,
+        "mealCategory": "dessert",
+        "potSize": 81,
+        "period": "day",
+        "eventMult": 1,
+        "sleepEventMix": "some",
+        "recipeLevels": {},
+        "whistleHelps": 0,
+        "shinyUp": false,
+        "sundayPot": false
+      },
+      "meals": 5,
+      "sunday": false,
+      "options": {},
+      "expected": {
+        "meals": [
+          {
+            "name": "橙夢的排毒茶",
+            "mix": false,
+            "potUsed": 81,
+            "energy": 22336
+          },
+          {
+            "name": "橙夢的排毒茶",
+            "mix": false,
+            "potUsed": 81,
+            "energy": 18072
+          },
+          {
+            "name": "手製勁爽汽水",
+            "mix": false,
+            "potUsed": 81,
+            "energy": 17342
+          },
+          {
+            "name": "拌拌果汁",
+            "mix": true,
+            "potUsed": 81,
+            "energy": 16290
+          },
+          {
+            "name": "拌拌果汁",
+            "mix": true,
+            "potUsed": 81,
+            "energy": 14413
+          }
+        ],
+        "remain": {
+          "粗枝大葱": 0,
+          "品鲜蘑菇": 0,
+          "特选蛋": 0,
+          "窝心洋芋": 0,
+          "特选苹果": 4,
+          "火辣香草": 0,
+          "豆制肉": 68,
+          "哞哞鲜奶": 0,
+          "甜甜蜜": 8,
+          "纯粹油": 30,
+          "暖暖姜": 29,
+          "好眠番茄": 68,
+          "放松可可": 0,
+          "美味尾巴": 0,
+          "萌绿大豆": 34,
+          "萌绿玉米": 0,
+          "醒脑咖啡豆": 0,
+          "沉甸甸南瓜": 0,
+          "嫩亮酪梨": 0,
+          "unknown": 7.5
+        }
+      }
+    }
+  ],
+  "train": [
+    {
+      "input": {
+        "from": 1,
+        "to": 30,
+        "remaining": 0,
+        "nature": "勤奋",
+        "sleepOnTeam": false,
+        "napping": true,
+        "napDays": 1,
+        "earlyRetrieve": true,
+        "relaxTicket": true,
+        "sleepScore": 100,
+        "sleepExpBonus": 0,
+        "sleepIncense": false,
+        "ownedCandy": 0,
+        "reserveCandy": 25,
+        "dailyCandy": 0,
+        "boost": "none",
+        "boostCandy": 30,
+        "group": "normal"
+      },
+      "expected": {
+        "needExp": 11992,
+        "candy": 312,
+        "shards": 24072,
+        "feedExp": 0,
+        "dailyExp": 600,
+        "days": 139,
+        "napExp": 300,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 120
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 160
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 139
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 117
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 120
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 160
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": "Infinity"
+          }
+        ],
+        "boostShard": 1
+      }
+    },
+    {
+      "input": {
+        "from": 24,
+        "to": 50,
+        "remaining": 0,
+        "nature": "固执",
+        "sleepOnTeam": true,
+        "napping": false,
+        "napDays": 7,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 1,
+        "sleepIncense": true,
+        "ownedCandy": 25,
+        "reserveCandy": 25,
+        "dailyCandy": 1,
+        "boost": "mini",
+        "boostCandy": 30,
+        "group": "pseudo"
+      },
+      "expected": {
+        "needExp": 32887.5,
+        "candy": 1245,
+        "shards": 232293,
+        "feedExp": 0,
+        "dailyExp": 268,
+        "days": 130,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 145
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 224
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 203
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 147
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 130
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 189
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 1245
+          }
+        ],
+        "boostShard": 4
+      }
+    },
+    {
+      "input": {
+        "from": 29,
+        "to": 60,
+        "remaining": 0,
+        "nature": "胆小",
+        "sleepOnTeam": true,
+        "napping": true,
+        "napDays": 10,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 2,
+        "sleepIncense": false,
+        "ownedCandy": 50,
+        "reserveCandy": 25,
+        "dailyCandy": 2,
+        "boost": "normal",
+        "boostCandy": 30,
+        "group": "legendary"
+      },
+      "expected": {
+        "needExp": 72376.20000000001,
+        "candy": 2376,
+        "shards": 785355,
+        "feedExp": 1852,
+        "dailyExp": 177,
+        "days": 300,
+        "napExp": 1770,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 480
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 410
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 390
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 478
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 335
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 300
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 1188
+          }
+        ],
+        "boostShard": 5
+      }
+    },
+    {
+      "input": {
+        "from": 50,
+        "to": 70,
+        "remaining": 0,
+        "nature": "勤奋",
+        "sleepOnTeam": false,
+        "napping": false,
+        "napDays": 1,
+        "earlyRetrieve": true,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 3,
+        "sleepIncense": true,
+        "ownedCandy": 75,
+        "reserveCandy": 25,
+        "dailyCandy": 3,
+        "boost": "none",
+        "boostCandy": 30,
+        "group": "mythical"
+      },
+      "expected": {
+        "needExp": 114771.80000000002,
+        "candy": 4591,
+        "shards": 3329194,
+        "feedExp": 1250,
+        "dailyExp": 75,
+        "days": 1514,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 405
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 1531
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 1510
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 408
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 317
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 757
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 1514
+          }
+        ],
+        "boostShard": 1
+      }
+    },
+    {
+      "input": {
+        "from": 1,
+        "to": 30,
+        "remaining": 0,
+        "nature": "固执",
+        "sleepOnTeam": true,
+        "napping": true,
+        "napDays": 7,
+        "earlyRetrieve": false,
+        "relaxTicket": true,
+        "sleepScore": 100,
+        "sleepExpBonus": 4,
+        "sleepIncense": false,
+        "ownedCandy": 100,
+        "reserveCandy": 25,
+        "dailyCandy": 4,
+        "boost": "mini",
+        "boostCandy": 30,
+        "group": "normal"
+      },
+      "expected": {
+        "needExp": 11992,
+        "candy": 282,
+        "shards": 26508,
+        "feedExp": 4200,
+        "dailyExp": 600,
+        "days": 21,
+        "napExp": 4200,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 77
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 84
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 63
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 78
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 26
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 28
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 60
+          }
+        ],
+        "boostShard": 4
+      }
+    },
+    {
+      "input": {
+        "from": 24,
+        "to": 50,
+        "remaining": 0,
+        "nature": "胆小",
+        "sleepOnTeam": true,
+        "napping": false,
+        "napDays": 10,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 5,
+        "sleepIncense": true,
+        "ownedCandy": 125,
+        "reserveCandy": 25,
+        "dailyCandy": 0,
+        "boost": "normal",
+        "boostCandy": 30,
+        "group": "pseudo"
+      },
+      "expected": {
+        "needExp": 32887.5,
+        "candy": 1011,
+        "shards": 202581,
+        "feedExp": 5450,
+        "dailyExp": 401.20000000000005,
+        "days": 69,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 82
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 190
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 170
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 86
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 69
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 160
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": "Infinity"
+          }
+        ],
+        "boostShard": 5
+      }
+    },
+    {
+      "input": {
+        "from": 29,
+        "to": 60,
+        "remaining": 0,
+        "nature": "勤奋",
+        "sleepOnTeam": false,
+        "napping": true,
+        "napDays": 1,
+        "earlyRetrieve": true,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 0,
+        "sleepIncense": false,
+        "ownedCandy": 150,
+        "reserveCandy": 25,
+        "dailyCandy": 1,
+        "boost": "none",
+        "boostCandy": 30,
+        "group": "legendary"
+      },
+      "expected": {
+        "needExp": 72376.20000000001,
+        "candy": 2881,
+        "shards": 932024,
+        "feedExp": 3495,
+        "dailyExp": 150,
+        "days": 689,
+        "napExp": 75,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 724
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 966
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 945
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 721
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 552
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 689
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 2756
+          }
+        ],
+        "boostShard": 1
+      }
+    },
+    {
+      "input": {
+        "from": 50,
+        "to": 70,
+        "remaining": 0,
+        "nature": "固执",
+        "sleepOnTeam": true,
+        "napping": false,
+        "napDays": 7,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 1,
+        "sleepIncense": true,
+        "ownedCandy": 175,
+        "reserveCandy": 25,
+        "dailyCandy": 2,
+        "boost": "mini",
+        "boostCandy": 30,
+        "group": "mythical"
+      },
+      "expected": {
+        "needExp": 114771.80000000002,
+        "candy": 4561,
+        "shards": 3347734,
+        "feedExp": 4500,
+        "dailyExp": 278,
+        "days": 397,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 504
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 770
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 749
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 506
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 397
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 553
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 2221
+          }
+        ],
+        "boostShard": 4
+      }
+    },
+    {
+      "input": {
+        "from": 1,
+        "to": 30,
+        "remaining": 0,
+        "nature": "胆小",
+        "sleepOnTeam": true,
+        "napping": true,
+        "napDays": 10,
+        "earlyRetrieve": false,
+        "relaxTicket": true,
+        "sleepScore": 100,
+        "sleepExpBonus": 2,
+        "sleepIncense": false,
+        "ownedCandy": 200,
+        "reserveCandy": 25,
+        "dailyCandy": 3,
+        "boost": "normal",
+        "boostCandy": 30,
+        "group": "normal"
+      },
+      "expected": {
+        "needExp": 11992,
+        "candy": 236,
+        "shards": 24337,
+        "feedExp": 9515,
+        "dailyExp": 708,
+        "days": 10,
+        "napExp": 5487,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 80
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 70
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 50
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 79
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 10
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 10
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 31
+          }
+        ],
+        "boostShard": 5
+      }
+    },
+    {
+      "input": {
+        "from": 24,
+        "to": 50,
+        "remaining": 0,
+        "nature": "勤奋",
+        "sleepOnTeam": false,
+        "napping": false,
+        "napDays": 1,
+        "earlyRetrieve": true,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 3,
+        "sleepIncense": true,
+        "ownedCandy": 225,
+        "reserveCandy": 25,
+        "dailyCandy": 4,
+        "boost": "none",
+        "boostCandy": 30,
+        "group": "pseudo"
+      },
+      "expected": {
+        "needExp": 32887.5,
+        "candy": 1245,
+        "shards": 232293,
+        "feedExp": 6765,
+        "dailyExp": 100,
+        "days": 262,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 116
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 439
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 418
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 120
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 69
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 150
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 262
+          }
+        ],
+        "boostShard": 1
+      }
+    },
+    {
+      "input": {
+        "from": 29,
+        "to": 60,
+        "remaining": 0,
+        "nature": "固执",
+        "sleepOnTeam": true,
+        "napping": true,
+        "napDays": 7,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 4,
+        "sleepIncense": false,
+        "ownedCandy": 250,
+        "reserveCandy": 25,
+        "dailyCandy": 0,
+        "boost": "mini",
+        "boostCandy": 30,
+        "group": "legendary"
+      },
+      "expected": {
+        "needExp": 72376.20000000001,
+        "candy": 2850,
+        "shards": 938747,
+        "feedExp": 6755,
+        "dailyExp": 150,
+        "days": 441,
+        "napExp": 1050,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 464
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 483
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 462
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 465
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 421
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 441
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": "Infinity"
+          }
+        ],
+        "boostShard": 4
+      }
+    },
+    {
+      "input": {
+        "from": 50,
+        "to": 70,
+        "remaining": 0,
+        "nature": "胆小",
+        "sleepOnTeam": true,
+        "napping": false,
+        "napDays": 10,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 5,
+        "sleepIncense": true,
+        "ownedCandy": 275,
+        "reserveCandy": 25,
+        "dailyCandy": 1,
+        "boost": "normal",
+        "boostCandy": 30,
+        "group": "mythical"
+      },
+      "expected": {
+        "needExp": 114771.80000000002,
+        "candy": 3796,
+        "shards": 2802174,
+        "feedExp": 8400,
+        "dailyExp": 431.20000000000005,
+        "days": 247,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 287
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 650
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 630
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 290
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 247
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 520
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 3576
+          }
+        ],
+        "boostShard": 5
+      }
+    },
+    {
+      "input": {
+        "from": 1,
+        "to": 30,
+        "remaining": 0,
+        "nature": "勤奋",
+        "sleepOnTeam": false,
+        "napping": true,
+        "napDays": 1,
+        "earlyRetrieve": true,
+        "relaxTicket": true,
+        "sleepScore": 100,
+        "sleepExpBonus": 0,
+        "sleepIncense": false,
+        "ownedCandy": 300,
+        "reserveCandy": 25,
+        "dailyCandy": 2,
+        "boost": "none",
+        "boostCandy": 30,
+        "group": "normal"
+      },
+      "expected": {
+        "needExp": 11992,
+        "candy": 312,
+        "shards": 24072,
+        "feedExp": 10710,
+        "dailyExp": 600,
+        "days": 4,
+        "napExp": 300,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 120
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 160
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 139
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 117
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 8
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 9
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 19
+          }
+        ],
+        "boostShard": 1
+      }
+    },
+    {
+      "input": {
+        "from": 24,
+        "to": 50,
+        "remaining": 0,
+        "nature": "固执",
+        "sleepOnTeam": true,
+        "napping": false,
+        "napDays": 7,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 1,
+        "sleepIncense": true,
+        "ownedCandy": 325,
+        "reserveCandy": 25,
+        "dailyCandy": 3,
+        "boost": "mini",
+        "boostCandy": 30,
+        "group": "pseudo"
+      },
+      "expected": {
+        "needExp": 32887.5,
+        "candy": 1215,
+        "shards": 238012,
+        "feedExp": 10020,
+        "dailyExp": 303,
+        "days": 76,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 145
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 224
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 203
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 147
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 76
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 105
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 315
+          }
+        ],
+        "boostShard": 4
+      }
+    },
+    {
+      "input": {
+        "from": 29,
+        "to": 60,
+        "remaining": 0,
+        "nature": "胆小",
+        "sleepOnTeam": true,
+        "napping": true,
+        "napDays": 10,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 2,
+        "sleepIncense": false,
+        "ownedCandy": 350,
+        "reserveCandy": 25,
+        "dailyCandy": 4,
+        "boost": "normal",
+        "boostCandy": 30,
+        "group": "legendary"
+      },
+      "expected": {
+        "needExp": 72376.20000000001,
+        "candy": 2371,
+        "shards": 787185,
+        "feedExp": 11002,
+        "dailyExp": 177,
+        "days": 210,
+        "napExp": 1770,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 480
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 410
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 390
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 478
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 227
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 210
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 519
+          }
+        ],
+        "boostShard": 5
+      }
+    },
+    {
+      "input": {
+        "from": 50,
+        "to": 70,
+        "remaining": 0,
+        "nature": "勤奋",
+        "sleepOnTeam": false,
+        "napping": false,
+        "napDays": 1,
+        "earlyRetrieve": true,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 3,
+        "sleepIncense": true,
+        "ownedCandy": 375,
+        "reserveCandy": 25,
+        "dailyCandy": 0,
+        "boost": "none",
+        "boostCandy": 30,
+        "group": "mythical"
+      },
+      "expected": {
+        "needExp": 114771.80000000002,
+        "candy": 4591,
+        "shards": 3329194,
+        "feedExp": 8750,
+        "dailyExp": 0,
+        "days": "Infinity",
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 405
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 1531
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 1510
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 408
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 374
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 1414
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": "Infinity"
+          }
+        ],
+        "boostShard": 1
+      }
+    },
+    {
+      "input": {
+        "from": 1,
+        "to": 30,
+        "remaining": 0,
+        "nature": "固执",
+        "sleepOnTeam": true,
+        "napping": true,
+        "napDays": 7,
+        "earlyRetrieve": false,
+        "relaxTicket": true,
+        "sleepScore": 100,
+        "sleepExpBonus": 4,
+        "sleepIncense": false,
+        "ownedCandy": 400,
+        "reserveCandy": 25,
+        "dailyCandy": 1,
+        "boost": "mini",
+        "boostCandy": 30,
+        "group": "normal"
+      },
+      "expected": {
+        "needExp": 11992,
+        "candy": 282,
+        "shards": 26508,
+        "feedExp": 12005,
+        "dailyExp": 600,
+        "days": 0,
+        "napExp": 4200,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 77
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 84
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 63
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 78
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 0
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 0
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 0
+          }
+        ],
+        "boostShard": 4
+      }
+    },
+    {
+      "input": {
+        "from": 24,
+        "to": 50,
+        "remaining": 0,
+        "nature": "胆小",
+        "sleepOnTeam": true,
+        "napping": false,
+        "napDays": 10,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 5,
+        "sleepIncense": true,
+        "ownedCandy": 425,
+        "reserveCandy": 25,
+        "dailyCandy": 2,
+        "boost": "normal",
+        "boostCandy": 30,
+        "group": "pseudo"
+      },
+      "expected": {
+        "needExp": 32887.5,
+        "candy": 1011,
+        "shards": 202581,
+        "feedExp": 14571,
+        "dailyExp": 461.20000000000005,
+        "days": 40,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 82
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 190
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 170
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 86
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 40
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 80
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 321
+          }
+        ],
+        "boostShard": 5
+      }
+    },
+    {
+      "input": {
+        "from": 29,
+        "to": 60,
+        "remaining": 0,
+        "nature": "勤奋",
+        "sleepOnTeam": false,
+        "napping": true,
+        "napDays": 1,
+        "earlyRetrieve": true,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 0,
+        "sleepIncense": false,
+        "ownedCandy": 450,
+        "reserveCandy": 25,
+        "dailyCandy": 3,
+        "boost": "none",
+        "boostCandy": 30,
+        "group": "legendary"
+      },
+      "expected": {
+        "needExp": 72376.20000000001,
+        "candy": 2881,
+        "shards": 932024,
+        "feedExp": 10995,
+        "dailyExp": 150,
+        "days": 410,
+        "napExp": 75,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 724
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 966
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 945
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 721
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 351
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 410
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 819
+          }
+        ],
+        "boostShard": 1
+      }
+    },
+    {
+      "input": {
+        "from": 50,
+        "to": 70,
+        "remaining": 0,
+        "nature": "固执",
+        "sleepOnTeam": true,
+        "napping": false,
+        "napDays": 7,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 1,
+        "sleepIncense": true,
+        "ownedCandy": 475,
+        "reserveCandy": 25,
+        "dailyCandy": 4,
+        "boost": "mini",
+        "boostCandy": 30,
+        "group": "mythical"
+      },
+      "expected": {
+        "needExp": 114771.80000000002,
+        "candy": 4561,
+        "shards": 3347734,
+        "feedExp": 12000,
+        "dailyExp": 328,
+        "days": 314,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 504
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 770
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 749
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 506
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 314
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 413
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 1036
+          }
+        ],
+        "boostShard": 4
+      }
+    },
+    {
+      "input": {
+        "from": 1,
+        "to": 30,
+        "remaining": 0,
+        "nature": "胆小",
+        "sleepOnTeam": true,
+        "napping": true,
+        "napDays": 10,
+        "earlyRetrieve": false,
+        "relaxTicket": true,
+        "sleepScore": 100,
+        "sleepExpBonus": 2,
+        "sleepIncense": false,
+        "ownedCandy": 500,
+        "reserveCandy": 25,
+        "dailyCandy": 0,
+        "boost": "normal",
+        "boostCandy": 30,
+        "group": "normal"
+      },
+      "expected": {
+        "needExp": 11992,
+        "candy": 236,
+        "shards": 24337,
+        "feedExp": 12016,
+        "dailyExp": 708,
+        "days": 0,
+        "napExp": 5487,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 80
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 70
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 50
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 79
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 0
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 0
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 0
+          }
+        ],
+        "boostShard": 5
+      }
+    },
+    {
+      "input": {
+        "from": 24,
+        "to": 50,
+        "remaining": 0,
+        "nature": "勤奋",
+        "sleepOnTeam": false,
+        "napping": false,
+        "napDays": 1,
+        "earlyRetrieve": true,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 3,
+        "sleepIncense": true,
+        "ownedCandy": 525,
+        "reserveCandy": 25,
+        "dailyCandy": 1,
+        "boost": "none",
+        "boostCandy": 30,
+        "group": "pseudo"
+      },
+      "expected": {
+        "needExp": 32887.5,
+        "candy": 1245,
+        "shards": 232293,
+        "feedExp": 14265,
+        "dailyExp": 25,
+        "days": 745,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 116
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 439
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 418
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 120
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 61
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 187
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 745
+          }
+        ],
+        "boostShard": 1
+      }
+    },
+    {
+      "input": {
+        "from": 29,
+        "to": 60,
+        "remaining": 0,
+        "nature": "固执",
+        "sleepOnTeam": true,
+        "napping": true,
+        "napDays": 7,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 4,
+        "sleepIncense": false,
+        "ownedCandy": 550,
+        "reserveCandy": 25,
+        "dailyCandy": 2,
+        "boost": "mini",
+        "boostCandy": 30,
+        "group": "legendary"
+      },
+      "expected": {
+        "needExp": 72376.20000000001,
+        "candy": 2850,
+        "shards": 938747,
+        "feedExp": 14255,
+        "dailyExp": 150,
+        "days": 294,
+        "napExp": 1050,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 464
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 483
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 462
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 465
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 283
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 294
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 1178
+          }
+        ],
+        "boostShard": 4
+      }
+    },
+    {
+      "input": {
+        "from": 50,
+        "to": 70,
+        "remaining": 0,
+        "nature": "胆小",
+        "sleepOnTeam": true,
+        "napping": false,
+        "napDays": 10,
+        "earlyRetrieve": false,
+        "relaxTicket": false,
+        "sleepScore": 100,
+        "sleepExpBonus": 5,
+        "sleepIncense": true,
+        "ownedCandy": 575,
+        "reserveCandy": 25,
+        "dailyCandy": 3,
+        "boost": "normal",
+        "boostCandy": 30,
+        "group": "mythical"
+      },
+      "expected": {
+        "needExp": 114771.80000000002,
+        "candy": 3796,
+        "shards": 2802174,
+        "feedExp": 17400,
+        "dailyExp": 491.20000000000005,
+        "days": 199,
+        "napExp": 0,
+        "paths": [
+          {
+            "name": "只上阵睡觉",
+            "days": 287
+          },
+          {
+            "name": "只午睡岛（无券）",
+            "days": 650
+          },
+          {
+            "name": "只午睡岛（放松券）",
+            "days": 630
+          },
+          {
+            "name": "午睡岛满 7 天再上阵",
+            "days": 290
+          },
+          {
+            "name": "先喂糖再睡",
+            "days": 199
+          },
+          {
+            "name": "先喂糖再寄放",
+            "days": 370
+          },
+          {
+            "name": "不增强只喂糖",
+            "days": 1092
+          }
+        ],
+        "boostShard": 5
+      }
+    }
+  ]
+}

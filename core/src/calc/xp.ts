@@ -39,21 +39,44 @@ export function candyExp(count: number, nature: string, boost: boolean, group: '
 export type ExpGroup = 'normal' | 'pseudo' | 'legendary' | 'mythical'
 export interface TrainingProgress { level: number, exp: number }
 
-export function advanceTraining(progress: TrainingProgress, amount: number, target: number, group: ExpGroup): void {
-  progress.exp += amount
-  while (progress.level < target && progress.exp >= expTo(progress.level + 1) * groupMult(group)) progress.level++
+/** Pure EXP transition; the supplied progress is never changed. */
+export function advanceTrainingState(progress: Readonly<TrainingProgress>, amount: number, target: number, group: ExpGroup): TrainingProgress {
+  const exp = progress.exp + amount
+  let level = progress.level
+  while (level < target && exp >= expTo(level + 1) * groupMult(group)) level++
+  return { level, exp }
 }
 
-export function feedTraining(progress: TrainingProgress, count: number, target: number, nature: string, group: ExpGroup, boost = false, shardMultiplier = 1) {
+export interface TrainingFeedResult {
+  progress: TrainingProgress
+  candies: number
+  shards: number
+  exp: number
+}
+
+/** Pure feeding transition. Local iteration preserves per-candy rounding and level bands. */
+export function feedTrainingState(progress: Readonly<TrainingProgress>, count: number, target: number, nature: string, group: ExpGroup, boost = false, shardMultiplier = 1): TrainingFeedResult {
+  let next = { ...progress }
   let candies = 0
   let shards = 0
-  const before = progress.exp
-  while (progress.level < target && candies < count) {
-    shards += shardsTo(progress.level + 1) * shardMultiplier
-    advanceTraining(progress, candyExpAtLevel(progress.level, nature, boost), target, group)
+  while (next.level < target && candies < count) {
+    shards += shardsTo(next.level + 1) * shardMultiplier
+    next = advanceTrainingState(next, candyExpAtLevel(next.level, nature, boost), target, group)
     candies++
   }
-  return { candies, shards, exp: progress.exp - before }
+  return { progress: next, candies, shards, exp: next.exp - progress.exp }
+}
+
+/** @deprecated Integration compatibility; prefer advanceTrainingState. */
+export function advanceTraining(progress: TrainingProgress, amount: number, target: number, group: ExpGroup): void {
+  Object.assign(progress, advanceTrainingState(progress, amount, target, group))
+}
+
+/** @deprecated Integration compatibility; prefer feedTrainingState. */
+export function feedTraining(progress: TrainingProgress, count: number, target: number, nature: string, group: ExpGroup, boost = false, shardMultiplier = 1) {
+  const { progress: next, ...result } = feedTrainingState(progress, count, target, nature, group, boost, shardMultiplier)
+  Object.assign(progress, next)
+  return result
 }
 
 export function xpCandy(opts: {
@@ -80,6 +103,6 @@ export function xpCandy(opts: {
   }
   const progress = { level: opts.from, exp: start + nextGap - remaining }
   const need = Math.max(0, expTo(opts.to) * groupMult(group) - progress.exp)
-  const fed = feedTraining(progress, Infinity, opts.to, opts.nature, group, opts.boost, opts.boost ? 5 : 1)
+  const fed = feedTrainingState(progress, Infinity, opts.to, opts.nature, group, opts.boost, opts.boost ? 5 : 1)
   return { exp: need, candy: fed.candies, shards: fed.shards }
 }

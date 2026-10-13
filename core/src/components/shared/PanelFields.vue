@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FormField from './FormField.vue'
 import { computed } from 'vue'
 import { NATURES, POKEDEX, SUBSKILLS, pokeById } from '../../calc/data'
 import { POKEMON_LEVEL_MAX } from '../../calc/xp'
@@ -11,6 +12,14 @@ const model = defineModel<ProduceInput>({ required: true })
 
 const poke = computed(() => pokeById(model.value.pokeId) ?? POKEDEX[0]!)
 const skillMax = computed(() => skillMaxFor(poke.value.mainSkill))
+
+function patch(value: Partial<ProduceInput>) {
+  model.value = { ...model.value, ...value }
+}
+const pokeId = computed({ get: () => model.value.pokeId, set: (pokeId: number) => patch({ pokeId }) })
+const level = computed({ get: () => model.value.level, set: (level: number) => patch({ level }) })
+const nature = computed({ get: () => model.value.nature, set: (nature: string) => patch({ nature }) })
+const skillLevel = computed({ get: () => model.value.skillLevel, set: (skillLevel: number) => patch({ skillLevel }) })
 
 function setSlot(index: number, value: number) {
   const next: [number | null, number | null, number | null] = [model.value.ingredientSlots[0], model.value.ingredientSlots[1], model.value.ingredientSlots[2]]
@@ -29,18 +38,12 @@ function setSub(index: number, value: string) {
   <div class="stack">
     <div class="field">
       <label>宝可梦</label>
-      <PokePicker v-model="model.pokeId" />
+      <PokePicker v-model="pokeId" />
     </div>
-    <div class="field">
-      <label>等级</label>
-      <input v-model.number="model.level" type="number" min="1" :max="POKEMON_LEVEL_MAX">
-    </div>
-    <div class="field">
-      <label>性格</label>
-      <select v-model="model.nature">
+    <FormField v-slot="{ id }" label="等级"><input :id="id" v-model.number="level" type="number" min="1" :max="POKEMON_LEVEL_MAX"></FormField>
+    <FormField v-slot="{ id }" label="性格"><select :id="id" v-model="nature">
         <option v-for="n in NATURES" :key="n.name" :value="n.name">{{ n.name }}</option>
-      </select>
-    </div>
+      </select></FormField>
     <div v-for="i in 5" :key="i" class="field">
       <label>副技能 {{ i }}</label>
       <select :value="model.subskills[i - 1] ?? ''" @change="setSub(i - 1, ($event.target as HTMLSelectElement).value)">
@@ -54,9 +57,6 @@ function setSub(index: number, value: string) {
         <option v-for="(amt, ai) in ing.amounts" :key="ai" :value="ai">{{ amt }}</option>
       </select>
     </div>
-    <div class="field">
-      <label>技能等级</label>
-      <input v-model.number="model.skillLevel" type="number" min="1" :max="skillMax">
-    </div>
+    <FormField v-slot="{ id }" label="技能等级"><input :id="id" v-model.number="skillLevel" type="number" min="1" :max="skillMax"></FormField>
   </div>
 </template>

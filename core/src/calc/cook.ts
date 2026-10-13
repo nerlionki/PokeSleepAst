@@ -5,7 +5,7 @@ export const RECIPE_LEVEL_MAX = 70
 /** 真实等级加成，来源：https://wikiwiki.jp/poke_sleep/料理 */
 const LEVEL_BONUS = [0,2,4,6,8,9,11,13,16,18,19,21,23,24,26,28,30,31,33,35,37,40,42,45,47,50,52,55,58,61,64,67,70,74,77,81,84,88,92,96,100,104,108,113,117,122,127,132,137,142,148,153,159,165,171,177,183,190,197,203,209,215,221,227,234,239,243,248,252,258]
 
-export function recipeLevelOf(settings: Settings, name: string): number {
+export function recipeLevelOf(settings: CookSettings, name: string): number {
   return Math.min(RECIPE_LEVEL_MAX, Math.max(1, settings.recipeLevels?.[name] || 1))
 }
 
@@ -23,58 +23,72 @@ export function cookEnergy(recipeName: string, extra: number, sunday: boolean, r
   return Math.round(raw * crit)
 }
 
-export function cookMeals(bag: Record<string, number>, settings: Settings, meals = 3, sunday = false, options: { pot?: number, multiplier?: number } = {}): { meals: CookMeal[], remain: Record<string, number> } {
+export type CookSettings = Readonly<Pick<Settings, 'goodCamp' | 'sundayPot' | 'potSize' | 'mealCategory' | 'areaBonus' | 'recipeLevels'>>
+export type IngredientBag = Readonly<Record<string, number>>
+export interface CookOptions { pot?: number, multiplier?: number }
+export interface CookResult { meals: CookMeal[], remain: Record<string, number> }
+export interface IngredientAllocation { remain: Record<string, number>, used: number, energy: number }
+
+const ingredientEnergy = new Map(INGREDIENTS.map(ingredient => [ingredient.name, ingredient.energy]))
+
+/** Allocate filler ingredients by energy without changing the caller's inventory.
+ * Unknown ingredients retain the existing branch-specific energy fallback. */
+export function allocateIngredients(bag: IngredientBag, capacity: number, unknownEnergy = 0): IngredientAllocation {
+  const names = Object.keys(bag).sort((a, b) => (ingredientEnergy.get(b) ?? 0) - (ingredientEnergy.get(a) ?? 0))
+  return names.reduce<IngredientAllocation>((state, name) => {
+    const take = Math.min(Math.floor(state.remain[name] ?? 0), capacity - state.used)
+    if (take <= 0) return state
+    return {
+      remain: { ...state.remain, [name]: (state.remain[name] ?? 0) - take },
+      used: state.used + take,
+      energy: state.energy + take * (ingredientEnergy.get(name) ?? unknownEnergy),
+    }
+  }, { remain: { ...bag }, used: 0, energy: 0 })
+}
+
+function cookingContext(settings: CookSettings, sunday: boolean, options: CookOptions) {
   const potMul = (settings.goodCamp ? 1.5 : 1) * (sunday || settings.sundayPot ? 2 : 1)
   const pot = options.pot ?? Math.ceil(settings.potSize * potMul)
-  const pool = RECIPES.filter((r) => r.category === settings.mealCategory && !r.mix)
-    .slice()
+  const pool = RECIPES.filter(recipe => recipe.category === settings.mealCategory && !recipe.mix)
     .sort((a, b) => b.baseEnergy * recipeLevelMult(recipeLevelOf(settings, b.name)) - a.baseEnergy * recipeLevelMult(recipeLevelOf(settings, a.name)))
-  const remain = { ...bag }
-  const out: CookMeal[] = []
-  const mix = RECIPES.find((r) => r.category === settings.mealCategory && r.mix)
+  const mix = RECIPES.find(recipe => recipe.category === settings.mealCategory && recipe.mix)
+  return { pot, pool, mix, settings, multiplier: options.multiplier ?? (sunday ? 1.6 : 1.1) }
+}
 
-  for (let i = 0; i < Math.min(21, Math.max(0, Math.floor(meals))); i++) {
-    const hit = pool.find((r) => {
-      if (r.pot > pot) return false
-      return r.ingredients.every((ing) => (remain[ing.name] ?? 0) >= ing.count)
-    })
-    if (hit) {
-      for (const ing of hit.ingredients) remain[ing.name] = (remain[ing.name] ?? 0) - ing.count
-      let extra = 0
-      let extraEnergy = 0
-      const room = pot - hit.pot
-      if (room > 0) {
-        for (const name of Object.keys(remain).sort((a, b) => (INGREDIENTS.find(x => x.name === b)?.energy ?? 0) - (INGREDIENTS.find(x => x.name === a)?.energy ?? 0))) {
-          const take = Math.min(Math.floor(remain[name] ?? 0), room - extra)
-          if (take <= 0) continue
-          remain[name] -= take
-          extra += take
-          extraEnergy += take * (INGREDIENTS.find(x => x.name === name)?.energy ?? 0)
-          if (extra >= room) break
-        }
-      }
-      out.push({ name: hit.name, mix: false, potUsed: hit.pot + extra, energy: Math.round((hit.baseEnergy * recipeLevelMult(recipeLevelOf(settings, hit.name)) + extraEnergy) * (1 + settings.areaBonus) * (options.multiplier ?? (sunday ? 1.6 : 1.1))) })
-    }
-    else {
-      let used = 0
-      let fill = 0
-      for (const name of Object.keys(remain).sort((a, b) => (INGREDIENTS.find(x => x.name === b)?.energy ?? 0) - (INGREDIENTS.find(x => x.name === a)?.energy ?? 0))) {
-        const take = Math.min(Math.floor(remain[name] ?? 0), pot - used)
-        if (take <= 0) continue
-        remain[name] -= take
-        used += take
-        fill += take * (INGREDIENTS.find((x) => x.name === name)?.energy ?? 30)
-      }
-      const crit = options.multiplier ?? (sunday ? 1.6 : 1.1)
-      out.push({
-        name: mix?.name ?? '拌拌',
-        mix: true,
-        potUsed: used,
-        energy: Math.round(fill * crit * (1 + settings.areaBonus)),
-      })
-    }
+function cookMealWithContext(bag: IngredientBag, context: ReturnType<typeof cookingContext>): { meal: CookMeal, remain: Record<string, number> } {
+  const { pot, pool, mix, settings, multiplier } = context
+  const hit = pool.find(recipe => recipe.pot <= pot && recipe.ingredients.every(ingredient => (bag[ingredient.name] ?? 0) >= ingredient.count))
+  const baseBag = hit ? hit.ingredients.reduce<Record<string, number>>((remain, ingredient) => ({
+    ...remain, [ingredient.name]: (remain[ingredient.name] ?? 0) - ingredient.count,
+  }), { ...bag }) : bag
+  const allocation = allocateIngredients(baseBag, hit ? Math.max(0, pot - hit.pot) : pot, hit ? 0 : 30)
+  const baseEnergy = hit ? hit.baseEnergy * recipeLevelMult(recipeLevelOf(settings, hit.name)) : 0
+  return {
+    meal: {
+      name: hit?.name ?? mix?.name ?? '拌拌',
+      mix: !hit,
+      potUsed: (hit?.pot ?? 0) + allocation.used,
+      energy: hit
+        ? Math.round((baseEnergy + allocation.energy) * (1 + settings.areaBonus) * multiplier)
+        : Math.round(allocation.energy * multiplier * (1 + settings.areaBonus)),
+    },
+    remain: allocation.remain,
   }
-  return { meals: out, remain }
+}
+
+/** Calculate one meal as an inventory transition, independently of stores or platforms. */
+export function cookMeal(bag: IngredientBag, settings: CookSettings, sunday = false, options: CookOptions = {}): { meal: CookMeal, remain: Record<string, number> } {
+  return cookMealWithContext(bag, cookingContext(settings, sunday, options))
+}
+
+export function cookMeals(bag: IngredientBag, settings: CookSettings, meals = 3, sunday = false, options: CookOptions = {}): CookResult {
+  // Keep the original NaN/fraction/infinity iteration behavior.
+  const count = Math.min(21, Math.max(0, Math.floor(meals)))
+  const context = cookingContext(settings, sunday, options)
+  return Array.from({ length: count }).reduce<CookResult>(state => {
+    const next = cookMealWithContext(state.remain, context)
+    return { meals: [...state.meals, next.meal], remain: next.remain }
+  }, { meals: [], remain: { ...bag } })
 }
 
 export function categoryLabel(c: MealCategory): string {
