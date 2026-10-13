@@ -1,22 +1,13 @@
 <script setup lang="ts" generic="T extends string">
 import { taskNavigationLocked } from '../../composables/taskNavigationLock'
-defineProps<{
-  options: { id: T, label: string }[]
-}>()
-
+import SegmentedControl from './SegmentedControl.vue'
+withDefaults(defineProps<{
+  options: readonly { id: T, label: string, disabled?: boolean }[]
+  disabled?: boolean
+}>(), { disabled: false })
 const model = defineModel<T>({ required: true })
 </script>
 
 <template>
-  <div class="seg" :style="{ gridTemplateColumns: `repeat(${Math.max(1, Math.min(options.length, 4))}, minmax(0, 1fr))` }">
-    <button
-      v-for="opt in options"
-      :key="opt.id"
-      type="button" :disabled="taskNavigationLocked"
-      :class="{ on: model === opt.id }"
-      @click="model = opt.id"
-    >
-      {{ opt.label }}
-    </button>
-  </div>
+  <SegmentedControl v-model="model" :options="options" :disabled="disabled || taskNavigationLocked" />
 </template>

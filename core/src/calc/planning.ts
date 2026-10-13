@@ -1,0 +1,11 @@
+/** Stable functional planning entry point. No Vue, stores or platform capabilities. */
+export { allocateIngredients, cookMeal, cookMeals, cookEnergy, recipeLevelOf, recipeLevelMult } from './cook'
+export type { CookSettings, IngredientBag, IngredientAllocation, CookOptions, CookResult } from './cook'
+export { trainPlan, napDailyExp, napTotalExp } from './train'
+export type { TrainInput } from './train'
+export { advanceTrainingState, feedTrainingState, xpCandy } from './xp'
+export type { ExpGroup, TrainingProgress, TrainingFeedResult } from './xp'
+export { createCandyRowFromBox, calculateCandy, planCandy } from './candyPlan'
+export type { CandyRow, CandyResult, CandyBoostId } from './candyPlan'
+export { recommendIslands, recommendThree } from './catch'
+export type { CatchGoal, CatchIslandPick } from './catch'

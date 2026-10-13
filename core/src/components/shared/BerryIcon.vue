@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed } from 'vue'
+import FallbackImage from './FallbackImage.vue'
 import { berryIconUrl } from '../../calc/berry'
 import { berryByName } from '../../calc/data'
 
@@ -9,7 +10,6 @@ const props = defineProps<{
   small?: boolean
 }>()
 
-const failed = shallowRef(false)
 const berry = computed(() => berryByName(props.name))
 const hue = computed(() => {
   const map: Record<string, number> = {
@@ -20,23 +20,12 @@ const hue = computed(() => {
   return map[berry.value?.type ?? ''] ?? 40
 })
 
-watch(() => props.name, () => { failed.value = false })
 </script>
 
 <template>
-  <img
-    v-if="!failed"
-    class="berry-icon"
-    :class="{ lg: large, sm: small }"
-    :src="berryIconUrl(name)"
-    :alt="name"
-    @error="failed = true"
-  >
-  <span
-    v-else
-    class="berry-fallback"
-    :class="{ lg: large, sm: small }"
-    :style="{ background: `hsl(${hue} 55% 42%)` }"
-    :title="name"
-  >{{ name.slice(0, 1) }}</span>
+  <FallbackImage class="berry-icon" :class="{ lg: large, sm: small }" :src="berryIconUrl(name)" :alt="name" :reset-key="name">
+    <template #fallback>
+      <span class="berry-fallback" :class="{ lg: large, sm: small }" :style="{ background: `hsl(${hue} 55% 42%)` }" :title="name">{{ name.slice(0, 1) }}</span>
+    </template>
+  </FallbackImage>
 </template>

@@ -21,6 +21,17 @@ import { useSettingsStore } from '../stores/settings'
 import { usePlanStore } from '../stores/plans'
 import type { BabyEfficiencyOptions } from '../calc/babyEfficiency'
 const captured = vi.hoisted(() => ({ options: null as Ref<BabyEfficiencyOptions> | null }))
+// FormField owns the label and forwards the control slot after extraction.
+// Render it instead of replacing it with the generic domain-component stub.
+const fieldSource = readFileSync(new URL('../../../core/src/components/shared/FormField.vue', import.meta.url), 'utf8')
+const fieldScript = compileScript(parse(fieldSource).descriptor, { id: 'FormField', inlineTemplate: true })
+const fieldCode = transpileModule(fieldScript.content, { compilerOptions: { module: ModuleKind.CommonJS } }).outputText
+const fieldExports: { default?: Vue.Component } = {}
+new Function('require', 'exports', fieldCode)((id: string) => {
+  if (id === 'vue') return Vue
+  throw Error(id)
+}, fieldExports)
+
 function compilePage(name: string) {
   const source = readFileSync(new URL('../../../core/src/components/plan/' + name + '.vue', import.meta.url), 'utf8')
   const { descriptor } = parse(source)
@@ -40,6 +51,7 @@ function compilePage(name: string) {
   }
   const exports: { default?: Vue.Component } = {}
   new Function('require', 'exports', code)((id: string) => {
+    if (id.endsWith('/FormField.vue')) return { __esModule: true, default: fieldExports.default }
     if (id.endsWith('.vue')) return { __esModule: true, default: { render: () => null } }
     if (id in modules) return modules[id]
     throw Error(id)

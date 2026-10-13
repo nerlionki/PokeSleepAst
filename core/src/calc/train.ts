@@ -1,4 +1,4 @@
-import { advanceTraining, expTo, feedTraining, groupMult, natureExpFactor, xpCandy } from './xp'
+import { advanceTrainingState, expTo, feedTrainingState, groupMult, natureExpFactor, xpCandy } from './xp'
 
 export interface TrainInput {
   from: number
@@ -54,23 +54,19 @@ export function trainPlan(input: TrainInput) {
   const dailyCandies = Math.max(0, Math.floor(input.dailyCandy))
   const boostShard = input.boost === 'mini' ? 4 : input.boost === 'normal' ? 5 : 1
   const initial = { level: input.from, exp: expTo(input.to) * groupMult(input.group) - gap.exp }
-  const fed = { ...initial }
   const boosted = Math.min(Math.max(0, Math.floor(input.boostCandy)), usable)
-  if (!gap.error) {
-    feedTraining(fed, boosted, input.to, input.nature, input.group, input.boost !== 'none', boostShard)
-    feedTraining(fed, usable - boosted, input.to, input.nature, input.group)
-  }
+  const fedBoost = gap.error ? initial : feedTrainingState(initial, boosted, input.to, input.nature, input.group, input.boost !== 'none', boostShard).progress
+  const fed = gap.error ? initial : feedTrainingState(fedBoost, usable - boosted, input.to, input.nature, input.group).progress
   const feedExp = fed.exp - initial.exp
   const daysOf = (daily: number, progress = initial, candies = 0): number => {
     if (gap.error) return NaN
     if (progress.level >= input.to) return 0
     if (daily <= 0 && candies <= 0) return Infinity
     if (!candies) return Math.ceil(Math.max(0, expTo(input.to) * groupMult(input.group) - progress.exp) / daily)
-    const next = { ...progress }
+    let next = { ...progress }
     let days = 0
     while (next.level < input.to) {
-      advanceTraining(next, daily, input.to, input.group)
-      feedTraining(next, candies, input.to, input.nature, input.group)
+      next = feedTrainingState(advanceTrainingState(next, daily, input.to, input.group), candies, input.to, input.nature, input.group).progress
       days++
     }
     return days
@@ -78,32 +74,27 @@ export function trainPlan(input: TrainInput) {
   const stayDays = Math.min(365, Math.max(1, Math.floor(input.napDays) || 7))
   const daysOnNap = (relax: boolean, progress = initial, candies = 0): number => {
     if (gap.error) return NaN
-    const next = { ...progress }
+    let next = { ...progress }
     let days = 0
     let ticketDays = relax ? 7 : 0
     while (next.level < input.to) {
       // 寄放期间不能喂糖；按所选停留时长领回结算，再喂这段期间积累的糖果。
       const raw = (150 * stayDays + 450 * Math.min(ticketDays, stayDays)) * Math.max(1, natureExpFactor(input.nature))
-      advanceTraining(next, Math.floor(raw * (stayDays < 7 ? 0.5 : 1)), input.to, input.group)
-      feedTraining(next, candies * stayDays, input.to, input.nature, input.group)
+      next = feedTrainingState(advanceTrainingState(next, Math.floor(raw * (stayDays < 7 ? 0.5 : 1)), input.to, input.group), candies * stayDays, input.to, input.nature, input.group).progress
       ticketDays = Math.max(0, ticketDays - stayDays)
       days += stayDays
     }
     return days
   }
-  const dailyPreview = { ...fed }
-  if (!gap.error && !input.napping) advanceTraining(dailyPreview, dailySleep, input.to, input.group)
-  const candyPreview = gap.error ? 0 : feedTraining(dailyPreview, dailyCandies, input.to, input.nature, input.group).exp
+  const dailyPreview = !gap.error && !input.napping ? advanceTrainingState(fed, dailySleep, input.to, input.group) : fed
+  const candyPreview = gap.error ? 0 : feedTrainingState(dailyPreview, dailyCandies, input.to, input.nature, input.group).exp
   const dailyExp = dailySleep + dailyNap + (input.napping ? 0 : candyPreview)
   const days = input.napping ? daysOnNap(input.relaxTicket, fed, dailyCandies) : daysOf(dailySleep, fed, dailyCandies)
   const napExp = input.napping ? napTotalExp(input.napDays || (Number.isFinite(days) ? days : 7), input.relaxTicket, input.earlyRetrieve, input.nature) : 0
-  const afterNap = { ...initial }
-  if (!gap.error) advanceTraining(afterNap, napTotalExp(7, false, false, input.nature), input.to, input.group)
-  const plainFeed = { ...initial }
-  if (!gap.error) feedTraining(plainFeed, usable, input.to, input.nature, input.group)
-  const costProgress = { ...initial }
-  const boostedCost = gap.error ? { candies: 0, shards: 0 } : feedTraining(costProgress, boosted, input.to, input.nature, input.group, input.boost !== 'none', boostShard)
-  const normalCost = gap.error ? { candies: 0, shards: 0 } : feedTraining(costProgress, Infinity, input.to, input.nature, input.group)
+  const afterNap = gap.error ? initial : advanceTrainingState(initial, napTotalExp(7, false, false, input.nature), input.to, input.group)
+  const plainFeed = gap.error ? initial : feedTrainingState(initial, usable, input.to, input.nature, input.group).progress
+  const boostedCost = gap.error ? { progress: initial, candies: 0, shards: 0 } : feedTrainingState(initial, boosted, input.to, input.nature, input.group, input.boost !== 'none', boostShard)
+  const normalCost = gap.error ? { candies: 0, shards: 0 } : feedTrainingState(boostedCost.progress, Infinity, input.to, input.nature, input.group)
   return {
     error: gap.error,
     needExp: gap.exp,

@@ -51,11 +51,12 @@ export function evolutionLevels(pokeId: number): number[] {
 
 export const CANDY_PRESETS = [25, 30, 50, 60, 70]
 
-export function candyRowFromBox(pokemon: BoxPokemon): CandyRow {
+/** Pure Box-to-planning conversion; identity is supplied by the caller. */
+export function createCandyRowFromBox(pokemon: BoxPokemon, id: string): CandyRow {
   const nature = natureByName(pokemon.nature)
   const start = Math.min(MAX_LEVEL, Math.max(1, pokemon.level))
   return {
-    id: newUid(),
+    id,
     pokeId: pokemon.pokeId,
     method: 'target',
     start,
@@ -65,6 +66,11 @@ export function candyRowFromBox(pokemon: BoxPokemon): CandyRow {
     nature: nature.up === 'exp' ? 'up' : nature.down === 'exp' ? 'down' : 'flat',
     remaining: pokemon.tune?.exp || null,
   }
+}
+
+/** UI compatibility boundary: random identity stays outside the conversion. */
+export function candyRowFromBox(pokemon: BoxPokemon): CandyRow {
+  return createCandyRowFromBox(pokemon, newUid())
 }
 
 function curveOf(pokeId: number): number[] {
