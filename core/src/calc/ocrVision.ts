@@ -288,11 +288,14 @@ function ingredientShapeScore(shot: PixelImage, template: PixelImage): number {
   let best = -1
   for (const scale of [0.55, 0.65, 0.75, 0.85, 0.95]) {
     const size = Math.round(64 * scale)
-    const ref = resizeRgba(template, size, size)
+    const longest = Math.max(template.width, template.height)
+    const width = Math.max(1, Math.round(size * template.width / longest))
+    const height = Math.max(1, Math.round(size * template.height / longest))
+    const ref = resizeRgba(template, width, height)
     const icon = grayscale(ref.data, ref.width, ref.height)
-    for (let y = 0; y <= 64 - size; y += 2) {
-      for (let x = 0; x <= 64 - size; x += 2) {
-        const region = crop(canvas, x, y, size, size)
+    for (let y = 0; y <= 64 - height; y += 2) {
+      for (let x = 0; x <= 64 - width; x += 2) {
+        const region = crop(canvas, x, y, width, height)
         best = Math.max(best, maskedCorrelation(grayscale(region.data, region.width, region.height), icon))
       }
     }
@@ -301,7 +304,7 @@ function ingredientShapeScore(shot: PixelImage, template: PixelImage): number {
 }
 
 /** 食材图标可能是灰色未解锁态；轮廓相关性为主，前景宽高比用于分开油瓶和洋芋。 */
-export function matchIngredientSprite(shot: PixelImage, refs: { id: number, image: PixelImage }[]): number | null {
+export function ingredientSpriteScores(shot: PixelImage, refs: { id: number, image: PixelImage }[]): { id: number, score: number }[] {
   const shotAspect = largestForegroundAspect(shot)
   const ranked = refs.map((ref) => {
     const shape = ingredientShapeScore(shot, ref.image)
@@ -309,7 +312,11 @@ export function matchIngredientSprite(shot: PixelImage, refs: { id: number, imag
     const aspectPenalty = shotAspect == null ? 0 : Math.abs(shotAspect - refAspect) * 30
     return { id: ref.id, score: shape * 100 - aspectPenalty }
   }).sort((a, b) => b.score - a.score)
-  return ranked[0]?.id ?? null
+  return ranked
+}
+
+export function matchIngredientSprite(shot: PixelImage, refs: { id: number, image: PixelImage }[]): number | null {
+  return ingredientSpriteScores(shot, refs)[0]?.id ?? null
 }
 
 function colorError(shot: PixelImage, ref: PixelImage, ox: number, oy: number): number {
@@ -323,9 +330,14 @@ function colorError(shot: PixelImage, ref: PixelImage, ox: number, oy: number): 
       const sr = shot.data[si] ?? 0
       const sg = shot.data[si + 1] ?? 0
       const sb = shot.data[si + 2] ?? 0
+      // 立绘的半透明阴影在截图中已与浅色圆盘合成，不能直接比较未合成的 RGB。
+      const alpha = (ref.data[ri + 3] ?? 0) / 255
+      const rr = (ref.data[ri] ?? 0) * alpha + 255 * (1 - alpha)
+      const rg = (ref.data[ri + 1] ?? 0) * alpha + 252 * (1 - alpha)
+      const rb = (ref.data[ri + 2] ?? 0) * alpha + 236 * (1 - alpha)
       error += isCream(sr, sg, sb)
         ? 270
-        : Math.abs(sr - (ref.data[ri] ?? 0)) + Math.abs(sg - (ref.data[ri + 1] ?? 0)) + Math.abs(sb - (ref.data[ri + 2] ?? 0))
+        : Math.abs(sr - rr) + Math.abs(sg - rg) + Math.abs(sb - rb)
       count++
     }
   }

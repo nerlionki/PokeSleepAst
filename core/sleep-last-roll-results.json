@@ -1,0 +1,465 @@
+{
+  "conditions": "全部解锁、剩余睡意之力充足、非活动跨类型；最高候选及已出大肚上睡后的候选",
+  "verifiedAt": "2026-10-14",
+  "rows": [
+    {
+      "island": "萌绿之岛",
+      "islandId": "greengrass",
+      "type": "淺淺入夢",
+      "name": "瑪狃拉",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 215612000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "瑪狃拉",
+        "stars": 2,
+        "style": "挑釁睡",
+        "dpr": 77102000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "萌绿之岛",
+      "islandId": "greengrass",
+      "type": "安然入睡",
+      "name": "幸福蛋",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 205884000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "請假王",
+        "stars": 3,
+        "style": "偷吃睡",
+        "dpr": 85614000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "萌绿之岛",
+      "islandId": "greengrass",
+      "type": "深深入眠",
+      "name": "火焰雞",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 195358000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "勇士雄鷹",
+        "stars": 3,
+        "style": "理理羽毛睡",
+        "dpr": 85614000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "天青沙滩",
+      "islandId": "cyan",
+      "type": "淺淺入夢",
+      "name": "蜥蜴王",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 195358000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "蜥蜴王",
+        "stars": 3,
+        "style": "培育小樹睡",
+        "dpr": 179018000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "天青沙滩",
+      "islandId": "cyan",
+      "type": "安然入睡",
+      "name": "蝶結萌虻",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 122854000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "蝶結萌虻",
+        "stars": 3,
+        "style": "花粉團睡",
+        "dpr": 90136000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "天青沙滩",
+      "islandId": "cyan",
+      "type": "深深入眠",
+      "name": "大蔥鴨",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 163742000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "大蔥鴨",
+        "stars": 3,
+        "style": "嘴饞睡",
+        "dpr": 147364000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "灰褐洞窟",
+      "islandId": "taupe",
+      "type": "淺淺入夢",
+      "name": "壺壺",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 185516000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "壺壺",
+        "stars": 3,
+        "style": "果汁滿出來睡",
+        "dpr": 163742000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "灰褐洞窟",
+      "islandId": "taupe",
+      "type": "安然入睡",
+      "name": "風速狗",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 85614000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "風速狗",
+        "stars": 3,
+        "style": "肚子朝天睡",
+        "dpr": 68666000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "灰褐洞窟",
+      "islandId": "taupe",
+      "type": "深深入眠",
+      "name": "沙漠蜻蜓",
+      "stars": 3,
+      "style": "露肚子睡",
+      "dpr": 215612000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "沙漠蜻蜓",
+        "stars": 3,
+        "style": "露肚子睡",
+        "dpr": 215612000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "白花雪原",
+      "islandId": "snowdrop",
+      "type": "淺淺入夢",
+      "name": "瑪狃拉",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 215612000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "瑪狃拉",
+        "stars": 3,
+        "style": "懶散睡",
+        "dpr": 179018000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "白花雪原",
+      "islandId": "snowdrop",
+      "type": "安然入睡",
+      "name": "巴布土撥",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 225644000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "巴布土撥",
+        "stars": 3,
+        "style": "放電睡",
+        "dpr": 179018000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "白花雪原",
+      "islandId": "snowdrop",
+      "type": "深深入眠",
+      "name": "九尾（阿羅拉的樣子）",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 215612000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "九尾（阿羅拉的樣子）",
+        "stars": 3,
+        "style": "尾巴裹裹睡",
+        "dpr": 172710000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "宝蓝湖畔",
+      "islandId": "lapis",
+      "type": "淺淺入夢",
+      "name": "蜥蜴王",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 195358000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "蜥蜴王",
+        "stars": 3,
+        "style": "培育小樹睡",
+        "dpr": 179018000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "宝蓝湖畔",
+      "islandId": "lapis",
+      "type": "安然入睡",
+      "name": "夢夢蝕",
+      "stars": 3,
+      "style": "夢之煙霧睡",
+      "dpr": 134710000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "夢夢蝕",
+        "stars": 3,
+        "style": "夢之煙霧睡",
+        "dpr": 134710000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "宝蓝湖畔",
+      "islandId": "lapis",
+      "type": "深深入眠",
+      "name": "火焰雞",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 195358000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "火焰雞",
+        "stars": 3,
+        "style": "火焰踢睡",
+        "dpr": 179018000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "黄金旧发电厂",
+      "islandId": "powerplant",
+      "type": "淺淺入夢",
+      "name": "鍬農炮蟲",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 243390000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "鍬農炮蟲",
+        "stars": 3,
+        "style": "肚子發電睡",
+        "dpr": 205884000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "黄金旧发电厂",
+      "islandId": "powerplant",
+      "type": "安然入睡",
+      "name": "巴布土撥",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 225644000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "巴布土撥",
+        "stars": 3,
+        "style": "放電睡",
+        "dpr": 179018000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "黄金旧发电厂",
+      "islandId": "powerplant",
+      "type": "深深入眠",
+      "name": "波士可多拉",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 215612000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "波士可多拉",
+        "stars": 3,
+        "style": "吃鐵睡",
+        "dpr": 179018000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "琥褐溪谷",
+      "islandId": "canyon",
+      "type": "淺淺入夢",
+      "name": "岩殿居蟹",
+      "stars": 3,
+      "style": "殼上睡",
+      "dpr": 195358000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "岩殿居蟹",
+        "stars": 3,
+        "style": "殼上睡",
+        "dpr": 195358000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "琥褐溪谷",
+      "islandId": "canyon",
+      "type": "安然入睡",
+      "name": "幸福蛋",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 205884000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "幸福蛋",
+        "stars": 3,
+        "style": "寶貝蛋睡",
+        "dpr": 172710000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "琥褐溪谷",
+      "islandId": "canyon",
+      "type": "深深入眠",
+      "name": "沙漠蜻蜓",
+      "stars": 3,
+      "style": "露肚子睡",
+      "dpr": 215612000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "沙漠蜻蜓",
+        "stars": 3,
+        "style": "露肚子睡",
+        "dpr": 215612000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "萌绿之岛 EX",
+      "islandId": "greenex",
+      "type": "淺淺入夢",
+      "name": "瑪狃拉",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 560652000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "瑪狃拉",
+        "stars": 3,
+        "style": "懶散睡",
+        "dpr": 465500000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "萌绿之岛 EX",
+      "islandId": "greenex",
+      "type": "安然入睡",
+      "name": "巴布土撥",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 570190000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "巴布土撥",
+        "stars": 3,
+        "style": "放電睡",
+        "dpr": 465500000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "萌绿之岛 EX",
+      "islandId": "greenex",
+      "type": "深深入眠",
+      "name": "波士可多拉",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 560652000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "波士可多拉",
+        "stars": 3,
+        "style": "吃鐵睡",
+        "dpr": 465500000,
+        "estimated": false
+      }
+    },
+    {
+      "island": "天青沙滩 EX",
+      "islandId": "cyanex",
+      "type": "淺淺入夢",
+      "name": "鍬農炮蟲",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 590203669,
+      "estimated": true,
+      "afterBelly": {
+        "name": "鍬農炮蟲",
+        "stars": 3,
+        "style": "肚子發電睡",
+        "dpr": 554173908,
+        "estimated": true
+      }
+    },
+    {
+      "island": "天青沙滩 EX",
+      "islandId": "cyanex",
+      "type": "安然入睡",
+      "name": "幸福蛋",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 554173908,
+      "estimated": true,
+      "afterBelly": {
+        "name": "幸福蛋",
+        "stars": 3,
+        "style": "寶貝蛋睡",
+        "dpr": 469094899,
+        "estimated": true
+      }
+    },
+    {
+      "island": "天青沙滩 EX",
+      "islandId": "cyanex",
+      "type": "深深入眠",
+      "name": "巨沼怪",
+      "stars": 4,
+      "style": "大肚上睡",
+      "dpr": 560652000,
+      "estimated": false,
+      "afterBelly": {
+        "name": "巨沼怪",
+        "stars": 3,
+        "style": "玩泥巴睡",
+        "dpr": 513760000,
+        "estimated": false
+      }
+    }
+  ]
+}

@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { CandyRow } from '../calc/candyPlan'
+import { migrateCandyStocks } from '../calc/candyPlan'
 import type { CatchGoal } from '../calc/catch'
-import { DEFAULT_BABY_EFFICIENCY, validateBabyEfficiency, type BabyEfficiencyOptions } from '../calc/babyEfficiency'
+import { DEFAULT_BABY_EFFICIENCY, normalizeBabyEfficiencyPokemonId, validateBabyEfficiency, type BabyEfficiencyOptions } from '../calc/babyEfficiency'
 import { DEFAULT_WHISTLE, normalizeWhistleOptions, type WhistleOptions } from '../calc/whistle'
 import { loadJson, saveJson } from '../storage'
 
@@ -54,6 +55,7 @@ export const usePlanStore = defineStore('plans', () => {
   async function hydrate() {
     const saved = await loadJson<Partial<PlanState>>('plans', empty)
     const babyEfficiency = { ...DEFAULT_BABY_EFFICIENCY, ...saved.babyEfficiency }
+    babyEfficiency.pokeId = normalizeBabyEfficiencyPokemonId(babyEfficiency.pokeId)
     plan.value = {
       ...empty,
       ...saved,
@@ -62,7 +64,7 @@ export const usePlanStore = defineStore('plans', () => {
       sleepdexExcluded: saved.sleepdexExcluded ?? [],
       catchGoals: saved.catchGoals ?? [],
       candyRows: saved.candyRows ?? [],
-      candyStocks: saved.candyStocks ?? {},
+      candyStocks: migrateCandyStocks(saved.candyStocks ?? {}),
       whistle: normalizeWhistleOptions(saved.whistle),
       babyEfficiency: validateBabyEfficiency(babyEfficiency) ? { ...DEFAULT_BABY_EFFICIENCY } : babyEfficiency,
     }

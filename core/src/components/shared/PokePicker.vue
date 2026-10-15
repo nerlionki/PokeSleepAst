@@ -7,7 +7,7 @@ import BerryIcon from './BerryIcon.vue'
 import PokeSprite from './PokeSprite.vue'
 
 const model = defineModel<number>({ required: true })
-const props = defineProps<{ allowedIds?: readonly number[] }>()
+const props = defineProps<{ allowedIds?: readonly number[], nameOverrides?: Record<number, string> }>()
 const allowed = computed(() => props.allowedIds ? new Set(props.allowedIds) : null)
 const open = shallowRef(false)
 const q = shallowRef('')
@@ -59,7 +59,7 @@ const filterOn = computed(() => Boolean(spec.value || type.value || sleep.value 
     <button class="poke-pick" type="button" @click="open = true">
       <PokeSprite :id="current.id" :name="current.name" />
       <div class="poke-pick-txt">
-        <strong>{{ current.name }}</strong>
+        <strong>{{ props.nameOverrides?.[current.id] ?? current.name }}</strong>
         <span class="muted berry-name">#{{ current.id }} · <BerryIcon :name="current.berry" small />{{ current.berryType }}</span>
       </div>
     </button>
@@ -94,7 +94,7 @@ const filterOn = computed(() => Boolean(spec.value || type.value || sleep.value 
           <div class="poke-grid">
             <button v-for="p in list" :key="p.id + p.name" type="button" class="poke-cell" :class="{ on: p.id === model }" @click="pick(p.id)">
               <PokeSprite :id="p.id" :name="p.name" />
-              <span>{{ p.name }}</span>
+              <span>{{ props.nameOverrides?.[p.id] ?? p.name }}</span>
               <em class="berry-name"><BerryIcon :name="p.berry" small />{{ p.berryType }}</em>
             </button>
           </div>

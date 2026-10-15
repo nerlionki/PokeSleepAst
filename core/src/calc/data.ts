@@ -56,6 +56,8 @@ export interface SleepStyleRow {
   stars: number
   styleName: string
   dpr: number
+  /** RAE SPO ID: distinct from the internal sleep-style ID and DPR value. */
+  spoId?: number
   dprSource?: string
   dprSettled?: boolean
   /** User-approved EX2 fallback or an explicitly unverified legacy estimate. */

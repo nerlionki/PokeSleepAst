@@ -4,8 +4,8 @@ import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useSettingsStore } from '../../stores/settings'
 import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { BABY_POKEMON_IDS, babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
-import { ISLANDS, POKEDEX, pokeById } from '../../calc/data'
+import { BABY_POKEMON_IDS, BABY_POKEMON_NAMES, babyEfficiencyPokemonName, babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
+import { ISLANDS, POKEDEX } from '../../calc/data'
 import { familyOf } from '../../calc/candyPlan'
 import { EVENT_BONUSES } from '../../calc/sleep'
 import { useBabyEfficiency } from '../../composables/useBabyEfficiency'
@@ -26,10 +26,10 @@ const sleepTypes = EFFICIENCY_SLEEP_TYPES
 watch(islands, () => {
   if (islands.value.length <= 1 || !islands.value.some((island) => island.id === options.value.island)) options.value.island = 'all'
 }, { immediate: true })
-const family = computed(() => POKEDEX.filter((poke) => familyOf(poke.id) === familyOf(options.value.pokeId)).map((poke) => poke.name).join('、'))
-const targetName = computed(() => pokeById(options.value.pokeId)?.name ?? '')
+const family = computed(() => [...new Set(POKEDEX.filter((poke) => familyOf(poke.id) === familyOf(options.value.pokeId)).map((poke) => options.value.pokeId === 710 ? poke.name.replace(/\(.*\)/, '') : poke.name))].join('、'))
+const targetName = computed(() => babyEfficiencyPokemonName(options.value.pokeId))
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions)
-const resultName = computed(() => result.value ? pokeById(result.value.options.pokeId)?.name : '')
+const resultName = computed(() => result.value ? babyEfficiencyPokemonName(result.value.options.pokeId) : '')
 const percent = computed(() => Math.min(100, Math.floor(progress.value.percent)))
 </script>
 
@@ -37,7 +37,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
   <div class="stack" :aria-busy="busy">
     <p class="muted">每天按 100 分，在所选岛屿和睡眠类型范围内寻找最佳方案。开启拆分睡眠后，两觉合计 100 分，卡比兽能量按相同值计算。</p>
     <article class="card stack">
-      <div class="field"><label>目标一阶段宝可梦</label><PokePicker v-model="options.pokeId" :allowed-ids="BABY_POKEMON_IDS" /></div>
+      <div class="field"><label>目标一阶段宝可梦</label><PokePicker v-model="options.pokeId" :allowed-ids="BABY_POKEMON_IDS" :name-overrides="BABY_POKEMON_NAMES" /></div>
       <div class="efficiency-fields">
         <div class="field"><label for="baby-island">岛屿</label><select id="baby-island" v-model="options.island" :disabled="busy"><option value="all">全部</option><template v-if="islands.length > 1"><option v-for="island in islands" :key="island.id" :value="island.id">{{ island.name }}</option></template></select></div>
         <div class="field"><label for="baby-sleep-type">睡眠类型</label><select id="baby-sleep-type" v-model="options.sleepType" :disabled="busy"><option value="all">全部 · 自动择优</option><option v-for="type in sleepTypes" :key="type" :value="type">{{ type }}</option></select></div>

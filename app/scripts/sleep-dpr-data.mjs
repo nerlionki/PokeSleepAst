@@ -23,7 +23,7 @@ export function applySleepDpr(rows, snapshot) {
     if (row.limited) return row
     const entry = entries.get(sleepDprKey(row))
     if (!entry) throw Error(`Missing DPR snapshot: ${sleepDprKey(row)}`)
-    return { ...row, dpr: entry.dpr, dprSource: entry.source,
+    return { ...row, spoId: entry.spoId, dpr: entry.dpr, dprSource: entry.source,
       dprSettled: entry.settled, dprEstimated: entry.estimated }
   })
 }

@@ -9,7 +9,7 @@ export interface SleepSimulationRequest {
   seed: number
   options: Pick<DrawOpts, 'researchedBefore' | 'researchLimit' | 'firstResearchExtras' | 'rank' | 'discovered' | 'undiscoveredBoost' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps' | 'researchExpBonus' | 'shardBonus' | 'focusIncense' | 'luckIncense'> & { incenseSession?: 0 | 1 }
 }
-export interface SleepSimulationCheckpoint { version: 2, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint }
+export interface SleepSimulationCheckpoint { version: 4, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint }
 export type SleepSimulationRows = ReturnType<typeof sleepExpect>
 export type SleepSimulationMessage = { type: 'progress', completed: number, total: number }
   | { type: 'checkpoint', checkpoint: SleepSimulationCheckpoint }
@@ -47,15 +47,15 @@ export function* sleepSimulationSteps(request: SleepSimulationRequest): Generato
   if (!validResearchOptions(request) || !Number.isInteger(request.iterations) || request.iterations < 1 || request.iterations > 100000
     || !request.powers.length || request.powers.length > 2 || request.powers.some((power) => !Number.isFinite(power) || power < 0)) throw new Error('模拟参数无效，请重新设置')
   const checkpoint = request.checkpoint
-  if (checkpoint && checkpoint.version !== 2) throw new Error('研究奖励规则已更新，请重新计算')
+  if (checkpoint && checkpoint.version !== 4) throw new Error('睡姿抽选规则已更新，请重新计算')
   const result = [...(checkpoint?.result ?? [])]
   for (let index = checkpoint?.powerIndex ?? 0; index < request.powers.length; index++) {
     const steps = sleepExpectSteps(request.island, request.sleepType, request.powers[index]!, request.iterations, 'normal',
       researchOptions(request, index), undefined, index === checkpoint?.powerIndex ? checkpoint.session : undefined)
     let next = steps.next()
-    while (!next.done) { yield { version: 2, powerIndex: index, result, session: next.value }; next = steps.next() }
+    while (!next.done) { yield { version: 4, powerIndex: index, result, session: next.value }; next = steps.next() }
     result.push(...next.value)
-    yield { version: 2, powerIndex: index + 1, result }
+    yield { version: 4, powerIndex: index + 1, result }
   }
   return result
 }

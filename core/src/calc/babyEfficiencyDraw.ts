@@ -5,10 +5,12 @@ export interface EfficiencyBucket extends EfficiencyReward {
   typed: boolean
   special: boolean
   dpr: number
+  spoId?: number
   belly?: boolean
   order?: number
   unlockRank?: number
   weight?: number
+  lastRollExcluded?: boolean
 }
 export interface EfficiencyDrawState {
   buckets: EfficiencyBucket[]
