@@ -29,6 +29,8 @@ test('all ordinary styles are covered and match the offline source snapshot', ()
   for (const row of rows.filter(r => !r.limited)) {
     const entry = source.get(sleepDprKey(row))
     assert.equal(row.dpr, entry.dpr)
+    assert.equal(row.spoId, entry.spoId)
+    assert.ok(Number.isSafeInteger(row.spoId) && row.spoId > 0)
     assert.equal(row.dprEstimated, entry.estimated)
     assert.ok(Number.isSafeInteger(row.dpr) && row.dpr > 0)
   }
@@ -44,6 +46,7 @@ test('extracting data again preserves corrected DPR and the original sleep ident
   corrected.forEach((row, index) => {
     assert.equal(row.id, rows[index].id)
     assert.equal(row.styleId, rows[index].styleId)
+    assert.equal(row.spoId, rows[index].spoId)
     assert.equal(row.dpr, row.limited ? 1 : rows[index].dpr)
   })
   assert.throws(() => applySleepDpr([{ island: 'cyanex', pokeId: -1, stars: 1 }], snapshot), /Missing DPR/)

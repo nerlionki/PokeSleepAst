@@ -1,7 +1,7 @@
 import { INGREDIENTS, POKEDEX, pokeById } from './data'
 import { recognize, type OcrSessions, type PixelImage } from './ocrPipeline'
-import { avatarBox, chooseSimilar, ingredientQuantityMarks, matchIngredientSlot, parseCard, planImports, readMainSkill, splitCards, type OcrWord } from './ocrBox'
-import { bestPortraitVariant, crop, diskCrop, ingredientIconCrop, matchIngredientSprite, pickClosest, portraitScores, similarScores, speciesScores, trimOpaque } from './ocrVision'
+import { avatarBox, chooseSimilar, ingredientQuantityMarks, ingredientRowMarks, matchIngredientSlot, parseCard, planImports, readCarry, readMainSkill, splitCards, type OcrWord, type SpeciesEvidence } from './ocrBox'
+import { bestPortraitVariant, crop, diskCrop, ingredientIconCrop, ingredientSpriteScores, matchIngredientSprite, portraitScores, speciesScores, trimOpaque } from './ocrVision'
 import { slotDrop } from './ingredients'
 import { isAllRounder } from './specialty'
 import type { BoxPokemon } from '../types'
@@ -51,8 +51,8 @@ async function portraitTemplates(): Promise<{ id: number, shiny: boolean, image:
   return portraitCache
 }
 
-async function readSlotIngredientIds(image: PixelImage, words: OcrWord[]): Promise<[number | null, number | null]> {
-  const marks = ingredientQuantityMarks(words)
+async function readSpeciesEvidence(image: PixelImage, words: OcrWord[]): Promise<SpeciesEvidence> {
+  const marks = ingredientRowMarks(words)
   const urls = INGREDIENTS.flatMap((item) => {
     const url = ingredientImageUrl(item.id)
     return url ? [{ id: item.id, url }] : []
@@ -61,16 +61,30 @@ async function readSlotIngredientIds(image: PixelImage, words: OcrWord[]): Promi
   const gap = present.length > 1
     ? Math.abs(present[1]!.word.x - present[0]!.word.x)
     : (present[0]?.word.height ?? 24) * 7
-  const lines: Array<number | null> = []
-  for (const mark of marks) {
-    if (!mark) {
+  const refs = []
+  for (const item of urls) {
+    const template = await cachedIngredient(item.url)
+    if (template) refs.push({ id: item.id, image: template })
+  }
+  const lines: Array<number[] | null> = []
+  for (const [index, mark] of marks.entries()) {
+    // 信息浮层可遮住第一格图标；缺少食材行标题时不把浮层头像当作食材。
+    if (!mark || (index === 0 && !words.some(word => word.text.trim() === '食材'))) {
       lines.push(null)
       continue
     }
     const shot = ingredientIconCrop(image, mark.word, gap)
-    lines.push(await bestIngredient(shot, urls))
+    const ranked = ingredientSpriteScores(shot, refs)
+    const top = ranked[0]
+    // 灰色未解锁图标常有相近轮廓。低分不作为证据；相差 15 分内的候选交给组合/数量核对。
+    lines.push(top && top.score >= 20 ? ranked.filter(row => top.score - row.score <= 15).map(row => row.id) : null)
   }
-  return [lines[0] ?? null, lines[1] ?? null]
+  return {
+    skill: readMainSkill(words), carry: readCarry(words),
+    ingredients: [null, null],
+    ingredientCandidates: [lines[0] ?? null, lines[1] ?? null, lines[2] ?? null],
+    quantities: marks.map(mark => mark?.quantity ?? null) as [number | null, number | null, number | null],
+  }
 }
 
 async function matchPortrait(image: PixelImage, words: OcrWord[]): Promise<{ id: number, shiny: boolean } | null> {
@@ -79,12 +93,12 @@ async function matchPortrait(image: PixelImage, words: OcrWord[]): Promise<{ id:
   const shot = diskCrop(crop(image, box.x, box.y, box.size, box.size))
   const variants = portraitScores(shot, await portraitTemplates())
   const scores = speciesScores(variants)
-  let id = pickClosest(scores)
-  if (!id) {
-    const close = similarScores(scores)
-    if (close.length < 2) return null
-    id = chooseSimilar(close, { skill: readMainSkill(words), ingredients: await readSlotIngredientIds(image, words) })
-  }
+  const best = scores[0]
+  if (!best || best.score > 76) return null
+  // 图片只提出合理候选，不能绕过主技能和食材校验；证据不能救回明显不相似的头像。
+  const candidates = scores.filter(row => row.score <= 76 && row.score - best.score < 18)
+  const evidence = await readSpeciesEvidence(image, words)
+  const id = chooseSimilar(candidates, evidence)
   if (!id) return null
   const variant = bestPortraitVariant(variants, id)
   return variant ? { id, shiny: variant.shiny } : null

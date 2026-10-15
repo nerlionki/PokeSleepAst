@@ -12,6 +12,7 @@ import {
   parseCard,
   planImports,
   readMainSkill,
+  readCarry,
   splitCards,
   type OcrWord,
 } from './ocrBox'
@@ -149,6 +150,28 @@ describe('screenshot card', () => {
     expect(box).not.toBeNull()
     expect(box!.y).toBeGreaterThan(120)
     expect(box!.x + box!.size).toBeLessThanOrEqual(235 + 8)
+  })
+
+  it('keeps an unreadable level as a position anchor without inventing its value', () => {
+    // 狂欢浪舞鸭截图：Lv.63 被读成 LV.633，页面标题也有错字。
+    const words = [
+      word('第忙能力', 83, 8, 124, 20),
+      word('sp4.130', 176, 152, 184, 20),
+      word('狂舞大葱醬鸭', 255, 202, 174, 18),
+      word('LV.633', 183, 204, 96, 16),
+      word('Lv.3', 718, 831, 67, 22),
+      word('LV.70', 468, 1159, 83, 14),
+      word('LV.80', 76, 1294, 85, 14),
+    ]
+    const box = avatarBox(words)!
+    expect(box.x).toBeGreaterThan(40)
+    expect(box.x + box.size).toBeLessThanOrEqual(184)
+    expect(box.y).toBeGreaterThan(100)
+    expect(box.y + box.size).toBeGreaterThan(225)
+    const parsed = parseCard(words, { portraitId: 914, slotLines: [null, null] })
+    expect(parsed?.name).toBe('狂舞大葱醬鸭')
+    expect(parsed?.ocrMissing).toContain('level')
+    expect(parsed?.skillLevel).toBe(3)
   })
 
   it('reads a level glued to a nickname and ignores the unlock badge on the right', () => {
@@ -295,11 +318,46 @@ describe('similar portraits', () => {
     expect(readMainSkill([word('流星群（樹果增）', 40, 80)])).toBe('流星群（樹果增）')
   })
 
-  it('uses a unique main skill even when noisy ingredient icons disagree', () => {
+  it('does not let a unique main skill override contradictory ingredients', () => {
     expect(chooseSimilar(
       [{ id: 132, score: 52.5 }, { id: 9006, score: 53.2 }, { id: 363, score: 56.2 }],
       { skill: '料理成功S', ingredients: [7, 3] },
-    )).toBe(9006)
+    )).toBeNull()
+  })
+
+  it('checks ingredients even when the image and main skill favour one species', () => {
+    expect(chooseSimilar([{ id: 81, score: 20 }, { id: 75, score: 40 }],
+      { skill: '料理强化S', ingredients: [3, 3] })).toBeNull()
+    expect(chooseSimilar([{ id: 81, score: 40 }, { id: 75, score: 39 }],
+      { skill: '料理强化S', firstIngredient: 10, ingredients: [6, 10], quantities: [1, 2, 4] })).toBe(81)
+    expect(chooseSimilar([{ id: 81, score: 20 }],
+      { skill: '料理强化S', firstIngredient: 10, ingredients: [6, 10], quantities: [1, 2, 9] })).toBeNull()
+  })
+
+  it('leaves visually ambiguous compatible species unrecognized', () => {
+    expect(chooseSimilar([{ id: 923, score: 29 }, { id: 922, score: 28 }],
+      { skill: '活力全體療癒S', ingredients: [8, 3] })).toBeNull()
+  })
+
+  it('uses carry only as auxiliary evidence without assuming absent bonuses are zero', () => {
+    const candidates = [{ id: 75, score: 38 }, { id: 81, score: 40 }]
+    expect(chooseSimilar(candidates, { skill: null, ingredients: [null, null], carry: 8 })).toBe(81)
+    expect(chooseSimilar(candidates, { skill: null, ingredients: [null, null], carry: 53 })).toBeNull()
+    expect(chooseSimilar([{ id: 81, score: 20 }],
+      { skill: '能量填充M', ingredients: [null, null], carry: 8 })).toBeNull()
+  })
+
+  it('reads only the value aligned with the carry label', () => {
+    expect(readCarry([word('持有上限', 30, 500), word('53個', 160, 500), word('8個', 160, 300)])).toBe(53)
+    expect(readCarry([word('持有上限', 30, 500), word('8個', 160, 300)])).toBeNull()
+    expect(readCarry([word('53個', 160, 500)])).toBeNull()
+    expect(readMainSkill([word('手支援S', 40, 800)])).toBe('帮手支援S')
+  })
+
+  it('recognizes Pawmi level-60 cacao as four, not three', () => {
+    expect(matchIngredientSlot(921, 2, 13, 4)).toBe(0)
+    expect(matchIngredientSlot(921, 2, 13, 3)).toBeNull()
+    expect(matchIngredientSlot(921, 1, 13, 2)).toBe(0)
   })
 
   it('reads the main skill and keeps the species whose ingredients fit', () => {

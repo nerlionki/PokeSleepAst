@@ -1,5 +1,6 @@
 import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix, type PokemonUps } from './sleepRules'
 import { selectSleepStyle } from './sleepSelection'
+import { isLastRollExcluded } from './sleepLastRoll'
 import { foldText } from './text'
 import snorlaxRanks from '../data/snorlax-ranks.json'
 import type { IslandId, SleepType } from '../types'
@@ -143,9 +144,9 @@ export const EVENT_OTHER_SHARE = 0.4
 /** 一场睡眠里最多一只。平日必须睡姿类型与所选类型一致。 */
 export const SPECIAL_POKEMON = new Set([243, 244, 245, 488, 380, 381, 150])
 
-type PreparedStyle = SleepStyleRow & { order: number, unlockRank: number }
+type PreparedStyle = SleepStyleRow & { order: number, unlockRank: number, lastRollExcluded: boolean }
 function prepareStyles(island: IslandId, pool: SleepStyleRow[]): PreparedStyle[] {
-  return pool.map(style => ({ ...style, order: sleepStyleInternalId(style), unlockRank: styleUnlockIndex(island, style) }))
+  return pool.map(style => ({ ...style, order: sleepStyleInternalId(style), unlockRank: styleUnlockIndex(island, style), lastRollExcluded: isLastRollExcluded(style) }))
 }
 
 export interface DrawOpts extends ResearchBonuses {

@@ -1,5 +1,6 @@
 import { newUid } from './uid'
 import growth from '../data/growth-meta.json'
+import legacyStockKeys from '../data/legacy-candy-stock-keys.json'
 import type { BoxPokemon } from '../types'
 import { natureByName, pokeById } from './data'
 import { candyExpAtLevel, shardsTo } from './xp'
@@ -43,6 +44,21 @@ const evolves = growth.evolve as Record<string, number[]>
 
 export function familyOf(pokeId: number): string {
   return families[String(pokeId)] ?? String(pokeId)
+}
+
+/** 旧版本缺少家族映射的库存键；用户确认同家族取最大值，迁移后移除旧键。
+ * 仅处理已知旧键，不能将全部库存键当作宝可梦 ID（它们通常是家族 ID）。
+ */
+export function migrateCandyStocks(stocks: Record<string, number>): Record<string, number> {
+  const next = { ...stocks }
+  for (const key of legacyStockKeys) {
+    if (!Object.hasOwn(next, key)) continue
+    const family = familyOf(Number(key))
+    if (family === key) continue
+    next[family] = Math.max(next[family] ?? 0, next[key]!)
+    delete next[key]
+  }
+  return next
 }
 
 export function evolutionLevels(pokeId: number): number[] {

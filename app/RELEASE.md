@@ -1,3 +1,18 @@
+# 1.0.5.1（2026-10-15）
+
+- App 与微信共用 OCR 修复：等级文字被多读一位时仍保留头像定位；按浅色背景合成头像模板的半透明阴影，修复狂欢浪舞鸭、小磁怪、帝王拿波截图识别错误。
+- 物种联合头像、主技能、三格食材及数量判断，截图中的持有上限作为辅助；证据不足时不导入。保持食材模板宽高比，避免灰色未解锁食材被拉伸后误判。
+- 两端共享资料中，布拨 60 级放松可可数量由 3 修正为 4；1 级和 30 级保持 1、2。依据用户确认，核对 Wiki 布拨条目的 A 食材列为 1／2／4：https://wikiwiki.jp/poke_sleep/パモ（2026-10-14）。RAE 页面 https://pks.raenonx.cc/zh/pokedex/921 本次未能读取数值，未将 Wiki 数值表述为官方公告。
+- 新增三张 OCR 回归图片；全量回归递归覆盖 `ocrTest`，逐张核对物种、食材、性格和已识别字段；仍缺失的字段保留待补全状态。
+- 已知 OCR 漏识别：狂欢浪舞鸭样本的等级及 70／80 级副技能、帝王拿波样本的 25／70 级副技能仍需手动补全，未将默认等级当作识别结果。
+- 睡姿模拟与宝宝效率统一应用用户确认的 RAE 完整末位排除清单，普通抽选池保留原有权重；相同 DPR 的末位候选优先较小 SPO ID，再比较解锁评级及内部睡姿 ID。补齐 2731 条普通地图记录的 SPO ID，并使旧规则检查点失效；来源、适用范围与既有估算数据边界见 `core/sleep-last-roll-2026-10-14.md`。
+- 宝宝效率合并南瓜精的四种体型统计遭遇收益，沿用家族糖果收益；旧选择自动迁移为统一入口。
+- 修复旧版糖果库存的家族键映射；同家族冲突按用户确认规则取最大值，迁移后移除旧键。
+- 梦幻技能发动率从共享物种基础值及完整精度倍率计算，避免提前四舍五入。
+- 提取共享 UI 控件和规划功能接口，App 与微信继续使用同一份核心算法与数据。
+
+发布附件为签名 Android APK、需要自行签名的 iOS IPA 与 Android 更新清单；微信构建包保留为 Actions artifact。未包含真机验证结论。
+
 # 1.0.5（2026-10-12）
 
 - 新增吹哨规划，从 Box 选择收益最高的合法队伍，按固定收益计算所需哨子数，食材单独展示。
@@ -76,7 +91,7 @@
 
 # Android 正式发布
 
-推送 `vMAJOR.MINOR.PATCH` 标签触发 `.github/workflows/android-release.yml`。工作流生成签名 APK 和 `update.json`，完成上传后才公开 GitHub Release。
+推送 `vMAJOR.MINOR.PATCH` 或 `vMAJOR.MINOR.PATCH.HOTFIX` 标签触发 `.github/workflows/android-release.yml`。工作流生成签名 APK 和 `update.json`，APK 与 IPA 及清单齐全后才公开 GitHub Release。
 
 GitHub Release 包含 APK、未签名 IPA 和 `update.json`，三份齐全后公开。微信编译包与 OCR 模型包保留在本地或 Actions artifacts，不追加到 Release。已经公开的 APK 与更新清单保持不变。微信编译命令与 OCR 体验说明见 `../wxapp/README.md`。
 
@@ -111,7 +126,7 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-标签是发布版本的来源，无需手动修改 Gradle 中的版本号。无标签的本地构建使用 `package.json` 版本；可以通过 `APP_VERSION` 覆盖。版本码为 `major * 1000000 + minor * 1000 + patch`；major 范围 0..2099，minor/patch 范围 0..999，不接受 0.0.0、前导零或预发布标签。按语义版本递增发布，不覆盖已经公开的版本。
+标签是发布版本的来源，无需手动修改 Gradle 中的版本号。无标签的本地构建使用 `package.json` 版本；可以通过 `APP_VERSION` 覆盖。当前构建号为 `(major * 1000000 + minor * 1000 + patch) * 100 + hotfix`，三段版本的 hotfix 为 0；major 范围 0..2099，minor/patch 范围 0..999，hotfix 范围 0..99，最终构建号不得超过 2100000000。不接受全零、前导零或预发布标签。iOS 展示前三段版本并用完整构建号区分热修复。按版本递增发布，不覆盖已经公开的版本。
 
 ```powershell
 npm run build:android:prod

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
-  MAX_EFFICIENCY_DROWSY_POWER, babyEfficiencySleepTypes, babyEfficiencySteps, BABY_POKEMON_IDS, DEFAULT_BABY_EFFICIENCY, EFFICIENCY_SLEEP_TYPES, efficiencyCurve, efficiencyDrawState,
+  MAX_EFFICIENCY_DROWSY_POWER, babyEfficiencySleepTypes, babyEfficiencySteps, babyEfficiencyTargetIds, babyEfficiencyPokemonName, normalizeBabyEfficiencyPokemonId, BABY_POKEMON_IDS, DEFAULT_BABY_EFFICIENCY, EFFICIENCY_SLEEP_TYPES, efficiencyCurve, efficiencyDrawState,
   efficiencyIslands, searchBabyEfficiency, strengthForPower, validateBabyEfficiency,
   type EfficiencyIsland, type EfficiencyStyle,
 } from './babyEfficiency'
 import { efficiencyRandom, simulateEfficiencyState, type EfficiencyReward } from './babyEfficiencyDraw'
 import { drowsyPower, rankFromStrength, sleepExpect, unlockedStyles } from './sleep'
 import { familyOf } from './candyPlan'
+import { SLEEP_STYLES } from './data'
 
 const zero = { catch: 0, candy: 0 }
 const fixture: EfficiencyIsland = {
@@ -20,6 +21,68 @@ const fixture: EfficiencyIsland = {
     ...Array.from({ length: 5 }, () => ({ sleepType: '淺淺入夢' as const, special: false, catch: 0, candy: 0, unlockStrength: 4, dpr: 0 })),
   ],
 }
+
+describe('merged Pumpkaboo baby target', () => {
+  it('offers one target and accepts older saved size choices', () => {
+    const ids = [710, 71002, 71003, 71004]
+    expect(BABY_POKEMON_IDS.filter(id => ids.includes(id))).toEqual([710])
+    for (const id of ids) {
+      expect(normalizeBabyEfficiencyPokemonId(id)).toBe(710)
+      expect(babyEfficiencyTargetIds(id)).toEqual(ids)
+      expect(babyEfficiencyPokemonName(id)).toBe('南瓜精')
+      expect(validateBabyEfficiency({ ...DEFAULT_BABY_EFFICIENCY, pokeId: id })).toBeNull()
+    }
+    expect(babyEfficiencyTargetIds(1)).toEqual([1])
+  })
+
+  it('counts every size without collapsing its research entries or costs', () => {
+    const islands = efficiencyIslands(710)
+    const targets = new Set([710, 71002, 71003, 71004])
+    const encountered = new Set<number>()
+    for (const island of islands) {
+      const raw = SLEEP_STYLES.filter(style => style.island === island.id && !style.limited)
+      expect(island.styles).toHaveLength(raw.length)
+      island.styles.forEach((style, index) => {
+        expect(style.pokeId).toBe(raw[index]!.pokeId)
+        expect(style.dpr).toBe(raw[index]!.dpr)
+        expect(style.catch).toBe(Number(targets.has(style.pokeId!)))
+        if (targets.has(style.pokeId!)) encountered.add(style.pokeId!)
+        if ([711, 71102, 71103, 71104].includes(style.pokeId!)) {
+          expect(style.catch).toBe(0)
+          expect(style.candy).toBeGreaterThan(0)
+        }
+      })
+    }
+    // 当前资料已经将所有大小共用的睡姿归入 710，不能人为复制为四倍。
+    expect([...encountered]).toEqual([710])
+    expect(efficiencyIslands(71004)).toEqual(islands)
+  })
+
+  it('includes separate size entries if the source provides them without changing their costs', () => {
+    const base = SLEEP_STYLES.find(style => style.pokeId === 710 && style.island === 'greengrass')!
+    const extra = [71002, 71003, 71004].map((pokeId, index) => ({ ...base, id: 999900 + index, pokeId, dpr: base.dpr + (index + 1) * 100 }))
+    const before = SLEEP_STYLES.length
+    SLEEP_STYLES.push(...extra)
+    try {
+      const island = efficiencyIslands(710).find(island => island.id === 'greengrass')!
+      for (const entry of extra) {
+        expect(island.styles.find(style => style.pokeId === entry.pokeId)).toMatchObject({ catch: 1, dpr: entry.dpr })
+      }
+    } finally { SLEEP_STYLES.splice(before) }
+  })
+
+  it('normalizes result identity and restarts pre-merge checkpoints', () => {
+    const options = { ...DEFAULT_BABY_EFFICIENCY, pokeId: 71004, iterations: 100, precision: 'low' as const, splitSleep: false }
+    const initial = babyEfficiencySteps(options, () => {}, [fixture]).next().value!
+    expect(initial.options.pokeId).toBe(710)
+    const old = JSON.parse(JSON.stringify(initial))
+    delete old.targetPokeIds
+    old.best.catch.value = 999999999
+    const resumed = babyEfficiencySteps(options, () => {}, [fixture], old)
+    let next = resumed.next(); while (!next.done) next = resumed.next()
+    expect(next.value).toEqual(searchBabyEfficiency(options, () => {}, [fixture]))
+  })
+})
 
 describe('baby efficiency draw distribution', () => {
   it('counts all target faces and family rewards using ordinary weights', () => {

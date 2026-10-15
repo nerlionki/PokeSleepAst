@@ -34,8 +34,15 @@ describe('Mew editable skill', () => {
     expect(normalizeMewSkill(999)).toBe(12)
     const mew = data.pokeById(151)!
     expect(resolveMemberSkill(mew, { mewSkill: 7 }).rate).toBe(.064)
-    expect(resolveMemberSkill(mew, { mewSkill: 8 }).rate).toBe(.0337)
+    expect(resolveMemberSkill(mew, { mewSkill: 8 }).rate).toBeCloseTo(.04 * (16 / 19), 15)
     expect(resolveMemberSkill(data.pokeById(25)!, { mewSkill: 8 }).rate).toBe(data.pokeById(25)!.skillRate)
+  })
+  it('keeps full multiplier precision and reads the species base rate', () => {
+    const mew = data.pokeById(151)!
+    expect(resolveMemberSkill(mew, { mewSkill: 4 }).rate).toBeCloseTo(.04391080617495712, 15)
+    expect(resolveMemberSkill(mew, { mewSkill: 20 }).rate).toBeCloseTo(.028444444444444446, 15)
+    expect(resolveMemberSkill({ ...mew, skillRate: .05 }, { mewSkill: 8 }).rate).toBeCloseTo(.05 * (16 / 19), 15)
+    expect(MEW_SKILLS.find(s => s.id === 8)!.rate).toBeCloseTo(resolveMemberSkill(mew, { mewSkill: 8 }).rate, 15)
   })
   it('native import preserves selection and omni level', () => {
     const a = actor(8).input

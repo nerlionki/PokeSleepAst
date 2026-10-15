@@ -9,6 +9,20 @@ vi.mock('../storage', () => ({ loadJson: vi.fn(), saveJson: vi.fn() }))
 beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks() })
 
 describe('baby planner persisted settings', () => {
+  it('migrates a saved Pumpkaboo size while retaining panel settings', async () => {
+    vi.mocked(loadJson).mockResolvedValue({ babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY, pokeId: 71003, eventMult: 1.5, splitSleep: false } })
+    const store = usePlanStore()
+    await store.hydrate()
+    expect(store.plan.babyEfficiency).toEqual({ ...DEFAULT_BABY_EFFICIENCY, pokeId: 710, eventMult: 1.5, splitSleep: false })
+  })
+  it('hydrates and persists legacy candy stocks using each family maximum', async () => {
+    vi.mocked(loadJson).mockResolvedValue({ candyStocks: { '1': 20, '9001': 50, '9007': 30, '133': 42, '7006': 15 } })
+    const store = usePlanStore()
+    await store.hydrate()
+    await nextTick()
+    expect(store.plan.candyStocks).toEqual({ '1': 50, '133': 42 })
+    expect(saveJson).toHaveBeenLastCalledWith('plans', expect.objectContaining({ candyStocks: { '1': 50, '133': 42 } }))
+  })
   it('migrates older saved plans and keeps their existing planning values', async () => {
     vi.mocked(loadJson).mockResolvedValue({ snorlaxStrength: 123456, catchGoals: [{ id: 'old', pokeId: 133, purpose: 'candy', stars: [] }] })
     const store = usePlanStore()
