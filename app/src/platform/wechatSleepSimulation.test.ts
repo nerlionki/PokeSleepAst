@@ -1,7 +1,7 @@
 import { effectScope } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useSleepSimulation } from '../../../wxapp/src/platform/sleepSimulation'
-import { requireWorkerSupport, versionAtLeast } from '../../../wxapp/src/platform/compatibility'
+import { MIN_MINIPROGRAM_VERSION, requireWorkerSupport, versionAtLeast } from '../../../wxapp/src/platform/compatibility'
 import type { SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
 const request: SleepSimulationRequest = { island: 'greengrass', sleepType: '淺淺入夢', powers: [1e7], iterations: 4000, seed: 1, options: {} }
 afterEach(() => vi.unstubAllGlobals())
@@ -43,7 +43,7 @@ describe('WeChat background sleep simulation', () => {
     expect(state.error.value).toContain('2.27.3')
     expect(download).not.toHaveBeenCalled()
     vi.stubGlobal('wx', { getAppBaseInfo: () => ({ SDKVersion: '3.14.3' }), getAccountInfoSync: () => ({ miniProgram: { version: '1.0.3', envVersion: 'release' } }) })
-    expect(requireWorkerSupport).toThrow('1.0.5')
+    expect(requireWorkerSupport).toThrow(MIN_MINIPROGRAM_VERSION)
     scope.stop()
   })
   it('compares numeric components and permits development with no release version', () => {
