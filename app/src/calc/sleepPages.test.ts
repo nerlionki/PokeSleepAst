@@ -11,6 +11,7 @@ import * as rules from '../../../core/src/calc/sleepRules'
 import * as sleep from './sleep'
 import * as data from './data'
 import * as baby from './babyEfficiency'
+import * as completion from '../../../core/src/calc/completionEfficiency'
 import * as candyPlan from './candyPlan'
 import * as sleepCandy from './sleepCandy'
 import * as sleepRewards from '../../../core/src/calc/sleepRewards'
@@ -38,6 +39,8 @@ function compilePage(name: string) {
   const script = compileScript(descriptor, { id: name, inlineTemplate: true })
   const code = transpileModule(script.content, { compilerOptions: { module: ModuleKind.CommonJS } }).outputText
   const modules: Record<string, unknown> = {
+    'vue-router': { useRouter: () => ({ push: vi.fn() }) },
+    '../../calc/completionEfficiency': completion,
     vue: Vue, pinia: Pinia, '../../calc/sleepRules': rules, '../../calc/sleep': sleep, '../../calc/data': data,
     '../../calc/babyEfficiency': baby, '../../calc/candyPlan': candyPlan, '../../calc/sleepCandy': sleepCandy,
     '../../calc/sleepRewards': sleepRewards, '../../calc/train': train,
@@ -59,8 +62,26 @@ function compilePage(name: string) {
   return exports.default!
 }
 const SleepPane = compilePage('SleepPane'), BabyEfficiencyPane = compilePage('BabyEfficiencyPane'), TrainPane = compilePage('TrainPane')
+const CompletionEfficiencyPane = compilePage('CompletionEfficiencyPane')
 const renderPage = (component: Vue.Component) => { const app = createSSRApp(component); app.directive('back', {}); return renderToString(app) }
 beforeEach(() => { setActivePinia(createPinia()); captured.options = null })
+describe('completion target selection', () => {
+  it('shows the dex empty state when all styles are collected', async () => {
+    const html = await renderPage(CompletionEfficiencyPane)
+    expect(html).toContain('暂无可补齐的普通睡姿')
+    expect(html).toContain('前往睡姿图鉴')
+    expect(html).not.toContain('计算补齐效率')
+  })
+  it('selects an evolved missing face and uses independent baby defaults', async () => {
+    const plan = usePlanStore().plan
+    plan.sleepdexExcluded = ['160-4']
+    plan.babyEfficiency.eventMult = 2
+    const html = await renderPage(CompletionEfficiencyPane)
+    expect(html).toContain('计算补齐效率')
+    expect(captured.options!.value).toMatchObject({ pokeId: 160, completionTarget: '160-4', eventMult: 1, iterations: 4000, precision: 'medium' })
+    expect(html).not.toContain('优先遇到未发现睡姿')
+  })
+})
 describe('activity switches on calculation pages', () => {
   it('renders training and the functional research incense controls without audit notes', async () => {
     expect(await renderPage(TrainPane)).toContain('经验性格')

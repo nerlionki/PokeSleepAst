@@ -43,9 +43,9 @@ export function efficiencyRandom(seed: number): () => number {
   }
 }
 /** Same DPR selection as sleepDraw, grouping only equivalent rewards and costs. */
-export interface EfficiencySimulation extends EfficiencyReward { slotCandy: number[], slotFamily: number[] }
+export interface EfficiencySimulation extends EfficiencyReward { slotCandy: number[], slotFamily: number[], hitRuns: number }
 export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: number, rng = efficiencyRandom(1)): EfficiencySimulation {
-  const result: EfficiencySimulation = { catch: 0, candy: 0, slotCandy: Array(state.encounters).fill(0), slotFamily: Array(state.encounters).fill(0) }
+  const result: EfficiencySimulation = { catch: 0, candy: 0, slotCandy: Array(state.encounters).fill(0), slotFamily: Array(state.encounters).fill(0), hitRuns: 0 }
   if (state.buckets.every((bucket) => !bucket.catch && !bucket.candy)
     && !state.typedFallback.catch && !state.typedFallback.candy
     && !state.openFallback.catch && !state.openFallback.candy) return result
@@ -59,6 +59,7 @@ export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: 
   }
   for (let run = 0; run < iterations; run++) {
     let remaining = state.power
+    let hit = false
     let special = false, belly = false
     for (let slot = 0; slot < state.encounters; slot++) {
       const anyType = slot < state.otherSlots
@@ -66,6 +67,7 @@ export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: 
       const item: EfficiencyBucket | undefined = select(remaining, slot === state.encounters - 1, rng)
       const reward = item ?? (anyType ? state.openFallback : state.typedFallback)
       result.catch += reward.catch
+      hit ||= reward.catch > 0
       result.candy += reward.candy
       result.slotCandy[slot]! += reward.candy
       result.slotFamily[slot]! += Number(reward.candy > 0)
@@ -75,6 +77,7 @@ export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: 
         belly ||= !!item.belly
       }
     }
+    result.hitRuns += Number(hit)
   }
   return result
 }

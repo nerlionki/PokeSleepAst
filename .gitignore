@@ -6,6 +6,7 @@ docs/
 *.md
 !/AGENTS.md
 !/core/src/data/subskill-draw.md
+!/core/src/data/completion-efficiency.md
 !/app/RELEASE.md
 dist
 ios

@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import type { CandyRow } from '../calc/candyPlan'
 import { migrateCandyStocks } from '../calc/candyPlan'
 import type { CatchGoal } from '../calc/catch'
-import { DEFAULT_BABY_EFFICIENCY, normalizeBabyEfficiencyPokemonId, validateBabyEfficiency, type BabyEfficiencyOptions } from '../calc/babyEfficiency'
+import { DEFAULT_BABY_EFFICIENCY, DEFAULT_COMPLETION_EFFICIENCY, normalizeBabyEfficiencyPokemonId, validateBabyEfficiency, type BabyEfficiencyOptions } from '../calc/babyEfficiency'
 import { DEFAULT_WHISTLE, normalizeWhistleOptions, type WhistleOptions } from '../calc/whistle'
 import { loadJson, saveJson } from '../storage'
 
@@ -25,6 +25,7 @@ interface PlanState {
   candyRows: CandyRow[]
   candyStocks: Record<string, number>
   babyEfficiency: BabyEfficiencyOptions
+  completionEfficiency: BabyEfficiencyOptions
   whistle: WhistleOptions
 }
 
@@ -45,17 +46,19 @@ const empty: PlanState = {
   candyRows: [],
   candyStocks: {},
   babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY },
+  completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY },
   whistle: { ...DEFAULT_WHISTLE },
 }
 
 export const usePlanStore = defineStore('plans', () => {
-  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY }, whistle: { ...DEFAULT_WHISTLE } })
+  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY }, completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY }, whistle: { ...DEFAULT_WHISTLE } })
   const ready = ref(false)
 
   async function hydrate() {
     const saved = await loadJson<Partial<PlanState>>('plans', empty)
     const babyEfficiency = { ...DEFAULT_BABY_EFFICIENCY, ...saved.babyEfficiency }
     babyEfficiency.pokeId = normalizeBabyEfficiencyPokemonId(babyEfficiency.pokeId)
+    const completionEfficiency = { ...DEFAULT_COMPLETION_EFFICIENCY, ...saved.completionEfficiency }
     plan.value = {
       ...empty,
       ...saved,
@@ -67,6 +70,7 @@ export const usePlanStore = defineStore('plans', () => {
       candyStocks: migrateCandyStocks(saved.candyStocks ?? {}),
       whistle: normalizeWhistleOptions(saved.whistle),
       babyEfficiency: validateBabyEfficiency(babyEfficiency) ? { ...DEFAULT_BABY_EFFICIENCY } : babyEfficiency,
+      completionEfficiency: validateBabyEfficiency(completionEfficiency) ? { ...DEFAULT_COMPLETION_EFFICIENCY } : completionEfficiency,
     }
     ready.value = true
   }

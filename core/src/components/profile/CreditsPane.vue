@@ -1,6 +1,11 @@
 <script setup lang="ts">
 const SOURCES = [
   {
+    name: '金属佬',
+    note: '感谢金属佬对宝宝效率 tab 和各个岛屿保底睡姿的校对。',
+    links: [],
+  },
+  {
     name: 'RaenonX',
     note: '资料与研究来源：RaenonX Pokémon Sleep 攻略及其研究团队。引用图鉴、树果与食材能量、食谱、主副技能、十项全能、性格、经验、活力、睡姿与地图资料，以及 DPR 和睡姿抽选规则；道具分类、进化道具获取途径与活动资料亦参考该站。食材率与技能率原始研究来自 RP Model。',
     links: [
