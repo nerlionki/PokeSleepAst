@@ -35,3 +35,16 @@ app/release/
 /.impeccable/
 
 !/core/INTEGRATION.md
+
+# Local-only documentation and test scripts
+docs/
+**/docs/
+抽选逻辑前后差异以及示例.md
+*.test.*
+*.spec.*
+**/test/
+**/tests/
+**/__tests__/
+**/androidTest/
+app/scripts/test-*.mjs
+wxapp/scripts/test-*.mjs
