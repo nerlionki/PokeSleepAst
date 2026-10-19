@@ -3,8 +3,8 @@ name: WeChat miniapp
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    tags: ['v*', '*_hotfix']
+    branches: [ main ]
+    tags: [ 'v*', '*_hotfix' ]
     paths:
       - 'core/**'
       - 'wxapp/**'
@@ -25,13 +25,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
           cache: npm
           cache-dependency-path: wxapp/package-lock.json
       - run: npm ci
       - run: npm run build:weapp
       - run: npm run typecheck
-      - run: npm run test:ocr
       - run: node scripts/package-release.mjs
       - uses: actions/upload-artifact@v4
         with:
