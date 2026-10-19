@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_BABY_EFFICIENCY } from '../calc/babyEfficiency'
+import { DEFAULT_BABY_EFFICIENCY, DEFAULT_COMPLETION_EFFICIENCY } from '../calc/babyEfficiency'
 import { loadJson, saveJson } from '../storage'
 import { usePlanStore } from './plans'
 
@@ -9,6 +9,19 @@ vi.mock('../storage', () => ({ loadJson: vi.fn(), saveJson: vi.fn() }))
 beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks() })
 
 describe('baby planner persisted settings', () => {
+  it('migrates old plans and persists completion settings independently', async () => {
+    vi.mocked(loadJson).mockResolvedValue({})
+    const store = usePlanStore()
+    await store.hydrate()
+    expect(store.plan.completionEfficiency).toEqual(DEFAULT_COMPLETION_EFFICIENCY)
+    store.plan.completionEfficiency = { ...DEFAULT_COMPLETION_EFFICIENCY, pokeId: 160, completionTarget: '160-4', eventMult: 2 }
+    await nextTick()
+    expect(store.plan.babyEfficiency).toEqual(DEFAULT_BABY_EFFICIENCY)
+    expect(saveJson).toHaveBeenLastCalledWith('plans', expect.objectContaining({ completionEfficiency: expect.objectContaining({ completionTarget: '160-4', eventMult: 2 }) }))
+    vi.mocked(loadJson).mockResolvedValue({ completionEfficiency: store.plan.completionEfficiency })
+    await store.hydrate()
+    expect(store.plan.completionEfficiency.completionTarget).toBe('160-4')
+  })
   it('migrates a saved Pumpkaboo size while retaining panel settings', async () => {
     vi.mocked(loadJson).mockResolvedValue({ babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY, pokeId: 71003, eventMult: 1.5, splitSleep: false } })
     const store = usePlanStore()

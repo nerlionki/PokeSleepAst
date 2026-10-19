@@ -2,9 +2,9 @@ import { requireWorkerSupport } from './compatibility'
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { validateBabyEfficiency, type BabyEfficiencyCheckpoint, type BabyEfficiencyOptions, type BabyEfficiencyResult, type EfficiencyProgress } from '../../../core/src/calc/babyEfficiency'
 import type { BabyEfficiencyMessage } from '../../../core/src/calc/babyEfficiencyMessages'
-const STORAGE_KEY = 'baby-efficiency-checkpoint-v1'
 interface SavedTask { options: BabyEfficiencyOptions, checkpoint?: BabyEfficiencyCheckpoint, progress: EfficiencyProgress }
 export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
+  const STORAGE_KEY = options.value.completionTarget != null ? 'completion-efficiency-checkpoint-v1' : 'baby-efficiency-checkpoint-v1'
   const busy = shallowRef(false), error = shallowRef(''), notice = shallowRef('')
   const result = shallowRef<BabyEfficiencyResult | null>(null)
   const progress = shallowRef<EfficiencyProgress>({ percent: 0, island: '', evaluatedStates: 0 })
@@ -69,7 +69,8 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
   wx.onAppHide?.(hide); wx.onAppShow?.(show)
   try {
     const saved = wx.getStorageSync?.(STORAGE_KEY) as SavedTask | undefined
-    if (saved?.options && !validateBabyEfficiency(saved.options)) {
+    if (saved?.options && !validateBabyEfficiency(saved.options)
+      && (options.value.completionTarget == null || saved.options.completionTarget === options.value.completionTarget)) {
       task = saved; progress.value = saved.progress ?? { percent: 0, island: '', evaluatedStates: 0 }; notice.value = '正在恢复上次未完成的计算'; void launch()
     }
   } catch { /* A corrupt or unavailable local record must not block new calculations. */ }
