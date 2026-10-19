@@ -1,0 +1,68 @@
+{
+  "target": {
+    "name": "大力鱷",
+    "stars": 4,
+    "styleName": "大肚上睡"
+  },
+  "options": {
+    "pokeId": 160,
+    "island": "all",
+    "sleepType": "all",
+    "splitSleep": true,
+    "eventMult": 1,
+    "eventMix": false,
+    "iterations": 4000,
+    "precision": "medium",
+    "completionTarget": "160-4"
+  },
+  "catch": {
+    "value": 0.0874984375,
+    "intervals": [
+      {
+        "min": 3679021,
+        "max": 3679021,
+        "islandId": "cyan",
+        "island": "天青沙滩",
+        "sleeps": [
+          {
+            "score": 49,
+            "sleepTypes": [
+              "深深入眠"
+            ]
+          },
+          {
+            "score": 51,
+            "sleepTypes": [
+              "深深入眠"
+            ]
+          }
+        ]
+      },
+      {
+        "min": 3679021,
+        "max": 3679021,
+        "islandId": "cyan",
+        "island": "天青沙滩",
+        "sleeps": [
+          {
+            "score": 51,
+            "sleepTypes": [
+              "深深入眠"
+            ]
+          },
+          {
+            "score": 49,
+            "sleepTypes": [
+              "深深入眠"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "candy": {
+    "value": 0,
+    "intervals": []
+  },
+  "evaluatedStates": 74788
+}
