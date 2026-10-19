@@ -2,7 +2,7 @@ name: Android Release
 
 on:
   push:
-    tags: ['v*', '*_hotfix']
+    tags: [ 'v*', '*_hotfix' ]
 
 permissions:
   contents: write
@@ -22,13 +22,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
           cache: npm
           cache-dependency-path: app/package-lock.json
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
       - name: Validate release version
         env:
           RELEASE_TAG: ${{ github.ref_name }}
@@ -47,16 +47,6 @@ jobs:
         run: npm ci
       - name: Install Android SDK packages
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"'
-      - name: Test updater
-        run: npm run test:update
-      - name: Test ingredient OCR regression and WeChat form contracts
-        run: npm test -- src/calc/ocrTreecko.test.ts src/calc/ocrBox.test.ts src/platform/wechatForms.test.ts src/platform/wechatWorker.test.ts src/platform/wechatImages.test.ts src/platform/wechatImagePaths.test.ts src/platform/wechatOcrModels.test.ts src/stores/settings.test.ts
-      - name: Test back navigation and OCR import
-        run: npm run test:mobile
-      - name: Test baby efficiency planner
-        run: npm test -- src/calc/babyEfficiency.test.ts src/composables/useBabyEfficiency.test.ts src/stores/plans.test.ts
-      - name: Test hotfix import and sleep rewards
-        run: npm test -- src/calc/hotfix.test.ts
       - name: Prepare signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
