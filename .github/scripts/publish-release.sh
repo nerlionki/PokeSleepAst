@@ -10,13 +10,13 @@ repo="${REPOSITORY:?}"
 if ! gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
   # Reviewed release notes travel with the annotated tag, not a tracked Markdown file.
   notes_file="$(mktemp)"
-  notes_args=(--generate-notes)
-  if test "$(git cat-file -t "refs/tags/$tag")" = tag; then
-    git for-each-ref --format='%(contents)' "refs/tags/$tag" > "$notes_file"
-    if test -s "$notes_file"; then notes_args=(--notes-file "$notes_file"); fi
-  fi
+  # checkout with fetch-depth=1 may create a lightweight local tag at the commit.
+  git fetch --no-tags --force origin "refs/tags/$tag:refs/tags/$tag"
+  test "$(git cat-file -t "refs/tags/$tag")" = tag || { echo 'Reviewed notes require an annotated release tag'; exit 1; }
+  git for-each-ref --format='%(contents)' "refs/tags/$tag" > "$notes_file"
+  test -s "$notes_file" || { echo 'Reviewed release notes are empty'; exit 1; }
   # Both platform workflows can arrive here together; accept the other's draft.
-  gh release create "$tag" --repo "$repo" --verify-tag --draft "${notes_args[@]}" \
+  gh release create "$tag" --repo "$repo" --verify-tag --draft --notes-file "$notes_file" \
     --title "$tag" || gh release view "$tag" --repo "$repo" >/dev/null
   rm -f "$notes_file"
 fi
