@@ -1,7 +1,6 @@
 ocrTest/
 docs/
 *.md
-!/app/RELEASE.md
 dist
 ios
 android
@@ -35,3 +34,12 @@ docs/
 **/androidTest/
 app/scripts/test-*.mjs
 wxapp/scripts/test-*.mjs
+
+# All Markdown except AGENTS.md remains local.
+*.[mM][dD]
+!AGENTS.md
+*.test.*
+*.spec.*
+*.test-run.*
+
+/.local-maintenance/
