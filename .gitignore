@@ -1,7 +1,6 @@
 ocrTest/
 docs/
 *.md
-!/app/RELEASE.md
 dist
 ios
 android
@@ -23,7 +22,6 @@ app/release/
 .env.test.local
 .env.production.local
 
-!/抽选逻辑前后差异以及示例.md
 
 # Local-only documentation and test scripts
 docs/
@@ -37,3 +35,12 @@ docs/
 **/androidTest/
 app/scripts/test-*.mjs
 wxapp/scripts/test-*.mjs
+
+# All Markdown except AGENTS.md remains local.
+*.[mM][dD]
+!AGENTS.md
+*.test.*
+*.spec.*
+*.test-run.*
+
+/.local-maintenance/
