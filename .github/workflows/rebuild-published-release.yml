@@ -1,0 +1,45 @@
+name: Rebuild published release
+
+on:
+  push:
+    tags: ['v1.0.7']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published annotated tag to rebuild
+        required: true
+        default: v1.0.7
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: rebuild-published-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  replace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Wait for verified builds and back up the current release
+        run: node .github/scripts/rebuild-published-release.mjs prepare
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-before-${{ env.RELEASE_TAG }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-refresh/backup
+          if-no-files-found: error
+          retention-days: 30
+      - name: Replace the release only after every build passes
+        run: node .github/scripts/rebuild-published-release.mjs publish
