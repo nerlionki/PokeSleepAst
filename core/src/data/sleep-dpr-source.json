@@ -30046,6 +30046,265 @@
       "estimated": true,
       "sourceMapId": 10001,
       "source": "RAE EX1 参考值 ×1.0351（用户指定估算）"
+    },
+    {
+      "key": "greengrass:200:1:",
+      "internalId": 948,
+      "spoId": 21,
+      "dpr": 6004000,
+      "spo": 158,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 1,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "greengrass:200:2:",
+      "internalId": 949,
+      "spoId": 43,
+      "dpr": 30476000,
+      "spo": 802,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 1,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "snowdrop:200:1:",
+      "internalId": 948,
+      "spoId": 21,
+      "dpr": 6004000,
+      "spo": 158,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 4,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "snowdrop:200:2:",
+      "internalId": 949,
+      "spoId": 43,
+      "dpr": 30476000,
+      "spo": 802,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 4,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "snowdrop:200:3:",
+      "internalId": 950,
+      "spoId": 57,
+      "dpr": 65702000,
+      "spo": 1729,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 4,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "powerplant:200:1:",
+      "internalId": 948,
+      "spoId": 21,
+      "dpr": 6004000,
+      "spo": 158,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 6,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "powerplant:200:2:",
+      "internalId": 949,
+      "spoId": 43,
+      "dpr": 30476000,
+      "spo": 802,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 6,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "powerplant:200:3:",
+      "internalId": 950,
+      "spoId": 57,
+      "dpr": 65702000,
+      "spo": 1729,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 6,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "greenex:200:1:",
+      "internalId": 948,
+      "spoId": 21,
+      "dpr": 37810000,
+      "spo": 995,
+      "settled": false,
+      "estimated": true,
+      "sourceMapId": 10001,
+      "source": "RAE 萌绿EX当前参考值（用户授权预估，2026-10-26）"
+    },
+    {
+      "key": "greenex:200:2:",
+      "internalId": 949,
+      "spoId": 43,
+      "dpr": 106096000,
+      "spo": 2792,
+      "settled": false,
+      "estimated": true,
+      "sourceMapId": 10001,
+      "source": "RAE 萌绿EX当前参考值（用户授权预估，2026-10-26）"
+    },
+    {
+      "key": "greenex:200:3:",
+      "internalId": 950,
+      "spoId": 57,
+      "dpr": 194522000,
+      "spo": 5119,
+      "settled": false,
+      "estimated": true,
+      "sourceMapId": 10001,
+      "source": "RAE 萌绿EX当前参考值（用户授权预估，2026-10-26）"
+    },
+    {
+      "key": "greengrass:429:1:",
+      "internalId": 951,
+      "spoId": 45,
+      "dpr": 33478000,
+      "spo": 881,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 1,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "greengrass:429:2:",
+      "internalId": 952,
+      "spoId": 62,
+      "dpr": 85614000,
+      "spo": 2253,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 1,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "snowdrop:429:1:",
+      "internalId": 951,
+      "spoId": 45,
+      "dpr": 33478000,
+      "spo": 881,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 4,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "snowdrop:429:2:",
+      "internalId": 952,
+      "spoId": 62,
+      "dpr": 85614000,
+      "spo": 2253,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 4,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "snowdrop:429:3:",
+      "internalId": 953,
+      "spoId": 80,
+      "dpr": 205884000,
+      "spo": 5418,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 4,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "powerplant:429:1:",
+      "internalId": 951,
+      "spoId": 45,
+      "dpr": 33478000,
+      "spo": 881,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 6,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "powerplant:429:2:",
+      "internalId": 952,
+      "spoId": 62,
+      "dpr": 85614000,
+      "spo": 2253,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 6,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "powerplant:429:3:",
+      "internalId": 953,
+      "spoId": 80,
+      "dpr": 205884000,
+      "spo": 5418,
+      "settled": true,
+      "estimated": false,
+      "sourceMapId": 6,
+      "source": "RAE 普通岛已确定参考值 2026-10-26"
+    },
+    {
+      "key": "greenex:429:1:",
+      "internalId": 951,
+      "spoId": 45,
+      "dpr": 116546000,
+      "spo": 3067,
+      "settled": false,
+      "estimated": true,
+      "sourceMapId": 10001,
+      "source": "RAE 萌绿EX当前参考值（用户授权预估，2026-10-26）"
+    },
+    {
+      "key": "greenex:429:2:",
+      "internalId": 952,
+      "spoId": 62,
+      "dpr": 245898000,
+      "spo": 6471,
+      "settled": false,
+      "estimated": true,
+      "sourceMapId": 10001,
+      "source": "RAE 萌绿EX当前参考值（用户授权预估，2026-10-26）"
+    },
+    {
+      "key": "greenex:429:3:",
+      "internalId": 953,
+      "spoId": 80,
+      "dpr": 535382000,
+      "spo": 14089,
+      "settled": false,
+      "estimated": true,
+      "sourceMapId": 10001,
+      "source": "RAE 萌绿EX当前参考值（用户授权预估，2026-10-26）"
+    }
+  ],
+  "incrementalUpdates": [
+    {
+      "verifiedAt": "2026-10-26",
+      "pokemon": [
+        200,
+        429
+      ],
+      "sources": [
+        "https://pks.raenonx.cc/zh/pokedex/200",
+        "https://pks.raenonx.cc/zh/pokedex/429"
+      ],
+      "rows": 22,
+      "regularSettledRows": 16,
+      "userApprovedExEstimates": 6,
+      "policy": "Use RAE map-specific reference ×38000. Only actual spawn linkages; no new EX2 rows. Existing records retain their original verification dates."
     }
   ]
 }

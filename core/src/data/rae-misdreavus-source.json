@@ -630,9 +630,275 @@
     }
   },
   "sleepDpr": {
-    "status": "deferred",
-    "reason": "Sleep-style base data and SPO remapping remain equal to the initial baseline; user allows DPR deferral.",
-    "addedSleepStyles": false
+    "status": "integrated-regular-settled-ex-estimated",
+    "verifiedAt": "2026-10-26",
+    "userPolicy": "用户确认：EX使用预估数据，并将梦妖一家加入睡姿抽选。",
+    "sources": [
+      "https://pks.raenonx.cc/zh/pokedex/200",
+      "https://pks.raenonx.cc/zh/pokedex/429"
+    ],
+    "addedSleepStyles": true,
+    "regularRows": 16,
+    "estimatedExRows": 6,
+    "entries": [
+      {
+        "pokeId": 200,
+        "island": "greengrass",
+        "stars": 1,
+        "internalId": 948,
+        "spoId": 21,
+        "dpr": 6004000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 11
+      },
+      {
+        "pokeId": 200,
+        "island": "greengrass",
+        "stars": 2,
+        "internalId": 949,
+        "spoId": 43,
+        "dpr": 30476000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 15
+      },
+      {
+        "pokeId": 200,
+        "island": "snowdrop",
+        "stars": 1,
+        "internalId": 948,
+        "spoId": 21,
+        "dpr": 6004000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 6
+      },
+      {
+        "pokeId": 200,
+        "island": "snowdrop",
+        "stars": 2,
+        "internalId": 949,
+        "spoId": 43,
+        "dpr": 30476000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 10
+      },
+      {
+        "pokeId": 200,
+        "island": "snowdrop",
+        "stars": 3,
+        "internalId": 950,
+        "spoId": 57,
+        "dpr": 65702000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 16
+      },
+      {
+        "pokeId": 200,
+        "island": "powerplant",
+        "stars": 1,
+        "internalId": 948,
+        "spoId": 21,
+        "dpr": 6004000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 4
+      },
+      {
+        "pokeId": 200,
+        "island": "powerplant",
+        "stars": 2,
+        "internalId": 949,
+        "spoId": 43,
+        "dpr": 30476000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 8
+      },
+      {
+        "pokeId": 200,
+        "island": "powerplant",
+        "stars": 3,
+        "internalId": 950,
+        "spoId": 57,
+        "dpr": 65702000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 14
+      },
+      {
+        "pokeId": 200,
+        "island": "greenex",
+        "stars": 1,
+        "internalId": 948,
+        "spoId": 21,
+        "dpr": 37810000,
+        "raeSettled": false,
+        "estimated": true,
+        "unlockIndex": 5
+      },
+      {
+        "pokeId": 200,
+        "island": "greenex",
+        "stars": 2,
+        "internalId": 949,
+        "spoId": 43,
+        "dpr": 106096000,
+        "raeSettled": false,
+        "estimated": true,
+        "unlockIndex": 11
+      },
+      {
+        "pokeId": 200,
+        "island": "greenex",
+        "stars": 3,
+        "internalId": 950,
+        "spoId": 57,
+        "dpr": 194522000,
+        "raeSettled": false,
+        "estimated": true,
+        "unlockIndex": 15
+      },
+      {
+        "pokeId": 429,
+        "island": "greengrass",
+        "stars": 1,
+        "internalId": 951,
+        "spoId": 45,
+        "dpr": 33478000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 22
+      },
+      {
+        "pokeId": 429,
+        "island": "greengrass",
+        "stars": 2,
+        "internalId": 952,
+        "spoId": 62,
+        "dpr": 85614000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 26
+      },
+      {
+        "pokeId": 429,
+        "island": "snowdrop",
+        "stars": 1,
+        "internalId": 951,
+        "spoId": 45,
+        "dpr": 33478000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 17
+      },
+      {
+        "pokeId": 429,
+        "island": "snowdrop",
+        "stars": 2,
+        "internalId": 952,
+        "spoId": 62,
+        "dpr": 85614000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 21
+      },
+      {
+        "pokeId": 429,
+        "island": "snowdrop",
+        "stars": 3,
+        "internalId": 953,
+        "spoId": 80,
+        "dpr": 205884000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 27
+      },
+      {
+        "pokeId": 429,
+        "island": "powerplant",
+        "stars": 1,
+        "internalId": 951,
+        "spoId": 45,
+        "dpr": 33478000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 15
+      },
+      {
+        "pokeId": 429,
+        "island": "powerplant",
+        "stars": 2,
+        "internalId": 952,
+        "spoId": 62,
+        "dpr": 85614000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 19
+      },
+      {
+        "pokeId": 429,
+        "island": "powerplant",
+        "stars": 3,
+        "internalId": 953,
+        "spoId": 80,
+        "dpr": 205884000,
+        "raeSettled": true,
+        "estimated": false,
+        "unlockIndex": 25
+      },
+      {
+        "pokeId": 429,
+        "island": "greenex",
+        "stars": 1,
+        "internalId": 951,
+        "spoId": 45,
+        "dpr": 116546000,
+        "raeSettled": false,
+        "estimated": true,
+        "unlockIndex": 11
+      },
+      {
+        "pokeId": 429,
+        "island": "greenex",
+        "stars": 2,
+        "internalId": 952,
+        "spoId": 62,
+        "dpr": 245898000,
+        "raeSettled": false,
+        "estimated": true,
+        "unlockIndex": 17
+      },
+      {
+        "pokeId": 429,
+        "island": "greenex",
+        "stars": 3,
+        "internalId": 953,
+        "spoId": 80,
+        "dpr": 535382000,
+        "raeSettled": false,
+        "estimated": true,
+        "unlockIndex": 25
+      }
+    ],
+    "evidence": "docs/rae-monitor-20261026/sleep-integration",
+    "previousDeferralCorrection": "All six regular references were already RAE isSettled=true in the initial baseline. Unchanged baseline values do not imply unsettled data.",
+    "validation": {
+      "completedAt": "2026-10-26T05:38:53.242Z",
+      "node": "v24.14.1",
+      "testFiles": 10,
+      "testsPassed": 108,
+      "runSummary": "Nine unchanged related suites passed 80 tests; the new 28-case sleep integration suite passed after correcting its two lexical-sort expectations.",
+      "existingStyleRowsPreserved": 2767,
+      "existingResearchRewardRowsPreserved": 943,
+      "existingDprCalibrationRowsPreserved": 2731,
+      "whitespaceCheckPassed": true,
+      "buildRun": false,
+      "reason": "Game data/settings update; AGENTS.md defaults to no build."
+    }
   },
   "implementation": {
     "sharedPlatforms": [

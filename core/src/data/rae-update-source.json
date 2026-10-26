@@ -34,8 +34,8 @@
       "raeId": "200",
       "name": "梦妖",
       "source": "https://pks.raenonx.cc/zh/pokedex/200",
-      "status": "production-active-sleep-dpr-pending",
-      "userPolicy": "2026-10-26用户授权：已确定生产资料加入计算，DPR未满足确认条件，暂缓睡姿抽选",
+      "status": "active-with-estimated-ex-dpr",
+      "userPolicy": "生产及睡姿计算已启用；普通岛DPR确定，萌绿EX按用户授权采用RAE预估参考值。",
       "officialAnnouncement": "https://www.pokemonsleep.net/zh/news/343532353938363734303738333032323133/",
       "officialDisplayedAvailableFrom": "2026-10-26 15:00",
       "type": "幽灵",
@@ -52,17 +52,15 @@
       "evolutionCandy": 80,
       "raeEvolutionItemId": 102,
       "candyRefId": 238,
-      "missing": [
-        "confirmedSleepDpr"
-      ],
+      "missing": [],
       "currentSource": "rae-misdreavus-source.json"
     },
     {
       "raeId": "429",
       "name": "梦妖魔",
       "source": "https://pks.raenonx.cc/zh/pokedex/429",
-      "status": "production-active-sleep-dpr-pending",
-      "userPolicy": "2026-10-26用户授权：已确定生产资料加入计算，DPR未满足确认条件，暂缓睡姿抽选",
+      "status": "active-with-estimated-ex-dpr",
+      "userPolicy": "生产及睡姿计算已启用；普通岛DPR确定，萌绿EX按用户授权采用RAE预估参考值。",
       "officialAnnouncement": "https://www.pokemonsleep.net/zh/news/343532353938363734303738333032323133/",
       "officialDisplayedAvailableFrom": "2026-10-26 15:00",
       "type": "幽灵",
@@ -78,9 +76,7 @@
       "evolvesFrom": 200,
       "candyRefId": 238,
       "announcedMainSkill": "魔法火焰（料理跃进S）",
-      "missing": [
-        "confirmedSleepDpr"
-      ],
+      "missing": [],
       "currentSource": "rae-misdreavus-source.json"
     },
     {
