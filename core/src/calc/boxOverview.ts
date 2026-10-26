@@ -17,6 +17,12 @@ export interface OverviewBonuses {
 }
 export const defaultOverviewBonuses = (): OverviewBonuses => ({ island: 'greengrass', exBuff: true, exDebuff: true, exWeeklyBonus: 'none', areaBonus: 0, goodCamp: false, helpingBonus: 0, favoredBerries: [] })
 export interface OverviewRank { pokemon: BoxPokemon; amount: number }
+/** Mini Program engines may ignore toLocaleString fraction options. */
+export function formatOverviewAmount(amount: number | undefined, places = 2): string {
+  if (amount == null || !Number.isFinite(amount) || amount < 0) return '—'
+  const [whole, fraction] = amount.toFixed(places).split('.')
+  return whole!.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (fraction == null ? '' : `.${fraction}`)
+}
 export function criticalOverviewFields(pokemon: BoxPokemon, mode: 'berries' | 'ingredients'): OcrMissingField[] {
   return normalizeOcrMissing(pokemon.ocrMissing).filter((field) => {
     if (field === 'level' || field === 'nature' || field === 'skillLevel') return true
@@ -49,8 +55,10 @@ export function calculateBoxOverview(pokemon: readonly BoxPokemon[], bonuses: Ov
     }
     if (criticalOverviewFields(member, 'ingredients').length) excludedIngredients.push(member)
     else {
-      for (const [name, amount] of Object.entries(output!.ingredients)) {
-        if (amount <= 0) continue
+      for (const [name, total] of Object.entries(output!.ingredients)) {
+        // produce includes direct skill food and extra-help food; this panel ranks ordinary helps only.
+        const amount = total - (output!.skillIngredients?.[name] ?? 0)
+        if (!Number.isFinite(amount) || amount <= 0) continue
         const list = ingredientRanks.get(name) ?? []
         list.push({ pokemon: member, amount })
         ingredientRanks.set(name, list)

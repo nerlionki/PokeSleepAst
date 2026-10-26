@@ -161,8 +161,14 @@ fs.mkdirSync(path.join(wxRoot, 'src/workers'), { recursive: true })
 await esbuild.build({ stdin: { contents: `import { babyEfficiencySteps } from './core/src/calc/babyEfficiency';
 import { sleepSimulationSteps } from './core/src/calc/sleepSimulation';
 import { scoreSearchSteps } from './core/src/calc/scoreSearch';
+import { splitSleepSteps } from './core/src/calc/splitSleep';
   export { installImportWorker } from './core/src/calc/ocrWorker';
-export function runBaby({options, checkpoint}) {
+export function runBaby({options, checkpoint, splitOptions}) {
+ if (splitOptions) {
+  const total = splitOptions.targets.length * 100 * (splitOptions.sleepType === 'all' ? 4 : 1);
+  run(splitSleepSteps({splitOptions, checkpoint}), state => { worker.postMessage({type:'checkpoint',checkpoint:state}); worker.postMessage({type:'progress',completed:state.completed,total}); });
+  return;
+ }
  const steps = babyEfficiencySteps(options, progress => worker.postMessage({type:'progress',progress}), undefined, checkpoint);
  run(steps, state => worker.postMessage({type:'checkpoint',checkpoint:state}));
 }
@@ -207,6 +213,6 @@ for (const name of ['det', 'rec']) {
 }
 write(path.join(wxRoot, 'src/platform/ocr-models.json'), JSON.stringify(models))
 write(path.join(wxRoot, 'src/platform/ocr-dict.json'), JSON.stringify(fs.readFileSync(path.join(root, 'core/public/ocr/keys.txt'), 'utf8').replace(/^\uFEFF/, '').trimEnd().split(/\r?\n/)))
-let css = stripWebCheckboxStyles(fs.readFileSync(path.join(core, 'style.css'), 'utf8')).replace(/\bbody\s*\{[\s\S]*?\n\}/, 'body { background: #081018; }').replaceAll(':root', 'page').replace(/html, body, #app/g, 'page').replace(/\bbody\b/g, 'page')
-write(path.join(wxRoot, 'src/app.css'), css + '\npage{padding:0;box-sizing:border-box;font-size:16px;min-height:100vh;background:#081018;background-image:none} view,text,button,input,picker,textarea{box-sizing:border-box} .page{width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding-left:16px;padding-right:16px} .wx-control{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:16px;color:var(--text)} .wx-input{height:44px;line-height:24px;padding:10px 12px} .wx-select{padding:10px 12px;min-height:44px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere} .wx-inline{display:inline-flex;align-items:center;gap:4px;min-width:0} .wx-sub-ico{background:transparent;mask-image:none;-webkit-mask-image:none} .wx-textarea{padding:10px 12px} image{display:inline-block} button{line-height:1.5;margin:0} textarea{width:100%;min-height:100px} .source-link{color:#7fcec0;margin-right:12px} .wx-settings{margin-bottom:14px}\n')
+let css = stripWebCheckboxStyles(fs.readFileSync(path.join(core, 'style.css'), 'utf8')).replace(/\bbody\s*\{[\s\S]*?\n\}/, 'body { background: var(--ink); }').replaceAll(':root', 'page').replace(/html, body, #app/g, 'page').replace(/\bbody\b/g, 'page')
+write(path.join(wxRoot, 'src/app.css'), css + '\npage{padding:0;box-sizing:border-box;font-size:var(--font-16);min-height:100vh;background:var(--ink);background-image:none} view,text,button,input,picker,textarea{box-sizing:border-box} .page{width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding-left:16px;padding-right:16px} .wx-control{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:var(--font-16);color:var(--text)} .wx-input{height:44px;line-height:24px;padding:10px 12px} .wx-select{padding:10px 12px;min-height:44px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere} .wx-inline{display:inline-flex;align-items:center;gap:4px;min-width:0} .wx-sub-ico{background:transparent;mask-image:none;-webkit-mask-image:none} .wx-textarea{padding:10px 12px} image{display:inline-block} button{line-height:1.5;margin:0} textarea{width:100%;min-height:100px} .source-link{color:var(--sage);margin-right:12px} .wx-settings{margin-bottom:14px}\n')
 console.log(`Prepared shared views and ${pack + 1} asset subpackages (${assets.length} images).`)

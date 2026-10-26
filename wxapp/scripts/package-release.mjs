@@ -9,7 +9,6 @@ const output = path.join(root, 'app/release')
 fs.mkdirSync(output, { recursive: true })
 const app = new Zip()
 app.addLocalFolder(path.join(root, 'wxapp/dist'))
-app.addLocalFile(path.join(root, 'wxapp/README.md'), '', 'README.md')
 app.writeZip(path.join(output, `PokeSleepAst-${version}-weapp.zip`))
 const file = path.join(output, `PokeSleepAst-${version}-weapp.zip`)
 for (const entry of new Zip(file).getEntries()) {

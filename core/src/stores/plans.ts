@@ -6,6 +6,7 @@ import type { CatchGoal } from '../calc/catch'
 import { DEFAULT_BABY_EFFICIENCY, DEFAULT_COMPLETION_EFFICIENCY, normalizeBabyEfficiencyPokemonId, validateBabyEfficiency, type BabyEfficiencyOptions } from '../calc/babyEfficiency'
 import { DEFAULT_WHISTLE, normalizeWhistleOptions, type WhistleOptions } from '../calc/whistle'
 import { loadJson, saveJson } from '../storage'
+import { defaultSplitOptions, normalizeSplitOptions, type SplitOptions } from '../calc/splitSleep'
 
 interface PlanState {
   snorlaxStrength: number
@@ -27,6 +28,7 @@ interface PlanState {
   babyEfficiency: BabyEfficiencyOptions
   completionEfficiency: BabyEfficiencyOptions
   whistle: WhistleOptions
+  splitSleep: SplitOptions
 }
 
 const empty: PlanState = {
@@ -48,10 +50,11 @@ const empty: PlanState = {
   babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY },
   completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY },
   whistle: { ...DEFAULT_WHISTLE },
+  splitSleep: defaultSplitOptions(),
 }
 
 export const usePlanStore = defineStore('plans', () => {
-  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY }, completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY }, whistle: { ...DEFAULT_WHISTLE } })
+  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY }, completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY }, whistle: { ...DEFAULT_WHISTLE }, splitSleep: defaultSplitOptions() })
   const ready = ref(false)
 
   async function hydrate() {
@@ -69,6 +72,7 @@ export const usePlanStore = defineStore('plans', () => {
       candyRows: saved.candyRows ?? [],
       candyStocks: migrateCandyStocks(saved.candyStocks ?? {}),
       whistle: normalizeWhistleOptions(saved.whistle),
+      splitSleep: normalizeSplitOptions(saved.splitSleep),
       babyEfficiency: validateBabyEfficiency(babyEfficiency) ? { ...DEFAULT_BABY_EFFICIENCY } : babyEfficiency,
       completionEfficiency: validateBabyEfficiency(completionEfficiency) ? { ...DEFAULT_COMPLETION_EFFICIENCY } : completionEfficiency,
     }

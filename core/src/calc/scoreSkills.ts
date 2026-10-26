@@ -90,8 +90,9 @@ export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkil
     case 28: case 33: case 36: case 38: food(value('食材'), SELECT_POOLS[selected.id]); break
     case 26: case 27:
       food(value('携带')); if (pair && actor.firstFood) ctx.ingredient(actor.firstFood, value('一致追加')); break
-    case 11: case 25:
+    case 11: case 25: case 41:
       ctx.pot(value('锅容量'))
+      if (selected.id === 41) ctx.crit(percent('暴击'))
       if (selected.id === 25 && pair) heal(randomTarget(), value('活力'))
       break
     case 13: ctx.crit(percent('暴击')); break

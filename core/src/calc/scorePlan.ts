@@ -5,7 +5,7 @@ import { unlockedSubskills } from './member'
 import { skillByPokedexName } from './mainSkills'
 import { resolveMemberSkill } from './mew'
 
-export const SCORE_RULE_VERSION = 2
+export const SCORE_RULE_VERSION = 3
 export interface ScoreSleep {
   start: string
   end: string

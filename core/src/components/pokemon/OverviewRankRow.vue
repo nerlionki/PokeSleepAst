@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { OverviewRank } from '../../calc/boxOverview'
+import { formatOverviewAmount } from '../../calc/boxOverview'
 import { boxLabel } from '../../calc/boxFilter'
 import { pokeById, SUBSKILLS } from '../../calc/data'
 import { slotDrop } from '../../calc/ingredients'
@@ -15,7 +16,7 @@ const slots = computed(() => mon.value.ingredientSlots.slice(0, mon.value.level 
   const drop = index == null || !species.value ? null : slotDrop(species.value.ingredients, slot, index)
   return drop ? [{ ...drop, slot }] : []
 }))
-const amount = computed(() => props.row.amount.toLocaleString('zh-CN', { maximumFractionDigits: props.ingredients ? 1 : 0 }))
+const amount = computed(() => formatOverviewAmount(props.row.amount, props.ingredients ? 2 : 0))
 </script>
 <template>
   <div class="overview-rank">
@@ -37,11 +38,11 @@ const amount = computed(() => props.row.amount.toLocaleString('zh-CN', { maximum
 .rank-position.leading { color: var(--amber); }
 .rank-details { min-width: 0; }
 .rank-details strong { overflow-wrap: anywhere; }
-.rank-details p { margin: 4px 0 0; font-size: 12px; line-height: 1.6; }
-.rank-slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: 12px; }
+.rank-details p { margin: 4px 0 0; font-size: var(--font-12); line-height: 1.6; }
+.rank-slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: var(--font-12); }
 .rank-slots .row { gap: 3px; }
 .rank-amount { text-align: right; font-variant-numeric: tabular-nums; }
-.rank-amount strong { display: block; color: var(--sage); font-size: 20px; }
-.rank-amount span { font-size: 11px; }
-@media (max-width: 400px) { .overview-rank { grid-template-columns: 16px 36px minmax(0, 1fr) auto; gap: 7px; } .rank-amount strong { font-size: 17px; } .rank-portrait :deep(.sprite), .rank-portrait :deep(.fallback-sprite) { width: 36px; height: 36px; } }
+.rank-amount strong { display: block; color: var(--sage); font-size: var(--font-20); }
+.rank-amount span { font-size: var(--font-11); }
+@media (max-width: 400px) { .overview-rank { grid-template-columns: 16px 36px minmax(0, 1fr) auto; gap: 7px; } .rank-amount strong { font-size: var(--font-17); } .rank-portrait :deep(.sprite), .rank-portrait :deep(.fallback-sprite) { width: 36px; height: 36px; } }
 </style>

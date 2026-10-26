@@ -4,10 +4,7 @@ ocrTest/*
 !ocrTest/ab97618f084672c22e4c145fe03d08bc.jpg
 docs/
 *.md
-!/AGENTS.md
-!/core/src/data/subskill-draw.md
-!/core/src/data/completion-efficiency.md
-!/app/RELEASE.md
+!AGENTS.md
 dist
 ios
 android
@@ -29,13 +26,11 @@ app/release/
 .env.test.local
 .env.production.local
 
-!/抽选逻辑前后差异以及示例.md
 
 /app/android/app/src/main/assets/calculation.js
 
 /.impeccable/
 
-!/core/INTEGRATION.md
 
 # Local-only documentation and test scripts
 docs/
@@ -49,3 +44,11 @@ docs/
 **/androidTest/
 app/scripts/test-*.mjs
 wxapp/scripts/test-*.mjs
+
+# Private backups and history-rewrite tooling must never be published.
+/.local-maintenance/
+
+# All Markdown except AGENTS.md remains local.
+*.[mM][dD]
+!AGENTS.md
+*.test-run.*

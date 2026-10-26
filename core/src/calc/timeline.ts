@@ -14,7 +14,7 @@ import { slotDrop } from './ingredients'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
 import { natureStatFactor } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
-import { skillStorageLimit } from './specialty'
+import { FULL_INVENTORY_SKILL_HELPS, skillStorageLimit } from './specialty'
 import { ACCEL_FACTOR, ACCEL_MINUTES, chargeStrength, skillKind, skillValue } from './skills'
 
 export function teamHelpingBonus(roster: BoxPokemon[], fallback: number): number {
@@ -84,6 +84,7 @@ interface Member {
   next: number
   held: number
   stock: number
+  fullSkillHelps: number
   accelUntil: number
   typeAccelUntil: number
   factor: number
@@ -152,6 +153,8 @@ export function simulateTeam(
       next: 0,
       held: 0,
       stock: 0,
+      // “全时满包”是持续偷吃的对比口径，不模拟刚进入满包的过渡窗口。
+      fullSkillHelps: input.carryMode === 'full' ? FULL_INVENTORY_SKILL_HELPS : 0,
       accelUntil: -1,
       typeAccelUntil: -1,
       factor: natureStatFactor(input.nature, 'energy'),
@@ -292,6 +295,8 @@ export function simulateTeam(
   function applyHelp(m: Member, minute: number, seed: number, fromSupport = false) {
     m.result.helps += 1
     const full = m.held >= m.carry
+    const canRollSkill = !full || m.fullSkillHelps < FULL_INVENTORY_SKILL_HELPS
+    if (!fromSupport && full) m.fullSkillHelps = Math.min(FULL_INVENTORY_SKILL_HELPS, m.fullSkillHelps + 1)
     if (full) {
       m.result.berries += m.perHelp
       m.result.berryEnergy += m.perHelp * m.unitBerry
@@ -324,13 +329,14 @@ export function simulateTeam(
       m.result.berryEnergy += m.perHelp * m.unitBerry
       m.held += m.perHelp
     }
-    if (!fromSupport && !full && (opts.expectedProcs || opts.alwaysProc || roll(seed + 7) < m.skillRate)) {
+    if (!fromSupport && canRollSkill && (opts.expectedProcs || opts.alwaysProc || roll(seed + 7) < m.skillRate)) {
       m.stock = Math.min(skillStorageLimit(m.poke.specialty), m.stock + (opts.expectedProcs && !opts.alwaysProc ? Math.min(1, m.skillRate) : 1))
     }
     if (!asleepAt(minute) && !fromSupport) {
       const held = heldFood.get(m)
       if (held) { for (const [name, amount] of Object.entries(held)) creditFood(m, name, amount); heldFood.delete(m) }
       m.held = 0
+      if (m.input.carryMode !== 'full') m.fullSkillHelps = 0
       while (m.stock > 0) triggerSkill(m, minute)
     }
   }
@@ -379,6 +385,7 @@ export function simulateTeam(
         const held = heldFood.get(m)
         if (held) { for (const [name, amount] of Object.entries(held)) creditFood(m, name, amount); heldFood.delete(m) }
         m.held = 0
+        if (m.input.carryMode !== 'full') m.fullSkillHelps = 0
         while (m.stock > 0) triggerSkill(m, t)
       }
     }

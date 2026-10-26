@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { taskNavigationLocked } from '../../../../core/src/composables/taskNavigationLock'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watchEffect } from 'vue'
+import { useAppearanceStore } from '../../../../core/src/stores/appearance'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
@@ -21,11 +22,16 @@ const route = useRoute()
 const title = computed(() => titles[String(route.name)] ?? '宝睡助手')
 const settings = useSettingsStore()
 const updater = useUpdateStore()
+const appearance = useAppearanceStore()
+watchEffect(() => {
+  for (const [key, value] of Object.entries(appearance.variables)) document.documentElement.style.setProperty(key, value)
+})
 
 onMounted(async () => {
   void updater.initialize()
   await Promise.all([
     settings.hydrate(),
+    appearance.hydrate(),
     useBoxStore().hydrate(),
     useRosterStore().hydrate(),
     usePlanStore().hydrate(),

@@ -3,7 +3,7 @@ import FormField from '../shared/FormField.vue'
 import { MIX_OPTIONS } from '../../calc/sleepRules'
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { RECIPES } from '../../calc/data'
+import { POT_TIERS, RECIPES } from '../../calc/data'
 import { categoryLabel, RECIPE_LEVEL_MAX, recipeLevelOf } from '../../calc/cook'
 import EnvironmentFields from '../shared/EnvironmentFields.vue'
 import MealIcon from '../shared/MealIcon.vue'
@@ -14,6 +14,7 @@ const props = defineProps<{ embedded?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const store = useSettingsStore()
 const { settings, summary } = storeToRefs(store)
+const maxPotSize = Math.max(...POT_TIERS.map(tier => tier.pot))
 
 const recipeGroups = computed(() => (['curry', 'salad', 'dessert'] as MealCategory[]).map((c) => ({
   id: c,
@@ -82,7 +83,7 @@ function setRecipeLevel(name: string, level: number) {
           </div>
         </details>
       </div>
-      <FormField v-slot="{ id }" label="锅容量"><input :id="id" v-model.number="settings.potSize" type="number" min="21" max="81"></FormField>
+      <FormField v-slot="{ id }" label="锅容量"><input :id="id" v-model.number="settings.potSize" type="number" min="21" :max="maxPotSize"></FormField>
       <FormField v-slot="{ id }" label="活动倍率"><select :id="id" v-model.number="settings.eventMult">
           <option :value="1">平时 1</option>
           <option :value="1.1">1.1</option>

@@ -2216,7 +2216,7 @@
     "berryType": "幽灵",
     "interval": 2200,
     "carry": 28,
-    "ingredientRate": 0.161,
+    "ingredientRate": 0.166,
     "skillRate": 0.024,
     "mainSkill": "能量填充S(X~Y)",
     "friendship": 22,
@@ -10907,5 +10907,89 @@
       }
     ],
     "formKey": "敗露球菇"
+  },
+  {
+    "id": 200,
+    "name": "夢妖",
+    "specialty": "技能型",
+    "sleepType": "淺淺入夢",
+    "berry": "墨莓果",
+    "berryType": "幽灵",
+    "interval": 2800,
+    "carry": 13,
+    "ingredientRate": 0.15,
+    "skillRate": 0.047,
+    "mainSkill": "料理強化S",
+    "friendship": 16,
+    "medalGroup": 3,
+    "ingredients": [
+      {
+        "id": 4,
+        "name": "窝心洋芋",
+        "amounts": [
+          1,
+          2,
+          4
+        ]
+      },
+      {
+        "id": 17,
+        "name": "醒脑咖啡豆",
+        "amounts": [
+          2,
+          3
+        ]
+      },
+      {
+        "id": 12,
+        "name": "好眠番茄",
+        "amounts": [
+          4
+        ]
+      }
+    ],
+    "formKey": "夢妖"
+  },
+  {
+    "id": 429,
+    "name": "夢妖魔",
+    "specialty": "技能型",
+    "sleepType": "淺淺入夢",
+    "berry": "墨莓果",
+    "berryType": "幽灵",
+    "interval": 2400,
+    "carry": 17,
+    "ingredientRate": 0.142,
+    "skillRate": 0.036,
+    "mainSkill": "魔法火焰（料理跃进S）",
+    "friendship": 20,
+    "medalGroup": 4,
+    "ingredients": [
+      {
+        "id": 4,
+        "name": "窝心洋芋",
+        "amounts": [
+          1,
+          2,
+          4
+        ]
+      },
+      {
+        "id": 17,
+        "name": "醒脑咖啡豆",
+        "amounts": [
+          2,
+          3
+        ]
+      },
+      {
+        "id": 12,
+        "name": "好眠番茄",
+        "amounts": [
+          4
+        ]
+      }
+    ],
+    "formKey": "夢妖魔"
   }
 ]

@@ -11,7 +11,7 @@ import { skillMaxFor } from './mainSkills'
 import { natureStatFactor } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { carryLimit, teamHelpingBonus } from './timeline'
-import { skillStorageLimit } from './specialty'
+import { FULL_INVENTORY_SKILL_HELPS, skillStorageLimit } from './specialty'
 import { recipeLevelMult, recipeLevelOf } from './cook'
 import { teamRestrictionError } from './teamRestrictions'
 import { scoreSkill, type ScoreActor } from './scoreSkills'
@@ -22,7 +22,7 @@ interface Actor extends ScoreActor {
   pokemon: BoxPokemon, input: ProduceInput, poke: NonNullable<ReturnType<typeof pokeById>>
   subs: string[], carry: number, drops: { name: string, amount: number }[], ingredientRate: number, berryCount: number
   unit: number, next: number, decay: number, heldBerries: number, heldFood: Record<string, number>, stock: number
-  failures: number, syncHelps: number, pity: number, hours: number, dailyHours: number[], exp: number
+  failures: number, syncHelps: number, pity: number, fullSkillHelps: number, hours: number, dailyHours: number[], exp: number
 }
 export const SCORE_ASSUMPTIONS = [
   '近似搜索，未穷举整个 Box；操作表是一条固定种子的执行示例，统计收益来自多次模拟。',
@@ -60,7 +60,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       firstFood: drops[0]?.name ?? '', drops, ingredientRate: Math.min(1, poke.ingredientRate * natureStatFactor(pokemon.nature, 'ingredient') * (1 + (subs.includes('ingS') ? 0.18 : 0) + (subs.includes('ingM') ? 0.36 : 0))),
       carry: carryLimit(poke.carry, subs, settings.goodCamp, 'preset', ribbon.carry, ex.carryExtra), berryCount: (['树果型', '全部'].includes(poke.specialty) ? 2 : 1) + Number(subs.includes('berryS')),
       unit: berryUnitEnergy(poke.berry, pokemon.level, settings.areaBonus, ex.berryMultiplier), next: Infinity, decay: start,
-      heldBerries: 0, heldFood: {}, stock: 0, failures: 0, syncHelps: 0,
+      heldBerries: 0, heldFood: {}, stock: 0, failures: 0, syncHelps: 0, fullSkillHelps: 0,
       pity: ['技能型', '全部'].includes(poke.specialty) ? Math.ceil(144000 / poke.interval) : 78,
       hours: 0, dailyHours: Array(7).fill(0), exp: 0 })
   }
@@ -118,8 +118,12 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
   }
   function help(m: Actor, extra = false) {
     const full = m.heldBerries + sumBag(m.heldFood) >= m.carry
-    if (!extra && full) { creditBerries(m, m.berryCount); return }
-    if (m.drops.length && random() < m.ingredientRate) {
+    const canRollSkill = !full || m.fullSkillHelps < FULL_INVENTORY_SKILL_HELPS
+    if (!extra && full) {
+      creditBerries(m, m.berryCount)
+      m.fullSkillHelps = Math.min(FULL_INVENTORY_SKILL_HELPS, m.fullSkillHelps + 1)
+    }
+    else if (m.drops.length && random() < m.ingredientRate) {
       const drop = m.drops[Math.floor(random() * m.drops.length)]!
       const ex = exEffects(settings, m.berry, m.poke.specialty)
       const bonus = !extra && ex.ingredientExtra ? 1 + Number(ex.ingredientExtra > 1 && random() < 0.5) : 0
@@ -127,7 +131,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       if (extra) creditFood(drop.name, count); else add(m.heldFood, drop.name, count)
     } else if (extra) creditBerries(m, m.berryCount)
     else m.heldBerries += m.berryCount
-    if (!extra && !full && m.stock < skillStorageLimit(m.poke.specialty)) {
+    if (!extra && canRollSkill && m.stock < skillStorageLimit(m.poke.specialty)) {
       m.syncHelps++
       if (m.failures + m.syncHelps >= m.pity || random() < m.rate) { m.stock++; m.failures = 0; m.syncHelps = 0 }
     }
@@ -163,6 +167,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       fruits += m.heldBerries; creditBerries(m, m.heldBerries); m.heldBerries = 0
       for (const [name, count] of Object.entries(m.heldFood)) { add(food, name, count); creditFood(name, count) }
       m.heldFood = {}
+      m.fullSkillHelps = 0
       m.failures = Math.min(m.pity - 1, m.failures + m.syncHelps); m.syncHelps = 0
     }
     note({ minute: currentMinute, kind: 'collect', text: `收取树果 ${fruits} 颗、食材 ${sumBag(food)} 个`, members: active.map(m => m.uid), foods: food })

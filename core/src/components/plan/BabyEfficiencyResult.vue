@@ -34,10 +34,10 @@ const range = (min: number, max: number | null) => max === null ? `≥ ${format(
 
 <style scoped>
 .result-header { justify-content: space-between; flex-wrap: wrap; }
-.result-value { color: var(--sage); font-size: 20px; }
+.result-value { color: var(--sage); font-size: var(--font-20); }
 .efficiency-interval { border-top: 1px solid var(--line); padding-top: 14px; }
 .energy-range { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
-.energy-range strong { color: var(--amber); font-size: 18px; font-variant-numeric: tabular-nums; }
-.sleep-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; font-size: 14px; }
+.energy-range strong { color: var(--amber); font-size: var(--font-18); font-variant-numeric: tabular-nums; }
+.sleep-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; font-size: var(--font-14); }
 .sleep-types { flex-basis: 100%; }
 </style>

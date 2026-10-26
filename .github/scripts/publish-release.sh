@@ -8,9 +8,17 @@ version="${version%_hotfix}"
 repo="${REPOSITORY:?}"
 
 if ! gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
+  # Reviewed release notes travel with the annotated tag, not a tracked Markdown file.
+  notes_file="$(mktemp)"
+  notes_args=(--generate-notes)
+  if test "$(git cat-file -t "refs/tags/$tag")" = tag; then
+    git for-each-ref --format='%(contents)' "refs/tags/$tag" > "$notes_file"
+    if test -s "$notes_file"; then notes_args=(--notes-file "$notes_file"); fi
+  fi
   # Both platform workflows can arrive here together; accept the other's draft.
-  gh release create "$tag" --repo "$repo" --verify-tag --draft --generate-notes \
+  gh release create "$tag" --repo "$repo" --verify-tag --draft "${notes_args[@]}" \
     --title "$tag" || gh release view "$tag" --repo "$repo" >/dev/null
+  rm -f "$notes_file"
 fi
 if test "$(gh release view "$tag" --repo "$repo" --json isDraft --jq .isDraft)" != true; then
   assets="$(gh release view "$tag" --repo "$repo" --json assets --jq '.assets[].name')"

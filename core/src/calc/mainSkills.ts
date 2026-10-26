@@ -278,6 +278,13 @@ export const MAIN_SKILLS: MainSkill[] = [
     ...one('锅容量', [7, 10, 12, 17, 22, 27, 31]),
   },
   {
+    // RAE mainSkillEffectMap[41], verified 2026-10-26; see rae-misdreavus-source.json.
+    id: 41, group: '料理', name: '魔法火焰（料理跃进S）', aliases: ['魔法火焰（料理跃进S）', '魔法火焰（料理躍進S）'], maxLevel: 7,
+    summary: '增加下一次料理的锅容量，同时提升料理大成功率。',
+    detail: '扩锅与大成功率分别沿用已有料理技能的累积和清零规则。',
+    ...rows(['锅容量', '暴击'], [[7,10,12,17,22,27,31], [0.01,0.02,0.02,0.03,0.03,0.04,0.05].map(pct)]),
+  },
+  {
     id: 13, group: '料理', name: '料理成功S', aliases: ['料理成功S'], maxLevel: 6,
     summary: '提高料理暴击率。',
     detail: '下一次料理按表中的概率暴击。',
