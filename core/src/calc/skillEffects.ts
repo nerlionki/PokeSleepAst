@@ -151,8 +151,9 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
           if (ingredient) context.ingredient(actor, ingredient.name, value('一致追加') * w)
         }
         break
-      case 11: case 25:
+      case 11: case 25: case 41:
         context.pot(value('锅容量') * w)
+        if (choice.id === 41) crit.push({ amount: Number(MAIN_SKILLS.find(skill => skill.id === 41)!.levels[level - 1]![1]!.replace('%', '')) / 100, probability: w })
         if (choice.id === 25 && pair) for (const target of team) heal(target, value('活力') / team.length)
         break
       case 13:

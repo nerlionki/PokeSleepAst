@@ -4,6 +4,15 @@ import { pokeById } from './data'
 /** 图鉴资料里全能型（目前是梦幻、达克莱伊）的专长写作「全部」。 */
 const ALL_ROUNDER = '全部'
 
+/**
+ * Wiki 验证规则：进入满包后的前 4 次自然帮忙仍抽选主技能，第 5 次起停止。
+ * 不包含使背包刚好装满的那次；额外帮忙不抽选，也不消耗这个窗口。
+ * 这是社区验证口径，不是官方公布数值；核对日期：2026-10-23。
+ * https://wikiwiki.jp/poke_sleep/メインスキル
+ * https://wikiwiki.jp/poke_sleep/検証/メインスキルのクールタイム
+ */
+export const FULL_INVENTORY_SKILL_HELPS = 4
+
 export const SPECIALTY_FILTERS = ['树果型', '食材型', '技能型', '全能型'] as const
 
 export function isAllRounder(poke: { specialty: string } | null | undefined): boolean {

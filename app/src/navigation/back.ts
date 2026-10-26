@@ -33,18 +33,23 @@ export const backDirective: ObjectDirective<HTMLElement, () => void> = {
   beforeUnmount(element) { registrations.get(element)?.remove(); registrations.delete(element) },
 }
 
-export function installAndroidBack(router: Router, target: Pick<Window, 'addEventListener' | 'removeEventListener'> = window) {
+export function installAndroidBack(router: Router, target: Pick<Window, 'addEventListener' | 'removeEventListener'> = window, confirmExit: () => Promise<void> = async () => {}) {
   let navigating = false
+  let confirmingExit = false
   const stop = router.afterEach(() => { navigating = false })
   const onBack = () => {
-    if (handleTaskNavigationBack() || backStack.handle() || navigating) return
+    if (confirmingExit || handleTaskNavigationBack() || backStack.handle() || navigating) return
     const current = router.currentRoute.value
     const tabs = current.meta.backTabs
     const mainTab = Array.isArray(tabs)
     if (mainTab) {
       const section = typeof current.query.tab === 'string' && tabs.includes(current.query.tab) ? current.query.tab : tabs[0]
       // Each bottom tab's initial section is a boundary, even with older route history.
-      if (section === tabs[0]) return
+      if (section === tabs[0]) {
+        confirmingExit = true
+        void Promise.resolve().then(confirmExit).catch(error => console.warn('退出确认无法打开', error)).finally(() => { confirmingExit = false })
+        return
+      }
     }
     const previous = router.options.history.state.back
     const destination = typeof previous === 'string' ? router.resolve(previous) : null

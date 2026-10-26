@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, shallowRef, onMounted, watch } from 'vue'
-import { calculateBoxOverview, defaultOverviewBonuses, type OverviewBonuses } from '../../calc/boxOverview'
+import { calculateBoxOverview, defaultOverviewBonuses, formatOverviewAmount, type OverviewBonuses } from '../../calc/boxOverview'
 import { loadJson, saveJson } from '../../storage'
 import { normalizeEx2Berries, canPickBerries } from '../../calc/defaults'
 import type { Settings } from '../../types'
@@ -94,7 +94,7 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
         <button v-for="ingredient in overview.ingredients" :key="ingredient.id" class="ingredient-tile" type="button" :disabled="!ingredient.rows.length" :aria-label="ingredient.name + (ingredient.rows.length ? '产量排名' : '暂无产出')" @click="openIngredient(ingredient.id)">
           <IngredientIcon :id="ingredient.id" :name="ingredient.name" />
           <span>{{ ingredient.name }}</span>
-          <strong>{{ ingredient.rows[0]?.amount.toLocaleString('zh-CN', { maximumFractionDigits: 1 }) ?? '—' }}<small v-if="ingredient.rows.length"> /日</small></strong>
+          <strong>{{ formatOverviewAmount(ingredient.rows[0]?.amount) }}<small v-if="ingredient.rows.length"> /日</small></strong>
           <span class="muted">{{ ingredient.rows.length ? '最高单只 · ' + ingredient.rows.length + ' 只产出' : '暂无产出' }}</span>
         </button>
       </div>
@@ -112,7 +112,7 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
 <style scoped>
 .overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .overview-heading .btn { flex-shrink: 0; width: auto; margin: 0; white-space: nowrap; }
-.overview-heading h2 { margin: 0; font-size: 22px; }
+.overview-heading h2 { margin: 0; font-size: var(--font-22); }
 .bonus-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .favored-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .favored-choice { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: transparent; padding: 8px; color: var(--text); border-radius: 8px; }
@@ -125,11 +125,11 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
 .berry-heading > span { margin-left: auto; }
 .ingredient-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .ingredient-tile { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 10px; background: var(--card); border: 1px solid var(--line); color: var(--text); border-radius: 12px; text-align: center; }
-.ingredient-tile strong { font-size: 24px; font-variant-numeric: tabular-nums; color: var(--sage); }
-.ingredient-tile small { font-size: 12px; font-weight: 400; color: var(--muted); }
-.ingredient-tile > .muted { font-size: 12px; }
+.ingredient-tile strong { font-size: var(--font-24); font-variant-numeric: tabular-nums; color: var(--sage); }
+.ingredient-tile small { font-size: var(--font-12); font-weight: 400; color: var(--muted); }
+.ingredient-tile > .muted { font-size: var(--font-12); }
 .ingredient-tile:disabled { opacity: 0.6; }
 .ingredient-ranking .row h3 { flex: 1; min-width: 0; margin: 0; }
 @media (max-width: 760px) { .berry-rank-grid { grid-template-columns: 1fr; } .ingredient-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 400px) { .overview-heading { flex-wrap: wrap; } .overview-heading h2 { font-size: 19px; } .bonus-fields { grid-template-columns: 1fr; } .favored-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 400px) { .overview-heading { flex-wrap: wrap; } .overview-heading h2 { font-size: var(--font-19); } .bonus-fields { grid-template-columns: 1fr; } .favored-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>

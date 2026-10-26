@@ -85,7 +85,7 @@ const interval = (seconds: number) => `${Math.floor(seconds / 60)}分${seconds %
 </template>
 
 <style scoped>
-.whistle-member { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line, #ddd); }
+.whistle-member { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line, var(--muted)); }
 .whistle-member:last-child { border-bottom: 0; }
 .whistle-description { min-width: 0; gap: 4px; flex: 1; }
 .whistle-description p { margin: 0; overflow-wrap: anywhere; }

@@ -53,6 +53,6 @@ function pause() { emit('pause', completed.value) }
 
 <style scoped>
 .ocr-overlay { z-index: 50; }
-.ocr-warning { color: var(--rose); font-size: 13px; }
+.ocr-warning { color: var(--rose); font-size: var(--font-13); }
 button:disabled { opacity: .5; cursor: default; }
 </style>
