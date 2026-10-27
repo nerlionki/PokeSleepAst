@@ -1,12 +1,16 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { ITEM_CATEGORIES, ITEMS, type ItemEntry } from '../../calc/items'
 import { textHit } from '../../calc/text'
 import DrawerSheet from '../shared/DrawerSheet.vue'
+const components_data_ItemPane_config_clientDefaults = clientDefaults.modules.components_data_ItemPane
+
 
 const props = defineProps<{ q: string }>()
-const category = shallowRef('进化道具')
-const open = shallowRef<ItemEntry | null>(null)
+const category = shallowRef(components_data_ItemPane_config_clientDefaults["categoryInitial"])
+const open = shallowRef<ItemEntry | null>((components_data_ItemPane_config_clientDefaults["openInitial"] as unknown as ItemEntry | null))
 const listed = computed(() => ITEMS.filter((item) => item.category === category.value && textHit(item.name, props.q)))
 </script>
 

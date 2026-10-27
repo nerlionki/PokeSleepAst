@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { pokeHit } from '../../calc/pokeSearch'
 import { storeToRefs } from 'pinia'
@@ -9,6 +11,8 @@ import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
 import type { IslandId } from '../../types'
 import PokeSprite from '../shared/PokeSprite.vue'
+const components_plan_SleepGallery_config_clientDefaults = clientDefaults.modules.components_plan_SleepGallery
+
 
 const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
@@ -17,15 +21,15 @@ const { settings } = storeToRefs(useSettingsStore())
 const islandIds = new Set(ISLANDS.map((island) => island.id))
 const pokeOf = new Map(POKEDEX.map((poke) => [poke.id, poke]))
 const island = shallowRef<IslandId | 'all'>(settings.value.island)
-const nameQuery = shallowRef('')
-const stars = shallowRef(0)
-const view = shallowRef<'all' | 'found' | 'missing'>('all')
-const berryType = shallowRef('')
-const specialty = shallowRef('')
-const sleepType = shallowRef('')
-const panel = shallowRef<'none' | 'type' | 'spec' | 'sleep'>('none')
-const page = shallowRef(0)
-const PAGE = 48
+const nameQuery = shallowRef(components_plan_SleepGallery_config_clientDefaults["nameQueryInitial"])
+const stars = shallowRef(components_plan_SleepGallery_config_clientDefaults["starsInitial"])
+const view = shallowRef<'all' | 'found' | 'missing'>((components_plan_SleepGallery_config_clientDefaults["viewInitial"] as unknown as 'all' | 'found' | 'missing'))
+const berryType = shallowRef(components_plan_SleepGallery_config_clientDefaults["berryTypeInitial"])
+const specialty = shallowRef(components_plan_SleepGallery_config_clientDefaults["specialtyInitial"])
+const sleepType = shallowRef(components_plan_SleepGallery_config_clientDefaults["sleepTypeInitial"])
+const panel = shallowRef<'none' | 'type' | 'spec' | 'sleep'>((components_plan_SleepGallery_config_clientDefaults["panelInitial"] as unknown as 'none' | 'type' | 'spec' | 'sleep'))
+const page = shallowRef(components_plan_SleepGallery_config_clientDefaults["pageInitial"])
+const PAGE = (components_plan_SleepGallery_config_clientDefaults["PAGE"] as 48)
 
 const types = computed(() => [...new Set(BERRIES.map((berry) => berry.type))])
 const specs = computed(() => [...new Set(POKEDEX.map((poke) => poke.specialty).filter((item) => item !== '全部'))])

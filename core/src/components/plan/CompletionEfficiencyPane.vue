@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActivities } from '../../composables/useActivities'
 import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
@@ -22,11 +23,14 @@ const targets = computed(() => missingCompletionStyles(plan.value))
 const pokeIds = computed(() => [...new Set(targets.value.map(style => style.pokeId))])
 const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId))
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, options.value.completionTarget))
+const activity = useActivities(options, () => options.value.island ?? 'all', () => settings.value.activity)
+const eventMult = activity.field('drowsyPowerMultiplier', () => options.value.eventMult)
+const mixMode = activity.field('eventMix', () => normalizeEventMix(options.value.eventMix) !== 'off' ? settings.value.sleepEventMix : 'off')
 const otherTypes = computed({
-  get: () => normalizeEventMix(options.value.eventMix) !== 'off',
-  set: (value: boolean) => { options.value.eventMix = value },
+  get: () => mixMode.value !== 'off',
+  set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' },
 })
-const simulationOptions = computed(() => ({ ...options.value, eventMix: otherTypes.value ? settings.value.sleepEventMix : 'off' as const }))
+const simulationOptions = computed(() => ({ ...options.value, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 watch(pokeIds, ids => {
   if (!ids.includes(options.value.pokeId)) options.value.pokeId = ids[0] ?? 0
 }, { immediate: true })
@@ -48,6 +52,7 @@ watch(() => [options.value.pokeId, options.value.completionTarget], () => { if (
 
 <template>
   <div class="stack" :aria-busy="busy">
+    <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">恢复本面板自动活动设置</button>
     <p class="muted">每天合计 100 分，寻找指定未收集睡姿至少出现一次的最佳方案。拆觉时，两觉使用相同卡比兽能量。</p>
     <article v-if="!targets.length" class="card stack">
       <h3>暂无可补齐的普通睡姿</h3>
@@ -63,7 +68,7 @@ watch(() => [options.value.pokeId, options.value.completionTarget], () => { if (
       </div>
       <label class="row"><input v-model="options.splitSleep" :disabled="busy" type="checkbox" role="switch"> 比较拆分睡眠</label>
       <p class="muted">{{ options.splitSleep ? '同时比较整觉 100 分和两觉合计 100 分；指定睡眠类型时，两觉均使用该类型。' : '只计算一觉 100 分。' }}</p>
-      <div class="field"><label for="completion-event">活动睡意之力倍率</label><select id="completion-event" v-model.number="options.eventMult" :disabled="busy"><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select></div>
+      <div class="field"><label for="completion-event">活动睡意之力倍率</label><select id="completion-event" v-model.number="eventMult" :disabled="busy"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}倍（活动）</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select></div>
       <label class="row"><input v-model="otherTypes" :disabled="busy" type="checkbox" role="switch"> 活动期间遇到一些其他类型宝可梦</label>
       <div class="efficiency-fields">
         <div class="field"><label for="completion-iterations">计算次数</label><input id="completion-iterations" v-model.number="options.iterations" :disabled="busy" type="number" min="100" max="100000" step="100" inputmode="numeric"></div>

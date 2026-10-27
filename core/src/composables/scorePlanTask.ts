@@ -1,6 +1,11 @@
+
+import clientDefaults from '../data/client-defaults.json'
+import { cloneData } from '../calc/dataClone'
 import { computed, onScopeDispose, shallowRef } from 'vue'
 import { scoreFingerprint } from '../calc/scoreSearch'
 import type { ScoreMessage, ScoreRequest, ScoreResult } from '../calc/scorePlan'
+const composables_scorePlanTask_config_clientDefaults = clientDefaults.modules.composables_scorePlanTask
+
 export interface ScoreWorker {
   onmessage: ((event: { data: ScoreMessage }) => void) | null
   onerror: ((error?: unknown) => void) | null
@@ -9,9 +14,9 @@ export interface ScoreWorker {
 }
 export function createScorePlanTask(createWorker: (notice: (message: string) => void) => ScoreWorker | Promise<ScoreWorker>,
   currentInput: () => ScoreRequest) {
-  const busy = shallowRef(false), error = shallowRef(''), notice = shallowRef('')
-  const result = shallowRef<ScoreResult | null>(null), progress = shallowRef({ completed: 0, total: 1 })
-  let worker: ScoreWorker | null = null, generation = 0, lastFingerprint = ''
+  const busy = shallowRef(composables_scorePlanTask_config_clientDefaults["busyInitial"]), error = shallowRef(composables_scorePlanTask_config_clientDefaults["errorInitial"]), notice = shallowRef(composables_scorePlanTask_config_clientDefaults["noticeInitial"])
+  const result = shallowRef<ScoreResult | null>((composables_scorePlanTask_config_clientDefaults["resultInitial"] as unknown as ScoreResult | null)), progress = shallowRef(cloneData(composables_scorePlanTask_config_clientDefaults["progressInitial"]))
+  let worker: ScoreWorker | null = null, generation = composables_scorePlanTask_config_clientDefaults["generation"], lastFingerprint = composables_scorePlanTask_config_clientDefaults["lastFingerprint"]
   const dirty = computed(() => Boolean(result.value && lastFingerprint !== scoreFingerprint(currentInput())))
   function stop() { generation++; worker?.terminate(); worker = null; busy.value = false }
   function cancel() { stop(); notice.value = '已取消规划' }

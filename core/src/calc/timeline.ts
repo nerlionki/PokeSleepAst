@@ -1,4 +1,7 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleParameters from '../data/rule-parameters.json'
 import { applyMainSkill, type EffectActor } from './skillEffects'
+import { activityValues, snapshotActivity, type ActivityValues } from './activities'
 import { CookingSkillState } from './cookingSkillState'
 import { teamRestrictionError } from './teamRestrictions'
 import { resolveMemberSkill } from './mew'
@@ -16,14 +19,28 @@ import { natureStatFactor } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { FULL_INVENTORY_SKILL_HELPS, skillStorageLimit } from './specialty'
 import { ACCEL_FACTOR, ACCEL_MINUTES, chargeStrength, skillKind, skillValue } from './skills'
+const timeline_teamHelpingBonus_ruleParameters = ruleParameters.modules.timeline.teamHelpingBonus
+const timeline_clockOf_runtimeParameters = runtimeParameters.modules.timeline.clockOf.values
+const timeline_carryLimit_ruleParameters = ruleParameters.modules.timeline.carryLimit
+const timeline_berryCount_ruleParameters = ruleParameters.modules.timeline.berryCount
+const timeline_simulateTeam_ruleParameters = ruleParameters.modules.timeline.simulateTeam
+const timeline_expectedHelp_runtimeParameters = runtimeParameters.modules.timeline.expectedHelp.values
+const timeline_dispatchSkill_runtimeParameters = runtimeParameters.modules.timeline.dispatchSkill.values
+const timeline_dispatchSkill_ruleParameters = ruleParameters.modules.timeline.dispatchSkill
+const timeline_applyHelp_runtimeParameters = runtimeParameters.modules.timeline.applyHelp.values
+const timeline_applyHelp_ruleParameters = ruleParameters.modules.timeline.applyHelp
+const timeline_completeHelps_runtimeParameters = runtimeParameters.modules.timeline.completeHelps.values
+const timeline_simulateTeam_runtimeParameters = runtimeParameters.modules.timeline.simulateTeam.values
+const timeline_teamTimeline_ruleParameters = ruleParameters.modules.timeline.teamTimeline
+
 
 export function teamHelpingBonus(roster: BoxPokemon[], fallback: number): number {
   const n = roster.filter((p) => unlockedSubskills(p.level, p.subskills).includes('helpingBonus')).length
-  return Math.min(5, n + Math.max(0, Math.floor(Number(fallback) || 0)))
+  return Math.min(timeline_teamHelpingBonus_ruleParameters.teamSize, n + Math.max(0, Math.floor(Number(fallback) || 0)))
 }
 
 export function clockOf(minute: number): string {
-  const m = Math.floor(((minute % 1440) + 1440) % 1440)
+  const m = Math.floor(((minute % 1440) + (timeline_clockOf_runtimeParameters.p001 as 1440)) % 1440)
   const hh = String(Math.floor(m / 60)).padStart(2, '0')
   const mm = String(m % 60).padStart(2, '0')
   return `${hh}:${mm}`
@@ -41,19 +58,19 @@ function inSleep(minute: number, start: number, end: number): boolean {
 }
 
 export function carryLimit(base: number, subskills: string[], goodCamp: boolean, mode?: string, ribbonCarry = 0, exCarry = 0): number {
-  if (mode === 'unlimited') return 9999
+  if (mode === 'unlimited') return timeline_carryLimit_ruleParameters.unlimitedCarry
   if (mode === 'full') return 0
   let extra = ribbonCarry + exCarry
-  if (subskills.includes('invS')) extra += 6
-  if (subskills.includes('invM')) extra += 12
-  if (subskills.includes('invL')) extra += 18
+  if (subskills.includes('invS')) extra += timeline_carryLimit_ruleParameters.inventoryS
+  if (subskills.includes('invM')) extra += timeline_carryLimit_ruleParameters.inventoryM
+  if (subskills.includes('invL')) extra += timeline_carryLimit_ruleParameters.inventoryL
   const camp = mode === 'normal' ? false : goodCamp
-  return Math.ceil((base + extra) * (camp ? 1.2 : 1))
+  return Math.ceil((base + extra) * (camp ? timeline_carryLimit_ruleParameters.campCarryMultiplier : 1))
 }
 
 function berryCount(specialty: string, subskills: string[]): number {
-  let n = specialty === '树果型' || specialty === '全部' ? 2 : 1
-  if (subskills.includes('berryS')) n += 1
+  let n = specialty === '树果型' || specialty === '全部' ? timeline_berryCount_ruleParameters.specialistBerries : timeline_berryCount_ruleParameters.normalBerries
+  if (subskills.includes('berryS')) n += ruleParameters.modules.timeline.berryCount.berrySFruitBonus
   return n
 }
 
@@ -75,6 +92,7 @@ export interface SimOpts {
 }
 
 interface Member {
+  activity: ActivityValues
   disguiseReady?: number
   stockpile?: number[]
   input: ProduceInput
@@ -111,9 +129,11 @@ export function simulateTeam(
   helpingBonus: number,
   opts: SimOpts = {},
 ): { members: ProduceResult[], events: SkillEvent[], meals: ReturnType<typeof cookMeals>['meals'], bag: Record<string, number>, remain: Record<string, number> } {
+  const snapshot = snapshotActivity(settings)
+  settings = snapshot
   const restriction = teamRestrictionError(roster)
   if (restriction) throw new Error(restriction)
-  const days = settings.period === 'week' ? 7 : 1
+  const days = settings.period === 'week' ? timeline_simulateTeam_ruleParameters.weeklyDays : 1
   const endMin = days * 1440
   const sleepStart = parseHm(settings.sleepStart)
   const sleepEnd = parseHm(settings.sleepEnd)
@@ -146,9 +166,10 @@ export function simulateTeam(
     const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))
     const skillLv = Math.min(skillMaxFor(poke.mainSkill), effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill) + ex.skillLevels)
     members.push({
+      activity: activityValues(snapshot.activity, settings.island, poke, 0),
       input,
       poke,
-      energy: Math.min(150, Math.max(0, opts.fixedEnergy ?? input.wakeEnergy ?? settings.sleepScore)),
+      energy: Math.min(timeline_simulateTeam_ruleParameters.energyCap, Math.max(0, opts.fixedEnergy ?? input.wakeEnergy ?? settings.sleepScore)),
       lastDecay: 0,
       next: 0,
       held: 0,
@@ -162,9 +183,9 @@ export function simulateTeam(
       carry: carryLimit(poke.carry, subs, settings.goodCamp, input.carryMode, ribbon.carry, ex.carryExtra),
       perHelp: berryCount(poke.specialty, subs),
       ingRate: poke.ingredientRate * natureStatFactor(input.nature, 'ingredient')
-        * (1 + (subs.includes('ingS') ? 0.18 : 0) + (subs.includes('ingM') ? 0.36 : 0)),
+        * (1 + (subs.includes('ingS') ? timeline_simulateTeam_ruleParameters.findingS : 0) + (subs.includes('ingM') ? timeline_simulateTeam_ruleParameters.findingM : 0)),
       skillRate: poke.skillRate * natureStatFactor(input.nature, 'skill')
-        * (1 + (subs.includes('skillS') ? 0.18 : 0) + (subs.includes('skillM') ? 0.36 : 0)) * ex.skillMultiplier,
+        * (1 + (subs.includes('skillS') ? timeline_simulateTeam_ruleParameters.findingS : 0) + (subs.includes('skillM') ? timeline_simulateTeam_ruleParameters.findingM : 0)) * ex.skillMultiplier,
       skillLv,
       fill: chargeStrength(poke.mainSkill, skillLv),
       unitBerry: berryUnitEnergy(poke.berry, input.level, settings.areaBonus, ex.berryMultiplier),
@@ -177,6 +198,20 @@ export function simulateTeam(
   // 每次独立模拟从迁岛后的空领域开始；睡眠与每天切换不重置。
   let berryZone = 0
   const baseBerryUnits = members.map(member => member.unitBerry)
+  const bases = members.map(member => ({ perHelp: member.perHelp, skillRate: member.skillRate, skillLv: member.skillLv }))
+  function refreshActivities(minute: number) {
+    members.forEach((member, index) => {
+      const before = intervalOf(member, minute)
+      member.activity = activityValues(snapshot.activity, settings.island, member.poke, minute)
+      member.perHelp = bases[index]!.perHelp + member.activity.berryCountBonus
+      member.skillRate = Math.min(1, bases[index]!.skillRate * member.activity.skillRateMultiplier)
+      member.skillLv = Math.min(skillMaxFor(member.poke.mainSkill), bases[index]!.skillLv + member.activity.skillLevelBonus)
+      member.fill = chargeStrength(member.poke.mainSkill, member.skillLv)
+      member.unitBerry = baseBerryUnits[index]! * member.activity.berryEnergyMultiplier * (member.poke.berryType === '超能' ? 1 + berryZone : 1)
+      if (member.next > minute) member.next = minute + (member.next - minute) * intervalOf(member, minute) / before
+    })
+  }
+  refreshActivities(0)
   if (settings.whistleHelps) {
     for (let i = 0; i < members.length; i++) {
       for (let w = 0; w < settings.whistleHelps; w++) extraQueue.push({ minute: 1 + w, index: i })
@@ -202,12 +237,12 @@ export function simulateTeam(
       m.favored,
       ribbonBonus(m.input.ribbonHours ?? 0, stagesLeft(m.poke.id)).speedCut,
       exEffects(settings, m.poke.berry).speed,
-    ) * accel
+    ) * accel * m.activity.helpIntervalMultiplier
   }
 
   function expectedHelp(target: EffectActor, amount: number) {
     const m = target as Member
-    const slots = m.input.ingredientSlots.slice(0, m.input.level >= 60 ? 3 : m.input.level >= 30 ? 2 : 1)
+    const slots = m.input.ingredientSlots.slice(0, m.input.level >= (timeline_expectedHelp_runtimeParameters.p001 as 60) ? 3 : m.input.level >= (timeline_expectedHelp_runtimeParameters.p002 as 30) ? 2 : 1)
     const drops = slots.map((index, slot) => index == null ? null : slotDrop(m.poke.ingredients, slot, index))
     const foodRate = drops.length ? Math.min(1, m.ingRate) : 0
     let foodChance = 0
@@ -224,14 +259,14 @@ export function simulateTeam(
   }
 
   function dispatchSkill(m: Member, minute: number, weight = 1, depth = 0) {
-    if (weight < 1e-8 || depth > 12) return
+    if (weight < 1e-8 || depth > (timeline_dispatchSkill_runtimeParameters.p001 as 12)) return
     const previousEnergy = members.map(member => member.energy)
     m.result.skillProcs += weight
     if (m.input.pokeId === 151) {
       const ex = exEffects(settings, m.poke.berry, m.poke.specialty)
-      const omniLv = Math.min(8, effectiveSkillLevel(m.input.level, m.input.skillLevel, m.input.subskills, '十项全能') + ex.skillLevels)
+      const omniLv = Math.min((timeline_dispatchSkill_runtimeParameters.p002 as 8), effectiveSkillLevel(m.input.level, m.input.skillLevel, m.input.subskills, '十项全能') + ex.skillLevels)
       m.result.rewards ??= { dreamShards: 0, candies: 0, berryJuice: 0 }
-      m.result.rewards.candies += weight * (1 + Math.max(0, omniLv - 5) * 0.3)
+      m.result.rewards.candies += weight * (1 + Math.max(0, omniLv - timeline_dispatchSkill_ruleParameters.maximumEligibleTargets) * timeline_dispatchSkill_ruleParameters.staticRecoveryChance)
     }
     const kind = skillKind(m.poke.mainSkill)
     const value = skillValue(m.poke.mainSkill, m.skillLv)
@@ -240,11 +275,11 @@ export function simulateTeam(
       help: expectedHelp,
       pot: amount => cooking.addPot(amount),
       crit: choices => cooking.addCrit(choices),
-      charge: (actor, amount) => { actor.result.skillEnergy += amount * (1 + settings.areaBonus) },
+      charge: (actor, amount) => { actor.result.skillEnergy += amount * (1 + settings.areaBonus) * (actor as Member).activity.skillStrengthMultiplier },
       zone: amount => {
-        berryZone = Math.min(0.24, berryZone + amount)
+        berryZone = Math.min(timeline_dispatchSkill_ruleParameters.berryZoneCap, berryZone + amount)
         members.forEach((member, index) => {
-          if (member.poke.berryType === '超能') member.unitBerry = baseBerryUnits[index]! * (1 + berryZone)
+          if (member.poke.berryType === '超能') member.unitBerry = baseBerryUnits[index]! * member.activity.berryEnergyMultiplier * (1 + berryZone)
         })
       },
       skillOnly: (target, helps, probability) => {
@@ -254,14 +289,14 @@ export function simulateTeam(
       },
     }, weight)
     if (!applied) {
-      if (kind === 'charge') m.result.skillEnergy += m.fill
-      if (kind === 'healSelf') m.energy = Math.min(150, m.energy + value * m.factor)
+      if (kind === 'charge') m.result.skillEnergy += m.fill * m.activity.skillStrengthMultiplier
+      if (kind === 'healSelf') m.energy = Math.min(timeline_dispatchSkill_ruleParameters.energyCap, m.energy + value * m.factor)
       if (kind === 'healAll') {
-        for (const other of members) other.energy = Math.min(150, other.energy + value * other.factor)
+        for (const other of members) other.energy = Math.min(timeline_dispatchSkill_ruleParameters.energyCap, other.energy + value * other.factor)
       }
       if (kind === 'healOne') {
         const target = members.slice().sort((a, b) => a.energy - b.energy)[0]
-        if (target) target.energy = Math.min(150, target.energy + value * target.factor)
+        if (target) target.energy = Math.min(timeline_dispatchSkill_ruleParameters.energyCap, target.energy + value * target.factor)
       }
       if (kind === 'helpAccel') {
         for (const other of members) other.accelUntil = minute + ACCEL_MINUTES
@@ -303,14 +338,14 @@ export function simulateTeam(
       m.result.sneaky += 1
     }
     else if (roll(seed) < m.ingRate && m.poke.ingredients.length) {
-      const unlocked = m.input.level >= 60 ? 3 : m.input.level >= 30 ? 2 : 1
+      const unlocked = m.input.level >= (timeline_applyHelp_runtimeParameters.p001 as 60) ? 3 : m.input.level >= (timeline_applyHelp_runtimeParameters.p002 as 30) ? 2 : 1
       const slot = Math.floor(roll(seed + 3) * unlocked)
       const lineIndex = m.input.ingredientSlots[slot]
       const drop = lineIndex == null ? null : slotDrop(m.poke.ingredients, slot, lineIndex)
       if (drop) {
         const ex = exEffects(settings, m.poke.berry, m.poke.specialty)
-        const extra = fromSupport ? 0 : ex.ingredientExtra > 0 ? 1 + (ex.ingredientExtra > 1 && roll(seed + 13) < 0.5 ? 1 : 0) : 0
-        const amount = fromSupport ? drop.amount + extra : Math.min(drop.amount + extra, Math.max(0, m.carry - m.held))
+        const extra = fromSupport ? 0 : ex.ingredientExtra > 0 ? 1 + (ex.ingredientExtra > 1 && roll(seed + (timeline_applyHelp_runtimeParameters.p003 as 13)) < timeline_applyHelp_ruleParameters.fractionalExExtraChance ? 1 : 0) : 0
+        const amount = fromSupport ? drop.amount + extra : Math.min(drop.amount + extra + m.activity.ingredientCountBonus, Math.max(0, m.carry - m.held))
         if (asleepAt(minute)) {
           const held = heldFood.get(m) ?? {}
           held[drop.name] = (held[drop.name] ?? 0) + amount
@@ -329,7 +364,7 @@ export function simulateTeam(
       m.result.berryEnergy += m.perHelp * m.unitBerry
       m.held += m.perHelp
     }
-    if (!fromSupport && canRollSkill && (opts.expectedProcs || opts.alwaysProc || roll(seed + 7) < m.skillRate)) {
+    if (!fromSupport && canRollSkill && (opts.expectedProcs || opts.alwaysProc || roll(seed + (timeline_applyHelp_runtimeParameters.p004 as 7)) < m.skillRate)) {
       m.stock = Math.min(skillStorageLimit(m.poke.specialty), m.stock + (opts.expectedProcs && !opts.alwaysProc ? Math.min(1, m.skillRate) : 1))
     }
     if (!asleepAt(minute) && !fromSupport) {
@@ -352,7 +387,7 @@ export function simulateTeam(
       if (index < 0) break
       const member = members[index]!
       const minute = member.next
-      applyHelp(member, minute, minute + index * 31)
+      applyHelp(member, minute, minute + index * (timeline_completeHelps_runtimeParameters.p001 as 31))
       member.next = minute + intervalOf(member, minute) / 60
     }
   }
@@ -360,15 +395,16 @@ export function simulateTeam(
   let t = 0
   while (t < endMin) {
     completeHelps(t, false)
+    if (t % 1440 === (timeline_simulateTeam_runtimeParameters.p001 as 240)) refreshActivities(t)
     const clock = t % 1440
     const asleep = asleepAt(t)
     if (opts.fixedEnergy == null) {
       for (const m of members) {
-        if (t - m.lastDecay < 10) continue
-        m.energy = Math.max(0, m.energy - 1)
+        if (t - m.lastDecay < timeline_simulateTeam_ruleParameters.energyDecayMinutes) continue
+        m.energy = Math.max(0, m.energy - ruleParameters.modules.timeline.energyDecay.perTick)
         m.lastDecay = t
         if (!asleep && settings.dailySkillHeal) {
-          m.energy = Math.min(150, m.energy + (settings.dailySkillHeal / 144) * m.factor)
+          m.energy = Math.min(timeline_simulateTeam_ruleParameters.energyCap, m.energy + (settings.dailySkillHeal / timeline_simulateTeam_ruleParameters.dailyRecoveryTicks) * m.factor)
         }
       }
     }
@@ -389,7 +425,7 @@ export function simulateTeam(
         while (m.stock > 0) triggerSkill(m, t)
       }
     }
-    if (t % 10 === 0) {
+    if (t % timeline_simulateTeam_ruleParameters.energyDecayMinutes === 0) {
       for (const m of members) {
         const energy = opts.fixedEnergy ?? m.energy
         m.curve.push({ minute: t, energy, multiplier: energyMultiplier(energy), asleep })
@@ -399,21 +435,22 @@ export function simulateTeam(
     const due = extraQueue.filter((q) => q.minute <= t)
     for (const q of due) {
       const target = members[q.index]
-      if (target) applyHelp(target, t, t + q.index * 17, true)
+      if (target) applyHelp(target, t, t + q.index * (timeline_simulateTeam_runtimeParameters.p002 as 17), true)
     }
     extraQueue.splice(0, extraQueue.length, ...extraQueue.filter((q) => q.minute > t))
 
     completeHelps(t, true)
-    if (settings.meals && !asleep && [480,720,1080].includes(clock) && meals.length < 21) {
-      const sunday = settings.period === 'week' && Math.floor(t / 1440) === 6
-      const pot = cooking.potSize(settings.potSize, sunday || settings.sundayPot, settings.goodCamp)
+    if (settings.meals && !asleep && [timeline_simulateTeam_ruleParameters.breakfastMinute,timeline_simulateTeam_ruleParameters.lunchMinute,timeline_simulateTeam_ruleParameters.dinnerMinute].includes(clock) && meals.length < timeline_simulateTeam_ruleParameters.weeklyMealLimit) {
+      const sunday = settings.period === 'week' && Math.floor(t / 1440) === timeline_simulateTeam_ruleParameters.sundayIndex
+      const activity = activityValues(snapshot.activity, settings.island, undefined, t)
+      const pot = Math.ceil(cooking.potSize(settings.potSize, sunday || settings.sundayPot, settings.goodCamp) * activity.potSizeMultiplier)
       if (Object.values(bag).some(amount => amount >= 1)) {
-        const crit = cooking.cook(sunday)
-        const cooked = cookMeals(bag, settings, 1, sunday, { pot, multiplier: crit.multiplier })
+        const crit = cooking.cook(sunday, activity.cookingCritBonus, activity.cookingCritMultiplier)
+        const cooked = cookMeals(bag, settings, 1, sunday, { pot, multiplier: crit.multiplier * activity.cookingEnergyMultiplier })
         meals.push({ ...cooked.meals[0]!, minute: t, critChance: crit.chance, potSize: pot })
         for (const name of Object.keys(bag)) bag[name] = cooked.remain[name] ?? 0
         for (const m of members) {
-          const recovered = Math.min(150, m.energy + mealRecover(m.energy))
+          const recovered = Math.min(timeline_simulateTeam_ruleParameters.energyCap, m.energy + mealRecover(m.energy))
           if (recovered > m.energy) m.lastDecay = t
           m.energy = recovered
         }
@@ -428,16 +465,16 @@ export function simulateTeam(
   }
   for (const q of extraQueue) {
     const target = members[q.index]
-    if (target) applyHelp(target, Math.min(endMin - 1, q.minute), q.minute + q.index * 17, true)
+    if (target) applyHelp(target, Math.min(endMin - 1, q.minute), q.minute + q.index * (timeline_simulateTeam_runtimeParameters.p003 as 17), true)
   }
   for (const m of members) m.result.curve = m.curve
   return { members: members.map((m) => m.result), events, meals, bag: produced, remain: bag }
 }
 
 export function teamTimeline(settings: Settings, roster: BoxPokemon[]) {
-  const restriction = teamRestrictionError(roster.slice(0, 5))
+  const restriction = teamRestrictionError(roster.slice(0, timeline_teamTimeline_ruleParameters.teamSize))
   if (restriction) throw new Error(restriction)
-  const active = roster.filter((p) => !p.napping).slice(0, 5)
+  const active = roster.filter((p) => !p.napping).slice(0, timeline_teamTimeline_ruleParameters.teamSize)
   const hb = teamHelpingBonus(active, settings.helpingBonus)
   const sim = simulateTeam(settings, active, hb)
   const bag: Record<string, number> = {}

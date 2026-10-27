@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
 import { computed, ref } from 'vue'
 import type { SplitOptimum, SplitResult } from '../../calc/splitSleep'
 import { sleepClock } from '../../calc/sleep'
+const components_plan_SplitRecommendation_config_clientDefaults = clientDefaults.modules.components_plan_SplitRecommendation
+
 
 const props = defineProps<{ title: string, optimum: SplitOptimum, result: SplitResult, metricIndex?: number }>()
-const visible = ref(5)
-const expanded = ref<Record<string, number>>({})
+const visible = ref(components_plan_SplitRecommendation_config_clientDefaults["visibleInitial"])
+const expanded = ref<Record<string, number>>((cloneData(components_plan_SplitRecommendation_config_clientDefaults["expandedInitial"]) as unknown as Record<string, number>))
 const format = (value: number) => value.toLocaleString('zh-CN', { maximumFractionDigits: 3 })
 const groups = computed(() => {
   const rows = new Map<string, number[]>()

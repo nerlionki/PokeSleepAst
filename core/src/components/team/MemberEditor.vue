@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed, shallowRef } from 'vue'
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
+import { computed, shallowRef, watch } from 'vue'
 import { NATURES, SUBSKILLS, pokeById } from '../../calc/data'
 import { clearIngredientSlot, ingredientColumns, setIngredientChoice } from '../../calc/ingredients'
-import { applySilverSeed, exclusiveSubskills, silverSeedCandidates, stepGoldSeed, stepSkillLevel, subskillLevelBonus, undoSilverSeed, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
+import { applySilverSeed, exclusiveSubskills, silverSeedCandidates, stepGoldSeed, stepMemberEvolutions, stepSkillLevel, subskillLevelBonus, switchMemberEvolution, undoSilverSeed, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
+import { evolutionDepth, evolutionStages } from '../../calc/evolution'
 import { MEW_SKILLS, normalizeMewSkill } from '../../calc/mew'
 import { skillMaxFor } from '../../calc/mainSkills'
 import { RIBBON_HOURS, ribbonBonus, stagesLeft } from '../../calc/ribbon'
@@ -13,31 +17,30 @@ import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import MainSkillIcon from '../shared/MainSkillIcon.vue'
 import SubskillIcon from '../shared/SubskillIcon.vue'
+const components_team_MemberEditor_config_clientDefaults = clientDefaults.modules.components_team_MemberEditor
+
 
 const model = defineModel<MemberDraft>({ required: true })
 const props = withDefaults(defineProps<{ actions?: boolean, shiny?: boolean }>(), { actions: true, shiny: false })
 const emit = defineEmits<{ copy: [], remove: [], confirm: [field: OcrMissingField] }>()
 
-const LEVELS = [1, 10, 25, 30, 50, 60, 70, 80, 100]
-const MODES: { id: CarryMode, label: string }[] = [
-  { id: 'preset', label: '预设' },
-  { id: 'normal', label: '一般' },
-  { id: 'full', label: '全时满包' },
-  { id: 'unlimited', label: '持有无上限' },
-]
-const STAT: Record<string, string> = { help: '帮忙', energy: '活力', ingredient: '食材', skill: '技能', exp: '经验' }
+const LEVELS = cloneData(components_team_MemberEditor_config_clientDefaults["LEVELS"])
+const MODES: { id: CarryMode, label: string }[] = (cloneData(components_team_MemberEditor_config_clientDefaults["MODES"]) as unknown as { id: CarryMode, label: string }[])
+const STAT: Record<string, string> = (cloneData(components_team_MemberEditor_config_clientDefaults["STAT"]) as unknown as Record<string, string>)
 
 function natureMark(stat: string | null, arrow: string) {
   if (!stat || !STAT[stat]) return ''
   return `${STAT[stat]}${arrow}`
 }
 
-const natureOpen = shallowRef(false)
-const subPick = shallowRef<number | null>(null)
-const silverOpen = shallowRef(false)
+const natureOpen = shallowRef(components_team_MemberEditor_config_clientDefaults["natureOpenInitial"])
+const subPick = shallowRef<number | null>((components_team_MemberEditor_config_clientDefaults["subPickInitial"] as unknown as number | null))
+const silverOpen = shallowRef(components_team_MemberEditor_config_clientDefaults["silverOpenInitial"])
 const silverChoices = computed(() => silverSeedCandidates(model.value.level, model.value.subskills))
 const skillBonus = computed(() => subskillLevelBonus(model.value.level, model.value.subskills))
 const poke = computed(() => pokeById(model.value.pokeId))
+const stages = computed(() => evolutionStages(model.value.pokeId))
+const maxEvolutions = computed(() => evolutionDepth(model.value.pokeId))
 const board = computed(() => poke.value ? ingredientColumns(poke.value.ingredients) : [])
 const skillMax = computed(() => skillMaxFor(poke.value?.mainSkill ?? ''))
 const ribbon = computed(() => ribbonBonus(model.value.tune.ribbonHours, stagesLeft(model.value.pokeId)))
@@ -51,6 +54,17 @@ function patch(partial: Partial<MemberDraft>) {
 
 function patchTune(partial: Partial<MemberTune>) {
   model.value = { ...model.value, tune: { ...model.value.tune, ...partial } }
+}
+
+watch(() => [model.value.pokeId, model.value.tune.evolutions], () => {
+  const evolutions = Math.min(maxEvolutions.value, Math.max(0, model.value.tune.evolutions))
+  if (evolutions !== model.value.tune.evolutions) patchTune({ evolutions })
+}, { immediate: true })
+
+function switchEvolution(id: number) {
+  if (id === model.value.pokeId) return
+  model.value = switchMemberEvolution(model.value, id)
+  emit('confirm', 'skillLevel')
 }
 
 function setLevel(level: number) {
@@ -108,9 +122,11 @@ function stepSilver(index?: number) {
   silverOpen.value = false
 }
 
-function stepTune(key: 'evolutions', delta: number, max: number) {
-  const value = Math.min(max, Math.max(0, model.value.tune[key] + delta))
-  patchTune({ [key]: value })
+function stepEvolution(delta: number) {
+  const next = stepMemberEvolutions(model.value, delta)
+  if (next === model.value) return
+  model.value = next
+  emit('confirm', 'skillLevel')
 }
 </script>
 
@@ -123,6 +139,23 @@ function stepTune(key: 'evolutions', delta: number, max: number) {
         <p class="muted"><MainSkillIcon :name="poke.mainSkill" /> {{ poke.mainSkill }}</p>
       </div>
     </div>
+
+    <section v-if="stages.length > 1" class="evo-chain" aria-label="进化链">
+      <h3>进化链</h3>
+      <div class="evo-stages">
+        <template v-for="(stage, index) in stages" :key="index">
+          <span v-if="index" class="evo-arrow" aria-hidden="true">↓</span>
+          <div class="evo-stage">
+            <button v-for="node in stage" :key="node.id" type="button" class="evo-node"
+              :class="{ on: node.id === model.pokeId }" :aria-pressed="node.id === model.pokeId"
+              @click="switchEvolution(node.id)">
+              <PokeSprite :id="node.id" :name="node.name" :shiny="props.shiny" />
+              <span>{{ node.name }}</span>
+            </button>
+          </div>
+        </template>
+      </div>
+    </section>
 
     <label v-if="poke?.id === 151" class="field">
       <span>十项全能 · 当前习得技能</span>
@@ -169,9 +202,9 @@ function stepTune(key: 'evolutions', delta: number, max: number) {
 
     <div class="tune-row">
       <span>进化次数</span>
-      <button type="button" @click="stepTune('evolutions', -1, 3)">−</button>
+      <button type="button" :disabled="model.tune.evolutions <= 0" @click="stepEvolution(-1)">−</button>
       <b>{{ model.tune.evolutions }}</b>
-      <button type="button" @click="stepTune('evolutions', 1, 3)">+</button>
+      <button type="button" :disabled="model.tune.evolutions >= maxEvolutions" @click="stepEvolution(1)">+</button>
     </div>
     <div class="tune-row">
       <span>金种子</span>

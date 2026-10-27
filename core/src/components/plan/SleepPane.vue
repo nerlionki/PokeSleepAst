@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
+import { useActivities } from '../../composables/useActivities'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import { computed, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -13,6 +16,8 @@ import { candyExpectation } from '../../calc/sleepCandy'
 import { teamResearchBonuses } from '../../calc/sleepRewards'
 import { useRosterStore } from '../../stores/roster'
 import { useBoxStore } from '../../stores/box'
+const components_plan_SleepPane_config_clientDefaults = clientDefaults.modules.components_plan_SleepPane
+
 
 const settingsStore = useSettingsStore()
 const planStore = usePlanStore()
@@ -22,9 +27,9 @@ const researchBonuses = computed(() => teamResearchBonuses(roster.slots.flatMap(
   const member = roster.customs.find(item => item.uid === uid) ?? box.pokemon.find(item => item.uid === uid)
   return member ? [member] : []
 })))
-const focusIncense = shallowRef(false)
-const luckIncense = shallowRef(false)
-const incenseSession = shallowRef<0 | 1>(0)
+const focusIncense = shallowRef(components_plan_SleepPane_config_clientDefaults["focusIncenseInitial"])
+const luckIncense = shallowRef(components_plan_SleepPane_config_clientDefaults["luckIncenseInitial"])
+const incenseSession = shallowRef<0 | 1>((components_plan_SleepPane_config_clientDefaults["incenseSessionInitial"] as unknown as 0 | 1))
 const { settings } = storeToRefs(settingsStore)
 const { plan } = storeToRefs(planStore)
 
@@ -33,23 +38,26 @@ const island = computed({
   set: (value) => settingsStore.applyIsland(value),
 })
 
+const activity = useActivities(settings, () => island.value)
+const eventMult = activity.field('drowsyPowerMultiplier', () => settings.value.eventMult)
+const shinyUp = activity.field('shinyUp', () => plan.value.shinyUp || settings.value.shinyUp)
 const rank = computed(() => rankFromStrength(island.value, plan.value.snorlaxStrength))
 const nextRank = computed(() => rankToNext(island.value, plan.value.snorlaxStrength))
 const pickedRank = computed({
   get: () => rank.value,
   set: (value) => { plan.value.snorlaxStrength = rankStrength(island.value, value) },
 })
-const dp = computed(() => drowsyPower(plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult))
+const dp = computed(() => drowsyPower(plan.value.sleepScore, plan.value.snorlaxStrength, eventMult.value))
 
 const result = computed(() => maxEncounters(
   island.value,
   plan.value.sleepScore,
   plan.value.snorlaxStrength,
-  settings.value.eventMult,
+  eventMult.value,
 ))
 const splitHelps = computed(() => result.value.best.total > result.value.single)
 /** null 表示跟随推荐：拆分能多抓时拆分。改岛屿、分数、能量或加成后回到推荐。 */
-const manualWhole = shallowRef<boolean | null>(null)
+const manualWhole = shallowRef<boolean | null>((components_plan_SleepPane_config_clientDefaults["manualWholeInitial"] as unknown as boolean | null))
 const whole = computed(() => manualWhole.value ?? !splitHelps.value)
 const caught = computed(() => whole.value ? result.value.single : result.value.best.total)
 const shown = computed(() => caught.value + (plan.value.campTicket ? 1 : 0))
@@ -57,26 +65,27 @@ const nextCatch = computed(() => strengthToNext(
   island.value,
   plan.value.sleepScore,
   plan.value.snorlaxStrength,
-  settings.value.eventMult,
+  eventMult.value,
 ))
-const sameMult = (mult: number) => Math.abs(settings.value.eventMult - mult) < 0.001
+const sameMult = (mult: number) => Math.abs(eventMult.value - mult) < 0.001
 
-const BATCH = 4000
-const otherTypes = shallowRef(false)
-const researchedBefore = shallowRef(0)
-const specialEncountered = shallowRef(false)
-const firstResearchExtras = shallowRef(0)
-const eventMix = computed(() => otherTypes.value ? settings.value.sleepEventMix : 'off')
-const resultTab = shallowRef<'encounters' | 'candies'>('encounters')
+const BATCH = (components_plan_SleepPane_config_clientDefaults["BATCH"] as 4000)
+const mixMode = activity.field('eventMix', () => 'off')
+const otherTypes = computed({ get: () => mixMode.value !== 'off', set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' } })
+const researchedBefore = shallowRef(components_plan_SleepPane_config_clientDefaults["researchedBeforeInitial"])
+const specialEncountered = shallowRef(components_plan_SleepPane_config_clientDefaults["specialEncounteredInitial"])
+const firstResearchExtras = shallowRef(components_plan_SleepPane_config_clientDefaults["firstResearchExtrasInitial"])
+const eventMix = mixMode
+const resultTab = shallowRef<'encounters' | 'candies'>((components_plan_SleepPane_config_clientDefaults["resultTabInitial"] as unknown as 'encounters' | 'candies'))
 const { busy, error: simulationError, notice, progress, result: seen, calculate: startSimulation, cancel, reset } = useSleepSimulation()
 watch(() => [researchBonuses.value, focusIncense.value, luckIncense.value, incenseSession.value], () => reset(), { deep: true, flush: 'sync' })
 const percent = computed(() => progress.value.total ? Math.floor(progress.value.completed / progress.value.total * 100) : 0)
-let drawSeed = 1
+let drawSeed = components_plan_SleepPane_config_clientDefaults["drawSeed"]
 
-watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult], () => {
+watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, eventMult.value], () => {
   manualWhole.value = null
 })
-watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, settings.value.eventMult, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, settings.value.shinyUp, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded, researchedBefore.value, specialEncountered.value, firstResearchExtras.value, plan.value.campTicket], () => {
+watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, eventMult.value, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, shinyUp.value, activity.context.value, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded, researchedBefore.value, specialEncountered.value, firstResearchExtras.value, plan.value.campTicket], () => {
   reset()
 }, { deep: true, flush: 'sync' })
 
@@ -95,14 +104,15 @@ function calculate() {
     discovered: resolvedSleepdex(plan.value),
     undiscoveredBoost: plan.value.undiscoveredBoost,
     rare: plan.value.rare,
-    shinyUp: plan.value.shinyUp || settings.value.shinyUp,
+    shinyUp: shinyUp.value,
+    activity: activity.context.value,
     eventMix: eventMix.value,
-    eventMult: settings.value.eventMult,
+    eventMult: eventMult.value,
   }
   const scores = whole.value ? [plan.value.sleepScore] : [result.value.best.a, result.value.best.b]
   resultTab.value = 'encounters'
   void startSimulation({ island: island.value, sleepType: plan.value.sleepType as SleepType,
-    powers: scores.map((score) => drowsyPower(score, plan.value.snorlaxStrength, settings.value.eventMult)),
+    powers: scores.map((score) => drowsyPower(score, plan.value.snorlaxStrength, eventMult.value)),
     iterations: BATCH, seed: drawSeed, options: opts })
 }
 
@@ -130,7 +140,7 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
         type="button"
         :disabled="busy"
         :class="{ on: sameMult(bonus.mult) }"
-        @click="settings.eventMult = bonus.mult"
+        @click="eventMult = bonus.mult"
       >{{ bonus.label }}</button>
     </div>
     <article class="card stack">

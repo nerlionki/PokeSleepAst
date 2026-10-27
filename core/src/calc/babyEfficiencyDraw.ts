@@ -1,4 +1,8 @@
+import runtimeParameters from '../data/runtime-parameters.json'
 import { createSleepSelector } from './sleepSelection'
+const babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters = runtimeParameters.modules.babyEfficiencyDraw.simulateEfficiencySlots.values
+const babyEfficiencyDraw_efficiencyRewardsAfterResearch_runtimeParameters = runtimeParameters.modules.babyEfficiencyDraw.efficiencyRewardsAfterResearch.values
+
 export interface EfficiencyReward { catch: number, candy: number }
 export interface EfficiencyBucket extends EfficiencyReward {
   count: number
@@ -52,8 +56,8 @@ export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: 
   // Precompute type, special and belly restriction combinations, outside the Monte Carlo loop.
   let selectors = selectorCache.get(state.buckets)
   if (!selectors) {
-    const pools = Array.from({ length: 8 }, (_, mask) => state.buckets.filter((bucket) =>
-    (mask & 1 || bucket.typed) && (!(mask & 2) || !bucket.special) && (!(mask & 4) || !bucket.belly)))
+    const pools = Array.from({ length: (babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters.p001 as 8) }, (_, mask) => state.buckets.filter((bucket) =>
+    (mask & 1 || bucket.typed) && (!(mask & 2) || !bucket.special) && (!(mask & (babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters.p002 as 4)) || !bucket.belly)))
     selectors = pools.map((pool) => createSleepSelector(pool, (bucket) => bucket.count * (bucket.weight ?? 1)))
     selectorCache.set(state.buckets, selectors)
   }
@@ -63,7 +67,7 @@ export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: 
     let special = false, belly = false
     for (let slot = 0; slot < state.encounters; slot++) {
       const anyType = slot < state.otherSlots
-      const select: ReturnType<typeof createSleepSelector<EfficiencyBucket>> = selectors[Number(anyType) + Number(special) * 2 + Number(belly) * 4]!
+      const select: ReturnType<typeof createSleepSelector<EfficiencyBucket>> = selectors[Number(anyType) + Number(special) * 2 + Number(belly) * (babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters.p003 as 4)]!
       const item: EfficiencyBucket | undefined = select(remaining, slot === state.encounters - 1, rng)
       const reward = item ?? (anyType ? state.openFallback : state.typedFallback)
       result.catch += reward.catch
@@ -84,7 +88,7 @@ export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: 
 
 /** Daily limits only change rewards, so reuse the same full simulation across preceding counts. */
 export function efficiencyRewardsAfterResearch(result: EfficiencySimulation, researchedBefore = 0): EfficiencyReward {
-  return { catch: result.catch, candy: result.slotCandy.reduce((sum, candy, slot) => sum + (researchedBefore + slot >= 10 ? result.slotFamily[slot]! : candy), 0) }
+  return { catch: result.catch, candy: result.slotCandy.reduce((sum, candy, slot) => sum + (researchedBefore + slot >= (babyEfficiencyDraw_efficiencyRewardsAfterResearch_runtimeParameters.p001 as 10) ? result.slotFamily[slot]! : candy), 0) }
 }
 export function simulateEfficiencyState(state: EfficiencyDrawState, iterations: number, rng = efficiencyRandom(1)): EfficiencyReward {
   return efficiencyRewardsAfterResearch(simulateEfficiencySlots(state, iterations, rng), state.researchedBefore)

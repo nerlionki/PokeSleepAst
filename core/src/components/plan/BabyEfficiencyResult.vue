@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import type { EfficiencyOptimum, EfficiencyPrecision } from '../../calc/babyEfficiency'
+const components_plan_BabyEfficiencyResult_config_clientDefaults = clientDefaults.modules.components_plan_BabyEfficiencyResult
+
 
 const props = defineProps<{ title: string, unit: string, optimum: EfficiencyOptimum, precision: EfficiencyPrecision, probability?: boolean }>()
-const visibleCount = shallowRef(20)
+const visibleCount = shallowRef(components_plan_BabyEfficiencyResult_config_clientDefaults["visibleCountInitial"])
 const visible = computed(() => props.optimum.intervals.slice(0, visibleCount.value))
 const format = (value: number) => value.toLocaleString('zh-CN', { maximumFractionDigits: 3 })
 const range = (min: number, max: number | null) => max === null ? `≥ ${format(min)}` : min === max ? format(min) : `${format(min)} – ${format(max)}`

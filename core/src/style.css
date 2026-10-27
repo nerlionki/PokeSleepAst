@@ -228,6 +228,7 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
 }
 .seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.plan-tabs button { white-space: pre-line; }
 .seg button {
   width: 100%;
   margin: 0;

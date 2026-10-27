@@ -1,11 +1,15 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { POKEDEX } from '../../calc/data'
 import { pokeHit } from '../../calc/pokeSearch'
 import PokeSprite from './PokeSprite.vue'
+const components_shared_SpeciesSheet_config_clientDefaults = clientDefaults.modules.components_shared_SpeciesSheet
+
 
 const emit = defineEmits<{ pick: [id: number], close: [] }>()
-const q = shallowRef('')
+const q = shallowRef(components_shared_SpeciesSheet_config_clientDefaults["qInitial"])
 const list = computed(() => POKEDEX.filter((poke) => pokeHit(poke, q.value)))
 </script>
 

@@ -1,5 +1,17 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleCatalogs from '../data/rule-catalogs.json'
+import ruleParameters from '../data/rule-parameters.json'
+import { activityValues, createActivityContext, type ActivityContext } from './activities'
+import { normalizeEventMix } from './sleepRules'
 import type { IslandId, SleepType } from '../types'
 import { encounterCount, sleepExpect, sleepExpectSteps, type SleepExpectCheckpoint, type DrawOpts } from './sleep'
+const sleepSimulation_prepareActivityRequest_runtimeParameters = runtimeParameters.modules.sleepSimulation.prepareActivityRequest.values
+const sleepSimulation_validResearchOptions_runtimeParameters = runtimeParameters.modules.sleepSimulation.validResearchOptions.values
+const sleepSimulation_config_ruleCatalogs = ruleCatalogs.modules.sleepSimulation
+const sleepSimulation_simulateSleep_ruleParameters = ruleParameters.modules.sleepSimulation.simulateSleep
+const sleepSimulation_sleepSimulationSteps_ruleParameters = ruleParameters.modules.sleepSimulation.sleepSimulationSteps
+const sleepSimulation_sleepSimulationSteps_runtimeParameters = runtimeParameters.modules.sleepSimulation.sleepSimulationSteps.values
+
 export interface SleepSimulationRequest {
   checkpoint?: SleepSimulationCheckpoint
   island: IslandId
@@ -7,13 +19,20 @@ export interface SleepSimulationRequest {
   powers: number[]
   iterations: number
   seed: number
-  options: Pick<DrawOpts, 'researchedBefore' | 'researchLimit' | 'firstResearchExtras' | 'rank' | 'discovered' | 'undiscoveredBoost' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps' | 'researchExpBonus' | 'shardBonus' | 'focusIncense' | 'luckIncense'> & { incenseSession?: 0 | 1 }
+  options: Pick<DrawOpts, 'activity' | 'researchedBefore' | 'researchLimit' | 'firstResearchExtras' | 'rank' | 'discovered' | 'undiscoveredBoost' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps' | 'researchExpBonus' | 'shardBonus' | 'focusIncense' | 'luckIncense'> & { incenseSession?: 0 | 1 }
 }
-export interface SleepSimulationCheckpoint { version: 4, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint }
+export interface SleepSimulationCheckpoint { version: 4, activity?: ActivityContext, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint }
 export type SleepSimulationRows = ReturnType<typeof sleepExpect>
 export type SleepSimulationMessage = { type: 'progress', completed: number, total: number }
   | { type: 'checkpoint', checkpoint: SleepSimulationCheckpoint }
   | { type: 'result', result: SleepSimulationRows } | { type: 'error', message: string }
+function prepareActivityRequest(request: SleepSimulationRequest): SleepSimulationRequest {
+  const activity = createActivityContext('research', request.checkpoint?.activity ?? request.options.activity)
+  const effects = activityValues(activity, request.island, undefined, (sleepSimulation_prepareActivityRequest_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: request.options.eventMult ?? 1, eventMix: normalizeEventMix(request.options.eventMix), shinyUp: request.options.shinyUp ?? false })
+  const changed = effects.drowsyPowerMultiplier !== (request.options.eventMult ?? 1)
+  return { ...request, powers: changed ? request.powers.map(power => power / (request.options.eventMult ?? 1) * effects.drowsyPowerMultiplier) : request.powers,
+    options: { ...request.options, activity, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix, shinyUp: effects.shinyUp } }
+}
 function researchOptions(request: SleepSimulationRequest, index: number): DrawOpts & { seed: number } {
   return { ...request.options,
     focusIncense: index === (request.options.incenseSession ?? 0) && request.options.focusIncense,
@@ -21,15 +40,16 @@ function researchOptions(request: SleepSimulationRequest, index: number): DrawOp
     researchedBefore: (request.options.researchedBefore ?? 0) + (index ? encounterCount(request.island, request.powers[0]!) + (request.options.firstResearchExtras ?? 0) : 0), seed: request.seed + index } as DrawOpts & { seed: number }
 }
 function validResearchOptions(request: SleepSimulationRequest) {
-  return [request.options.researchedBefore ?? 0, request.options.firstResearchExtras ?? 0].every(value => Number.isInteger(value) && value >= 0 && value <= 100)
-    && [10,11].includes(request.options.researchLimit ?? 10)
-    && [request.options.researchExpBonus ?? 0, request.options.shardBonus ?? 0].every(value => Number.isInteger(value) && value >= 0 && value <= 5)
+  return [request.options.researchedBefore ?? 0, request.options.firstResearchExtras ?? 0].every(value => Number.isInteger(value) && value >= 0 && value <= (sleepSimulation_validResearchOptions_runtimeParameters.p001 as 100))
+    && sleepSimulation_config_ruleCatalogs.validResearchOptionsList0.values.includes(request.options.researchLimit ?? (sleepSimulation_validResearchOptions_runtimeParameters.p002 as 10))
+    && [request.options.researchExpBonus ?? 0, request.options.shardBonus ?? 0].every(value => Number.isInteger(value) && value >= 0 && value <= (sleepSimulation_validResearchOptions_runtimeParameters.p003 as 5))
     && [0,1].includes(request.options.incenseSession ?? 0)
 }
 /** Runs exclusively inside a platform worker; each split session keeps its own seed/budget. */
 export function simulateSleep(request: SleepSimulationRequest, emit: (message: SleepSimulationMessage) => void): void {
   try {
-    if (!validResearchOptions(request) || !Number.isInteger(request.iterations) || request.iterations < 1 || request.iterations > 100000
+    request = prepareActivityRequest(request)
+    if (!validResearchOptions(request) || !Number.isInteger(request.iterations) || request.iterations < 1 || request.iterations > sleepSimulation_simulateSleep_ruleParameters.maxIterations
       || !request.powers.length || request.powers.length > 2 || request.powers.some((power) => !Number.isFinite(power) || power < 0)) {
       throw new Error('模拟参数无效，请重新设置')
     }
@@ -44,7 +64,8 @@ export function simulateSleep(request: SleepSimulationRequest, emit: (message: S
 
 /** Resume after every 100 researches without changing the random sequence. */
 export function* sleepSimulationSteps(request: SleepSimulationRequest): Generator<SleepSimulationCheckpoint, SleepSimulationRows> {
-  if (!validResearchOptions(request) || !Number.isInteger(request.iterations) || request.iterations < 1 || request.iterations > 100000
+  request = prepareActivityRequest(request)
+  if (!validResearchOptions(request) || !Number.isInteger(request.iterations) || request.iterations < 1 || request.iterations > sleepSimulation_sleepSimulationSteps_ruleParameters.maxIterations
     || !request.powers.length || request.powers.length > 2 || request.powers.some((power) => !Number.isFinite(power) || power < 0)) throw new Error('模拟参数无效，请重新设置')
   const checkpoint = request.checkpoint
   if (checkpoint && checkpoint.version !== 4) throw new Error('睡姿抽选规则已更新，请重新计算')
@@ -53,9 +74,9 @@ export function* sleepSimulationSteps(request: SleepSimulationRequest): Generato
     const steps = sleepExpectSteps(request.island, request.sleepType, request.powers[index]!, request.iterations, 'normal',
       researchOptions(request, index), undefined, index === checkpoint?.powerIndex ? checkpoint.session : undefined)
     let next = steps.next()
-    while (!next.done) { yield { version: 4, powerIndex: index, result, session: next.value }; next = steps.next() }
+    while (!next.done) { yield { version: (sleepSimulation_sleepSimulationSteps_runtimeParameters.p001 as 4), activity: request.options.activity as ActivityContext, powerIndex: index, result, session: next.value }; next = steps.next() }
     result.push(...next.value)
-    yield { version: 4, powerIndex: index + 1, result }
+    yield { version: (sleepSimulation_sleepSimulationSteps_runtimeParameters.p002 as 4), activity: request.options.activity as ActivityContext, powerIndex: index + 1, result }
   }
   return result
 }

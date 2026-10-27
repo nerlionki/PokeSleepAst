@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
 import { resolveMemberSkill } from '../../calc/mew'
 import { skillMaxFor } from '../../calc/mainSkills'
 import { exEffects } from '../../calc/exEffects'
@@ -17,6 +20,8 @@ import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import MainSkillIcon from '../shared/MainSkillIcon.vue'
 import SubskillIcon from '../shared/SubskillIcon.vue'
+const components_team_MemberCard_config_clientDefaults = clientDefaults.modules.components_team_MemberCard
+
 
 const props = defineProps<{
   pokeId: number
@@ -35,7 +40,7 @@ const props = defineProps<{
 }>()
 
 const { settings } = storeToRefs(useSettingsStore())
-const STAT: Record<string, string> = { help: '帮忙', energy: '活力', ingredient: '食材', skill: '技能', exp: '经验' }
+const STAT: Record<string, string> = (cloneData(components_team_MemberCard_config_clientDefaults["STAT"]) as unknown as Record<string, string>)
 
 const poke = computed(() => {
   const species = pokeById(props.pokeId)

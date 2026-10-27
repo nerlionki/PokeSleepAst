@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
 import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { boxLabel } from '../../calc/boxFilter'
@@ -14,17 +17,19 @@ import PokeSprite from '../shared/PokeSprite.vue'
 import SpeciesSheet from '../shared/SpeciesSheet.vue'
 import MemberCard from './MemberCard.vue'
 import MemberEditor from './MemberEditor.vue'
+const components_team_TeamRosterPane_config_clientDefaults = clientDefaults.modules.components_team_TeamRosterPane
 
-const LEVELS = [1, 10, 25, 30, 50, 60, 70]
+
+const LEVELS = cloneData(components_team_TeamRosterPane_config_clientDefaults["LEVELS"])
 
 const box = useBoxStore()
 const roster = useRosterStore()
 const { settings } = storeToRefs(useSettingsStore())
-const view = shallowRef<'overview' | 'detail' | 'time'>('overview')
-const level = shallowRef<number | null>(null)
-const picking = shallowRef<number | null>(null)
-const adding = shallowRef<number | null>(null)
-const editing = shallowRef<string | null>(null)
+const view = shallowRef<'overview' | 'detail' | 'time'>((components_team_TeamRosterPane_config_clientDefaults["viewInitial"] as unknown as 'overview' | 'detail' | 'time'))
+const level = shallowRef<number | null>((components_team_TeamRosterPane_config_clientDefaults["levelInitial"] as unknown as number | null))
+const picking = shallowRef<number | null>((components_team_TeamRosterPane_config_clientDefaults["pickingInitial"] as unknown as number | null))
+const adding = shallowRef<number | null>((components_team_TeamRosterPane_config_clientDefaults["addingInitial"] as unknown as number | null))
+const editing = shallowRef<string | null>((components_team_TeamRosterPane_config_clientDefaults["editingInitial"] as unknown as string | null))
 
 interface SlotMember extends MemberDraft {
   uid: string
@@ -65,7 +70,7 @@ const teamError = computed(() => teamRestrictionError(members.value.flatMap(memb
 const result = computed(() => teamProduce(settings.value, teamError.value ? [] : analyzed.value))
 
 const slotResult = computed(() => {
-  let cursor = 0
+  let cursor = components_team_TeamRosterPane_config_clientDefaults["cursor"]
   return members.value.map((member) => {
     if (!member || member.napping) return null
     return result.value.members[cursor++] ?? null
@@ -87,6 +92,7 @@ const editingDraft = computed({
     if (uid.startsWith('custom-')) roster.updateCustom(uid, next as TeamCustom)
     else {
       box.update(uid, {
+        pokeId: next.pokeId,
         level: next.level,
         nature: next.nature,
         subskills: next.subskills,

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { INGREDIENTS, RECIPES } from '../../calc/data'
 import { topIngredientProducers } from '../../calc/ingredients'
@@ -7,9 +9,11 @@ import DataRow from '../shared/DataRow.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import MealIcon from '../shared/MealIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
+const components_data_IngredientPane_config_clientDefaults = clientDefaults.modules.components_data_IngredientPane
+
 
 const props = defineProps<{ q: string }>()
-const openId = shallowRef(0)
+const openId = shallowRef(components_data_IngredientPane_config_clientDefaults["openIdInitial"])
 
 const list = computed(() => INGREDIENTS.filter((i) => textHit(i.name, props.q)))
 

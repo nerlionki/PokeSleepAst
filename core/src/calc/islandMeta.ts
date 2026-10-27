@@ -1,7 +1,11 @@
+import extracted0 from '../data/calc-tables.json'
+import { cloneData } from './dataClone'
 import sleepMap from '../data/sleep-map-mask.json'
 import type { IslandId } from '../types'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX } from './data'
 import { mythicalAppear } from './specialty'
+const islandMeta_config_extracted0 = extracted0.modules.islandMeta
+
 
 const MAP_BITS = sleepMap as unknown as Record<string, { bits?: string }>
 
@@ -35,17 +39,7 @@ export function homeText(pokeId: number): string {
   return islandsOf(pokeId).map((island) => island.name).join('、') || '仅限活动'
 }
 
-export const ISLAND_UNLOCK: Record<IslandId, string> = {
-  greengrass: '初始开放',
-  cyan: '登录约 50 个睡姿后开放',
-  taupe: '登录约 70 个睡姿后开放',
-  snowdrop: '登录约 150 个睡姿后开放',
-  lapis: '登录约 240 个睡姿后开放',
-  powerplant: '登录约 340 个睡姿后开放',
-  canyon: '登录约 450 个睡姿后开放',
-  greenex: '萌绿之岛评级达到大师18后开放（EX）',
-  cyanex: '天青沙滩评级达到大师18后开放（EX2）',
-}
+export const ISLAND_UNLOCK: Record<IslandId, string> = (cloneData(islandMeta_config_extracted0.ISLAND_UNLOCK) as unknown as Record<IslandId, string>)
 
 export function islandUnlock(id: IslandId): string {
   return ISLAND_UNLOCK[id] ?? '开放条件未收录'

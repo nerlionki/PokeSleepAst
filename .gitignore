@@ -2,6 +2,8 @@ ocrTest/*
 !ocrTest/e3ae0c3fff61a8862f32ba4d0812218f.jpg
 !ocrTest/49bf98c1bac49bdc67f175afe0fdd728.jpg
 !ocrTest/ab97618f084672c22e4c145fe03d08bc.jpg
+!ocrTest/dedenne-20261026.jpg
+!ocrTest/ribombee-20261026.jpg
 docs/
 *.md
 !AGENTS.md
@@ -52,3 +54,6 @@ wxapp/scripts/test-*.mjs
 *.[mM][dD]
 !AGENTS.md
 *.test-run.*
+
+# Local extraction baselines and comparison outputs
+/.tmp/

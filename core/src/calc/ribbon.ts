@@ -1,15 +1,14 @@
+import extracted0 from '../data/calc-tables.json'
+import { cloneData } from './dataClone'
 import left from '../data/evolution-left.json'
+const ribbon_config_extracted0 = extracted0.modules.ribbon
 
-const STAGES = [
-  { hours: 2000, carry: 8, speed: [0, 0.12, 0.25] },
-  { hours: 1000, carry: 6, speed: [0, 0.05, 0.11] },
-  { hours: 500, carry: 3, speed: [0, 0.05, 0.11] },
-  { hours: 200, carry: 1, speed: [0, 0, 0] },
-] as const
+
+const STAGES = (cloneData(ribbon_config_extracted0.STAGES) as unknown as readonly [{readonly "hours":2000;readonly "carry":8;readonly "speed":readonly [0,0.12,0.25]},{readonly "hours":1000;readonly "carry":6;readonly "speed":readonly [0,0.05,0.11]},{readonly "hours":500;readonly "carry":3;readonly "speed":readonly [0,0.05,0.11]},{readonly "hours":200;readonly "carry":1;readonly "speed":readonly [0,0,0]}])
 
 const LEFT = left as Record<string, number>
 
-export const RIBBON_HOURS = [0, 200, 500, 1000, 2000] as const
+export const RIBBON_HOURS = (cloneData(ribbon_config_extracted0.RIBBON_HOURS) as unknown as readonly [0,200,500,1000,2000])
 
 /** 还能再进化几次。最终形态是 0，不会因为勋章缩短帮忙间隔。 */
 export function stagesLeft(pokeId: number): number {

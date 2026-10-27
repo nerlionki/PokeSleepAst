@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../data/client-defaults.json'
+import { cloneData } from '../calc/dataClone'
+
 import { shallowRef } from 'vue'
 import { canCheckAppUpdate } from '#platform/profile'
 import { usePageTab } from '../composables/usePageTab'
@@ -7,9 +10,11 @@ import AppearancePane from '../components/profile/AppearancePane.vue'
 import CreditsPane from '../components/profile/CreditsPane.vue'
 import SettingsPanel from '../components/layout/SettingsPanel.vue'
 import UpdateSettings from '../components/update/UpdateSettings.vue'
+const views_ProfileView_config_clientDefaults = clientDefaults.modules.views_ProfileView
+
 const tab = usePageTab(['home', 'backup', 'settings', 'appearance', 'credits', 'update'] as const, 'home')
-const userInfo = shallowRef<{ name: string; avatar?: string } | null>(null)
-const titles = { home: '我的', backup: '导入 / 导出', settings: '全局设置', appearance: '外观设置', credits: '鸣谢', update: '检查更新' }
+const userInfo = shallowRef<{ name: string; avatar?: string } | null>((views_ProfileView_config_clientDefaults["userInfoInitial"] as unknown as { name: string; avatar?: string } | null))
+const titles = cloneData(views_ProfileView_config_clientDefaults["titles"])
 </script>
 <template>
   <div class="stack">
@@ -20,6 +25,7 @@ const titles = { home: '我的', backup: '导入 / 导出', settings: '全局设
       <button class="card profile-entry" type="button" @click="tab = 'appearance'"><span>外观设置</span><span aria-hidden="true">›</span></button>
       <button class="card profile-entry" type="button" @click="tab = 'credits'"><span>鸣谢</span><span aria-hidden="true">›</span></button>
       <button v-if="canCheckAppUpdate" class="card profile-entry" type="button" @click="tab = 'update'"><span>检查更新</span><span aria-hidden="true">›</span></button>
+      <slot name="app-tools" />
     </template>
     <template v-else>
       <div class="row"><button class="btn ghost" type="button" @click="tab = 'home'">返回我的</button><h2>{{ titles[tab] }}</h2></div>

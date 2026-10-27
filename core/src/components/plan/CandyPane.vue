@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
+import { useActivities } from '../../composables/useActivities'
+import { useSettingsStore } from '../../stores/settings'
 import FormField from '../shared/FormField.vue'
 import { newUid } from '../../calc/uid'
 import { computed, ref, shallowRef } from 'vue'
@@ -10,12 +14,16 @@ import { usePlanStore } from '../../stores/plans'
 import type { BoxPokemon } from '../../types'
 import PokePicker from '../shared/PokePicker.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
+const components_plan_CandyPane_config_clientDefaults = clientDefaults.modules.components_plan_CandyPane
 
+
+const { settings } = storeToRefs(useSettingsStore())
+const activity = useActivities(settings, () => settings.value.island)
 const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
 const box = useBoxStore()
-const mode = shallowRef<CandyBoostId>('christmas')
-const importing = shallowRef(false)
+const mode = shallowRef<CandyBoostId>((components_plan_CandyPane_config_clientDefaults["modeInitial"] as unknown as CandyBoostId))
+const importing = shallowRef(components_plan_CandyPane_config_clientDefaults["importingInitial"])
 const imported = ref(new Set<string>())
 const boxList = computed(() => [...box.pokemon].reverse())
 
@@ -30,8 +38,8 @@ function importFromBox(pokemon: BoxPokemon) {
 }
 
 const plans = computed(() => ({
-  christmas: planCandy(plan.value.candyRows, plan.value.candyStocks, 'christmas'),
-  mini: planCandy(plan.value.candyRows, plan.value.candyStocks, 'mini'),
+  christmas: planCandy(plan.value.candyRows, plan.value.candyStocks, 'christmas', activity.context.value, settings.value.island),
+  mini: planCandy(plan.value.candyRows, plan.value.candyStocks, 'mini', activity.context.value, settings.value.island),
 }))
 const active = computed(() => plans.value[mode.value])
 const boost = computed(() => CANDY_BOOSTS[mode.value])
@@ -87,18 +95,18 @@ const presets = CANDY_PRESETS
 
 <template>
   <div class="stack">
-    <p class="muted">同一进化家族共用当前糖果，按行顺序扣。经验 ×2；大型增强梦碎 ×5、额度 3,500，迷你增强梦碎 ×4、额度 350。不含睡眠经验。</p>
+    <p class="muted">同一进化家族共用当前糖果，按行顺序扣。大型增强经验 ×{{ CANDY_BOOSTS.christmas.exp }}、梦碎 ×{{ CANDY_BOOSTS.christmas.shards }}、额度 {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}，迷你增强经验 ×{{ CANDY_BOOSTS.mini.exp }}、梦碎 ×{{ CANDY_BOOSTS.mini.shards }}、额度 {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}。不含睡眠经验。</p>
     <div class="seg">
       <button type="button" :class="{ on: mode === 'christmas' }" @click="mode = 'christmas'">大型增强</button>
       <button type="button" :class="{ on: mode === 'mini' }" @click="mode = 'mini'">迷你增强</button>
     </div>
     <div class="row">
       <article class="card">
-        <p class="muted">大型增强 · {{ plans.christmas.candies.toLocaleString('zh-CN') }} / 3,500 颗</p>
+        <p class="muted">大型增强 · {{ plans.christmas.candies.toLocaleString('zh-CN') }} / {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }} 颗</p>
         <p>梦碎 {{ plans.christmas.shards.toLocaleString('zh-CN') }}</p>
       </article>
       <article class="card">
-        <p class="muted">迷你增强 · {{ plans.mini.candies.toLocaleString('zh-CN') }} / 350 颗</p>
+        <p class="muted">迷你增强 · {{ plans.mini.candies.toLocaleString('zh-CN') }} / {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }} 颗</p>
         <p>梦碎 {{ plans.mini.shards.toLocaleString('zh-CN') }}</p>
       </article>
     </div>

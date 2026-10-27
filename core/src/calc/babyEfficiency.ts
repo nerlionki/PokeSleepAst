@@ -1,3 +1,10 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleCatalogs from '../data/rule-catalogs.json'
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/client-defaults.json'
+import extracted1 from '../data/calc-tables.json'
+import { cloneData } from './dataClone'
+import { activityValues, createActivityContext, type ActivityContext, type ActivitySelection } from './activities'
 import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix } from './sleepRules'
 import { compareSleepPriority } from './sleepSelection'
 import { isLastRollExcluded } from './sleepLastRoll'
@@ -5,14 +12,23 @@ import type { IslandId, SleepType } from '../types'
 import { familyOf } from './candyPlan'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES, type SleepStyleRow } from './data'
 import { evolutionStages } from './evolution'
-import { EVENT_BONUSES, fallbackStyle, RANK_ORDER, rankStrength, SPECIAL_POKEMON, styleUnlockIndex, styleKey } from './sleep'
+import { fallbackStyle, RANK_ORDER, rankStrength, SPECIAL_POKEMON, styleUnlockIndex, styleKey } from './sleep'
 import { sleepReward, sleepStyleInternalId } from './sleepRewards'
 import { createDrawStateKey, efficiencyRandom, simulateEfficiencySlots, efficiencyRewardsAfterResearch, type EfficiencySimulation, type EfficiencyBucket, type EfficiencyDrawState, type EfficiencyReward } from './babyEfficiencyDraw'
+const babyEfficiency_config_extracted0 = extracted0.modules.babyEfficiency
+const babyEfficiency_config_extracted1 = extracted1.modules.babyEfficiency
+const babyEfficiency_normalizeBabyEfficiencyPokemonId_runtimeParameters = runtimeParameters.modules.babyEfficiency.normalizeBabyEfficiencyPokemonId.values
+const babyEfficiency_babyEfficiencyTargetIds_runtimeParameters = runtimeParameters.modules.babyEfficiency.babyEfficiencyTargetIds.values
+const babyEfficiency_validateBabyEfficiency_ruleParameters = ruleParameters.modules.babyEfficiency.validateBabyEfficiency
+const babyEfficiency_config_ruleCatalogs = ruleCatalogs.modules.babyEfficiency
+const babyEfficiency_babyEfficiencySteps_runtimeParameters = runtimeParameters.modules.babyEfficiency.babyEfficiencySteps.values
 
-export const MAX_EFFICIENCY_DROWSY_POWER = 5_000_000_000
+
+export const MAX_EFFICIENCY_DROWSY_POWER = (babyEfficiency_config_extracted0.MAX_EFFICIENCY_DROWSY_POWER as 5000000000)
 
 export type EfficiencyPrecision = 'low' | 'medium' | 'high'
 export interface BabyEfficiencyOptions {
+  activity?: ActivitySelection
   pokeId: number
   /** 指定时搜索这一条睡姿的每日至少一次概率，不合并物种或同星睡姿。 */
   completionTarget?: string
@@ -24,20 +40,18 @@ export interface BabyEfficiencyOptions {
   iterations: number
   precision: EfficiencyPrecision
 }
-export const DEFAULT_BABY_EFFICIENCY: BabyEfficiencyOptions = {
-  pokeId: 1, island: 'all', sleepType: 'all', splitSleep: true, eventMult: 1, eventMix: false, iterations: 4000, precision: 'medium',
-}
+export const DEFAULT_BABY_EFFICIENCY: BabyEfficiencyOptions = (cloneData(babyEfficiency_config_extracted0.DEFAULT_BABY_EFFICIENCY) as unknown as BabyEfficiencyOptions)
 export const DEFAULT_COMPLETION_EFFICIENCY: BabyEfficiencyOptions = {
-  ...DEFAULT_BABY_EFFICIENCY, pokeId: 0, completionTarget: '',
+  ...DEFAULT_BABY_EFFICIENCY, pokeId: babyEfficiency_config_extracted0.DEFAULT_COMPLETION_EFFICIENCY.pokeId, completionTarget: babyEfficiency_config_extracted0.DEFAULT_COMPLETION_EFFICIENCY.completionTarget,
 }
-export const EFFICIENCY_SLEEP_TYPES: SleepType[] = ['淺淺入夢', '安然入睡', '深深入眠', '没有特征']
-const PUMPKABOO_IDS = [710, 71002, 71003, 71004] as const
-export const BABY_POKEMON_NAMES: Record<number, string> = { 710: '南瓜精' }
+export const EFFICIENCY_SLEEP_TYPES: SleepType[] = (cloneData(babyEfficiency_config_extracted1.EFFICIENCY_SLEEP_TYPES) as unknown as SleepType[])
+const PUMPKABOO_IDS = (cloneData(babyEfficiency_config_extracted1.PUMPKABOO_IDS) as unknown as readonly [710,71002,71003,71004])
+export const BABY_POKEMON_NAMES: Record<number, string> = (cloneData(babyEfficiency_config_extracted1.BABY_POKEMON_NAMES) as unknown as Record<number, string>)
 export function normalizeBabyEfficiencyPokemonId(pokeId: number): number {
-  return PUMPKABOO_IDS.some(id => id === pokeId) ? 710 : pokeId
+  return PUMPKABOO_IDS.some(id => id === pokeId) ? (babyEfficiency_normalizeBabyEfficiencyPokemonId_runtimeParameters.p001 as 710) : pokeId
 }
 export function babyEfficiencyTargetIds(pokeId: number): readonly number[] {
-  return normalizeBabyEfficiencyPokemonId(pokeId) === 710 ? PUMPKABOO_IDS : [pokeId]
+  return normalizeBabyEfficiencyPokemonId(pokeId) === (babyEfficiency_babyEfficiencyTargetIds_runtimeParameters.p001 as 710) ? PUMPKABOO_IDS : [pokeId]
 }
 export function babyEfficiencyPokemonName(pokeId: number): string {
   const id = normalizeBabyEfficiencyPokemonId(pokeId)
@@ -56,6 +70,7 @@ export interface EfficiencyStyle extends EfficiencyReward {
   unlockRank?: number
   pokeId?: number
   lastRollExcluded?: boolean
+  activityWeight?: number
 }
 export interface EfficiencyIsland {
   id: IslandId
@@ -88,10 +103,10 @@ export function validateBabyEfficiency(options: BabyEfficiencyOptions): string |
   if (options.island != null && options.island !== 'all' && !babyEfficiencyIslands(options.pokeId, options.completionTarget).some((island) => island.id === options.island)) return '请选择目标睡姿或宝可梦出没的岛屿'
   if (options.sleepType != null && options.sleepType !== 'all' && !EFFICIENCY_SLEEP_TYPES.includes(options.sleepType)) return '请选择有效的睡眠类型'
   if (options.splitSleep != null && typeof options.splitSleep !== 'boolean') return '请选择是否拆分睡眠'
-  if (!Number.isInteger(options.iterations) || options.iterations < 100 || options.iterations > 100000) return '计算次数需为 100–100000 的整数'
-  if (!EVENT_BONUSES.some((bonus) => bonus.mult === options.eventMult)) return '请选择有效的活动倍率'
-  if (![false, true, 'off', 'some', 'all'].includes(options.eventMix)) return '请选择有效的跨睡眠类型模式'
-  if (!['low', 'medium', 'high'].includes(options.precision)) return '请选择有效的搜索精度'
+  if (!Number.isInteger(options.iterations) || options.iterations < babyEfficiency_validateBabyEfficiency_ruleParameters.minIterations || options.iterations > babyEfficiency_validateBabyEfficiency_ruleParameters.maxIterations) return '计算次数需为 100–100000 的整数'
+  if (!Number.isFinite(options.eventMult) || options.eventMult <= 0 || options.eventMult > babyEfficiency_validateBabyEfficiency_ruleParameters.maxEventMultiplier) return '请选择有效的活动倍率'
+  if (!babyEfficiency_config_ruleCatalogs.validateBabyEfficiencyList0.values.includes(options.eventMix)) return '请选择有效的跨睡眠类型模式'
+  if (!babyEfficiency_config_ruleCatalogs.validateBabyEfficiencyList1.values.includes(options.precision)) return '请选择有效的搜索精度'
   return null
 }
 
@@ -141,6 +156,14 @@ export function efficiencyIslands(pokeId: number, completionTarget?: string): Ef
 }
 
 /** Correct boundary rounding using the same multiplication order as drowsyPower. */
+export function activityEfficiencyIsland(island: EfficiencyIsland, context: ActivityContext): EfficiencyIsland {
+  const effects = (id?: number) => activityValues(context, island.id, POKEDEX.find(p => p.id === id))
+  return { ...island, styles: island.styles.map(style => ({ ...style,
+    candy: style.candy * effects(style.pokeId).researchCandyMultiplier,
+    activityWeight: effects(style.pokeId).encounterWeightMultiplier })),
+    fallbacks: Object.fromEntries(EFFICIENCY_SLEEP_TYPES.map(type => [type, { ...island.fallbacks[type], candy: island.fallbacks[type].candy * effects(fallbackStyle(island.id, type).pokeId).researchCandyMultiplier }])) as Record<SleepType, EfficiencyReward> }
+}
+
 export function strengthForPower(power: number, score: number, mult: number): number {
   if (power <= 1) return 1
   let strength = Math.max(1, Math.ceil(power / (score * mult)))
@@ -168,7 +191,7 @@ export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: n
     const previous = unlocked
     while (unlocked < unlocks.length && unlocks[unlocked]!.at <= min) {
       const style = unlocks[unlocked++]!.style
-      const weight = pokemonSleepWeight(style.pokeId ?? 0, mult)
+      const weight = pokemonSleepWeight(style.pokeId ?? 0, mult) * (style.activityWeight ?? 1)
       const key = `${weight}|${style.sleepType}|${Number(style.special)}|${style.catch}|${style.candy}|${style.dpr}|${style.belly}|${Number(!!style.lastRollExcluded)}`
       const group = groups.get(key)
       if (group) { group.count++; if (compareSleepPriority(style, group) < 0) { group.spoId = style.spoId; group.order = style.order; group.unlockRank = style.unlockRank } }
@@ -266,8 +289,9 @@ export function* babyEfficiencySteps(
   islands: EfficiencyIsland[] = efficiencyIslands(options.pokeId, options.completionTarget),
   checkpoint?: BabyEfficiencyCheckpoint,
 ): Generator<BabyEfficiencyCheckpoint, BabyEfficiencyResult> {
+  options = { ...options, activity: createActivityContext('research', options.activity ?? checkpoint?.options.activity) }
   const completion = options.completionTarget != null
-  const goals: readonly ('catch' | 'candy')[] = completion ? ['catch'] : ['catch', 'candy']
+  const goals: readonly ('catch' | 'candy')[] = (completion ? babyEfficiency_config_ruleCatalogs.babyEfficiencyStepsList0.values : babyEfficiency_config_ruleCatalogs.babyEfficiencyStepsList1.values) as readonly ('catch' | 'candy')[]
   options = { ...options, pokeId: completion ? options.pokeId : normalizeBabyEfficiencyPokemonId(options.pokeId) }
   const targetPokeIds = babyEfficiencyTargetIds(options.pokeId)
   if (!completion && options.pokeId === 710 && JSON.stringify(checkpoint?.targetPokeIds) !== JSON.stringify(targetPokeIds)) checkpoint = undefined
@@ -279,23 +303,28 @@ export function* babyEfficiencySteps(
   const cache = new Map<string, EfficiencySimulation>()
   const drawStateKey = createDrawStateKey()
   const best = checkpoint?.best ?? { catch: { value: 0, intervals: [] as EfficiencyInterval[] }, candy: { value: 0, intervals: [] as EfficiencyInterval[] } }
-  const step = options.precision === 'low' ? 10 : options.precision === 'medium' ? 5 : 1
-  const stride = options.precision === 'low' ? 8 : options.precision === 'medium' ? 2 : 1
-  const baseSplits = options.splitSleep !== false ? Array.from({ length: Math.floor(99 / step) }, (_, index) => (index + 1) * step) : [100]
+  const step = options.precision === 'low' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p001 as 10) : options.precision === 'medium' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p002 as 5) : 1
+  const stride = options.precision === 'low' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p003 as 8) : options.precision === 'medium' ? 2 : 1
+  const baseSplits = options.splitSleep !== false ? Array.from({ length: Math.floor((babyEfficiency_babyEfficiencySteps_runtimeParameters.p004 as 99) / step) }, (_, index) => (index + 1) * step) : babyEfficiency_config_ruleCatalogs.babyEfficiencyStepsList2.values
   // 补齐同时比较整觉和拆觉；原宝宝效率保持原有拆觉开关含义。
-  if (completion && options.splitSleep !== false) baseSplits.push(100)
+  if (completion && options.splitSleep !== false) baseSplits.push((babyEfficiency_babyEfficiencySteps_runtimeParameters.p005 as 100))
   const initialStates = checkpoint?.evaluatedStates ?? 0
   const completedStates = () => initialStates + cache.size
   let progressTime = 0
   let progressPercent = 0
   const update = (percent: number, island: string, force = false) => {
-    if (!force && Date.now() - progressTime < 100) return
+    if (!force && Date.now() - progressTime < (babyEfficiency_babyEfficiencySteps_runtimeParameters.p006 as 100)) return
     progressTime = Date.now()
     progressPercent = Math.max(progressPercent, percent)
     onProgress({ percent: progressPercent, island, evaluatedStates: completedStates() })
   }
 
-  for (const [islandIndex, island] of islands.entries()) {
+  const baseOptions = options
+  for (const [islandIndex, originalIsland] of islands.entries()) {
+    const context = baseOptions.activity as ActivityContext
+    const effects = activityValues(context, originalIsland.id, undefined, (babyEfficiency_babyEfficiencySteps_runtimeParameters.p007 as 240), { drowsyPowerMultiplier: baseOptions.eventMult, eventMix: normalizeEventMix(baseOptions.eventMix) })
+    const options = { ...baseOptions, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
+    const island = context.catalog.activities.length || Object.keys(context.overrides ?? {}).length ? activityEfficiencyIsland(originalIsland, context) : originalIsland
     if (islandIndex < (checkpoint?.islandIndex ?? 0)) continue
     const resumeIndex = islandIndex === checkpoint?.islandIndex ? checkpoint.splitIndex : 0
     update(islandIndex / islands.length * 100, island.name, true)
@@ -330,7 +359,7 @@ export function* babyEfficiencySteps(
       return result
     }
     const scanSplit = (first: number, position: number, total: number) => {
-      const second = first === 100 ? 0 : 100 - first
+      const second = first === (babyEfficiency_babyEfficiencySteps_runtimeParameters.p008 as 100) ? 0 : (babyEfficiency_babyEfficiencySteps_runtimeParameters.p009 as 100) - first
       const curvesToMerge = second ? [curveOf(first), curveOf(second)] : [curveOf(first)]
       const ceiling = Math.floor(MAX_EFFICIENCY_DROWSY_POWER / (Math.max(first, second) * options.eventMult))
       const starts = [...new Set([ceiling, ...curvesToMerge.flatMap((curve) => curve.map((state) => state.min))])].filter(min => min <= ceiling).sort((a, b) => a - b)
@@ -393,10 +422,10 @@ export function* babyEfficiencySteps(
       return leaders
     }
     const localLeaders = islandIndex === checkpoint?.islandIndex ? checkpoint.leaders : emptyLeaders()
-    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 4, targetPokeIds, options: { ...options }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
+    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: (babyEfficiency_babyEfficiencySteps_runtimeParameters.p010 as 4), targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
     for (const [index, split] of baseSplits.entries()) {
       if (index < resumeIndex) continue
-      const leaders = scanSplit(split, index, baseSplits.length + (options.precision === 'medium' ? 4 : 0))
+      const leaders = scanSplit(split, index, baseSplits.length + (options.precision === 'medium' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p011 as 4) : 0))
       for (const goal of goals) {
         if (leaders[goal].value > localLeaders[goal].value) localLeaders[goal] = { value: leaders[goal].value, splits: [split] }
         else if (leaders[goal].value === localLeaders[goal].value) localLeaders[goal].splits.push(split)
@@ -405,7 +434,7 @@ export function* babyEfficiencySteps(
     }
     if (options.precision === 'medium' && options.splitSleep !== false) {
       const extra = [...new Set([...localLeaders.catch.splits, ...localLeaders.candy.splits]
-        .flatMap((score) => [score - 1, score + 1]).filter((score) => score >= 1 && score <= 99 && !baseSplits.includes(score)))]
+        .flatMap((score) => [score - 1, score + 1]).filter((score) => score >= 1 && score <= (babyEfficiency_babyEfficiencySteps_runtimeParameters.p012 as 99) && !baseSplits.includes(score)))]
       for (const [index, split] of extra.entries()) {
         if (baseSplits.length + index < resumeIndex) continue
         scanSplit(split, baseSplits.length + index, baseSplits.length + extra.length)

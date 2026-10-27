@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import ActivitySettings from '../shared/ActivitySettings.vue'
+import { useActivities } from '../../composables/useActivities'
+import { EVENT_BONUSES } from '../../calc/sleep'
 import FormField from '../shared/FormField.vue'
 import { MIX_OPTIONS } from '../../calc/sleepRules'
 import { computed } from 'vue'
@@ -14,6 +17,10 @@ const props = defineProps<{ embedded?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const store = useSettingsStore()
 const { settings, summary } = storeToRefs(store)
+const activity = useActivities(settings, () => settings.value.island)
+const eventMult = activity.field('drowsyPowerMultiplier', () => settings.value.eventMult)
+const shinyUp = activity.field('shinyUp', () => settings.value.shinyUp)
+const mixMode = activity.field('eventMix', () => settings.value.sleepEventMix)
 const maxPotSize = Math.max(...POT_TIERS.map(tier => tier.pot))
 
 const recipeGroups = computed(() => (['curry', 'salad', 'dessert'] as MealCategory[]).map((c) => ({
@@ -57,7 +64,7 @@ function setRecipeLevel(name: string, level: number) {
       <label class="row"><input v-model="settings.incense" type="checkbox"> 回复薰香（恢复 ×2）</label>
       <label class="row"><input v-model="settings.goodCamp" type="checkbox"> 优质露营券</label>
       <label class="row"><input v-model="settings.sundayPot" type="checkbox"> 周日锅 ×2（日产手动开）</label>
-      <label class="row"><input v-model="settings.shinyUp" type="checkbox"> 全局闪光 UP</label>
+      <label class="row"><input v-model="shinyUp" type="checkbox"> 全局闪光 UP</label>
       <FormField v-slot="{ id }" label="日均技能回活力（近似，时序仍会仿真发动）"><input :id="id" v-model.number="settings.dailySkillHeal" type="number" min="0"></FormField>
       <FormField v-slot="{ id }" label="哨子额外帮忙"><input :id="id" v-model.number="settings.whistleHelps" type="number" min="0" max="20"></FormField>
       <FormField v-slot="{ id }" label="本周喜好料理"><select :id="id" v-model="settings.mealCategory">
@@ -84,23 +91,18 @@ function setRecipeLevel(name: string, level: number) {
         </details>
       </div>
       <FormField v-slot="{ id }" label="锅容量"><input :id="id" v-model.number="settings.potSize" type="number" min="21" :max="maxPotSize"></FormField>
-      <FormField v-slot="{ id }" label="活动倍率"><select :id="id" v-model.number="settings.eventMult">
-          <option :value="1">平时 1</option>
-          <option :value="1.1">1.1</option>
-          <option :value="1.3">1.3</option>
-          <option :value="1.5">好眠 1.5</option>
-          <option :value="2">满月 2</option>
-          <option :value="2.5">满月 2.5</option>
-          <option :value="3">满月 3</option>
-          <option :value="4">满月 4</option>
+      <FormField v-slot="{ id }" label="活动倍率"><select :id="id" v-model.number="eventMult">
+          <option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}倍（活动）</option>
+          <option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option>
         </select></FormField>
       <div class="field">
         <label for="sleep-event-mix">活动跨类型出现数量（睡姿模拟／宝宝效率）</label>
-        <select id="sleep-event-mix" v-model="settings.sleepEventMix">
-          <option v-for="option in MIX_OPTIONS.filter(option => option.value !== 'off')" :key="option.value" :value="option.value">{{ option.label }}</option>
+        <select id="sleep-event-mix" v-model="mixMode">
+          <option v-for="option in MIX_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
         </select>
       </div>
-      <p class="muted">开启页面中的活动开关后生效。</p>
+      <p class="muted">活动按日期提供默认值；也可在各面板手动调整。</p>
+      <ActivitySettings />
       <FormField v-slot="{ id }" label="分析周期"><select :id="id" v-model="settings.period">
           <option value="day">日产</option>
           <option value="week">周产</option>

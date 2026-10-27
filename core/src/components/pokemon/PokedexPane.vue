@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { skillByPokedexName } from '../../calc/mainSkills'
@@ -16,16 +18,18 @@ import MainSkillIcon from '../shared/MainSkillIcon.vue'
 import DrawerSheet from '../shared/DrawerSheet.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
+const components_pokemon_PokedexPane_config_clientDefaults = clientDefaults.modules.components_pokemon_PokedexPane
+
 
 const router = useRouter()
 function showSkill(name: string) { const skill = skillByPokedexName(name); if (skill) void router.push({ path: '/data', query: { tab: 'skill', skill: String(skill.id) } }) }
-const q = shallowRef('')
-const spec = shallowRef('全部')
-const panel = shallowRef<'none' | 'sleep' | 'berry' | 'skill'>('none')
-const sleep = shallowRef('全部')
-const berry = shallowRef('全部')
-const skill = shallowRef('全部')
-const selected = shallowRef<number | null>(null)
+const q = shallowRef(components_pokemon_PokedexPane_config_clientDefaults["qInitial"])
+const spec = shallowRef(components_pokemon_PokedexPane_config_clientDefaults["specInitial"])
+const panel = shallowRef<'none' | 'sleep' | 'berry' | 'skill'>((components_pokemon_PokedexPane_config_clientDefaults["panelInitial"] as unknown as 'none' | 'sleep' | 'berry' | 'skill'))
+const sleep = shallowRef(components_pokemon_PokedexPane_config_clientDefaults["sleepInitial"])
+const berry = shallowRef(components_pokemon_PokedexPane_config_clientDefaults["berryInitial"])
+const skill = shallowRef(components_pokemon_PokedexPane_config_clientDefaults["skillInitial"])
+const selected = shallowRef<number | null>((components_pokemon_PokedexPane_config_clientDefaults["selectedInitial"] as unknown as number | null))
 const { settings } = storeToRefs(useSettingsStore())
 
 const sleepTypes = computed(() => ['全部', ...new Set(POKEDEX.map((p) => p.sleepType))])

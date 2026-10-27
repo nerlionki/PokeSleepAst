@@ -1,6 +1,13 @@
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/calc-tables.json'
+import extracted1 from '../data/client-defaults.json'
+import { cloneData } from './dataClone'
 import { POKEDEX } from './data'
 import { isAllRounderId } from './specialty'
 import type { IngredientSlots } from '../types'
+const ingredients_config_extracted0 = extracted0.modules.ingredients
+const ingredients_config_extracted1 = extracted1.modules.ingredients
+
 
 export interface IngredientLine {
   id: number
@@ -137,18 +144,13 @@ export function nextIngredientSlot(lineCount: number, slot: number, current: num
 
 /** 一次帮忙的树果数：树果型和全能型 2 颗。 */
 export function berryCount(specialty: string): number {
-  return specialty === '树果型' || specialty === '全部' ? 2 : 1
+  return specialty === '树果型' || specialty === '全部' ? ruleParameters.modules.ingredients.berryCount.specialist : ruleParameters.modules.ingredients.berryCount.normal
 }
 
 /** 友情徽章组。等级到达后，捕捉到的个体锁定对应数量的金色副技能。 */
-const MEDAL_LEVELS: Record<number, readonly [number, number, number]> = {
-  1: [10, 40, 100],
-  2: [10, 30, 60],
-  3: [10, 25, 50],
-  4: [10, 20, 40],
-}
+const MEDAL_LEVELS: Record<number, readonly [number, number, number]> = (cloneData(ingredients_config_extracted0.MEDAL_LEVELS) as unknown as Record<number, readonly [number, number, number]>)
 
-const TONES = ['copper', 'silver', 'gold'] as const
+const TONES = (cloneData(ingredients_config_extracted1.TONES) as unknown as readonly ["copper","silver","gold"])
 
 export function friendTiers(group: number | null | undefined) {
   const levels = group ? MEDAL_LEVELS[group] : undefined

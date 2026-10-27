@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
+import { useActivities } from '../../composables/useActivities'
+import { CANDY_BOOSTS } from '../../calc/candyPlan'
 import FormField from '../shared/FormField.vue'
 import { computed, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -6,30 +10,33 @@ import { NATURES, POKEDEX } from '../../calc/data'
 import { napDailyExp, SLEEP_EXP_BONUS, SLEEP_EXP_BONUS_MAX, trainPlan } from '../../calc/train'
 import { useBoxStore } from '../../stores/box'
 import { useSettingsStore } from '../../stores/settings'
+const components_plan_TrainPane_config_clientDefaults = clientDefaults.modules.components_plan_TrainPane
+
 
 const box = useBoxStore()
-const uid = shallowRef('')
-const from = shallowRef(1)
-const to = shallowRef(30)
-const remaining = shallowRef(0)
-const nature = shallowRef('勤奋')
-const sleepOnTeam = shallowRef(true)
-const napping = shallowRef(false)
-const napDays = shallowRef(7)
-const relax = shallowRef(false)
-const sleepExpBonus = shallowRef(0)
-const sleepIncense = shallowRef(false)
+const uid = shallowRef(components_plan_TrainPane_config_clientDefaults["uidInitial"])
+const from = shallowRef(components_plan_TrainPane_config_clientDefaults["fromInitial"])
+const to = shallowRef(components_plan_TrainPane_config_clientDefaults["toInitial"])
+const remaining = shallowRef(components_plan_TrainPane_config_clientDefaults["remainingInitial"])
+const nature = shallowRef(components_plan_TrainPane_config_clientDefaults["natureInitial"])
+const sleepOnTeam = shallowRef(components_plan_TrainPane_config_clientDefaults["sleepOnTeamInitial"])
+const napping = shallowRef(components_plan_TrainPane_config_clientDefaults["nappingInitial"])
+const napDays = shallowRef(components_plan_TrainPane_config_clientDefaults["napDaysInitial"])
+const relax = shallowRef(components_plan_TrainPane_config_clientDefaults["relaxInitial"])
+const sleepExpBonus = shallowRef(components_plan_TrainPane_config_clientDefaults["sleepExpBonusInitial"])
+const sleepIncense = shallowRef(components_plan_TrainPane_config_clientDefaults["sleepIncenseInitial"])
 
 function stepBonus(delta: number) {
   sleepExpBonus.value = Math.min(SLEEP_EXP_BONUS_MAX, Math.max(0, sleepExpBonus.value + delta))
 }
-const owned = shallowRef(0)
-const reserve = shallowRef(0)
-const dailyCandy = shallowRef(0)
-const boost = shallowRef<'none' | 'mini' | 'normal'>('none')
-const boostCandy = shallowRef(0)
-const group = shallowRef<'normal' | 'pseudo' | 'legendary' | 'mythical'>('normal')
+const owned = shallowRef(components_plan_TrainPane_config_clientDefaults["ownedInitial"])
+const reserve = shallowRef(components_plan_TrainPane_config_clientDefaults["reserveInitial"])
+const dailyCandy = shallowRef(components_plan_TrainPane_config_clientDefaults["dailyCandyInitial"])
+const boost = shallowRef<'none' | 'mini' | 'normal'>((components_plan_TrainPane_config_clientDefaults["boostInitial"] as unknown as 'none' | 'mini' | 'normal'))
+const boostCandy = shallowRef(components_plan_TrainPane_config_clientDefaults["boostCandyInitial"])
+const group = shallowRef<'normal' | 'pseudo' | 'legendary' | 'mythical'>((components_plan_TrainPane_config_clientDefaults["groupInitial"] as unknown as 'normal' | 'pseudo' | 'legendary' | 'mythical'))
 const { settings } = storeToRefs(useSettingsStore())
+const activity = useActivities(settings, () => settings.value.island)
 
 watch(uid, (id) => {
   const p = box.pokemon.find((x) => x.uid === id)
@@ -41,6 +48,9 @@ watch(uid, (id) => {
 })
 
 const result = computed(() => trainPlan({
+  activity: activity.context.value,
+  island: settings.value.island,
+  pokeId: box.pokemon.find(p => p.uid === uid.value)?.pokeId,
   from: from.value,
   to: to.value,
   remaining: remaining.value,
@@ -106,8 +116,8 @@ const result = computed(() => trainPlan({
     <FormField v-slot="{ id }" label="每日额外产糖"><input :id="id" v-model.number="dailyCandy" type="number"></FormField>
     <FormField v-slot="{ id }" label="增强窗口"><select :id="id" v-model="boost">
         <option value="none">无</option>
-        <option value="mini">迷你 ×2 经验 ×4 梦碎</option>
-        <option value="normal">常规 ×2 ×5</option>
+        <option value="mini">{{ CANDY_BOOSTS.mini.name }} ×{{ CANDY_BOOSTS.mini.exp }} 经验 ×{{ CANDY_BOOSTS.mini.shards }} 梦碎</option>
+        <option value="normal">{{ CANDY_BOOSTS.christmas.name }} ×{{ CANDY_BOOSTS.christmas.exp }} 经验 ×{{ CANDY_BOOSTS.christmas.shards }} 梦碎</option>
       </select></FormField>
     <FormField v-slot="{ id }" label="增强期喂糖"><input :id="id" v-model.number="boostCandy" type="number"></FormField>
     <p v-if="result.error" class="amber" role="alert">无法计算：{{ result.error }}</p>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { POKEDEX, SUBSKILLS } from '../../calc/data'
@@ -11,10 +13,12 @@ import PokeSprite from '../shared/PokeSprite.vue'
 import MainSkillIcon from '../shared/MainSkillIcon.vue'
 import SubskillIcon from '../shared/SubskillIcon.vue'
 import SkillLevels from './SkillLevels.vue'
+const components_data_SkillPane_config_clientDefaults = clientDefaults.modules.components_data_SkillPane
+
 
 const props = defineProps<{ q: string }>()
-const part = shallowRef<'main' | 'sub'>('main')
-const open = shallowRef(0)
+const part = shallowRef<'main' | 'sub'>((components_data_SkillPane_config_clientDefaults["partInitial"] as unknown as 'main' | 'sub'))
+const open = shallowRef(components_data_SkillPane_config_clientDefaults["openInitial"])
 const route = useRoute()
 const router = useRouter()
 const detailId = computed<number | null>({

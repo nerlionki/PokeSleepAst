@@ -1,8 +1,16 @@
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/client-defaults.json'
+import extracted1 from '../data/calc-tables.json'
+import { cloneData } from './dataClone'
 import mythical from '../data/mythical.json'
 import { pokeById } from './data'
+const specialty_config_extracted0 = extracted0.modules.specialty
+const specialty_config_extracted1 = extracted1.modules.specialty
+const specialty_skillStorageLimit_ruleParameters = ruleParameters.modules.specialty.skillStorageLimit
+
 
 /** 图鉴资料里全能型（目前是梦幻、达克莱伊）的专长写作「全部」。 */
-const ALL_ROUNDER = '全部'
+const ALL_ROUNDER = (specialty_config_extracted0.ALL_ROUNDER as "全部")
 
 /**
  * Wiki 验证规则：进入满包后的前 4 次自然帮忙仍抽选主技能，第 5 次起停止。
@@ -11,9 +19,9 @@ const ALL_ROUNDER = '全部'
  * https://wikiwiki.jp/poke_sleep/メインスキル
  * https://wikiwiki.jp/poke_sleep/検証/メインスキルのクールタイム
  */
-export const FULL_INVENTORY_SKILL_HELPS = 4
+export const FULL_INVENTORY_SKILL_HELPS = (specialty_config_extracted1.FULL_INVENTORY_SKILL_HELPS as 4)
 
-export const SPECIALTY_FILTERS = ['树果型', '食材型', '技能型', '全能型'] as const
+export const SPECIALTY_FILTERS = (cloneData(specialty_config_extracted1.SPECIALTY_FILTERS) as unknown as readonly ["树果型","食材型","技能型","全能型"])
 
 export function isAllRounder(poke: { specialty: string } | null | undefined): boolean {
   return poke?.specialty === ALL_ROUNDER
@@ -21,7 +29,7 @@ export function isAllRounder(poke: { specialty: string } | null | undefined): bo
 
 /** 技能型与全能型可储存两次主技能，其余专长只能储存一次。 */
 export function skillStorageLimit(specialty: string): number {
-  return specialty === '技能型' || specialty === ALL_ROUNDER ? 2 : 1
+  return specialty === '技能型' || specialty === ALL_ROUNDER ? specialty_skillStorageLimit_ruleParameters.dualStorageCapacity : ruleParameters.modules.specialty.skillStorageLimit.normalCapacity
 }
 
 export function isAllRounderId(pokeId: number): boolean {

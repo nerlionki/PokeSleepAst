@@ -70,10 +70,14 @@ function nameWord(words: OcrWord[]): OcrWord | null {
     const level = [...near].filter((word) => hasLevelLabel(word.text)).sort((a, b) => a.x - b.x)[0]
     if (level) {
       const rest = stripLevelPrefix(level.text)
-      if (rest && ocrFold(rest) !== ocrFold(level.text) && !noiseLabel(rest)) return level
       const beside = near
         .filter((word) => word !== level && center(word).x > level.x && Math.abs(center(word).y - center(level).y) < level.height * 1.4 && !noiseLabel(word.text))
         .sort((a, b) => a.x - b.x)[0]
+      if (rest && ocrFold(rest) !== ocrFold(level.text) && !noiseLabel(rest)) {
+        // 等级末尾偶尔黏上一个误读字，同时完整昵称另有重叠的文字框。
+        if (rest.length === 1 && beside && beside.x < level.x + level.width && beside.text.trim().length > 1) return beside
+        return level
+      }
       if (beside) return beside
     }
   }
@@ -97,11 +101,14 @@ function nameWord(words: OcrWord[]): OcrWord | null {
 
 function subskillId(text: string): string {
   let key = ocrFold(text)
+  key = key.replace(/^[冀翼]忙速度([sm])$/, '帮忙速度$1')
+  key = key.replace(/^持有上限提开([sml])$/, '持有上限提升$1')
   if (/^忙速度[sm]$/.test(key)) key = `帮${key}`
   const recurring: Record<string, string> = {
     手: 'helpingBonus',
     手厅: 'helpingBonus',
     帮手厅: 'helpingBonus',
+    帮手厂: 'helpingBonus',
     常手爽厅: 'helpingBonus',
     活力回复厅: 'energyRecover',
   }
@@ -274,6 +281,22 @@ export function avatarBox(words: OcrWord[]): { x: number, y: number, size: numbe
   }
 }
 
+/** 依据文字锚点定位头部复读区域，同时保留原始词框以便只替换确认的信息。 */
+export function headerTextInfo(words: OcrWord[]) {
+  const cluster = headerCluster(words)
+  const name = nameWord(words)
+  if (!cluster.length || !name) return null
+  const h = Math.max(...cluster.map(word => word.height))
+  const left = Math.min(...cluster.map(word => word.x))
+  const top = Math.min(...cluster.map(word => word.y))
+  const right = Math.max(...cluster.map(word => word.x + word.width))
+  const bottom = Math.max(...cluster.map(word => word.y + word.height))
+  const label = cluster.find(word => hasLevelLabel(word.text)) ?? null
+  return { name, nameText: stripLevelPrefix(name.text), label, level: label ? levelIn(label.text) : null,
+    levelBox: { x: left - h * 0.3, y: top - h * 1.3, width: right - left + h * 3, height: bottom - top + h * 2.6 },
+    box: { x: left - h * 0.15, y: top - h * 1.35, width: right - left + h * 5, height: bottom - top + h * 3.8 } }
+}
+
 export function splitCards(words: OcrWord[]): OcrWord[][] {
   if (!words.length) return []
   const headers = words
@@ -314,7 +337,9 @@ export function ingredientRowMarks(words: OcrWord[]): [IngredientQuantityMark | 
   const targets = [0.56, 0.75, 0.93]
   for (const word of words) {
     if (word.y <= anchor.y + anchor.height || word.y >= bottom) continue
-    const matched = word.text.trim().match(/^(?:[×xX✕＊*]\s*)?(\d{1,3})$/)
+    // 数量徽标里的细竖线 1 会被识别成 ]；仅修复带乘号的完整徽标，避免把普通文字当数量。
+    const quantityText = word.text.trim().replace(/^[×xX✕＊*]\s*\]$/, '×1')
+    const matched = quantityText.match(/^(?:[×xX✕＊*]\s*)?(\d{1,3})$/)
     if (!matched) continue
     const ratio = (center(word).x - left) / width
     const slot: 0 | 1 | 2 | null = ratio >= 0.84 ? 2 : ratio >= 0.64 ? 1 : ratio >= 0.42 ? 0 : null
@@ -447,7 +472,15 @@ export function chooseSimilar(candidates: { id: number, score: number }[], evide
   const hasEvidence = evidence.skill != null || evidence.firstIngredient != null
     || evidence.ingredients.some(id => id != null) || evidence.ingredientCandidates?.some(ids => ids != null)
   if (fitting.length === 1 && hasEvidence) return fitting[0]!.id
-  return pickClosest(fitting, 46, 3.2)
+  // 进化前后可共享主技能、食材组合。至少两格图标和数量加主技能已共同校验时，
+  // 使用已有视觉候选上限，并要求更大的领先幅度；不能再当成只有头像的识别。
+  const supportedSlots = [0, 1, 2].filter(slot => {
+    const ids = evidence.ingredientCandidates?.[slot]
+    const ingredient = slot === 0 ? evidence.firstIngredient : evidence.ingredients[slot - 1]
+    return (ids != null && ids.length > 0 || ingredient != null) && evidence.quantities?.[slot] != null
+  }).length
+  const corroborated = evidence.skill != null && supportedSlots >= 2
+  return pickClosest(fitting, corroborated ? 76 : 46, corroborated ? 6 : 3.2)
 }
 
 /** 只读取“持有上限”右侧同一行带“个”的数值，不借用其它行数字。 */

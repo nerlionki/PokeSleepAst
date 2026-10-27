@@ -1,21 +1,25 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { BERRIES, INGREDIENTS, POKEDEX } from '../../calc/data'
 import { pokeHit } from '../../calc/pokeSearch'
 import { SPECIALTY_FILTERS, specialtyHit } from '../../calc/specialty'
 import BerryIcon from './BerryIcon.vue'
 import PokeSprite from './PokeSprite.vue'
+const components_shared_PokePicker_config_clientDefaults = clientDefaults.modules.components_shared_PokePicker
+
 
 const model = defineModel<number>({ required: true })
 const props = defineProps<{ allowedIds?: readonly number[], nameOverrides?: Record<number, string> }>()
 const allowed = computed(() => props.allowedIds ? new Set(props.allowedIds) : null)
-const open = shallowRef(false)
-const q = shallowRef('')
-const panel = shallowRef<'none' | 'spec' | 'type' | 'sleep' | 'ing'>('none')
-const spec = shallowRef('')
-const type = shallowRef('')
-const sleep = shallowRef('')
-const ing = shallowRef('')
+const open = shallowRef(components_shared_PokePicker_config_clientDefaults["openInitial"])
+const q = shallowRef(components_shared_PokePicker_config_clientDefaults["qInitial"])
+const panel = shallowRef<'none' | 'spec' | 'type' | 'sleep' | 'ing'>((components_shared_PokePicker_config_clientDefaults["panelInitial"] as unknown as 'none' | 'spec' | 'type' | 'sleep' | 'ing'))
+const spec = shallowRef(components_shared_PokePicker_config_clientDefaults["specInitial"])
+const type = shallowRef(components_shared_PokePicker_config_clientDefaults["typeInitial"])
+const sleep = shallowRef(components_shared_PokePicker_config_clientDefaults["sleepInitial"])
+const ing = shallowRef(components_shared_PokePicker_config_clientDefaults["ingInitial"])
 
 const specs = ['全部', ...SPECIALTY_FILTERS]
 const types = computed(() => [...new Set(BERRIES.map((b) => b.type))])

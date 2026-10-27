@@ -1,9 +1,15 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import extracted0 from '../data/client-defaults.json'
+import { cloneData } from './dataClone'
 import { BERRIES, INGREDIENTS, pokeById, SUBSKILLS } from './data'
 import { MAIN_SKILLS } from './mainSkills'
 import { SUBSKILL_GATES } from './member'
 import { specialtyHit } from './specialty'
 import { foldText, textHit } from './text'
 import type { BoxPokemon } from '../types'
+const boxFilter_config_extracted0 = extracted0.modules.boxFilter
+const boxFilter_slotOpen_runtimeParameters = runtimeParameters.modules.boxFilter.slotOpen.values
+
 
 export type LockMode = 'unlocked' | 'locked'
 export type Combine = 'and' | 'or'
@@ -20,17 +26,7 @@ export interface BoxQuery {
   subskillCombine: Combine
 }
 
-export const EMPTY_BOX_QUERY: BoxQuery = {
-  text: '',
-  berryType: '',
-  specialty: '',
-  mainSkill: '',
-  ingredients: [],
-  ingredientLock: 'unlocked',
-  subskills: [],
-  subskillLock: 'unlocked',
-  subskillCombine: 'and',
-}
+export const EMPTY_BOX_QUERY: BoxQuery = (cloneData(boxFilter_config_extracted0.EMPTY_BOX_QUERY) as unknown as BoxQuery)
 
 export function speciesName(pokeId: number): string {
   return pokeById(pokeId)?.name ?? `#${pokeId}`
@@ -43,8 +39,8 @@ export function boxLabel(pokemon: { pokeId: number, name?: string }): string {
 
 function slotOpen(level: number, slot: number): boolean {
   if (slot <= 0) return true
-  if (slot === 1) return level >= 30
-  return level >= 60
+  if (slot === 1) return level >= (boxFilter_slotOpen_runtimeParameters.p001 as 30)
+  return level >= (boxFilter_slotOpen_runtimeParameters.p002 as 60)
 }
 
 interface Tagged {

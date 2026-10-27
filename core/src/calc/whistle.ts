@@ -1,3 +1,8 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleCatalogs from '../data/rule-catalogs.json'
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/client-defaults.json'
+import { cloneData } from './dataClone'
 import type { BoxPokemon, Settings } from '../types'
 import { berryByName, NATURES, pokeById } from './data'
 import { berryUnitEnergy as unitEnergy } from './berry'
@@ -10,13 +15,20 @@ import { normalizeOcrMissing } from './ocrCompletion'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { POKEMON_LEVEL_MAX } from './xp'
 import { nextSpecialTeamState, type SpecialTeamState } from './teamRestrictions'
+const whistle_config_extracted0 = extracted0.modules.whistle
+const whistle_whistleMember_ruleParameters = ruleParameters.modules.whistle.whistleMember
+const whistle_whistleMember_runtimeParameters = runtimeParameters.modules.whistle.whistleMember.values
+const whistle_invalidMember_runtimeParameters = runtimeParameters.modules.whistle.invalidMember.values
+const whistle_config_ruleCatalogs = ruleCatalogs.modules.whistle
+const whistle_planWhistle_ruleParameters = ruleParameters.modules.whistle.planWhistle
+
 
 export interface WhistleOptions {
   currentEnergy: number
   targetEnergy: number
 }
 
-export const DEFAULT_WHISTLE: WhistleOptions = { currentEnergy: 0, targetEnergy: 0 }
+export const DEFAULT_WHISTLE: WhistleOptions = (cloneData(whistle_config_extracted0.DEFAULT_WHISTLE) as unknown as WhistleOptions)
 
 export function normalizeWhistleOptions(raw?: Partial<WhistleOptions>): WhistleOptions {
   const energy = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0
@@ -61,16 +73,16 @@ export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBo
   const ribbon = ribbonBonus(pokemon.tune?.ribbonHours ?? 0, stagesLeft(poke.id))
   // Use the displayed team interval, then maximum-energy efficiency. No camp or EX speed modifier.
   const interval = levelInterval(poke.interval, pokemon.level, pokemon.nature, subs, helpingBonus, ribbon.speedCut)
-  const helps = 10800 / (interval * energyMultiplier(100))
-  const unlocked = pokemon.level >= 60 ? 3 : pokemon.level >= 30 ? 2 : 1
+  const helps = whistle_whistleMember_ruleParameters.rewardSeconds / (interval * energyMultiplier((whistle_whistleMember_runtimeParameters.p001 as 100)))
+  const unlocked = pokemon.level >= (whistle_whistleMember_runtimeParameters.p002 as 60) ? 3 : pokemon.level >= (whistle_whistleMember_runtimeParameters.p003 as 30) ? 2 : 1
   const slots = pokemon.ingredientSlots.slice(0, unlocked).flatMap((index, slot) => {
     if (index == null) return []
     const drop = slotDrop(poke.ingredients, slot, index)
     return drop ? [drop] : []
   })
   const ingredientRate = slots.length ? Math.min(1, poke.ingredientRate * natureStatFactor(pokemon.nature, 'ingredient')
-    * (1 + (subs.includes('ingS') ? 0.18 : 0) + (subs.includes('ingM') ? 0.36 : 0))) : 0
-  const berries = Math.round(helps * (1 - ingredientRate) * (berryCount(poke.specialty) + (subs.includes('berryS') ? 1 : 0)))
+    * (1 + (subs.includes('ingS') ? whistle_whistleMember_ruleParameters.findingS : 0) + (subs.includes('ingM') ? whistle_whistleMember_ruleParameters.findingM : 0))) : 0
+  const berries = Math.round(helps * (1 - ingredientRate) * (berryCount(poke.specialty) + (subs.includes('berryS') ? ruleParameters.modules.whistle.berryCount.berryS : 0)))
   const ingredients: Record<string, number> = {}
   for (const slot of slots) {
     const quantity = Math.round(helps * ingredientRate / slots.length * slot.amount)
@@ -80,7 +92,7 @@ export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBo
   // https://wikiwiki.jp/poke_sleep/きのみ
   const berryUnitEnergy = unitEnergy(poke.berry, pokemon.level, settings.areaBonus, exEffects(settings, poke.berry, poke.specialty).berryMultiplier)
   return { pokemon, helpingBonus: subs.includes('helpingBonus'), interval, helps, ingredientRate, berries,
-    berry: poke.berry, berryUnitEnergy, berryEnergy: Math.round(berries * berryUnitEnergy * 5) / 5, ingredients }
+    berry: poke.berry, berryUnitEnergy, berryEnergy: Math.round(berries * berryUnitEnergy * (whistle_whistleMember_runtimeParameters.p004 as 5)) / (whistle_whistleMember_runtimeParameters.p005 as 5), ingredients }
 }
 
 function invalidMember(pokemon: BoxPokemon): string | null {
@@ -88,9 +100,9 @@ function invalidMember(pokemon: BoxPokemon): string | null {
   if (!poke || !berryByName(poke.berry) || poke.interval <= 0) return '缺少宝可梦生产资料'
   if (!Number.isInteger(pokemon.level) || pokemon.level < 1 || pokemon.level > POKEMON_LEVEL_MAX) return '等级无效'
   if (!NATURES.some(nature => nature.name === pokemon.nature)) return '性格无效'
-  const unlocked = pokemon.level >= 60 ? 3 : pokemon.level >= 30 ? 2 : 1
+  const unlocked = pokemon.level >= (whistle_invalidMember_runtimeParameters.p001 as 60) ? 3 : pokemon.level >= (whistle_invalidMember_runtimeParameters.p002 as 30) ? 2 : 1
   const missing = normalizeOcrMissing(pokemon.ocrMissing).some(field => field === 'level' || field === 'nature'
-    || field.startsWith('subskill') && pokemon.level >= [10, 25, 50, 70, 80][Number(field.at(-1))]!
+    || field.startsWith('subskill') && pokemon.level >= whistle_config_ruleCatalogs.invalidMemberList0.values[Number(field.at(-1))]!
     || field.startsWith('ingredient') && Number(field.at(-1)) < unlocked)
   if (missing) return '生产相关 OCR 字段尚未确认'
   for (let slot = 0; slot < unlocked; slot++) {
@@ -111,7 +123,7 @@ export function planWhistle(settings: Settings, box: BoxPokemon[], options: Whis
   if ([options.currentEnergy, options.targetEnergy].some(value => !Number.isSafeInteger(value) || value < 0)) {
     throw new Error('当前能量和目标能量必须为非负整数')
   }
-  if (!Number.isFinite(settings.areaBonus) || settings.areaBonus < 0 || settings.areaBonus > 0.85) throw new Error('岛屿加成须在 0%–85% 之间')
+  if (!Number.isFinite(settings.areaBonus) || settings.areaBonus < 0 || settings.areaBonus > whistle_planWhistle_ruleParameters.areaBonusCap) throw new Error('岛屿加成须在 0%–85% 之间')
   const excluded: WhistleResult['excluded'] = []
   const seen = new Set<string>()
   const candidates = box.filter(pokemon => {
@@ -120,14 +132,14 @@ export function planWhistle(settings: Settings, box: BoxPokemon[], options: Whis
     if (reason) excluded.push({ uid: pokemon.uid, name: pokemon.name || pokeById(pokemon.pokeId)?.name || String(pokemon.pokeId), reason })
     return !reason
   })
-  const size = Math.min(5, candidates.length)
-  const extraBonus = Math.min(5, Math.max(0, Math.floor(Number(settings.helpingBonus) || 0)))
+  const size = Math.min(whistle_planWhistle_ruleParameters.teamSize, candidates.length)
+  const extraBonus = Math.min(whistle_planWhistle_ruleParameters.teamSize, Math.max(0, Math.floor(Number(settings.helpingBonus) || 0)))
   let best: WhistleMember[] = []
   let bestEnergy = -1
   let bestBonus = 0
   let teamsCompared = 0
   for (let holders = 0; holders <= size && size > 0; holders++) {
-    const bonus = Math.min(5, holders + extraBonus)
+    const bonus = Math.min(whistle_planWhistle_ruleParameters.teamSize, holders + extraBonus)
     const ranked = candidates.map(pokemon => whistleMember(settings, pokemon, bonus))
       .sort((a, b) => b.berryEnergy - a.berryEnergy || a.pokemon.uid.localeCompare(b.pokemon.uid))
     interface Selection { team: WhistleMember[], energy: number, holders: number, special: SpecialTeamState }
@@ -155,13 +167,13 @@ export function planWhistle(settings: Settings, box: BoxPokemon[], options: Whis
     }
   }
   best.sort((a, b) => b.berryEnergy - a.berryEnergy || a.pokemon.uid.localeCompare(b.pokemon.uid))
-  const berryEnergy = Math.round(Math.max(0, bestEnergy) * 5) / 5
+  const berryEnergy = Math.round(Math.max(0, bestEnergy) * whistle_planWhistle_ruleParameters.teamSize) / whistle_planWhistle_ruleParameters.teamSize
   const gap = Math.max(0, options.targetEnergy - options.currentEnergy)
-  const whistles = gap === 0 ? 0 : berryEnergy > 0 ? Math.ceil((gap * 5) / Math.round(berryEnergy * 5)) : null
+  const whistles = gap === 0 ? 0 : berryEnergy > 0 ? Math.ceil((gap * whistle_planWhistle_ruleParameters.teamSize) / Math.round(berryEnergy * whistle_planWhistle_ruleParameters.teamSize)) : null
   const ingredients: Record<string, number> = {}
   for (const member of best) addIngredients(ingredients, member.ingredients)
   const totalIngredients = Object.fromEntries(Object.entries(ingredients).map(([name, quantity]) => [name, quantity * (whistles ?? 0)]))
   return { members: best, helpingBonus: bestBonus, berryEnergy, ingredients, gap, whistles,
-    finalEnergy: whistles == null ? null : Math.round((options.currentEnergy + whistles * berryEnergy) * 5) / 5,
+    finalEnergy: whistles == null ? null : Math.round((options.currentEnergy + whistles * berryEnergy) * whistle_planWhistle_ruleParameters.teamSize) / whistle_planWhistle_ruleParameters.teamSize,
     totalIngredients, teamsCompared, excluded }
 }

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, reactive, shallowRef, onMounted, watch } from 'vue'
 import { calculateBoxOverview, defaultOverviewBonuses, formatOverviewAmount, type OverviewBonuses } from '../../calc/boxOverview'
 import { loadJson, saveJson } from '../../storage'
@@ -11,11 +13,13 @@ import BerryIcon from '../shared/BerryIcon.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import Segmented from '../shared/Segmented.vue'
 import OverviewRankRow from './OverviewRankRow.vue'
+const components_pokemon_BoxOverview_config_clientDefaults = clientDefaults.modules.components_pokemon_BoxOverview
+
 const emit = defineEmits<{ back: []; complete: [uids: string[]] }>()
 const box = useBoxStore()
-const tab = shallowRef<'berries' | 'ingredients'>('berries')
+const tab = shallowRef<'berries' | 'ingredients'>((components_pokemon_BoxOverview_config_clientDefaults["tabInitial"] as unknown as 'berries' | 'ingredients'))
 const bonuses = reactive(defaultOverviewBonuses())
-const loaded = shallowRef(false)
+const loaded = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["loadedInitial"])
 onMounted(async () => {
   const saved = await loadJson<Partial<OverviewBonuses>>('boxOverviewBonuses', {})
   Object.assign(bonuses, defaultOverviewBonuses(), saved)
@@ -41,9 +45,9 @@ function setEnvironment(patch: Partial<Pick<Settings, 'island' | 'berries' | 'he
   if (patch.exDebuff != null) bonuses.exDebuff = patch.exDebuff
   if (patch.exWeeklyBonus != null) bonuses.exWeeklyBonus = patch.exWeeklyBonus
 }
-const adjusting = shallowRef(false)
-const ingredientId = shallowRef<number | null>(null)
-const visibleRanks = shallowRef(20)
+const adjusting = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["adjustingInitial"])
+const ingredientId = shallowRef<number | null>((components_pokemon_BoxOverview_config_clientDefaults["ingredientIdInitial"] as unknown as number | null))
+const visibleRanks = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["visibleRanksInitial"])
 const overview = computed(() => calculateBoxOverview(box.pokemon, bonuses))
 const excluded = computed(() => tab.value === 'berries' ? overview.value.excludedBerries : overview.value.excludedIngredients)
 const selected = computed(() => overview.value.ingredients.find((ingredient) => ingredient.id === ingredientId.value))

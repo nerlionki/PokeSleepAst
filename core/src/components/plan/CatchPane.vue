@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { newUid } from '../../calc/uid'
 import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -6,12 +8,14 @@ import { CATCH_MODES, recommendThree, type CatchGoal, type CatchPurpose } from '
 import { resolvedSleepdex, sleepdexState } from '../../calc/sleep'
 import { usePlanStore } from '../../stores/plans'
 import PokePicker from '../shared/PokePicker.vue'
+const components_plan_CatchPane_config_clientDefaults = clientDefaults.modules.components_plan_CatchPane
+
 
 const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
-const columns = shallowRef<ReturnType<typeof recommendThree> | null>(null)
-const stamped = shallowRef('')
-const selectedMode = shallowRef('all')
+const columns = shallowRef<ReturnType<typeof recommendThree> | null>((components_plan_CatchPane_config_clientDefaults["columnsInitial"] as unknown as ReturnType<typeof recommendThree> | null))
+const stamped = shallowRef(components_plan_CatchPane_config_clientDefaults["stampedInitial"])
+const selectedMode = shallowRef(components_plan_CatchPane_config_clientDefaults["selectedModeInitial"])
 
 const discovered = computed(() => resolvedSleepdex(plan.value))
 const fingerprint = computed(() => JSON.stringify({

@@ -1,14 +1,20 @@
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/calc-tables.json'
+import { cloneData } from './dataClone'
 import { berryByName } from './data'
 import { POKEMON_LEVEL_MAX } from './xp'
+const berry_config_extracted0 = extracted0.modules.berry
+const berry_berryEnergyAt_ruleParameters = ruleParameters.modules.berry.berryEnergyAt
 
-const SNAP = [1, 10, 25, 30, 50, 60, 70, 80, 100] as const
+
+const SNAP = (cloneData(berry_config_extracted0.SNAP) as unknown as readonly [1,10,25,30,50,60,70,80,100])
 
 /** Wiki：线性与复利取较大值再四舍五入；71～100 级为用户保留的规划推算。 */
 export function berryEnergyAt(name: string, level: number): number {
   const b = berryByName(name)
-  if (!b) return 30
+  if (!b) return berry_berryEnergyAt_ruleParameters.unknownBerryEnergy
   const lv = Math.min(POKEMON_LEVEL_MAX, Math.max(1, level))
-  return Math.round(Math.max(b.energyLv1 + lv - 1, b.energyLv1 * 1.025 ** (lv - 1)))
+  return Math.round(Math.max(b.energyLv1 + lv - 1, b.energyLv1 * berry_berryEnergyAt_ruleParameters.compoundGrowth ** (lv - 1)))
 }
 
 /** 每颗先向上取整营地加成，再乘喜好树果倍率。 */

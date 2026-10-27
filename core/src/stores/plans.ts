@@ -1,3 +1,6 @@
+
+import clientDefaults from '../data/client-defaults.json'
+import { cloneData } from '../calc/dataClone'
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { CandyRow } from '../calc/candyPlan'
@@ -7,6 +10,8 @@ import { DEFAULT_BABY_EFFICIENCY, DEFAULT_COMPLETION_EFFICIENCY, normalizeBabyEf
 import { DEFAULT_WHISTLE, normalizeWhistleOptions, type WhistleOptions } from '../calc/whistle'
 import { loadJson, saveJson } from '../storage'
 import { defaultSplitOptions, normalizeSplitOptions, type SplitOptions } from '../calc/splitSleep'
+const stores_plans_config_clientDefaults = clientDefaults.modules.stores_plans
+
 
 interface PlanState {
   snorlaxStrength: number
@@ -32,21 +37,21 @@ interface PlanState {
 }
 
 const empty: PlanState = {
-  snorlaxStrength: 0,
-  sleepScore: 100,
-  sleepType: '没有特征',
-  campTicket: false,
-  incense: false,
-  rank: '',
-  sleepdex: [],
-  sleepdexMode: 'all',
-  sleepdexExcluded: [],
-  undiscoveredBoost: true,
-  rare: true,
-  shinyUp: false,
-  catchGoals: [],
-  candyRows: [],
-  candyStocks: {},
+  snorlaxStrength: (stores_plans_config_clientDefaults["empty_snorlaxStrength"] as 0),
+  sleepScore: (stores_plans_config_clientDefaults["empty_sleepScore"] as 100),
+  sleepType: (stores_plans_config_clientDefaults["empty_sleepType"] as "没有特征"),
+  campTicket: (stores_plans_config_clientDefaults["empty_campTicket"] as false),
+  incense: (stores_plans_config_clientDefaults["empty_incense"] as false),
+  rank: (stores_plans_config_clientDefaults["empty_rank"] as ""),
+  sleepdex: cloneData(stores_plans_config_clientDefaults["empty_sleepdex"]),
+  sleepdexMode: (stores_plans_config_clientDefaults["empty_sleepdexMode"] as "all"),
+  sleepdexExcluded: cloneData(stores_plans_config_clientDefaults["empty_sleepdexExcluded"]),
+  undiscoveredBoost: (stores_plans_config_clientDefaults["empty_undiscoveredBoost"] as true),
+  rare: (stores_plans_config_clientDefaults["empty_rare"] as true),
+  shinyUp: (stores_plans_config_clientDefaults["empty_shinyUp"] as false),
+  catchGoals: cloneData(stores_plans_config_clientDefaults["empty_catchGoals"]),
+  candyRows: cloneData(stores_plans_config_clientDefaults["empty_candyRows"]),
+  candyStocks: cloneData(stores_plans_config_clientDefaults["empty_candyStocks"]),
   babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY },
   completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY },
   whistle: { ...DEFAULT_WHISTLE },
@@ -55,7 +60,7 @@ const empty: PlanState = {
 
 export const usePlanStore = defineStore('plans', () => {
   const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY }, completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY }, whistle: { ...DEFAULT_WHISTLE }, splitSleep: defaultSplitOptions() })
-  const ready = ref(false)
+  const ready = ref(stores_plans_config_clientDefaults["readyInitial"])
 
   async function hydrate() {
     const saved = await loadJson<Partial<PlanState>>('plans', empty)

@@ -1,3 +1,9 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleCatalogs from '../data/rule-catalogs.json'
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/calc-tables.json'
+import { cloneData } from './dataClone'
+import { EVENT_PARAMETERS, activityValues, createActivityContext, type ActivitySelection } from './activities'
 import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix, type PokemonUps } from './sleepRules'
 import { selectSleepStyle } from './sleepSelection'
 import { isLastRollExcluded } from './sleepLastRoll'
@@ -6,17 +12,28 @@ import snorlaxRanks from '../data/snorlax-ranks.json'
 import type { IslandId, SleepType } from '../types'
 import { ENCOUNTER_BANDS, FALLBACKS, ISLANDS, islandById, POKEDEX, pokeById, SLEEP_STYLES, type SleepStyleRow } from './data'
 import { boostedResearchReward, dailyResearchReward, sleepReward, sleepStyleInternalId, type ResearchBonuses } from './sleepRewards'
+const sleep_config_extracted0 = extracted0.modules.sleep
+const sleep_sleepMinutes_ruleParameters = ruleParameters.modules.sleep.sleepMinutes
+const sleep_energyLost_ruleParameters = ruleParameters.modules.sleep.energyLost
+const sleep_strengthToNext_ruleParameters = ruleParameters.modules.sleep.strengthToNext
+const sleep_encounterCount_ruleParameters = ruleParameters.modules.sleep.encounterCount
+const sleep_config_ruleCatalogs = ruleCatalogs.modules.sleep
+const sleep_sleepDraw_runtimeParameters = runtimeParameters.modules.sleep.sleepDraw.values
+const sleep_sleepExpectSteps_ruleParameters = ruleParameters.modules.sleep.sleepExpectSteps
+const sleep_sleepExpectSteps_runtimeParameters = runtimeParameters.modules.sleep.sleepExpectSteps.values
+const sleep_sleepExpect_ruleParameters = ruleParameters.modules.sleep.sleepExpect
+
 
 type BandKey = keyof typeof ENCOUNTER_BANDS
 
-export const SHINY_BASE = 3 / 1000
-export const SHINY_EVENT = 3 / 40
-export const UNDISCOVERED_WEIGHT = 2
+export const SHINY_BASE = EVENT_PARAMETERS.sleep.shinyBase
+export const SHINY_EVENT = EVENT_PARAMETERS.sleep.shinyEvent
+export const UNDISCOVERED_WEIGHT = EVENT_PARAMETERS.sleep.undiscoveredWeight
 
 /** RAE 地图页 snorlaxData：每岛 35 档评级的能量门槛，和每条睡姿的最低评级（下标）。 */
 const SNORLAX = snorlaxRanks as Record<IslandId, { energy: number[], unlock: Record<string, number> }>
 
-export const RANK_ORDER = ([['普通', 5], ['超级', 5], ['高级', 5], ['大师', 20]] as const)
+export const RANK_ORDER = (cloneData(sleep_config_extracted0.RANK_ORDER) as unknown as readonly [readonly ["普通",5],readonly ["超级",5],readonly ["高级",5],readonly ["大师",20]])
   .flatMap(([title, n]) => Array.from({ length: n }, (_, i) => `${title}${i + 1}`))
 
 export function rankIndex(rank: string): number {
@@ -67,7 +84,7 @@ export function drowsyPower(score: number, strength: number, event = 1): number 
 
 /** 满睡眠 8 小时 30 分对应 100 分，每分约 5.1 分钟。 */
 export function sleepMinutes(score: number): number {
-  return Math.round(Math.max(0, score) * 5.1)
+  return Math.round(Math.max(0, score) * sleep_sleepMinutes_ruleParameters.minutesPerScore)
 }
 
 export function sleepClock(score: number): string {
@@ -80,25 +97,16 @@ export function sleepClock(score: number): string {
 
 /** 这段睡眠里帮手大约掉的活力，每 10 分钟 1 点。满睡眠 510 分钟为 51。 */
 export function energyLost(score: number): number {
-  return Math.ceil(sleepMinutes(score) / 10)
+  return Math.ceil(sleepMinutes(score) / sleep_energyLost_ruleParameters.minutesPerEnergy)
 }
 
-export const EVENT_BONUSES = [
-  { mult: 1, label: '平时' },
-  { mult: 1.1, label: '1.1倍' },
-  { mult: 1.3, label: '1.3倍' },
-  { mult: 1.5, label: '好眠日*1.5倍' },
-  { mult: 2, label: '满月日*2倍' },
-  { mult: 2.5, label: '满月日*2.5倍(周三)' },
-  { mult: 3, label: '满月日*3倍(周二)' },
-  { mult: 4, label: '满月日*4倍(周一)' },
-] as const
+export const EVENT_BONUSES = EVENT_PARAMETERS.sleep.bonuses
 
 /** 再抓到下一只还差多少卡比兽能量。已经到 8 只时没有下一档。 */
 export function strengthToNext(island: IslandId, score: number, strength: number, event = 1) {
   if (score <= 0) return null
   const current = encounterCount(island, drowsyPower(score, strength, event))
-  if (current >= 8) return null
+  if (current >= sleep_strengthToNext_ruleParameters.maxNaturalEncounters) return null
   const total = energyForCount(island, score, event, current + 1)
   const need = total - Math.max(0, strength)
   if (need <= 0) return null
@@ -107,7 +115,7 @@ export function strengthToNext(island: IslandId, score: number, strength: number
 
 export function encounterCount(island: IslandId, dp: number): number {
   const bands = bandsOf(island)
-  let count = 3
+  let count = sleep_encounterCount_ruleParameters.minNaturalEncounters
   for (const b of bands) {
     if (dp >= b.min) count = b.count
   }
@@ -122,27 +130,27 @@ export function energyForCount(island: IslandId, score: number, event: number, c
 }
 
 export function maxEncounters(island: IslandId, score: number, strength: number, event = 1, opts?: { camp?: boolean, incense?: boolean }) {
-  const extra = (opts?.camp ? 1 : 0) + (opts?.incense ? 1 : 0)
+  const extra = (opts?.camp ? ruleParameters.modules.sleep.maxEncounters.campExtra : 0) + (opts?.incense ? ruleParameters.modules.sleep.maxEncounters.incenseExtra : 0)
   const single = encounterCount(island, drowsyPower(score, strength, event)) + extra
   let best = { total: single, a: score, b: 0, first: single, second: 0 }
   const maxScore = Math.floor(score)
   for (let a = 1; a < maxScore; a++) {
     const b = maxScore - a
     const first = encounterCount(island, drowsyPower(a, strength, event)) + extra
-    const second = encounterCount(island, drowsyPower(b, strength, event)) + (opts?.incense ? 1 : 0)
+    const second = encounterCount(island, drowsyPower(b, strength, event)) + (opts?.incense ? ruleParameters.modules.sleep.maxEncounters.incenseExtra : 0)
     const total = first + second
     if (total > best.total) best = { total, a, b, first, second }
   }
   const next: Record<number, number> = {}
-  for (const n of [4, 5, 6, 7, 8]) next[n] = energyForCount(island, score, event, n)
+  for (const n of sleep_config_ruleCatalogs.maxEncountersList0.values) next[n] = energyForCount(island, score, event, n)
   return { single, best, next, extra }
 }
 
 /** Wiki 少量跨类型：末尾 floor(n × 0.4) 只固定同类型。 */
-export const EVENT_OTHER_SHARE = 0.4
+export const EVENT_OTHER_SHARE = EVENT_PARAMETERS.sleep.sameTypeShare
 
 /** 一场睡眠里最多一只。平日必须睡姿类型与所选类型一致。 */
-export const SPECIAL_POKEMON = new Set([243, 244, 245, 488, 380, 381, 150])
+export const SPECIAL_POKEMON = new Set(cloneData(sleep_config_extracted0.SPECIAL_POKEMON))
 
 type PreparedStyle = SleepStyleRow & { order: number, unlockRank: number, lastRollExcluded: boolean }
 function prepareStyles(island: IslandId, pool: SleepStyleRow[]): PreparedStyle[] {
@@ -150,6 +158,8 @@ function prepareStyles(island: IslandId, pool: SleepStyleRow[]): PreparedStyle[]
 }
 
 export interface DrawOpts extends ResearchBonuses {
+  activity?: ActivitySelection
+  activityResolved?: boolean
   researchedBefore?: number
   researchLimit?: 10 | 11
   firstResearchExtras?: number
@@ -288,6 +298,12 @@ export function sleepDraw(
   rng: () => number = Math.random,
   opts: DrawOpts = {},
 ): DrawnStyle[] {
+  if (!opts.activityResolved) {
+    const activity = createActivityContext('research', opts.activity)
+    const effects = activityValues(activity, island, undefined, (sleep_sleepDraw_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix), shinyUp: opts.shinyUp ?? false })
+    if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier
+    opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix, shinyUp: effects.shinyUp }
+  }
   const n = encounterCount(island, dp)
   const discovered = new Set(opts.discovered ?? [])
   const boost = opts.undiscoveredBoost ?? true
@@ -322,7 +338,7 @@ export function sleepDraw(
     let picked: DrawnStyle | undefined
     const item = selectSleepStyle(usable, remaining, i === n - 1, rng, (s) => {
       const missing = boost && !discovered.has(styleKey(s.pokeId, s.stars, s.styleId))
-      return (missing ? UNDISCOVERED_WEIGHT : 1) * pokemonSleepWeight(s.pokeId, opts.eventMult, opts.pokemonUps)
+      return (missing ? UNDISCOVERED_WEIGHT : 1) * pokemonSleepWeight(s.pokeId, opts.eventMult, opts.pokemonUps) * (!opts.activity?.catalog?.activities.length && opts.activity?.overrides?.encounterWeightMultiplier == null ? 1 : activityValues(createActivityContext('research', opts.activity), island, pokeById(s.pokeId)).encounterWeightMultiplier)
     })
     if (item) {
       const missing = boost && !discovered.has(styleKey(item.pokeId, item.stars, item.styleId))
@@ -345,12 +361,16 @@ export function* sleepExpectSteps(
   island: IslandId,
   sleepType: SleepType,
   dp: number,
-  n = 4000,
+  n = sleep_sleepExpectSteps_ruleParameters.defaultIterations,
   mode: 'normal' | 'map' = 'normal',
   opts: DrawOpts & { seed?: number } = {},
   onProgress?: (completed: number) => void,
   checkpoint?: SleepExpectCheckpoint,
 ) {
+  const activity = createActivityContext('research', opts.activity)
+  const effects = activityValues(activity, island, undefined, (sleep_sleepExpectSteps_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix), shinyUp: opts.shinyUp ?? false })
+  if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier
+  opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix, shinyUp: effects.shinyUp }
   const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()
   for (const row of checkpoint?.rows ?? []) freq.set(`${row.pokeId}-${row.stars}-${row.rare ? 'r' : 'n'}`, { ...row })
   const rank = opts.rank ?? '大师1'
@@ -363,7 +383,7 @@ export function* sleepExpectSteps(
     randomState = (randomState + 0x6D2B79F5) >>> 0
     let x = randomState
     x = Math.imul(x ^ (x >>> 15), x | 1)
-    x ^= x + Math.imul(x ^ (x >>> 7), x | 61)
+    x ^= x + Math.imul(x ^ (x >>> 7), x | (sleep_sleepExpectSteps_runtimeParameters.p002 as 61))
     return ((x ^ (x >>> 14)) >>> 0) / 0x100000000
   }
   for (let i = checkpoint?.completed ?? 0; i < n; i++) {
@@ -371,7 +391,10 @@ export function* sleepExpectSteps(
     for (const [index, s] of draw.entries()) {
       const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
       const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
-      const reward = boostedResearchReward(dailyResearchReward(sleepReward(s), (opts.researchedBefore ?? 0) + index, opts.researchLimit ?? 10), opts)
+      const baseReward = boostedResearchReward(dailyResearchReward(sleepReward(s), (opts.researchedBefore ?? 0) + index, opts.researchLimit ?? (sleep_sleepExpectSteps_runtimeParameters.p003 as 10)), opts)
+      const reward = baseReward ? { ...baseReward } : undefined
+      const activityReward = activityValues(activity, island, pokeById(s.pokeId))
+      if (reward) { reward.researchExp *= activityReward.researchExpMultiplier; reward.shards *= activityReward.dreamShardsMultiplier; if ((opts.researchedBefore ?? 0) + index < (opts.researchLimit ?? (sleep_sleepExpectSteps_runtimeParameters.p004 as 10))) reward.candy *= activityReward.researchCandyMultiplier }
       cur.count += 1
       cur.researchExp += reward?.researchExp ?? 0
       cur.shards += reward?.shards ?? 0
@@ -389,7 +412,7 @@ export function* sleepExpectSteps(
   return [...freq.values()].sort((a, b) => b.count - a.count)
 }
 
-export function sleepExpect(island: IslandId, sleepType: SleepType, dp: number, n = 4000, mode: 'normal' | 'map' = 'normal', opts: DrawOpts & { seed?: number } = {}, onProgress?: (completed: number) => void) {
+export function sleepExpect(island: IslandId, sleepType: SleepType, dp: number, n = sleep_sleepExpect_ruleParameters.defaultIterations, mode: 'normal' | 'map' = 'normal', opts: DrawOpts & { seed?: number } = {}, onProgress?: (completed: number) => void) {
   const steps = sleepExpectSteps(island, sleepType, dp, n, mode, opts, onProgress)
   let next = steps.next()
   while (!next.done) next = steps.next()

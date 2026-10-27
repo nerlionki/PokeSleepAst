@@ -1,6 +1,10 @@
+import extracted0 from '../data/calc-tables.json'
+import { cloneData } from './dataClone'
+const teamRestrictions_config_extracted0 = extracted0.modules.teamRestrictions
+
 /** 用户确认的同队限制；与睡眠抽选中的特殊宝可梦限制分别维护。 */
-export const SPECIAL_TEAM_POKEMON = new Set([150, 151, 243, 244, 245, 380, 381, 488, 491])
-export const SPECIAL_TEAM_RULE = '每队最多 1 只特殊宝可梦；仅允许各 1 只拉帝亚斯和拉帝欧斯一起上场，同种不能重复。'
+export const SPECIAL_TEAM_POKEMON = new Set(cloneData(teamRestrictions_config_extracted0.SPECIAL_TEAM_POKEMON))
+export const SPECIAL_TEAM_RULE = (teamRestrictions_config_extracted0.SPECIAL_TEAM_RULE as "每队最多 1 只特殊宝可梦；仅允许各 1 只拉帝亚斯和拉帝欧斯一起上场，同种不能重复。")
 
 export type SpecialTeamState = 'none' | 'other' | 'latias' | 'latios' | 'pair'
 

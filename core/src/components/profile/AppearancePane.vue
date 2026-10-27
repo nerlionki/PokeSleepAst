@@ -1,14 +1,18 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { ref, watch } from 'vue'
 import { useAppearanceStore } from '../../stores/appearance'
 import { colorFields, fontSizes, themes } from '../../ui/appearance'
 import type { Appearance, ColorKey, Palette } from '../../ui/appearance'
 import FormField from '../shared/FormField.vue'
 import ColorPicker from '../shared/ColorPicker.vue'
+const components_profile_AppearancePane_config_clientDefaults = clientDefaults.modules.components_profile_AppearancePane
+
 const appearance = useAppearanceStore()
 const draft = ref<Palette>({ ...appearance.palette })
-const message = ref('')
-const activeColor = ref<ColorKey | null>(null)
+const message = ref(components_profile_AppearancePane_config_clientDefaults["messageInitial"])
+const activeColor = ref<ColorKey | null>((components_profile_AppearancePane_config_clientDefaults["activeColorInitial"] as unknown as ColorKey | null))
 watch(() => appearance.palette, palette => { draft.value = { ...palette } }, { deep: true })
 function theme(id: Appearance['theme']) {
   message.value = ''
