@@ -1,4 +1,9 @@
+import skillRouting from '../data/compatibility-maps.json'
+import extracted0 from '../data/skill-tables.json'
+import { cloneData } from './dataClone'
 import { foldText } from './text'
+const mainSkills_config_extracted0 = extracted0.modules.mainSkills
+
 
 export interface SkillTable {
   title?: string
@@ -19,290 +24,10 @@ export interface MainSkill {
   extra?: SkillTable[]
 }
 
-const pct = (n: number) => `${Math.round(n * 1000) / 10}%`
-const s = (n: number) => String(n)
+export const SKILL_GROUPS = (cloneData(mainSkills_config_extracted0.SKILL_GROUPS) as unknown as readonly ["能量","梦之碎片","活力","额外帮忙","额外掉落","额外技能","料理","特殊"])
 
-function rows(columns: string[], cols: (string | number)[][]): Pick<MainSkill, 'columns' | 'levels'> {
-  const count = cols[0]?.length ?? 0
-  return {
-    columns,
-    levels: Array.from({ length: count }, (_, i) => cols.map((col) => String(col[i] ?? ''))),
-  }
-}
-
-function one(label: string, values: (string | number)[]): Pick<MainSkill, 'columns' | 'levels'> {
-  return rows([label], [values])
-}
-
-const ING = [5, 6, 8, 11, 13, 16, 18]
-const MAGNET = [6, 8, 11, 14, 17, 21, 24]
-
-export const SKILL_GROUPS = ['能量', '梦之碎片', '活力', '额外帮忙', '额外掉落', '额外技能', '料理', '特殊'] as const
-
-export const MAIN_SKILLS: MainSkill[] = [
-  {
-    id: 1, group: '能量', name: '能量填充S', aliases: ['能量填充S(X)'], maxLevel: 7,
-    summary: '让卡比兽的能量增加固定值。',
-    detail: '发动后按等级给卡比兽增加对应能量。图鉴里写成能量填充S(X)，X 是这一级的能量。',
-    ...one('能量', [400, 569, 785, 1083, 1496, 2066, 3212]),
-  },
-  {
-    id: 5, group: '能量', name: '能量填充S（区间）', aliases: ['能量填充S(X~Y)'], maxLevel: 7,
-    summary: '在最低到最高之间随机增加卡比兽能量。',
-    detail: '每次发动在这一级的下限和上限之间随机取值。',
-    ...rows(['最低', '最高'], [[200, 285, 393, 542, 748, 1033, 1606], [800, 1138, 1570, 2166, 2992, 4132, 6424]]),
-  },
-  {
-    id: 2, group: '能量', name: '能量填充M', aliases: ['能量填充M'], maxLevel: 7,
-    summary: '让卡比兽的能量增加较多的固定值。',
-    detail: '效果和能量填充S相同，数值更高。',
-    ...one('能量', [880, 1251, 1726, 2383, 3290, 4546, 6858]),
-  },
-  {
-    id: 15, group: '能量', name: '蓄力（能量填充S）', aliases: ['蓄力（能量填充S）'], maxLevel: 7,
-    summary: '能量随蓄力层数提高，发动后层数归零。',
-    detail: '平时积蓄层数，最多 10 层。发动时按当前层数给予能量，然后回到 0 层。下表是 0 层和 10 层。',
-    ...rows(['0 层', '10 层'], [[600, 853, 1177, 1625, 2243, 3099, 4502], [12120, 17231, 23776, 32827, 45309, 62600, 90940]]),
-    extra: [{
-      title: '各层能量',
-      columns: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
-      levels: [
-        [600, 1020, 1500, 2040, 2640, 3300, 4020, 4920, 6480, 8880, 12120],
-        [853, 1450, 2132, 2900, 3753, 4691, 5715, 6995, 9213, 12625, 17231],
-        [1177, 2001, 2943, 4002, 5179, 6474, 7886, 9652, 12712, 17420, 23776],
-        [1625, 2763, 4063, 5526, 7151, 8939, 10889, 13327, 17552, 24052, 32827],
-        [2243, 3813, 5607, 7626, 9869, 12336, 15028, 18393, 24225, 33197, 45309],
-        [3099, 5268, 7747, 10536, 13635, 17044, 20763, 25412, 33469, 45865, 62600],
-        [4502, 7653, 11255, 15307, 19809, 24761, 30163, 36916, 48621, 66629, 90940],
-      ].map((line) => line.map(s)),
-    }],
-  },
-  {
-    id: 22, group: '能量', name: '梦魇（能量填充M）', aliases: ['夢魘（能量填充M）'], maxLevel: 7,
-    summary: '增加能量，并让非恶属性成员活力下降。',
-    detail: '给予卡比兽能量。全队非恶属性宝可梦活力固定 −12，最低为 0。',
-    ...one('能量', [2640, 3753, 5178, 7149, 9870, 13638, 18515]),
-  },
-  {
-    id: 40, group: '能量', name: '精神击破（树果领域）', aliases: ['精神擊破（樹果領域）'], maxLevel: 6,
-    summary: '增加能量，并提升超能力属性树果的能量。',
-    detail: '领域每次发动叠加，最多提升 24%，持续到迁移岛屿，移出超梦不会清除。',
-    ...rows(['能量', '树果领域'], [[1408, 2002, 2762, 3813, 5264, 7274], [0.006, 0.008, 0.01, 0.012, 0.016, 0.02].map(pct)]),
-  },
-  {
-    id: 3, group: '梦之碎片', name: '梦之碎片获取S', aliases: ['夢之碎片獲取S(X)'], maxLevel: 8,
-    summary: '获得固定数量的梦之碎片。',
-    detail: '图鉴写成梦之碎片获取S(X) 时，X 是这一级的碎片数。',
-    ...one('梦碎', [240, 340, 480, 670, 920, 1260, 1800, 2500]),
-  },
-  {
-    id: 6, group: '梦之碎片', name: '梦之碎片获取S（区间）', aliases: ['夢之碎片獲取S(X~Y)'], maxLevel: 8,
-    summary: '在区间内随机获得梦之碎片。',
-    detail: '每次发动在下限和上限之间随机取值。',
-    ...rows(['最低', '最高'], [[120, 170, 240, 335, 460, 630, 900, 1150], [480, 680, 960, 1340, 1840, 2520, 3600, 4600]]),
-  },
-  {
-    id: 39, group: '梦之碎片', name: '波导弹（梦之碎片获取S）', aliases: ['波導彈（夢之碎片獲取S）'], maxLevel: 8,
-    summary: '同时获得梦之碎片和能量。',
-    detail: '一次发动同时结算碎片和卡比兽能量。',
-    ...rows(['梦碎', '能量'], [[240, 340, 480, 670, 920, 1260, 1800, 2500], [200, 285, 393, 542, 748, 1033, 1501, 2042]]),
-  },
-  {
-    id: 4, group: '活力', name: '活力疗愈S', aliases: ['活力療癒S'], maxLevel: 6,
-    summary: '让随机 1 名同伴回复活力。',
-    detail: '目标是随机一名同伴，不是固定活力最低的那只。',
-    ...one('活力', [12, 15, 20, 25, 33, 44]),
-  },
-  {
-    id: 7, group: '活力', name: '活力填充S', aliases: ['活力填充S'], maxLevel: 6,
-    summary: '让自己回复活力。',
-    detail: '只回复发动者自己。',
-    ...one('活力', [12, 16.2, 21.2, 26.6, 33.6, 43.4]),
-  },
-  {
-    id: 8, group: '活力', name: '活力全体疗愈S', aliases: ['活力全體療癒S'], maxLevel: 6,
-    summary: '让全队回复活力。',
-    detail: '场上每一只都会回复表中的活力。',
-    ...one('活力', [5, 7, 9, 11.4, 15, 18.1]),
-  },
-  {
-    id: 17, group: '活力', name: '月光（活力填充S）', aliases: ['月光（活力填充S）'], maxLevel: 6,
-    summary: '自己回复活力，有时再让随机同伴回复。',
-    detail: '必定回复自己。有机会再回复随机一名同伴。',
-    ...rows(['自己', '同伴'], [[12, 16.2, 21.2, 26.6, 33.6, 43.4], [6.3, 7.7, 10.1, 13, 17.2, 22.8]]),
-  },
-  {
-    id: 21, group: '活力', name: '新月祈祷（活力全体疗愈S）', aliases: ['新月祈禱（活力全體療癒S）'], maxLevel: 6,
-    summary: '全队回复活力，并按同属性只数掉落树果。',
-    detail: '回复全队。同属性宝可梦越多，自己和同伴拿到的树果越多。下表是 1 只和 5 只同属性时，自己获得的树果。',
-    ...rows(['活力', '1 只', '5 只'], [[3, 4, 5, 7, 9, 11], [5, 9, 13, 17, 21, 25], [14, 19, 24, 29, 30, 32]]),
-  },
-  {
-    id: 30, group: '活力', name: '蹭蹭脸颊（活力疗愈S）', aliases: ['蹭蹭臉頰（活力療癒S）'], maxLevel: 6,
-    summary: '回复活力，并给予仅抽选技能的额外帮忙。',
-    detail: '回复随机一名同伴；额外帮忙只抽选技能，不产生树果和食材，不保证触发。配队按至少触发一次的概率估算。',
-    ...rows(['活力', '技能帮忙'], [[9, 12, 16, 20, 27, 35], [2, 3, 4, 5, 6, 7]]),
-  },
-  {
-    id: 32, group: '活力', name: '树果汁（活力全体疗愈S）', aliases: ['樹果汁（活力全體療癒S）'], maxLevel: 6,
-    summary: '全队回复活力，有时获得道具。',
-    detail: '回复量和全体疗愈相同，另外有机会获得一份道具。',
-    ...one('活力', [5, 7, 9, 11.4, 15, 18.1]),
-  },
-  {
-    id: 35, group: '活力', name: '治愈波动（活力疗愈S）', aliases: ['治癒波動（活力療癒S）'], maxLevel: 6,
-    summary: '回复两名同伴，并追加帮忙。',
-    detail: '回复随机两名同伴。拉帝欧斯在场时，帮忙次数还会再增加。',
-    ...rows(['活力', '帮忙', '组合追加'], [[6, 8, 10, 13, 17, 22], [1, 2, 2, 3, 4, 4], [1, 1, 2, 2, 2, 3]]),
-  },
-  {
-    id: 9, group: '额外帮忙', name: '帮手支援S', aliases: ['幫手支援S'], maxLevel: 7,
-    summary: '让随机一名同伴立刻帮忙。',
-    detail: '发动后，随机一名同伴立刻进行表中次数的帮忙，这些帮忙不发动主技能。',
-    ...one('帮忙', [6, 7, 8, 9, 10, 11, 12]),
-  },
-  {
-    id: 14, group: '额外帮忙', name: '帮手加速（属性）', aliases: ['幫手加速（属性）'], maxLevel: 6,
-    summary: '全队立刻帮忙，同属性队友有追加次数。',
-    detail: '全队立刻帮忙。和自己同属性的队友还会按阶段追加次数，最高追加见右列。',
-    ...rows(['全队', '同属性追加'], [[2, 3, 3, 4, 4, 5], [4, 4, 5, 5, 6, 6]]),
-  },
-  {
-    id: 10, group: '额外掉落', name: '食材获取S', aliases: ['食材獲取S'], maxLevel: 7,
-    summary: '随机获得已解锁的食材。',
-    detail: '从账号已解锁的食材中随机获得表中的个数；本项目默认全部解锁。',
-    ...one('食材', MAGNET),
-  },
-  {
-    id: 16, group: '额外掉落', name: '画皮（树果骤增）', aliases: ['畫皮（樹果遽增）'], maxLevel: 6,
-    summary: '掉落树果，并可能暴击追加。',
-    detail: '自己获得基础数量，其他队友各获得追加数量。大成功时所有数量变为 3 倍；大成功后，直到下次睡眠研究或手动登记前不会再次大成功。',
-    ...rows(['基础', '追加'], [[8, 10, 15, 17, 19, 21], [1, 2, 2, 3, 4, 5]]),
-  },
-  {
-    id: 20, group: '额外掉落', name: '树果骤增', aliases: ['樹果遽增'], maxLevel: 6,
-    summary: '掉落树果。',
-    detail: '获得基础树果，并固定追加右侧数量，没有暴击。',
-    ...rows(['基础', '追加'], [[11, 14, 21, 24, 27, 30], [1, 2, 2, 3, 4, 5]]),
-  },
-  {
-    id: 23, group: '额外掉落', name: '超幸运（食材精选S）', aliases: ['超幸運（食材精選S）'], maxLevel: 7,
-    summary: '从蘑菇、豆制肉、大豆、咖啡豆里随机获得，小概率大量梦碎。',
-    detail: '四种食材各约 21.5%。大成功时改为 500 到 20000 梦之碎片，概率约 14%。',
-    ...rows(['食材', '梦碎', '大成功'], [ING, [500, 720, 1030, 1440, 2000, 2800, 4000], [2500, 3600, 5150, 7200, 10000, 14000, 20000]]),
-  },
-  {
-    id: 24, group: '额外掉落', name: '怪力钳（食材精选S）', aliases: ['怪力鉗（食材精選S）'], maxLevel: 7,
-    summary: '从洋芋、油、番茄、玉米里随机获得，小概率双倍。',
-    detail: '四种食材平分概率。大成功时数量翻倍。',
-    ...rows(['食材', '大成功'], [ING, ING.map((n) => n * 2)]),
-  },
-  {
-    id: 26, group: '额外掉落', name: '正电（食材获取S）', aliases: ['正電（食材獲取S）'], maxLevel: 7,
-    summary: '获取食材；队伍有正电或负电技能时追加第一食材。',
-    detail: '从已解锁食材中抽选，队伍中有正电／负电技能时，再追加发动者的第一食材。挥指使用普通正电的追加数量。',
-    ...rows(['携带', '一致追加'], [[5, 7, 9, 11, 13, 16, 18], [6, 7, 8, 9, 10, 11, 12]]),
-  },
-  {
-    id: 27, group: '额外掉落', name: '正电（食材获取S）·强', aliases: ['正電（食材獲取S）'], maxLevel: 7,
-    summary: '和正电相同，属性一致时的追加更多。',
-    detail: '携带食材数量与另一条正电相同，一致追加从 6 提高到 14。',
-    ...rows(['携带', '一致追加'], [[5, 7, 9, 11, 13, 16, 18], [6, 7, 9, 10, 12, 13, 14]]),
-  },
-  {
-    id: 28, group: '额外掉落', name: '食材精选S（洋芋、油、酪梨）', aliases: ['食材精選S'], maxLevel: 7,
-    summary: '从窝心洋芋、纯粹油、嫩亮酪梨里随机获得。',
-    detail: '三种食材概率相同。图鉴里这几只都记成食材精选S，奖池以具体技能为准。',
-    ...one('食材', ING),
-  },
-  {
-    id: 33, group: '额外掉落', name: '食材精选S（蜜、油、玉米）', aliases: ['食材精選S'], maxLevel: 7,
-    summary: '从甜甜蜜、纯粹油、萌绿玉米里随机获得。',
-    detail: '三种食材概率相同。',
-    ...one('食材', ING),
-  },
-  {
-    id: 36, group: '额外掉落', name: '食材精选S（洋芋、玉米、南瓜）', aliases: ['食材精選S'], maxLevel: 7,
-    summary: '从窝心洋芋、萌绿玉米、沉甸甸南瓜里随机获得。',
-    detail: '三种食材概率相同。',
-    ...one('食材', ING),
-  },
-  {
-    id: 38, group: '额外掉落', name: '食材精选S（香草、豆、姜）', aliases: ['食材精選S'], maxLevel: 7,
-    summary: '从火辣香草、豆制肉、暖暖姜里随机获得。',
-    detail: '三种食材概率相同。',
-    ...one('食材', ING),
-  },
-  {
-    id: 29, group: '额外掉落', name: '礼物（食材获取S）', aliases: ['禮物（食材獲取S）'], maxLevel: 7,
-    summary: '获得食材，有时再获得糖果。',
-    detail: '食材数量随等级提高。每一级都有机会额外获得 4 颗糖果。',
-    ...rows(['食材', '糖果'], [[4, 6, 8, 10, 12, 15, 17], [4, 4, 4, 4, 4, 4, 4]]),
-  },
-  {
-    id: 31, group: '额外掉落', name: '健美（料理辅助S）', aliases: ['健美（料理輔助S）'], maxLevel: 7,
-    summary: '获得食材，并提高下次料理暴击率。',
-    detail: '食材数量与食材获取S相同，同时给下一次料理加上表中的暴击率。',
-    ...rows(['食材', '暴击'], [MAGNET, [0.01, 0.02, 0.02, 0.03, 0.03, 0.04, 0.05].map(pct)]),
-  },
-  {
-    id: 37, group: '额外掉落', name: '流星群（树果骤增）', aliases: ['流星群（樹果遽增）', '流星群（樹果增）'], maxLevel: 6,
-    summary: '按同属性不同种类掉落树果，有拉帝亚斯时自己额外获得。',
-    detail: '不同种类的同属性成员越多，自己和队友的树果越多。拉帝亚斯在队时，发动者额外获得右侧数量。',
-    ...rows(['1 只', '5 只', '拉帝亚斯'], [[12, 21, 29, 38, 43, 48], [20, 33, 41, 49, 53, 58], [2, 4, 6, 8, 9, 10]]),
-  },
-  {
-    id: 12, group: '额外技能', name: '挥指', aliases: ['揮指'], maxLevel: 7,
-    summary: '随机发动另一种主技能。',
-    detail: '发动时从一组主技能里随机选一个结算。等级会传给被选中的技能。没有单独的数值表。',
-    columns: [], levels: [],
-  },
-  {
-    id: 18, group: '额外技能', name: '变身（技能复制）', aliases: ['變身（技能複製）'], maxLevel: 7,
-    summary: '复制场上另一只宝可梦的主技能。',
-    detail: '随机选择另一只队友，按自己的技能等级和被复制技能的等级上限结算，使用自己的属性与食材。抽到特殊宝可梦、复制技能或没有队友时失败，发动能量填充S。配队按队友等概率估算。',
-    columns: [], levels: [],
-    extra: [{ title: '复制失败：能量填充S', ...one('能量', [400, 569, 785, 1083, 1496, 2066, 3212]) }],
-  },
-  {
-    id: 19, group: '额外技能', name: '模仿（技能复制）', aliases: ['模仿（技能複製）'], maxLevel: 7,
-    summary: '随机复制另一只队友的主技能。',
-    detail: '随机选择另一只队友，规则与变身相同。抽到特殊宝可梦、复制技能或没有队友时失败，发动能量填充S。配队按队友等概率估算。',
-    columns: [], levels: [],
-    extra: [{ title: '复制失败：能量填充S', ...one('能量', [400, 569, 785, 1083, 1496, 2066, 3212]) }],
-  },
-  {
-    id: 11, group: '料理', name: '料理强化S', aliases: ['料理強化S'], maxLevel: 7,
-    summary: '下一次料理的锅容量增加。',
-    detail: '下次做菜时，锅的容量加上表中的格数。',
-    ...one('锅容量', [7, 10, 12, 17, 22, 27, 31]),
-  },
-  {
-    // RAE mainSkillEffectMap[41], verified 2026-10-26; see rae-misdreavus-source.json.
-    id: 41, group: '料理', name: '魔法火焰（料理跃进S）', aliases: ['魔法火焰（料理跃进S）', '魔法火焰（料理躍進S）'], maxLevel: 7,
-    summary: '增加下一次料理的锅容量，同时提升料理大成功率。',
-    detail: '扩锅与大成功率分别沿用已有料理技能的累积和清零规则。',
-    ...rows(['锅容量', '暴击'], [[7,10,12,17,22,27,31], [0.01,0.02,0.02,0.03,0.03,0.04,0.05].map(pct)]),
-  },
-  {
-    id: 13, group: '料理', name: '料理成功S', aliases: ['料理成功S'], maxLevel: 6,
-    summary: '提高料理暴击率。',
-    detail: '下一次料理按表中的概率暴击。',
-    ...one('暴击', [0.04, 0.05, 0.06, 0.07, 0.08, 0.1].map(pct)),
-  },
-  {
-    id: 25, group: '料理', name: '负电（料理强化S）', aliases: ['負電（料理強化S）'], maxLevel: 7,
-    summary: '增加锅容量，有组合伙伴时回复随机一名成员。',
-    detail: '自己以外至少一名成员持有正电或负电时，额外回复随机一名成员，与属性无关。',
-    ...rows(['锅容量', '活力'], [[5, 7, 9, 12, 16, 20, 24], [8, 10, 13, 17, 23, 30, 35]]),
-  },
-  {
-    id: 34, group: '特殊', name: '十项全能', aliases: ["十項全能"], maxLevel: 8,
-    summary: '使用当前习得的主技能，并获得糖果。',
-    detail: '初始技能为挥指，可改为习得的能量、食材、疗愈、料理等技能。每次获得 1 颗糖果；6–8 级有 30% 概率额外获得 1–3 颗。',
-    ...rows(['糖果', '追加'], [[1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 1, 2, 3]]),
-  },
-]
+// Table provenance retained: RAE mainSkillEffectMap[41], verified 2026-10-26; see rae-misdreavus-source.json.
+export const MAIN_SKILLS: MainSkill[] = (cloneData(mainSkills_config_extracted0.MAIN_SKILLS) as unknown as MainSkill[])
 
 const exactSkills = new Map<string, MainSkill>()
 const foldedSkills = new Map<string, MainSkill>()
@@ -313,8 +38,8 @@ for (const skill of MAIN_SKILLS) {
     if (!foldedSkills.has(folded)) foldedSkills.set(folded, skill)
   }
 }
-const SELECT_ALIAS = foldText('食材精選S')
-const PLUS_ALIAS = foldText('正電（食材獲取S）')
+const SELECT_ALIAS = foldText(skillRouting.modules.mainSkills.selectAlias)
+const PLUS_ALIAS = foldText(skillRouting.modules.mainSkills.plusAlias)
 
 export function skillByPokedexName(name: string, pokeId?: number): MainSkill | undefined {
   // 模拟每次发动会多次查询，固定名称与别名只折叠一次。
@@ -322,15 +47,15 @@ export function skillByPokedexName(name: string, pokeId?: number): MainSkill | u
   const folded = foldText(name)
   // 同名技能依物种分流；使用唯一规范名的复制/挥指保持选中的变体。
   if (folded === SELECT_ALIAS) {
-    const id = pokeId === 27 || pokeId === 28 ? 36 : pokeId === 742 || pokeId === 743 ? 33 : pokeId === 701 ? 38 : 28
+    const id = (skillRouting.modules.mainSkills.selectByPokemon as Record<string, number>)[String(pokeId)] ?? skillRouting.modules.mainSkills.selectDefault
     return MAIN_SKILLS.find(skill => skill.id === id)
   }
-  if (folded === PLUS_ALIAS && pokeId === 849) return MAIN_SKILLS.find(skill => skill.id === 27)
+  if (folded === PLUS_ALIAS && pokeId === skillRouting.modules.mainSkills.plusPokemon) return MAIN_SKILLS.find(skill => skill.id === skillRouting.modules.mainSkills.plusSkill)
   return exactSkills.get(name) ?? foldedSkills.get(folded)
 }
 
 export function skillMaxFor(name: string): number {
-  return skillByPokedexName(name)?.maxLevel ?? 6
+  return skillByPokedexName(name)?.maxLevel ?? skillRouting.modules.mainSkills.unknownSkillMaxLevel
 }
 
 export function clampSkillLevel(name: string, level: number): number {

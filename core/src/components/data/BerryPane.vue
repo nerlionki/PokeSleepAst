@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { berryEnergySnaps, berryEnergyTable } from '../../calc/berry'
 import { BERRIES } from '../../calc/data'
 import { textHit } from '../../calc/text'
 import BerryIcon from '../shared/BerryIcon.vue'
 import DrawerSheet from '../shared/DrawerSheet.vue'
+const components_data_BerryPane_config_clientDefaults = clientDefaults.modules.components_data_BerryPane
+
 
 const props = defineProps<{ q: string }>()
-const open = shallowRef('')
+const open = shallowRef(components_data_BerryPane_config_clientDefaults["openInitial"])
 
 const list = computed(() => BERRIES.filter((b) => textHit(`${b.name} ${b.type}`, props.q)))
 const current = computed(() => BERRIES.find((b) => b.name === open.value))

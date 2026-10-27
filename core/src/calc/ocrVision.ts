@@ -292,11 +292,18 @@ function ingredientShapeScore(shot: PixelImage, template: PixelImage): number {
     const width = Math.max(1, Math.round(size * template.width / longest))
     const height = Math.max(1, Math.round(size * template.height / longest))
     const ref = resizeRgba(template, width, height)
+    // 包含透明边缘的浅色背景，才能比较完整轮廓；只比较不透明内部会把褪色苹果误配成蛋。
+    for (let i = 0; i < ref.data.length; i += 4) {
+      const alpha = (ref.data[i + 3] ?? 0) / 255
+      for (const [channel, background] of [255, 252, 236].entries()) {
+        ref.data[i + channel] = (ref.data[i + channel] ?? 0) * alpha + background * (1 - alpha)
+      }
+    }
     const icon = grayscale(ref.data, ref.width, ref.height)
     for (let y = 0; y <= 64 - height; y += 2) {
       for (let x = 0; x <= 64 - width; x += 2) {
         const region = crop(canvas, x, y, width, height)
-        best = Math.max(best, maskedCorrelation(grayscale(region.data, region.width, region.height), icon))
+        best = Math.max(best, normalizedCorrelation(grayscale(region.data, region.width, region.height), icon))
       }
     }
   }

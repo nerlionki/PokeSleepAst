@@ -1,8 +1,13 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
 import { computed } from 'vue'
 import FallbackImage from './FallbackImage.vue'
 import { berryIconUrl } from '../../calc/berry'
 import { berryByName } from '../../calc/data'
+const components_shared_BerryIcon_config_clientDefaults = clientDefaults.modules.components_shared_BerryIcon
+
 
 const props = defineProps<{
   name: string
@@ -12,11 +17,7 @@ const props = defineProps<{
 
 const berry = computed(() => berryByName(props.name))
 const hue = computed(() => {
-  const map: Record<string, number> = {
-    一般: 40, 火: 12, 水: 210, 电: 50, 草: 130, 冰: 190,
-    格斗: 20, 毒: 280, 地面: 35, 飞行: 220, 超能: 300, 虫: 80,
-    岩石: 30, 幽灵: 260, 龙: 240, 恶: 250, 钢: 200, 妖精: 330,
-  }
+  const map: Record<string, number> = (cloneData(components_shared_BerryIcon_config_clientDefaults["map"]) as unknown as Record<string, number>)
   return map[berry.value?.type ?? ''] ?? 40
 })
 

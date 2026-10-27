@@ -1,4 +1,10 @@
+import extracted0 from '../data/skill-tables.json'
+import extracted1 from '../data/client-defaults.json'
+import { cloneData } from './dataClone'
 import { mainSkillValue, skillByPokedexName } from './mainSkills'
+const skills_config_extracted0 = extracted0.modules.skills
+const skills_config_extracted1 = extracted1.modules.skills
+
 
 export type SkillKind = 'charge' | 'healAll' | 'healOne' | 'healSelf' | 'support' | 'typeAccel' | 'helpAccel' | 'other'
 
@@ -13,8 +19,8 @@ export function chargeStrength(mainSkill: string, level: number): number {
   return mainSkillValue(mainSkill, level, '能量')
 }
 
-export const ACCEL_FACTOR = 0.9
-export const ACCEL_MINUTES = 120
+export const ACCEL_FACTOR = (skills_config_extracted0.ACCEL_FACTOR as 0.9)
+export const ACCEL_MINUTES = (skills_config_extracted0.ACCEL_MINUTES as 120)
 
 export function skillKind(name: string): SkillKind {
   if (/属性加速|屬性加速|加速（属性）|加速（屬性）/.test(name)) return 'typeAccel'
@@ -39,24 +45,6 @@ export function skillValue(mainSkill: string, level: number): number {
 
 export { MAIN_SKILLS as MAIN_SKILL_INFO, MAIN_SKILLS as MAIN_SKILL_DOCS, skillMaxFor } from './mainSkills'
 
-export const SUBSKILL_NOTES: Record<string, string> = {
-  berryS: '每次帮忙的树果数量 +1',
-  sleepExp: '睡眠获得的 EXP +14%',
-  helpingBonus: '全队帮忙间隔 −5%（最多叠加 5 次）',
-  researchExp: '研究 EXP +9%',
-  shardBonus: '梦之碎片 +6%',
-  skillLevelM: '主技能等级 +2',
-  energyRecover: '全队睡眠活力回复量 +14%，自身睡眠回复上限 105',
-  helpM: '帮忙间隔 −14%',
-  ingM: '食材发现率 +36%',
-  invL: '持有上限 +18',
-  invM: '持有上限 +12',
-  skillM: '主技能发动率 +36%',
-  skillLevelS: '主技能等级 +1',
-  helpS: '帮忙间隔 −7%',
-  ingS: '食材发现率 +18%',
-  invS: '持有上限 +6',
-  skillS: '主技能发动率 +18%',
-}
+export const SUBSKILL_NOTES: Record<string, string> = (cloneData(skills_config_extracted0.SUBSKILL_NOTES) as unknown as Record<string, string>)
 
-export const RARITY_LABEL = { gold: '金', blue: '蓝', white: '白' } as const
+export const RARITY_LABEL = (cloneData(skills_config_extracted1.RARITY_LABEL) as unknown as {readonly "gold":"金";readonly "blue":"蓝";readonly "white":"白"})

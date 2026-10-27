@@ -1,9 +1,18 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import clientFactoryDefaults from '../data/client-defaults.json'
+import extracted0 from '../data/client-defaults.json'
+import { cloneData } from './dataClone'
 import { newUid } from './uid'
+import { EVENT_PARAMETERS, activityValues, createActivityContext, type ActivitySelection } from './activities'
 import growth from '../data/growth-meta.json'
 import legacyStockKeys from '../data/legacy-candy-stock-keys.json'
 import type { BoxPokemon } from '../types'
 import { natureByName, pokeById } from './data'
 import { candyExpAtLevel, shardsTo } from './xp'
+const candyPlan_config_extracted0 = extracted0.modules.candyPlan
+const factory_candyPlan_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_candyPlan
+const candyPlan_calculateCandy_runtimeParameters = runtimeParameters.modules.candyPlan.calculateCandy.values
+
 
 export type CandyNature = 'flat' | 'up' | 'down'
 export type CandyMethod = 'target' | 'manual'
@@ -29,14 +38,11 @@ export interface CandyResult {
   error?: string
 }
 
-export const CANDY_BOOSTS = {
-  christmas: { id: 'christmas', name: '大型增强', exp: 2, shards: 5, quota: 3500 },
-  mini: { id: 'mini', name: '迷你增强', exp: 2, shards: 4, quota: 350 },
-} as const
+export const CANDY_BOOSTS = EVENT_PARAMETERS.candyBoosts
 
 export type CandyBoostId = keyof typeof CANDY_BOOSTS
 
-const MAX_LEVEL = 70
+const MAX_LEVEL = (candyPlan_config_extracted0.MAX_LEVEL as 70)
 const curves = growth.exp as Record<string, number[]>
 const expTypes = growth.expType as Record<string, number>
 const families = growth.family as Record<string, string>
@@ -65,7 +71,7 @@ export function evolutionLevels(pokeId: number): number[] {
   return evolves[String(pokeId)] ?? []
 }
 
-export const CANDY_PRESETS = [25, 30, 50, 60, 70]
+export const CANDY_PRESETS = cloneData(candyPlan_config_extracted0.CANDY_PRESETS)
 
 /** Pure Box-to-planning conversion; identity is supplied by the caller. */
 export function createCandyRowFromBox(pokemon: BoxPokemon, id: string): CandyRow {
@@ -74,11 +80,11 @@ export function createCandyRowFromBox(pokemon: BoxPokemon, id: string): CandyRow
   return {
     id,
     pokeId: pokemon.pokeId,
-    method: 'target',
+    method: (factory_candyPlan_config_clientFactoryDefaults["createCandyRowFromBox_method"] as "target"),
     start,
     target: CANDY_PRESETS.find((lv) => lv > start) ?? start,
-    use: 50,
-    useAll: false,
+    use: (factory_candyPlan_config_clientFactoryDefaults["createCandyRowFromBox_use"] as 50),
+    useAll: (factory_candyPlan_config_clientFactoryDefaults["createCandyRowFromBox_useAll"] as false),
     nature: nature.up === 'exp' ? 'up' : nature.down === 'exp' ? 'down' : 'flat',
     remaining: pokemon.tune?.exp || null,
   }
@@ -98,10 +104,11 @@ function levelGap(exp: number[], level: number): number {
   return (exp[level + 1] ?? 0) - (exp[level] ?? 0)
 }
 
-export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: number): CandyResult {
+export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: number, activity?: ActivitySelection, island = ''): CandyResult {
   const boost = CANDY_BOOSTS[mode]
   const poke = pokeById(row.pokeId)
   if (!poke) return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: '请选择宝可梦' }
+  const effects = activityValues(createActivityContext('research', activity), island, poke)
   if (!Number.isInteger(row.start) || row.start < 1 || row.start > MAX_LEVEL) {
     return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: '当前等级需在 1–70' }
   }
@@ -115,7 +122,7 @@ export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: 
   if (row.method === 'target' && (!Number.isInteger(row.target) || row.target < row.start || row.target > MAX_LEVEL)) {
     return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: `目标等级需在 ${row.start}–${MAX_LEVEL}` }
   }
-  if (row.method === 'manual' && (!Number.isInteger(use) || use < 0 || use > 100000)) {
+  if (row.method === 'manual' && (!Number.isInteger(use) || use < 0 || use > (candyPlan_calculateCandy_runtimeParameters.p001 as 100000))) {
     return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: '使用糖果需为 0–100000 的整数' }
   }
 
@@ -125,8 +132,8 @@ export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: 
   let shards = 0
   const nature = row.nature === 'up' ? '胆小' : row.nature === 'down' ? '勇敢' : '勤奋'
   while (level < MAX_LEVEL && (row.method === 'target' ? level < row.target : candies < use)) {
-    shards += shardsTo(level + 1) * boost.shards
-    current += candyExpAtLevel(level, nature, true)
+    shards += shardsTo(level + 1) * boost.shards * effects.candyShardMultiplier
+    current += candyExpAtLevel(level, nature, boost.exp * effects.candyExpMultiplier)
     candies += 1
     while (level < MAX_LEVEL && current >= (exp[level + 1] ?? Infinity)) level += 1
   }
@@ -139,7 +146,8 @@ export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: 
   }
 }
 
-export function planCandy(rows: CandyRow[], stocks: Record<string, number>, mode: CandyBoostId) {
+export function planCandy(rows: CandyRow[], stocks: Record<string, number>, mode: CandyBoostId, activity?: ActivitySelection, island = '') {
+  activity = createActivityContext('research', activity)
   const used: Record<string, number> = {}
   let candies = 0
   let shards = 0
@@ -149,7 +157,7 @@ export function planCandy(rows: CandyRow[], stocks: Record<string, number>, mode
     const stock = stocks[family] ?? 0
     const consumed = used[family] ?? 0
     const left = Math.max(0, stock - consumed)
-    const result = calculateCandy(row, mode, row.method === 'manual' && row.useAll ? left : undefined)
+    const result = calculateCandy(row, mode, row.method === 'manual' && row.useAll ? left : undefined, activity, island)
     if (result.error) return result
     result.missing = Math.max(0, consumed + result.candies - stock) - Math.max(0, consumed - stock)
     used[family] = consumed + result.candies

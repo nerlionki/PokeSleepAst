@@ -1,6 +1,21 @@
-import { advanceTrainingState, expTo, feedTrainingState, groupMult, natureExpFactor, xpCandy } from './xp'
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/calc-tables.json'
+import { EVENT_PARAMETERS, activityValues, createActivityContext, type ActivitySelection } from './activities'
+import { pokeById } from './data'
+import type { ExpGroup, TrainingProgress } from './xp'
+import { advanceTrainingState, expTo, feedTrainingState as baseFeedTrainingState, groupMult, natureExpFactor, xpCandy } from './xp'
+const train_config_extracted0 = extracted0.modules.train
+const train_napDailyExp_ruleParameters = ruleParameters.modules.train.napDailyExp
+const train_napTotalExp_ruleParameters = ruleParameters.modules.train.napTotalExp
+const train_trainPlan_runtimeParameters = runtimeParameters.modules.train.trainPlan.values
+const train_trainPlan_ruleParameters = ruleParameters.modules.train.trainPlan
+
 
 export interface TrainInput {
+  activity?: ActivitySelection
+  island?: string
+  pokeId?: number
   from: number
   to: number
   remaining: number
@@ -23,21 +38,29 @@ export interface TrainInput {
   group: 'normal' | 'pseudo' | 'legendary' | 'mythical'
 }
 
-export const SLEEP_EXP_BONUS = 0.14
-export const SLEEP_EXP_BONUS_MAX = 5
+export const SLEEP_EXP_BONUS = (train_config_extracted0.SLEEP_EXP_BONUS as 0.14)
+export const SLEEP_EXP_BONUS_MAX = (train_config_extracted0.SLEEP_EXP_BONUS_MAX as 5)
 
 export function napDailyExp(relax: boolean, nature = '勤奋'): number {
   // 午睡岛只有 EXP 上升性格生效，下降性格不会减少所得。
-  return (relax ? 600 : 150) * Math.max(1, natureExpFactor(nature))
+  return (relax ? train_napDailyExp_ruleParameters.relaxDailyExp : train_napDailyExp_ruleParameters.normalDailyExp) * Math.max(1, natureExpFactor(nature))
 }
 
 export function napTotalExp(days: number, relax: boolean, _early: boolean, nature = '勤奋'): number {
-  const duration = Math.min(365, Math.max(0, days))
-  const raw = (150 * duration + (relax ? 450 * Math.min(7, duration) : 0)) * Math.max(1, natureExpFactor(nature))
-  return Math.floor(raw * (duration < 7 ? 0.5 : 1))
+  const duration = Math.min(train_napTotalExp_ruleParameters.maxDays, Math.max(0, days))
+  const raw = (train_napTotalExp_ruleParameters.normalDailyExp * duration + (relax ? train_napTotalExp_ruleParameters.relaxExtraExp * Math.min(train_napTotalExp_ruleParameters.relaxDays, duration) : 0)) * Math.max(1, natureExpFactor(nature))
+  return Math.floor(raw * (duration < train_napTotalExp_ruleParameters.relaxDays ? train_napTotalExp_ruleParameters.earlyRetrieveMultiplier : 1))
 }
 
 export function trainPlan(input: TrainInput) {
+  const activity = createActivityContext('research', input.activity)
+  const effects = (day = 0) => activityValues(activity, input.island ?? '', pokeById(input.pokeId ?? 0), day * 1440 + (train_trainPlan_runtimeParameters.p001 as 240))
+  const feedTrainingState = (progress: Readonly<TrainingProgress>, count: number, target: number, nature: string, group: ExpGroup, boost: boolean | number = false, shards = 1, day = 0) => {
+    const event = effects(day)
+    return baseFeedTrainingState(progress, count, target, nature, group, (typeof boost === 'number' ? boost : boost ? EVENT_PARAMETERS.candyBoosts.christmas.exp : 1) * event.candyExpMultiplier, shards * event.candyShardMultiplier)
+  }
+  const boostPolicy = input.boost === 'none' ? undefined : EVENT_PARAMETERS.candyBoosts[input.boost === 'mini' ? 'mini' : 'christmas']
+
   const gap = xpCandy({
     from: input.from,
     to: input.to,
@@ -47,53 +70,53 @@ export function trainPlan(input: TrainInput) {
   })
   const usable = Math.max(0, Math.floor(input.ownedCandy - input.reserveCandy))
   const bonusFactor = 1 + SLEEP_EXP_BONUS * Math.min(SLEEP_EXP_BONUS_MAX, Math.max(0, Math.floor(input.sleepExpBonus)))
-  const sleepFactor = bonusFactor * (input.sleepIncense ? 2 : 1)
+  const sleepFactor = bonusFactor * (input.sleepIncense ? train_trainPlan_ruleParameters.sleepIncenseMultiplier : 1)
   const sleepThen = Math.max(0, input.sleepScore) * sleepFactor * natureExpFactor(input.nature)
   const dailySleep = input.sleepOnTeam && !input.napping ? sleepThen : 0
   const dailyNap = input.napping ? napDailyExp(input.relaxTicket, input.nature) : 0
   const dailyCandies = Math.max(0, Math.floor(input.dailyCandy))
-  const boostShard = input.boost === 'mini' ? 4 : input.boost === 'normal' ? 5 : 1
+  const boostShard = boostPolicy?.shards ?? 1
   const initial = { level: input.from, exp: expTo(input.to) * groupMult(input.group) - gap.exp }
   const boosted = Math.min(Math.max(0, Math.floor(input.boostCandy)), usable)
-  const fedBoost = gap.error ? initial : feedTrainingState(initial, boosted, input.to, input.nature, input.group, input.boost !== 'none', boostShard).progress
+  const fedBoost = gap.error ? initial : feedTrainingState(initial, boosted, input.to, input.nature, input.group, boostPolicy?.exp ?? 1, boostShard).progress
   const fed = gap.error ? initial : feedTrainingState(fedBoost, usable - boosted, input.to, input.nature, input.group).progress
   const feedExp = fed.exp - initial.exp
   const daysOf = (daily: number, progress = initial, candies = 0): number => {
     if (gap.error) return NaN
     if (progress.level >= input.to) return 0
-    if (daily <= 0 && candies <= 0) return Infinity
-    if (!candies) return Math.ceil(Math.max(0, expTo(input.to) * groupMult(input.group) - progress.exp) / daily)
+    if ((daily <= 0 || activity.overrides?.sleepExpMultiplier === 0) && candies <= 0) return Infinity
+    if (!candies && !activity.catalog.activities.length && effects().sleepExpMultiplier === 1) return Math.ceil(Math.max(0, expTo(input.to) * groupMult(input.group) - progress.exp) / daily)
     let next = { ...progress }
     let days = 0
     while (next.level < input.to) {
-      next = feedTrainingState(advanceTrainingState(next, daily, input.to, input.group), candies, input.to, input.nature, input.group).progress
+      next = feedTrainingState(advanceTrainingState(next, daily * effects(days).sleepExpMultiplier, input.to, input.group), candies, input.to, input.nature, input.group, false, 1, days).progress
       days++
     }
     return days
   }
-  const stayDays = Math.min(365, Math.max(1, Math.floor(input.napDays) || 7))
+  const stayDays = Math.min(train_trainPlan_ruleParameters.maxNapDays, Math.max(1, Math.floor(input.napDays) || train_trainPlan_ruleParameters.defaultAndRelaxDays))
   const daysOnNap = (relax: boolean, progress = initial, candies = 0): number => {
     if (gap.error) return NaN
     let next = { ...progress }
     let days = 0
-    let ticketDays = relax ? 7 : 0
+    let ticketDays = relax ? train_trainPlan_ruleParameters.defaultAndRelaxDays : 0
     while (next.level < input.to) {
       // 寄放期间不能喂糖；按所选停留时长领回结算，再喂这段期间积累的糖果。
-      const raw = (150 * stayDays + 450 * Math.min(ticketDays, stayDays)) * Math.max(1, natureExpFactor(input.nature))
-      next = feedTrainingState(advanceTrainingState(next, Math.floor(raw * (stayDays < 7 ? 0.5 : 1)), input.to, input.group), candies * stayDays, input.to, input.nature, input.group).progress
+      const raw = (train_trainPlan_ruleParameters.napDailyExp * stayDays + train_trainPlan_ruleParameters.napRelaxExtraExp * Math.min(ticketDays, stayDays)) * Math.max(1, natureExpFactor(input.nature))
+      next = feedTrainingState(advanceTrainingState(next, Math.floor(raw * (stayDays < train_trainPlan_ruleParameters.defaultAndRelaxDays ? train_trainPlan_ruleParameters.earlyRetrieveMultiplier : 1)), input.to, input.group), candies * stayDays, input.to, input.nature, input.group, false, 1, days + stayDays - 1).progress
       ticketDays = Math.max(0, ticketDays - stayDays)
       days += stayDays
     }
     return days
   }
-  const dailyPreview = !gap.error && !input.napping ? advanceTrainingState(fed, dailySleep, input.to, input.group) : fed
+  const dailyPreview = !gap.error && !input.napping ? advanceTrainingState(fed, dailySleep * effects().sleepExpMultiplier, input.to, input.group) : fed
   const candyPreview = gap.error ? 0 : feedTrainingState(dailyPreview, dailyCandies, input.to, input.nature, input.group).exp
-  const dailyExp = dailySleep + dailyNap + (input.napping ? 0 : candyPreview)
+  const dailyExp = dailySleep * effects().sleepExpMultiplier + dailyNap + (input.napping ? 0 : candyPreview)
   const days = input.napping ? daysOnNap(input.relaxTicket, fed, dailyCandies) : daysOf(dailySleep, fed, dailyCandies)
-  const napExp = input.napping ? napTotalExp(input.napDays || (Number.isFinite(days) ? days : 7), input.relaxTicket, input.earlyRetrieve, input.nature) : 0
-  const afterNap = gap.error ? initial : advanceTrainingState(initial, napTotalExp(7, false, false, input.nature), input.to, input.group)
+  const napExp = input.napping ? napTotalExp(input.napDays || (Number.isFinite(days) ? days : train_trainPlan_ruleParameters.defaultAndRelaxDays), input.relaxTicket, input.earlyRetrieve, input.nature) : 0
+  const afterNap = gap.error ? initial : advanceTrainingState(initial, napTotalExp(train_trainPlan_ruleParameters.defaultAndRelaxDays, false, false, input.nature), input.to, input.group)
   const plainFeed = gap.error ? initial : feedTrainingState(initial, usable, input.to, input.nature, input.group).progress
-  const boostedCost = gap.error ? { progress: initial, candies: 0, shards: 0 } : feedTrainingState(initial, boosted, input.to, input.nature, input.group, input.boost !== 'none', boostShard)
+  const boostedCost = gap.error ? { progress: initial, candies: 0, shards: 0 } : feedTrainingState(initial, boosted, input.to, input.nature, input.group, boostPolicy?.exp ?? 1, boostShard)
   const normalCost = gap.error ? { candies: 0, shards: 0 } : feedTrainingState(boostedCost.progress, Infinity, input.to, input.nature, input.group)
   return {
     error: gap.error,
@@ -108,7 +131,7 @@ export function trainPlan(input: TrainInput) {
       { name: '只上阵睡觉', days: daysOf(sleepThen) },
       { name: '只午睡岛（无券）', days: daysOnNap(false) },
       { name: '只午睡岛（放松券）', days: daysOnNap(true) },
-      { name: '午睡岛满 7 天再上阵', days: initial.level >= input.to ? 0 : daysOf(sleepThen, afterNap) + 7 },
+      { name: '午睡岛满 7 天再上阵', days: initial.level >= input.to ? 0 : daysOf(sleepThen, afterNap) + train_trainPlan_ruleParameters.defaultAndRelaxDays },
       { name: '先喂糖再睡', days: daysOf(sleepThen, fed, dailyCandies) },
       { name: '先喂糖再寄放', days: daysOnNap(false, fed, dailyCandies) },
       { name: '不增强只喂糖', days: daysOf(0, plainFeed, dailyCandies) },

@@ -1,23 +1,33 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleCatalogs from '../data/rule-catalogs.json'
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/skill-tables.json'
+import { cloneData } from './dataClone'
 import { INGREDIENTS, berryByName, pokeById } from './data'
 import { MAIN_SKILLS, clampSkillLevel, mainSkillValue, skillByPokedexName } from './mainSkills'
 import { SPECIAL_TEAM_POKEMON } from './teamRestrictions'
 import { chargeStrength } from './skills'
 import type { ProduceInput, ProduceResult } from '../types'
+const skillEffects_config_extracted0 = extracted0.modules.skillEffects
+const skillEffects_applyMainSkill_runtimeParameters = runtimeParameters.modules.skillEffects.applyMainSkill.values
+const skillEffects_config_ruleCatalogs = ruleCatalogs.modules.skillEffects
+const skillEffects_applyMainSkill_ruleParameters = ruleParameters.modules.skillEffects.applyMainSkill
+
 
 /** 用户确认：验证 Wiki 的 26 个候选等概率，未确认的技能不进入池。 */
-export const METRONOME_POOL = [1,5,2,15,20,39,9,10,31,23,24,29,26,4,30,7,8,17,32,11,13,25,3,6,14,21] as const
-export const BOOST = [[2,2,3,4,6],[3,3,4,5,7],[3,3,5,6,8],[4,4,6,7,9],[4,5,7,8,10],[5,6,8,9,11]]
-export const CRESCENT_SELF = [[5,7,9,12,14],[9,12,15,16,19],[13,17,18,20,24],[17,19,25,28,29],[21,24,27,28,30],[25,29,30,31,32]]
-export const CRESCENT_TEAM = [[1,1,1,1,2],[1,1,1,2,3],[1,1,2,3,4],[1,2,2,3,5],[1,2,3,5,7],[1,2,4,6,9]]
+export const METRONOME_POOL = (cloneData(skillEffects_config_extracted0.METRONOME_POOL) as unknown as readonly [1,5,2,15,20,39,9,10,31,23,24,29,26,4,30,7,8,17,32,11,13,25,3,6,14,21])
+export const BOOST = cloneData(skillEffects_config_extracted0.BOOST)
+export const CRESCENT_SELF = cloneData(skillEffects_config_extracted0.CRESCENT_SELF)
+export const CRESCENT_TEAM = cloneData(skillEffects_config_extracted0.CRESCENT_TEAM)
 
 // RAE 验证概率，非官方公布值：https://pks.raenonx.cc/en/mainskill/info/16
-export const DISGUISE_CRIT_CHANCE = 0.185
+export const DISGUISE_CRIT_CHANCE = (skillEffects_config_extracted0.DISGUISE_CRIT_CHANCE as 0.185)
 // 完整档位：https://wikiwiki.jp/poke_sleep/メインスキル/きのみバースト/りゅうせいぐん
-export const DRACO_SELF = [[12,14,18,18,20],[21,24,29,30,33],[29,29,35,37,41],[38,39,42,45,49],[43,44,48,49,53],[48,50,55,55,58]]
-export const DRACO_TEAM = [[1,1,1,2,2],[1,1,1,2,2],[1,2,2,3,3],[1,2,3,4,4],[2,3,4,5,5],[3,4,4,5,5]]
+export const DRACO_SELF = cloneData(skillEffects_config_extracted0.DRACO_SELF)
+export const DRACO_TEAM = cloneData(skillEffects_config_extracted0.DRACO_TEAM)
 // 用户确认按 RAE 验证值，Wiki 的 25% 不覆盖该值：https://pks.raenonx.cc/en/mainskill/info/15
-export const SPIT_UP_CHANCE = 0.265
-export const SELECT_POOLS: Record<number, number[]> = { 28: [4,10,19], 33: [9,10,16], 36: [4,16,18], 38: [6,7,11] }
+export const SPIT_UP_CHANCE = (skillEffects_config_extracted0.SPIT_UP_CHANCE as 0.265)
+export const SELECT_POOLS: Record<number, number[]> = (cloneData(skillEffects_config_extracted0.SELECT_POOLS) as unknown as Record<number, number[]>)
 
 export interface EffectActor {
   poke: { id: number, mainSkill: string, berry: string }
@@ -51,13 +61,13 @@ function reward(actor: EffectActor, key: 'dreamShards' | 'candies' | 'berryJuice
 export function applyMainSkill(actor: EffectActor, team: EffectActor[], context: EffectContext, weight = 1) {
   const selected = skillByPokedexName(actor.poke.mainSkill, actor.poke.id)
   if (!selected || weight <= 0) return false
-  const expand = (id: number, probability: number) => id === 12
+  const expand = (id: number, probability: number) => id === (skillEffects_applyMainSkill_runtimeParameters.p001 as 12)
     ? METRONOME_POOL.map(id => ({ id, probability: probability / METRONOME_POOL.length })) : [{ id, probability }]
   const copying = selected.id === 18 || selected.id === 19
   const candidates = copying ? team.filter(target => target !== actor) : []
   const choices = copying ? (candidates.length ? candidates.flatMap(target => {
     const skill = skillByPokedexName(target.poke.mainSkill, target.poke.id)
-    const failed = SPECIAL_TEAM_POKEMON.has(target.poke.id) || !skill || [18,19,22,35,37,40].includes(skill.id)
+    const failed = SPECIAL_TEAM_POKEMON.has(target.poke.id) || !skill || skillEffects_config_ruleCatalogs.applyMainSkillList0.values.includes(skill.id)
     return expand(failed ? 1 : skill!.id, 1 / candidates.length)
   }) : [{ id: 1, probability: 1 }]) : expand(selected.id, 1)
   const crit: { amount: number, probability: number }[] = []
@@ -66,13 +76,13 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
     const level = clampSkillLevel(name, actor.skillLv)
     const w = weight * choice.probability
     const value = (column: string) => mainSkillValue(name, level, column)
-    const heal = (target: EffectActor, amount: number) => { target.energy = Math.min(150, target.energy + amount * w * target.factor) }
+    const heal = (target: EffectActor, amount: number) => { target.energy = Math.min(skillEffects_applyMainSkill_ruleParameters.energyCap, target.energy + amount * w * target.factor) }
     const food = (amount: number, pool = INGREDIENTS) => { for (const ingredient of pool) context.ingredient(actor, ingredient.name, amount * w / pool.length) }
     const berry = (target: EffectActor, amount: number) => {
       target.result.berries += amount * w
       target.result.berryEnergy += amount * w * target.unitBerry
     }
-    const matchingSpecies = Math.min(5, Math.max(1, new Set(team.filter(member => member.poke.berry === actor.poke.berry).map(member => member.poke.id)).size)) - 1
+    const matchingSpecies = Math.min((skillEffects_applyMainSkill_runtimeParameters.p002 as 5), Math.max(1, new Set(team.filter(member => member.poke.berry === actor.poke.berry).map(member => member.poke.id)).size)) - 1
     const pair = team.some(member => member !== actor && /正电|正電|负电|負電/.test(member.poke.mainSkill))
     switch (choice.id) {
       case 1: case 2: case 5: case 39:
@@ -88,10 +98,10 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
           const probability = Math.min(1, remaining)
           const next = state.map(mass => mass * (1 - probability))
           state.forEach((mass, stack) => {
-            const spit = stack === 10 ? 1 : SPIT_UP_CHANCE
+            const spit = stack === (skillEffects_applyMainSkill_runtimeParameters.p003 as 10) ? 1 : SPIT_UP_CHANCE
             strength += mass * probability * spit * Number(table[stack])
             next[0]! += mass * probability * spit
-            if (stack < 10) next[stack + 1]! += mass * probability * (1 - spit)
+            if (stack < (skillEffects_applyMainSkill_runtimeParameters.p004 as 10)) next[stack + 1]! += mass * probability * (1 - spit)
           })
           state = next
         }
@@ -111,14 +121,14 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
         break
       case 8: case 32:
         for (const target of team) heal(target, value('活力'))
-        if (choice.id === 32) reward(actor, 'berryJuice', 0.185 * w)
+        if (choice.id === 32) reward(actor, 'berryJuice', skillEffects_applyMainSkill_ruleParameters.berryJuiceChance * w)
         break
       case 17: {
         heal(actor, value('自己'))
         const ranked = [...team].sort((a,b) => a.energy - b.energy)
-        const weights = ranked.map((_, index) => index === 0 ? 0.72 : 0.07)
+        const weights = ranked.map((_, index) => index === 0 ? skillEffects_applyMainSkill_ruleParameters.lowestEnergyTargetWeight : skillEffects_applyMainSkill_ruleParameters.otherEnergyTargetWeight)
         const total = weights.reduce((a,b) => a+b, 0)
-        ranked.forEach((target,index) => heal(target, value('同伴') * 0.45 * weights[index]! / total))
+        ranked.forEach((target,index) => heal(target, value('同伴') * skillEffects_applyMainSkill_ruleParameters.crescentRecoveryChance * weights[index]! / total))
         break
       }
       case 9:
@@ -133,11 +143,11 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
         if (choice.id === 31) crit.push({ amount: Number(MAIN_SKILLS.find(skill => skill.id === 31)!.levels[level-1]![1]!.replace('%','')) / 100, probability: w })
         break
       case 23:
-        food(value('食材') * 0.86, INGREDIENTS.filter(item => [2,7,15,17].includes(item.id)))
-        reward(actor, 'dreamShards', (value('梦碎') * 0.112 + value('大成功') * 0.028) * w)
+        food(value('食材') * skillEffects_applyMainSkill_ruleParameters.plusSuccessChance, INGREDIENTS.filter(item => skillEffects_config_ruleCatalogs.applyMainSkillList1.values.includes(item.id)))
+        reward(actor, 'dreamShards', (value('梦碎') * skillEffects_applyMainSkill_ruleParameters.plusRareOneChance + value('大成功') * skillEffects_applyMainSkill_ruleParameters.plusRareTwoChance) * w)
         break
       case 24:
-        food(value('食材') * (1 + 1/6), INGREDIENTS.filter(item => [4,10,12,16].includes(item.id)))
+        food(value('食材') * (1 + 1/(skillEffects_applyMainSkill_runtimeParameters.p005 as 6)), INGREDIENTS.filter(item => skillEffects_config_ruleCatalogs.applyMainSkillList2.values.includes(item.id)))
         break
       case 28: case 33: case 36: case 38:
         food(value('食材'), INGREDIENTS.filter(item => SELECT_POOLS[choice.id]!.includes(item.id)))
@@ -169,7 +179,7 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
         const ready = actor.disguiseReady ?? 1
         const success = ready * (1 - (1 - DISGUISE_CRIT_CHANCE) ** w)
         actor.disguiseReady = ready - success
-        for (const target of team) berry(target, (target === actor ? value('基础') : value('追加')) * (1 + 2 * success / w))
+        for (const target of team) berry(target, (target === actor ? value('基础') : value('追加')) * (1 + ruleParameters.modules.skillEffects.applyMainSkill.disguiseCritBonus * success / w))
         break
       }
       case 22:
@@ -177,7 +187,7 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
         // 固定扣除 12，与性格回复倍率无关，恶属性豁免，最低为 0。
         // https://pks.raenonx.cc/en/mainskill/info/22 （Energy Recovery: Static）
         for (const target of team) {
-          if (berryByName(target.poke.berry)?.type !== '恶') target.energy = Math.max(0, target.energy - 12 * w)
+          if (berryByName(target.poke.berry)?.type !== '恶') target.energy = Math.max(0, target.energy - (skillEffects_applyMainSkill_runtimeParameters.p006 as 12) * w)
         }
         break
       case 21:
@@ -192,7 +202,7 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
         // 满队使用 RAE 验证权重：https://pks.raenonx.cc/en/mainskill/info/35
         // 不足五人的分布未核实，按随机两名期望；组合默认已解锁。
         const ranked = [...team].sort((a, b) => a.energy - b.energy)
-        const weights = team.length === 5 ? [0.9265, 0.61938, 0.15137, 0.15137, 0.15137] : ranked.map(() => count / team.length)
+        const weights = team.length === (skillEffects_applyMainSkill_runtimeParameters.p007 as 5) ? [skillEffects_applyMainSkill_ruleParameters.latiasTargetWeight, skillEffects_applyMainSkill_ruleParameters.latiosFirstTargetWeight, skillEffects_applyMainSkill_ruleParameters.latiosOtherTargetWeight, skillEffects_applyMainSkill_ruleParameters.latiosOtherTargetWeight, skillEffects_applyMainSkill_ruleParameters.latiosOtherTargetWeight] : ranked.map(() => count / team.length)
         const total = weights.reduce((sum, value) => sum + value, 0)
         const chances = team.map(target => {
           const ties = ranked.flatMap((member, index) => member.energy === target.energy ? [index] : [])

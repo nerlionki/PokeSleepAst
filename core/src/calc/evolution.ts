@@ -1,5 +1,12 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import extracted0 from '../data/compatibility-maps.json'
+import { cloneData } from './dataClone'
 import evolution from '../data/evolution.json'
 import { NATURES, pokeById } from './data'
+const evolution_config_extracted0 = extracted0.modules.evolution
+const evolution_conditionText_runtimeParameters = runtimeParameters.modules.evolution.conditionText.values
+const evolution_evolutionStages_runtimeParameters = runtimeParameters.modules.evolution.evolutionStages.values
+
 
 /** RAE 进化条件，见 https://pks.raenonx.cc/zh/pokedex */
 export type EvoCondition =
@@ -25,22 +32,7 @@ export interface EvoNode {
 const EVOLUTION = evolution as unknown as Record<string, EvoEntry>
 
 /** RAE 道具编号对应的名称。 */
-const ITEM_NAME: Record<number, string> = {
-  21: '聯繫繩',
-  22: '火之石',
-  23: '水之石',
-  24: '雷之石',
-  25: '葉之石',
-  26: '冰之石',
-  27: '月之石',
-  28: '光之石',
-  29: '金屬膜',
-  30: '渾圓之石',
-  31: '王者之證',
-  35: '覺醒之石',
-  97: '銳利之爪',
-  102: '暗之石',
-}
+const ITEM_NAME: Record<number, string> = (cloneData(evolution_config_extracted0.ITEM_NAME) as unknown as Record<number, string>)
 
 function hour(n: number) {
   return `${n}:00`
@@ -54,7 +46,7 @@ export function conditionText(condition: EvoCondition): string {
     case 'item': return `${ITEM_NAME[condition[1]] ?? `道具 ${condition[1]}`} ×${condition[2]}`
     case 'time': {
       const [, start, end] = condition
-      return `${start >= 18 || start < 6 ? '夜晚' : '白天'} ${hour(start)}–${hour(end)}`
+      return `${start >= (evolution_conditionText_runtimeParameters.p001 as 18) || start < (evolution_conditionText_runtimeParameters.p002 as 6) ? '夜晚' : '白天'} ${hour(start)}–${hour(end)}`
     }
     case 'gender': return condition[1] === 'female' ? '雌性' : '雄性'
     case 'nature': {
@@ -86,7 +78,7 @@ export function evolutionStages(id: number): EvoNode[][] {
   const first = pokeById(root)
   if (!first) return []
   const stages: EvoNode[][] = [[{ id: root, name: first.name, conditions: [] }]]
-  for (let guard = 0; guard < 5; guard++) {
+  for (let guard = 0; guard < (evolution_evolutionStages_runtimeParameters.p001 as 5); guard++) {
     const last = stages[stages.length - 1]!
     const next: EvoNode[] = []
     for (const node of last) {
@@ -99,4 +91,9 @@ export function evolutionStages(id: number): EvoNode[][] {
     stages.push(next)
   }
   return stages
+}
+
+/** 当前种类最多可能经历的进化次数；直接捕获的个体可以少于此值。 */
+export function evolutionDepth(id: number): number {
+  return Math.max(0, evolutionStages(id).findIndex(stage => stage.some(node => node.id === id)))
 }

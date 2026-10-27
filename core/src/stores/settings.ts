@@ -1,13 +1,17 @@
+
+import clientDefaults from '../data/client-defaults.json'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { canPickBerries, defaultSettings, EX_MAIN, helpMaxSettings, idealSettings, mergeSettings, normalizeEx2Berries, work18Settings } from '../calc/defaults'
 import { BERRIES, ISLANDS } from '../calc/data'
 import { loadJson, saveJson } from '../storage'
 import type { Settings } from '../types'
+const stores_settings_config_clientDefaults = clientDefaults.modules.stores_settings
+
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<Settings>(defaultSettings())
-  const ready = ref(false)
+  const ready = ref(stores_settings_config_clientDefaults["readyInitial"])
 
   async function hydrate() {
     settings.value = mergeSettings(await loadJson('settings', defaultSettings()))

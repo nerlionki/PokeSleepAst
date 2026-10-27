@@ -17,6 +17,7 @@ export type Specialty = '树果型' | '食材型' | '技能型' | '全部'
 export type NatureStat = 'help' | 'energy' | 'ingredient' | 'skill' | 'exp'
 
 export interface Settings {
+  activity?: import('./calc/activities').ActivitySelection
   island: IslandId
   berries: string[]
   areaBonus: number

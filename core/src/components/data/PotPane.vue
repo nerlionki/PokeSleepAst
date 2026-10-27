@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef, watch } from 'vue'
 import { POT_TIERS, RECIPES } from '../../calc/data'
 import { MEAL_CATEGORIES, type RecipeRow } from '../../calc/recipes'
@@ -7,6 +9,8 @@ import { useSettingsStore } from '../../stores/settings'
 import { textHit } from '../../calc/text'
 import RecipeCard from './RecipeCard.vue'
 import RecipeSheet from './RecipeSheet.vue'
+const components_data_PotPane_config_clientDefaults = clientDefaults.modules.components_data_PotPane
+
 
 const props = defineProps<{ q: string }>()
 const store = useSettingsStore()
@@ -14,10 +18,10 @@ const minimumIndex = computed(() => {
   const at = POT_TIERS.findIndex(row => row.pot >= store.settings.potSize)
   return at < 0 ? POT_TIERS.length : at
 })
-const index = shallowRef(0)
+const index = shallowRef(components_data_PotPane_config_clientDefaults["indexInitial"])
 watch(minimumIndex, at => { index.value = at }, { immediate: true })
-const category = shallowRef<(typeof MEAL_CATEGORIES)[number]['id']>('curry')
-const opened = shallowRef<RecipeRow | null>(null)
+const category = shallowRef<(typeof MEAL_CATEGORIES)[number]['id']>((components_data_PotPane_config_clientDefaults["categoryInitial"] as unknown as (typeof MEAL_CATEGORIES)[number]['id']))
+const opened = shallowRef<RecipeRow | null>((components_data_PotPane_config_clientDefaults["openedInitial"] as unknown as RecipeRow | null))
 
 const tier = computed(() => POT_TIERS[index.value])
 const nextTier = computed(() => POT_TIERS[index.value + 1])

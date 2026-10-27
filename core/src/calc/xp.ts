@@ -1,8 +1,19 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/calc-tables.json'
 import { natureByName, XP_TABLE } from './data'
+import { EVENT_PARAMETERS } from './activities'
+const xp_config_extracted0 = extracted0.modules.xp
+const xp_natureExpFactor_ruleParameters = ruleParameters.modules.xp.natureExpFactor
+const xp_groupMult_ruleParameters = ruleParameters.modules.xp.groupMult
+const xp_candyExpAtLevel_ruleParameters = ruleParameters.modules.xp.candyExpAtLevel
+const xp_candyExp_ruleParameters = ruleParameters.modules.xp.candyExp
+const xp_xpCandy_runtimeParameters = runtimeParameters.modules.xp.xpCandy.values
+
 
 /** 用户保留的规划上限；当前游戏开放到 70，71～100 的产量为推算。 */
-export const POKEMON_LEVEL_MAX = 100
-export const GAME_LEVEL_MAX = 70
+export const POKEMON_LEVEL_MAX = (xp_config_extracted0.POKEMON_LEVEL_MAX as 100)
+export const GAME_LEVEL_MAX = (xp_config_extracted0.GAME_LEVEL_MAX as 70)
 
 export function expTo(level: number): number {
   return XP_TABLE.find((r) => r.level === level)?.exp ?? NaN
@@ -14,25 +25,25 @@ export function shardsTo(level: number): number {
 
 export function natureExpFactor(nature: string): number {
   const n = natureByName(nature)
-  if (n.up === 'exp') return 1.18
-  if (n.down === 'exp') return 0.82
+  if (n.up === 'exp') return xp_natureExpFactor_ruleParameters.expUp
+  if (n.down === 'exp') return xp_natureExpFactor_ruleParameters.expDown
   return 1
 }
 
 export function groupMult(group: 'normal' | 'pseudo' | 'legendary' | 'mythical'): number {
-  if (group === 'pseudo') return 1.5
-  if (group === 'legendary') return 1.8
-  if (group === 'mythical') return 2.2
+  if (group === 'pseudo') return xp_groupMult_ruleParameters.pseudo
+  if (group === 'legendary') return xp_groupMult_ruleParameters.legendary
+  if (group === 'mythical') return xp_groupMult_ruleParameters.mythical
   return 1
 }
 
 /** Ver.3.6.0：以喂糖前等级分档，每颗先按性格四舍五入，再应用增强。 */
-export function candyExpAtLevel(level: number, nature: string, boost = false): number {
-  const base = level < 25 ? 40 : level < 30 ? 35 : 25
-  return Math.round(base * natureExpFactor(nature)) * (boost ? 2 : 1)
+export function candyExpAtLevel(level: number, nature: string, boost: boolean | number = false): number {
+  const base = level < xp_candyExpAtLevel_ruleParameters.firstLevelThreshold ? xp_candyExpAtLevel_ruleParameters.earlyExp : level < xp_candyExpAtLevel_ruleParameters.secondThreshold ? xp_candyExpAtLevel_ruleParameters.middleExp : xp_candyExpAtLevel_ruleParameters.lateExp
+  return Math.round(base * natureExpFactor(nature)) * (typeof boost === 'number' ? boost : boost ? EVENT_PARAMETERS.candyBoosts.christmas.exp : 1)
 }
 
-export function candyExp(count: number, nature: string, boost: boolean, group: 'normal' | 'pseudo' | 'legendary' | 'mythical' = 'normal', level = 30): number {
+export function candyExp(count: number, nature: string, boost: boolean, group: 'normal' | 'pseudo' | 'legendary' | 'mythical' = 'normal', level = xp_candyExp_ruleParameters.defaultLevel): number {
   return count * candyExpAtLevel(level, nature, boost) / groupMult(group)
 }
 
@@ -55,7 +66,7 @@ export interface TrainingFeedResult {
 }
 
 /** Pure feeding transition. Local iteration preserves per-candy rounding and level bands. */
-export function feedTrainingState(progress: Readonly<TrainingProgress>, count: number, target: number, nature: string, group: ExpGroup, boost = false, shardMultiplier = 1): TrainingFeedResult {
+export function feedTrainingState(progress: Readonly<TrainingProgress>, count: number, target: number, nature: string, group: ExpGroup, boost: boolean | number = false, shardMultiplier = 1): TrainingFeedResult {
   let next = { ...progress }
   let candies = 0
   let shards = 0
@@ -103,6 +114,6 @@ export function xpCandy(opts: {
   }
   const progress = { level: opts.from, exp: start + nextGap - remaining }
   const need = Math.max(0, expTo(opts.to) * groupMult(group) - progress.exp)
-  const fed = feedTrainingState(progress, Infinity, opts.to, opts.nature, group, opts.boost, opts.boost ? 5 : 1)
+  const fed = feedTrainingState(progress, Infinity, opts.to, opts.nature, group, opts.boost, opts.boost ? (xp_xpCandy_runtimeParameters.p001 as 5) : 1)
   return { exp: need, candy: fed.candies, shards: fed.shards }
 }

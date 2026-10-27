@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useScorePlan } from '#platform/scorePlan'
@@ -10,10 +12,12 @@ import { boxLabel } from '../../calc/boxFilter'
 import { defaultScoreOptions, normalizeScoreOptions, scoreBounds, scoreTime, validateScoreOptions, type ScoreOptions } from '../../calc/scorePlan'
 import PokeSprite from '../shared/PokeSprite.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
+const components_team_ScorePlanPane_config_clientDefaults = clientDefaults.modules.components_team_ScorePlanPane
+
 
 const box = useBoxStore(), settings = useSettingsStore()
 const options = ref(defaultScoreOptions(settings.settings))
-const ready = ref(false), advanced = ref(false), inventory = ref(false), selected = ref(0), showActions = ref(false), actionDay = ref(0)
+const ready = ref(components_team_ScorePlanPane_config_clientDefaults["readyInitial"]), advanced = ref(components_team_ScorePlanPane_config_clientDefaults["advancedInitial"]), inventory = ref(components_team_ScorePlanPane_config_clientDefaults["inventoryInitial"]), selected = ref(components_team_ScorePlanPane_config_clientDefaults["selectedInitial"]), showActions = ref(components_team_ScorePlanPane_config_clientDefaults["showActionsInitial"]), actionDay = ref(components_team_ScorePlanPane_config_clientDefaults["actionDayInitial"])
 const request = () => ({ settings: { ...settings.settings, mealCategory: options.value.category }, box: box.pokemon, options: options.value })
 const { busy, error, notice, result, progress, dirty, calculate, cancel, restore } = useScorePlan(request)
 const inputError = computed(() => validateScoreOptions(options.value, settings.settings))

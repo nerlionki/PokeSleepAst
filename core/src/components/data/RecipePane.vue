@@ -1,16 +1,20 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef } from 'vue'
 import { RECIPES } from '../../calc/data'
 import { MEAL_CATEGORIES, RECIPE_LEVELS, type RecipeRow } from '../../calc/recipes'
 import { textHit } from '../../calc/text'
 import RecipeCard from './RecipeCard.vue'
 import RecipeSheet from './RecipeSheet.vue'
+const components_data_RecipePane_config_clientDefaults = clientDefaults.modules.components_data_RecipePane
+
 
 const props = defineProps<{ q: string }>()
-const category = shallowRef<(typeof MEAL_CATEGORIES)[number]['id']>('curry')
-const level = shallowRef<number>(1)
-const sort = shallowRef<'energy' | 'pot'>('energy')
-const opened = shallowRef<RecipeRow | null>(null)
+const category = shallowRef<(typeof MEAL_CATEGORIES)[number]['id']>((components_data_RecipePane_config_clientDefaults["categoryInitial"] as unknown as (typeof MEAL_CATEGORIES)[number]['id']))
+const level = shallowRef<number>((components_data_RecipePane_config_clientDefaults["levelInitial"] as unknown as number))
+const sort = shallowRef<'energy' | 'pot'>((components_data_RecipePane_config_clientDefaults["sortInitial"] as unknown as 'energy' | 'pot'))
+const opened = shallowRef<RecipeRow | null>((components_data_RecipePane_config_clientDefaults["openedInitial"] as unknown as RecipeRow | null))
 
 const list = computed(() => {
   const rows = RECIPES.filter((r) => r.category === category.value && textHit(r.name, props.q))

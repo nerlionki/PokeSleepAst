@@ -1,7 +1,8 @@
 import { INGREDIENTS, POKEDEX, pokeById } from './data'
 import { recognize, type OcrSessions, type PixelImage } from './ocrPipeline'
-import { avatarBox, chooseSimilar, ingredientQuantityMarks, ingredientRowMarks, matchIngredientSlot, parseCard, planImports, readCarry, readMainSkill, splitCards, type OcrWord, type SpeciesEvidence } from './ocrBox'
-import { bestPortraitVariant, crop, diskCrop, ingredientIconCrop, ingredientSpriteScores, matchIngredientSprite, portraitScores, speciesScores, trimOpaque } from './ocrVision'
+import { avatarBox, chooseSimilar, headerTextInfo, ingredientQuantityMarks, ingredientRowMarks, matchIngredientSlot, parseCard, planImports, readCarry, readMainSkill, splitCards, type OcrWord, type SpeciesEvidence } from './ocrBox'
+import { bestPortraitVariant, crop, diskCrop, ingredientIconCrop, ingredientSpriteScores, matchIngredientSprite, portraitScores, resizeRgba, speciesScores, trimOpaque } from './ocrVision'
+import { ocrFold } from './text'
 import { slotDrop } from './ingredients'
 import { isAllRounder } from './specialty'
 import type { BoxPokemon } from '../types'
@@ -104,6 +105,38 @@ async function matchPortrait(image: PixelImage, words: OcrWord[]): Promise<{ id:
   return variant ? { id, shiny: variant.shiny } : null
 }
 
+async function refineHeader(sessions: OcrSessions, image: PixelImage, words: OcrWord[]): Promise<void> {
+  const header = headerTextInfo(words)
+  if (!header) return
+  const region = crop(image, header.box.x, header.box.y, header.box.width, header.box.height)
+  const retryWords = await recognize(sessions, resizeRgba(region, region.width * 2, region.height * 2))
+  const reread = headerTextInfo(retryWords)
+  if (header.level == null && header.label) {
+    let level = reread?.level ?? null
+    if (level == null) {
+      // 再用紧凑窗口定位等级；裁切留白不同会改变检测框，避免把粘连的末位读进数字。
+      const compact = crop(image, header.levelBox.x, header.levelBox.y, header.levelBox.width, header.levelBox.height)
+      level = headerTextInfo(await recognize(sessions, resizeRgba(compact, compact.width * 2, compact.height * 2)))?.level ?? null
+    }
+    if (level != null) header.label.text = header.label.text.replace(/^[Ll][Vv]\.?\s*\d+/, `Lv.${level}`)
+  }
+  // 昵称只能补回局部复读实际读到的漏字，不能按图鉴物种猜改昵称或覆盖原有字。
+  const before = ocrFold(header.nameText)
+  const originY = Math.max(0, Math.floor(header.box.y))
+  const names = retryWords.filter(word => Math.abs(originY + (word.y + word.height / 2) / 2
+    - (header.name.y + header.name.height / 2)) <= header.name.height)
+    .map(word => word.text.replace(/^[Ll][Vv]\.?\s*\d+\s*/, '').trim()).filter(text => {
+      const after = ocrFold(text)
+      let index = 0
+      for (const char of after) if (char === before[index]) index++
+      return before.length >= 2 && after.length > before.length && after.length - before.length <= 2 && index === before.length
+    })
+  const distinct = [...new Set(names)]
+  if (distinct.length === 1) {
+    header.name.text = header.name.text.replace(header.nameText, distinct[0]!)
+  }
+}
+
 async function matchSlotLines(image: PixelImage, words: OcrWord[], pokeId: number,
   match: (shot: PixelImage, ids: number[]) => Promise<number | null> = (shot, ids) => bestIngredient(shot, ids.map((id) => ({ id, url: ingredientImageUrl(id) }))),
 ): Promise<[number | null, number | null]> {
@@ -163,6 +196,7 @@ async function importScreenshotFiles(files: Array<File | string>, existing: BoxP
         continue
       }
       for (const group of groups) {
+        await refineHeader(sessions, image, group)
         const portrait = await matchPortrait(image, group)
         if (!portrait) {
           cards.push(null)

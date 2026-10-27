@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
 import { computed, reactive } from 'vue'
 import type { BoxPokemon } from '../../types'
 import { boxLabel } from '../../calc/boxFilter'
@@ -7,10 +10,12 @@ import { POKEMON_LEVEL_MAX } from '../../calc/xp'
 import { pokeById } from '../../calc/data'
 import { skillMaxFor } from '../../calc/mainSkills'
 import PokeSprite from '../shared/PokeSprite.vue'
+const components_pokemon_OcrCompletionDialog_config_clientDefaults = clientDefaults.modules.components_pokemon_OcrCompletionDialog
+
 
 const props = defineProps<{ pokemon: BoxPokemon; remaining: number }>()
 const emit = defineEmits<{ save: [pokemon: BoxPokemon]; pause: [pokemon: BoxPokemon] }>()
-const selections = reactive<OcrSelections>({})
+const selections = reactive<OcrSelections>((cloneData(components_pokemon_OcrCompletionDialog_config_clientDefaults["selectionsInitial"]) as unknown as OcrSelections))
 const fields = computed(() => normalizeOcrMissing(props.pokemon.ocrMissing))
 const completed = computed(() => completeOcrFields(props.pokemon, selections))
 const pending = computed(() => normalizeOcrMissing(completed.value.ocrMissing).length)

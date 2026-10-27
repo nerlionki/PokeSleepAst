@@ -1,3 +1,6 @@
+
+import clientDefaults from '../data/client-defaults.json'
+import { cloneData } from '../calc/dataClone'
 import { newUid } from '../calc/uid'
 import { teamRestrictionError } from '../calc/teamRestrictions'
 import { useBoxStore } from './box'
@@ -6,6 +9,8 @@ import { ref, watch } from 'vue'
 import { defaultTune, type MemberTune } from '../calc/member'
 import type { ProduceInput } from '../types'
 import { loadJson, saveJson } from '../storage'
+const stores_roster_config_clientDefaults = clientDefaults.modules.stores_roster
+
 
 export interface TeamCustom extends ProduceInput {
   uid: string
@@ -25,11 +30,11 @@ function five(slots: unknown): (string | null)[] {
 }
 
 export const useRosterStore = defineStore('roster', () => {
-  const slots = ref<(string | null)[]>([null, null, null, null, null])
-  const customs = ref<TeamCustom[]>([])
-  const tunes = ref<Record<string, MemberTune>>({})
-  const ready = ref(false)
-  const error = ref('')
+  const slots = ref<(string | null)[]>((cloneData(stores_roster_config_clientDefaults["slotsInitial"]) as unknown as (string | null)[]))
+  const customs = ref<TeamCustom[]>((cloneData(stores_roster_config_clientDefaults["customsInitial"]) as unknown as TeamCustom[]))
+  const tunes = ref<Record<string, MemberTune>>((cloneData(stores_roster_config_clientDefaults["tunesInitial"]) as unknown as Record<string, MemberTune>))
+  const ready = ref(stores_roster_config_clientDefaults["readyInitial"])
+  const error = ref(stores_roster_config_clientDefaults["errorInitial"])
 
   function memberOf(uid: string | null) {
     return customs.value.find(item => item.uid === uid) ?? useBoxStore().pokemon.find(item => item.uid === uid)

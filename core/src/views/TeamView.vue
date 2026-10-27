@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../data/client-defaults.json'
+
 import { shallowRef } from 'vue'
 import { useSettingsStore } from '../stores/settings'
 import EnvironmentFields from '../components/shared/EnvironmentFields.vue'
@@ -7,9 +9,11 @@ import Segmented from '../components/shared/Segmented.vue'
 import ComparePane from '../components/team/ComparePane.vue'
 import TeamRosterPane from '../components/team/TeamRosterPane.vue'
 import ScorePlanPane from '../components/team/ScorePlanPane.vue'
+const views_TeamView_config_clientDefaults = clientDefaults.modules.views_TeamView
+
 
 const settingsStore = useSettingsStore()
-const adjusting = shallowRef(false)
+const adjusting = shallowRef(views_TeamView_config_clientDefaults["adjustingInitial"])
 const tab = usePageTab(['team', 'cmp', 'score'] as const, 'team')
 </script>
 

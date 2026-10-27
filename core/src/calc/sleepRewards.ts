@@ -1,6 +1,11 @@
+import ruleParameters from '../data/rule-parameters.json'
 /** RAE 睡姿图鉴的逐睡姿奖励：https://pks.raenonx.cc/zh/sleepdex/lookup */
 import rewards from '../data/sleep-rewards.json'
 import { unlockedSubskills } from './member'
+const sleepRewards_teamResearchBonuses_ruleParameters = ruleParameters.modules.sleepRewards.teamResearchBonuses
+const sleepRewards_boostedResearchReward_ruleParameters = ruleParameters.modules.sleepRewards.boostedResearchReward
+const sleepRewards_dailyResearchReward_ruleParameters = ruleParameters.modules.sleepRewards.dailyResearchReward
+
 
 export interface ResearchBonuses {
   researchExpBonus?: number
@@ -10,7 +15,7 @@ export interface ResearchBonuses {
 }
 
 export function teamResearchBonuses(team: readonly { level: number, subskills: string[], napping?: boolean }[]) {
-  const skills = team.slice(0, 5).filter(member => !member.napping).map(member => unlockedSubskills(member.level, member.subskills))
+  const skills = team.slice(0, sleepRewards_teamResearchBonuses_ruleParameters.teamSize).filter(member => !member.napping).map(member => unlockedSubskills(member.level, member.subskills))
   return {
     researchExpBonus: skills.filter(subs => subs.includes('researchExp')).length,
     shardBonus: skills.filter(subs => subs.includes('shardBonus')).length,
@@ -21,11 +26,11 @@ export function teamResearchBonuses(team: readonly { level: number, subskills: s
 export function boostedResearchReward(reward: SleepReward | undefined, bonuses: ResearchBonuses): SleepReward | undefined {
   if (!reward) return undefined
   if (!bonuses.researchExpBonus && !bonuses.shardBonus && !bonuses.focusIncense && !bonuses.luckIncense) return reward
-  const count = (value = 0) => Math.min(5, Math.max(0, Math.floor(value)))
+  const count = (value = 0) => Math.min(sleepRewards_boostedResearchReward_ruleParameters.maxBonusHolders, Math.max(0, Math.floor(value)))
   return {
     candy: reward.candy,
-    researchExp: reward.researchExp * (1 + 0.09 * count(bonuses.researchExpBonus)) * (bonuses.focusIncense ? 2 : 1),
-    shards: reward.shards * (1 + 0.06 * count(bonuses.shardBonus)) * (bonuses.luckIncense ? 2 : 1),
+    researchExp: reward.researchExp * (1 + sleepRewards_boostedResearchReward_ruleParameters.researchExpPerHolder * count(bonuses.researchExpBonus)) * (bonuses.focusIncense ? sleepRewards_boostedResearchReward_ruleParameters.incenseMultiplier : 1),
+    shards: reward.shards * (1 + sleepRewards_boostedResearchReward_ruleParameters.shardsPerHolder * count(bonuses.shardBonus)) * (bonuses.luckIncense ? sleepRewards_boostedResearchReward_ruleParameters.incenseMultiplier : 1),
   }
 }
 
@@ -54,7 +59,7 @@ export function sleepStyleInternalId(style: { pokeId: number, stars: number, sty
 }
 
 /** 当日按抽选顺序累计；特殊UP实际出现时完整奖励上限为11。 */
-export function dailyResearchReward(reward: SleepReward | undefined, index: number, limit = 10): SleepReward | undefined {
+export function dailyResearchReward(reward: SleepReward | undefined, index: number, limit = sleepRewards_dailyResearchReward_ruleParameters.defaultFullRewardLimit): SleepReward | undefined {
   if (!reward || index < limit) return reward
-  return { candy: 1, shards: reward.shards / 2, researchExp: reward.researchExp / 2 }
+  return { candy: sleepRewards_dailyResearchReward_ruleParameters.reducedCandy, shards: reward.shards / sleepRewards_dailyResearchReward_ruleParameters.reducedRewardDivisor, researchExp: reward.researchExp / sleepRewards_dailyResearchReward_ruleParameters.reducedRewardDivisor }
 }

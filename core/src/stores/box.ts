@@ -1,3 +1,6 @@
+
+import clientDefaults from '../data/client-defaults.json'
+import { cloneData } from '../calc/dataClone'
 import { normalizeMewSkill } from '../calc/mew'
 import { newUid } from '../calc/uid'
 import { defineStore } from 'pinia'
@@ -5,6 +8,8 @@ import { ref, watch } from 'vue'
 import { loadJson, saveJson } from '../storage'
 import type { BoxPokemon } from '../types'
 import { normalizeOcrMissing } from '../calc/ocrCompletion'
+const stores_box_config_clientDefaults = clientDefaults.modules.stores_box
+
 
 function adopt(item: BoxPokemon & { note?: string }): BoxPokemon {
   const name = item.name ?? item.note ?? ''
@@ -31,8 +36,8 @@ export interface BoxFile {
 }
 
 export const useBoxStore = defineStore('box', () => {
-  const pokemon = ref<BoxPokemon[]>([])
-  const ready = ref(false)
+  const pokemon = ref<BoxPokemon[]>((cloneData(stores_box_config_clientDefaults["pokemonInitial"]) as unknown as BoxPokemon[]))
+  const ready = ref(stores_box_config_clientDefaults["readyInitial"])
 
   async function hydrate() {
     const file = await loadJson<BoxFile>('box', { schemaVersion: 1, pokemon: [] })

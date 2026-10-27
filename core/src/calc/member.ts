@@ -1,16 +1,53 @@
+import defaultMemberConfig from '../data/client-defaults.json'
+import ruleParameters from '../data/rule-parameters.json'
+import extracted0 from '../data/calc-tables.json'
+import { cloneData } from './dataClone'
 import type { MemberTune, ProduceInput } from '../types'
-import { clampSkillLevel } from './mainSkills'
+import { clampSkillLevel, skillMaxFor } from './mainSkills'
+import { pokeById } from './data'
+import { evolutionDepth, evolutionStages } from './evolution'
+const member_config_extracted0 = extracted0.modules.member
+const member_compareHelpingBonus_ruleParameters = ruleParameters.modules.member.compareHelpingBonus
+const member_subskillLevelBonus_ruleParameters = ruleParameters.modules.member.subskillLevelBonus
+const member_applySilverSeed_ruleParameters = ruleParameters.modules.member.applySilverSeed
+const member_wakeFromHours_ruleParameters = ruleParameters.modules.member.wakeFromHours
+
 
 export type { MemberTune }
 
-export const SUBSKILL_GATES = [10, 25, 50, 70, 80] as const
+export const SUBSKILL_GATES = (cloneData(member_config_extracted0.SUBSKILL_GATES) as unknown as readonly [10,25,50,70,80])
 
 export interface MemberDraft extends ProduceInput {
   tune: MemberTune
 }
 
 export function defaultTune(): MemberTune {
-  return { evolutions: 0, goldSeeds: 0, silverSeeds: 0, sleepHours: 0, carryMode: 'preset', exp: 0, ribbonHours: 0 }
+  return cloneData(defaultMemberConfig.modules.factory_member.defaultTune) as MemberTune
+}
+
+/** 同链切换用于个体规划；保留面板配置，按阶段差联动进化次数与主技能等级。 */
+export function switchMemberEvolution<T extends MemberDraft>(member: T, pokeId: number): T {
+  if (member.pokeId === pokeId) return member
+  const stages = evolutionStages(member.pokeId)
+  const targetDepth = stages.findIndex(stage => stage.some(node => node.id === pokeId))
+  const target = pokeById(pokeId)
+  if (targetDepth < 0 || !target) return member
+  const depth = evolutionDepth(member.pokeId)
+  const delta = targetDepth - depth
+  const evolutions = Math.min(targetDepth, Math.max(0, Math.min(depth, member.tune.evolutions) + delta))
+  const skill = stepSkillLevel({ skillLevel: member.skillLevel, goldSeeds: member.tune.goldSeeds }, member.skillLevel + delta, skillMaxFor(target.mainSkill))
+  return { ...member, pokeId, skillLevel: skill.skillLevel,
+    tune: { ...member.tune, evolutions, goldSeeds: skill.goldSeeds } }
+}
+
+/** 调整实际经历的进化次数，同时增减主技能等级。 */
+export function stepMemberEvolutions<T extends MemberDraft>(member: T, delta: number): T {
+  const evolutions = Math.min(evolutionDepth(member.pokeId), Math.max(0, member.tune.evolutions + delta))
+  if (evolutions === member.tune.evolutions) return member
+  const skill = stepSkillLevel({ skillLevel: member.skillLevel, goldSeeds: member.tune.goldSeeds },
+    member.skillLevel + evolutions - member.tune.evolutions, skillMaxFor(pokeById(member.pokeId)?.mainSkill ?? ''))
+  return { ...member, skillLevel: skill.skillLevel,
+    tune: { ...member.tune, evolutions, goldSeeds: skill.goldSeeds } }
 }
 
 export function exclusiveSubskills<T extends { id: string }>(catalog: T[], selected: string[], index: number): T[] {
@@ -24,7 +61,7 @@ export function unlockedSubskills(level: number, subskills: string[]): string[] 
 
 /** 个体对比里，这只自己带着帮手奖励时，按满队 5 层（25%）计算。 */
 export function compareHelpingBonus(level: number, subskills: string[], fallback: number): number {
-  return unlockedSubskills(level, subskills).includes('helpingBonus') ? 5 : fallback
+  return unlockedSubskills(level, subskills).includes('helpingBonus') ? member_compareHelpingBonus_ruleParameters.teamSize : fallback
 }
 
 interface SkillSeeds {
@@ -43,12 +80,10 @@ export function stepGoldSeed(current: SkillSeeds, delta: number, skillMax: numbe
 
 export function subskillLevelBonus(level: number, subskills: string[]): number {
   const subs = unlockedSubskills(level, subskills)
-  return (subs.includes('skillLevelS') ? 1 : 0) + (subs.includes('skillLevelM') ? 2 : 0)
+  return (subs.includes('skillLevelS') ? member_subskillLevelBonus_ruleParameters.skillLevelS : 0) + (subs.includes('skillLevelM') ? member_subskillLevelBonus_ruleParameters.skillLevelM : 0)
 }
 
-const SUBSKILL_UPGRADES: Record<string, string> = {
-  helpS: 'helpM', ingS: 'ingM', skillS: 'skillM', skillLevelS: 'skillLevelM', invS: 'invM', invM: 'invL',
-}
+const SUBSKILL_UPGRADES: Record<string, string> = (cloneData(member_config_extracted0.SUBSKILL_UPGRADES) as unknown as Record<string, string>)
 
 /** 只允许已解锁副技能升一档；目标不能与任何槽位（包括未解锁）重复。 */
 export function silverSeedCandidates(level: number, subskills: string[]) {
@@ -60,7 +95,7 @@ export function silverSeedCandidates(level: number, subskills: string[]) {
 
 export function applySilverSeed(member: MemberDraft, index: number): MemberDraft | null {
   const candidate = silverSeedCandidates(member.level, member.subskills).find(item => item.index === index)
-  if (!candidate || member.tune.silverSeeds >= 9) return null
+  if (!candidate || member.tune.silverSeeds >= member_applySilverSeed_ruleParameters.legacySilverSeedCap) return null
   const subskills = [...member.subskills]
   subskills[index] = candidate.to
   return { ...member, subskills, tune: { ...member.tune, silverSeeds: member.tune.silverSeeds + 1,
@@ -92,5 +127,5 @@ export function effectiveSkillLevel(level: number, skillLevel: number, subskills
 /** 共眠小时换算起床活力。0 小时表示跟随全队睡眠分数。8.5 小时约为 100。 */
 export function wakeFromHours(hours: number): number | undefined {
   if (!hours) return undefined
-  return Math.min(150, Math.max(0, Math.round((hours * 60) / 5.1)))
+  return Math.min(member_wakeFromHours_ruleParameters.energyCap, Math.max(0, Math.round((hours * 60) / member_wakeFromHours_ruleParameters.minutesPerScore)))
 }

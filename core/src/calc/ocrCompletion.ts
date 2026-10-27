@@ -1,16 +1,15 @@
+import extracted0 from '../data/compatibility-maps.json'
+import { cloneData } from './dataClone'
 import type { BoxPokemon, OcrMissingField } from '../types'
 import { NATURES, SUBSKILLS, pokeById } from './data'
 import { ingredientColumns } from './ingredients'
 import { skillMaxFor } from './mainSkills'
 import { isAllRounder } from './specialty'
 import { POKEMON_LEVEL_MAX } from './xp'
+const ocrCompletion_config_extracted0 = extracted0.modules.ocrCompletion
 
-export const OCR_FIELD_LABELS: Record<OcrMissingField, string> = {
-  level: '宝可梦等级', nature: '性格', skillLevel: '主技能等级',
-  ingredient0: '第 1 槽食材', ingredient1: '第 2 槽食材（Lv.30）', ingredient2: '第 3 槽食材（Lv.60）',
-  subskill0: '第 1 个副技能', subskill1: '第 2 个副技能', subskill2: '第 3 个副技能',
-  subskill3: '第 4 个副技能', subskill4: '第 5 个副技能',
-}
+
+export const OCR_FIELD_LABELS: Record<OcrMissingField, string> = (cloneData(ocrCompletion_config_extracted0.OCR_FIELD_LABELS) as unknown as Record<OcrMissingField, string>)
 
 export function normalizeOcrMissing(raw: unknown): OcrMissingField[] {
   return Array.isArray(raw) ? [...new Set(raw.filter((field): field is OcrMissingField =>

@@ -1,7 +1,17 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import extracted0 from '../data/calc-tables.json'
+import extracted1 from '../data/client-defaults.json'
+import { cloneData } from './dataClone'
 import { ISLANDS, POKEDEX, SLEEP_STYLES, pokeById } from './data'
 import { familyOf } from './candyPlan'
 import { styleKey } from './sleep'
 import type { IslandId } from '../types'
+const catch_config_extracted0 = extracted0.modules.catch
+const catch_config_extracted1 = extracted1.modules.catch
+const catch_module_runtimeParameters = runtimeParameters.modules.catch.module.values
+const catch_mergeGoals_runtimeParameters = runtimeParameters.modules.catch.mergeGoals.values
+const catch_recommendIslands_runtimeParameters = runtimeParameters.modules.catch.recommendIslands.values
+
 
 export type CatchPurpose = 'catch' | 'sleep' | 'candy'
 
@@ -33,14 +43,14 @@ export interface CatchIslandPick {
   sleepGroups: CatchSleepGroup[]
 }
 
-const STAR_FACTOR = [0, 0.8, 0.85, 0.88, 0.9]
-const SLEEP_ORDER = ['淺淺入夢', '安然入睡', '深深入眠']
-const DEFER = new Set<IslandId>(['greengrass', 'greenex'])
+const STAR_FACTOR = cloneData(catch_config_extracted0.STAR_FACTOR)
+const SLEEP_ORDER = cloneData(catch_config_extracted1.SLEEP_ORDER)
+const DEFER = new Set<IslandId>((cloneData(catch_config_extracted0.DEFER) as IslandId[]))
 
 const speciesByIsland = new Map(ISLANDS.map((island) => [island.id, new Set(island.species)]))
 const starsOnIsland = new Map<string, Map<number, number[]>>()
 for (const style of SLEEP_STYLES) {
-  if (style.stars < 1 || (style.stars > 4 && !style.limited)) continue
+  if (style.stars < 1 || (style.stars > (catch_module_runtimeParameters.p001 as 4) && !style.limited)) continue
   if (!style.limited && !speciesByIsland.get(style.island)?.has(style.pokeId)) continue
   let island = starsOnIsland.get(style.island)
   if (!island) {
@@ -52,11 +62,7 @@ for (const style of SLEEP_STYLES) {
   island.set(style.pokeId, have)
 }
 
-export const CATCH_MODES = [
-  { id: 'all', name: '捕捉＋睡姿＋刷糖', purposes: ['catch', 'sleep', 'candy'] as CatchPurpose[], weights: { catch: 1.2, candy: 1 } },
-  { id: 'catch-candy', name: '捕捉＋刷糖', purposes: ['catch', 'candy'] as CatchPurpose[], weights: {} },
-  { id: 'sleep', name: '仅睡姿', purposes: ['sleep'] as CatchPurpose[], weights: {} },
-]
+export const CATCH_MODES = cloneData(catch_config_extracted1.CATCH_MODES)
 
 function mergeGoals(goals: CatchGoal[]) {
   const valid: { pokeId: number, purpose: CatchPurpose, stars: number[] }[] = []
@@ -67,7 +73,7 @@ function mergeGoals(goals: CatchGoal[]) {
       valid.push({ pokeId: goal.pokeId, purpose: goal.purpose, stars: [] })
       continue
     }
-    const stars = [...new Set(goal.stars.filter((n) => n >= 1 && n <= 5))]
+    const stars = [...new Set(goal.stars.filter((n) => n >= 1 && n <= (catch_mergeGoals_runtimeParameters.p001 as 5)))]
     if (!stars.length) continue
     let target = sleepTargets.get(goal.pokeId)
     if (!target) {
@@ -104,12 +110,12 @@ export function recommendIslands(
           ? islandStars.filter((star) => target.stars.includes(star) && SLEEP_STYLES.some((style) => style.island === island.id && style.pokeId === target.pokeId && style.stars === star && !found.has(styleKey(style.pokeId, style.stars, style.styleId))))
           : []
         const factor = target.purpose === 'sleep'
-          ? (STAR_FACTOR[Math.min(stars.length, 4)] ?? 0)
+          ? (STAR_FACTOR[Math.min(stars.length, (catch_recommendIslands_runtimeParameters.p001 as 4))] ?? 0)
           : (weights[target.purpose] ?? 1)
         if (factor <= 0) continue
         const members = target.purpose === 'candy'
           ? POKEDEX.filter((p) => familyOf(p.id) === familyOf(target.pokeId) && species.has(p.id) && p.sleepType === sleepType)
-          : ((species.has(target.pokeId) || stars.some((star) => star >= 5)) && poke.sleepType === sleepType ? [poke] : [])
+          : ((species.has(target.pokeId) || stars.some((star) => star >= (catch_recommendIslands_runtimeParameters.p002 as 5))) && poke.sleepType === sleepType ? [poke] : [])
         if (!members.length) continue
         matches.push({
           pokeId: target.pokeId,

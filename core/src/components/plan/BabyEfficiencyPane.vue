@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useActivities } from '../../composables/useActivities'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useSettingsStore } from '../../stores/settings'
@@ -16,11 +17,14 @@ import BabyEfficiencyResult from './BabyEfficiencyResult.vue'
 const { plan } = storeToRefs(usePlanStore())
 const options = computed(() => plan.value.babyEfficiency)
 const { settings } = storeToRefs(useSettingsStore())
+const activity = useActivities(options, () => options.value.island ?? 'all', () => settings.value.activity)
+const eventMult = activity.field('drowsyPowerMultiplier', () => options.value.eventMult)
+const mixMode = activity.field('eventMix', () => normalizeEventMix(options.value.eventMix) !== 'off' ? settings.value.sleepEventMix : 'off')
 const otherTypes = computed({
-  get: () => normalizeEventMix(options.value.eventMix) !== 'off',
-  set: (value: boolean) => { options.value.eventMix = value },
+  get: () => mixMode.value !== 'off',
+  set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' },
 })
-const simulationOptions = computed(() => ({ ...options.value, eventMix: otherTypes.value ? settings.value.sleepEventMix : 'off' as const }))
+const simulationOptions = computed(() => ({ ...options.value, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId))
 const sleepTypes = EFFICIENCY_SLEEP_TYPES
 watch(islands, () => {
@@ -35,6 +39,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
 
 <template>
   <div class="stack" :aria-busy="busy">
+    <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">恢复本面板自动活动设置</button>
     <p class="muted">每天按 100 分，在所选岛屿和睡眠类型范围内寻找最佳方案。开启拆分睡眠后，两觉合计 100 分，卡比兽能量按相同值计算。</p>
     <article class="card stack">
       <div class="field"><label>目标一阶段宝可梦</label><PokePicker v-model="options.pokeId" :allowed-ids="BABY_POKEMON_IDS" :name-overrides="BABY_POKEMON_NAMES" /></div>
@@ -46,7 +51,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
       <p class="muted">{{ options.splitSleep ? '计算两觉的最佳分数比例；选择具体睡眠类型时，两觉都使用该类型。' : '只计算一觉 100 分。' }}</p>
       <p class="muted">捕捉统计 {{ targetName }} 的全部星级睡姿。糖果统计 {{ family }} 的睡眠研究奖励。</p>
       <div class="field"><label for="baby-event">活动睡意之力倍率</label>
-        <select id="baby-event" v-model.number="options.eventMult"><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select>
+        <select id="baby-event" v-model.number="eventMult"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}倍（活动）</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select>
       </div>
       <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox" role="switch"> 活动期间遇到一些其他类型宝可梦</label>
       <p v-if="!otherTypes && options.sleepType === 'all'" class="muted">活动关闭时，只比较目标宝可梦自身的睡眠类型和没有特征；其他睡眠类型不参与方案搜索。</p>

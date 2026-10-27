@@ -1,15 +1,15 @@
+import extracted0 from '../data/client-defaults.json'
+import { cloneData } from './dataClone'
 import { RECIPE_LEVEL_MAX, recipeLevelMult } from './cook'
 import { RECIPES } from './data'
+const recipes_config_extracted0 = extracted0.modules.recipes
+
 
 export type RecipeRow = (typeof RECIPES)[number]
 
-export const MEAL_CATEGORIES = [
-  { id: 'curry', label: '咖喱、浓汤' },
-  { id: 'salad', label: '沙拉' },
-  { id: 'dessert', label: '点心、饮料' },
-] as const
+export const MEAL_CATEGORIES = (cloneData(recipes_config_extracted0.MEAL_CATEGORIES) as unknown as readonly [{readonly "id":"curry";readonly "label":"咖喱、浓汤"},{readonly "id":"salad";readonly "label":"沙拉"},{readonly "id":"dessert";readonly "label":"点心、饮料"}])
 
-export const RECIPE_LEVELS = [1, 10, 20, 30, 40, 50, 60, RECIPE_LEVEL_MAX] as const
+export const RECIPE_LEVELS = ([...cloneData(recipes_config_extracted0.RECIPE_LEVELS), RECIPE_LEVEL_MAX] as readonly number[])
 
 export function dishEnergy(baseEnergy: number, level: number): number {
   return Math.round(baseEnergy * recipeLevelMult(level))

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
 import { newUid } from '../../calc/uid'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -14,6 +17,8 @@ import MemberCard from './MemberCard.vue'
 import MemberEditor from './MemberEditor.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import SpeciesSheet from '../shared/SpeciesSheet.vue'
+const components_team_ComparePane_config_clientDefaults = clientDefaults.modules.components_team_ComparePane
+
 
 interface CustomPanel extends MemberDraft {
   uid: string
@@ -36,17 +41,17 @@ interface CompareRow {
   r: ProduceResult
 }
 
-const LEVELS = [1, 10, 25, 30, 50, 60, 70]
+const LEVELS = cloneData(components_team_ComparePane_config_clientDefaults["LEVELS"])
 
 const box = useBoxStore()
 const { settings } = storeToRefs(useSettingsStore())
 const route = useRoute()
-const selected = ref<string[]>([])
-const customs = ref<CustomPanel[]>([])
-const editing = ref<string | null>(null)
-const level = shallowRef<number | null>(null)
-const picking = shallowRef(false)
-const adding = shallowRef(false)
+const selected = ref<string[]>((cloneData(components_team_ComparePane_config_clientDefaults["selectedInitial"]) as unknown as string[]))
+const customs = ref<CustomPanel[]>((cloneData(components_team_ComparePane_config_clientDefaults["customsInitial"]) as unknown as CustomPanel[]))
+const editing = ref<string | null>((components_team_ComparePane_config_clientDefaults["editingInitial"] as unknown as string | null))
+const level = shallowRef<number | null>((components_team_ComparePane_config_clientDefaults["levelInitial"] as unknown as number | null))
+const picking = shallowRef(components_team_ComparePane_config_clientDefaults["pickingInitial"])
+const adding = shallowRef(components_team_ComparePane_config_clientDefaults["addingInitial"])
 
 watch(() => route.query.uid, (uid) => {
   if (typeof uid === 'string' && uid && !selected.value.includes(uid)) selected.value = [...selected.value, uid]
@@ -126,6 +131,7 @@ function updateEditing(next: MemberDraft) {
     return
   }
   box.update(uid, {
+    pokeId: next.pokeId,
     level: next.level,
     nature: next.nature,
     subskills: next.subskills,

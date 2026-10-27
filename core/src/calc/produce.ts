@@ -1,4 +1,8 @@
+import runtimeParameters from '../data/runtime-parameters.json'
+import ruleCatalogs from '../data/rule-catalogs.json'
+import ruleParameters from '../data/rule-parameters.json'
 import { resolveMemberSkill } from './mew'
+import { activityValues, snapshotActivity } from './activities'
 import { simulateTeam } from './timeline'
 import type { ProduceInput, ProduceResult, Settings } from '../types'
 import { exEffects } from './exEffects'
@@ -11,17 +15,24 @@ import { effectiveSkillLevel, unlockedSubskills } from './member'
 import { natureStatFactor } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { chargeStrength } from './skills'
+const produce_berryPerHelp_ruleParameters = ruleParameters.modules.produce.berryPerHelp
+const produce_findingRate_ruleParameters = ruleParameters.modules.produce.findingRate
+const produce_splitHelps_runtimeParameters = runtimeParameters.modules.produce.splitHelps.values
+const produce_config_ruleCatalogs = ruleCatalogs.modules.produce
+const produce_produce_ruleParameters = ruleParameters.modules.produce.produce
+const produce_produce_runtimeParameters = runtimeParameters.modules.produce.produce.values
+
 
 const emptyProduceResult = (): ProduceResult => ({ helps: 0, berries: 0, berryEnergy: 0, ingredients: {}, skillProcs: 0, skillEnergy: 0, sneaky: 0, curve: [] })
 
 function berryPerHelp(specialty: string, subskills: string[]): number {
-  let n = specialty === '树果型' || specialty === '全部' ? 2 : 1
-  if (subskills.includes('berryS')) n += 1
+  let n = specialty === '树果型' || specialty === '全部' ? produce_berryPerHelp_ruleParameters.specialistBerries : produce_berryPerHelp_ruleParameters.normalBerries
+  if (subskills.includes('berryS')) n += ruleParameters.modules.produce.berryPerHelp.berrySFruitBonus
   return n
 }
 
 function findingRate(base: number, nature: string, stat: 'ingredient' | 'skill', subskills: string[], small: string, medium: string): number {
-  const bonus = 1 + (subskills.includes(small) ? 0.18 : 0) + (subskills.includes(medium) ? 0.36 : 0)
+  const bonus = 1 + (subskills.includes(small) ? produce_findingRate_ruleParameters.findingS : 0) + (subskills.includes(medium) ? produce_findingRate_ruleParameters.findingM : 0)
   return Math.min(1, base * natureStatFactor(nature, stat) * bonus)
 }
 
@@ -50,7 +61,7 @@ export function splitHelps(
   if (foodHelps > 0 && slots.length) {
     for (const slot of slots) {
       let count = cutDecimal(foodHelps / slots.length * slot.amount, 1)
-      if (count >= 100) count = Math.floor(count)
+      if (count >= (produce_splitHelps_runtimeParameters.p001 as 100)) count = Math.floor(count)
       ingredients[slot.name] = (ingredients[slot.name] ?? 0) + count
     }
   }
@@ -61,20 +72,38 @@ export function splitHelps(
  * 个体对比用的日产量。按全天维持传入活力（对比页传满活力）的固定间隔取期望值。
  * 产量拆法对齐 pokeSleepCalc 的 getOneDayHelpCount / getOneDayEnergy。
  */
-export function produce(settings: Settings, input: ProduceInput, helpingBonus = settings.helpingBonus): ProduceResult {
+export function produce(settings: Settings, input: ProduceInput, helpingBonus = settings.helpingBonus, slice?: { minute: number, minutes: number }): ProduceResult {
+  const snapshot = snapshotActivity(settings)
+  settings = snapshot
   const species = pokeById(input.pokeId)
   const selected = species ? resolveMemberSkill(species, input) : null
   const poke = species && selected ? { ...species, mainSkill: selected.name, skillRate: selected.rate } : undefined
   if (!poke) return emptyProduceResult()
   // 纯能量/回复技能在固定活力比较中可使用等价快速公式，其余统一技能结算。
-  if (input.carryMode !== 'full' && (input.pokeId === 151 || ![1, 2, 4, 5, 7, 8].includes(skillByPokedexName(poke.mainSkill)?.id ?? 0))) {
-    const sim = simulateTeam(settings, [input], helpingBonus, { expectedProcs: true, fixedEnergy: input.wakeEnergy ?? 100 })
+  if (input.carryMode !== 'full' && (input.pokeId === 151 || !produce_config_ruleCatalogs.produceList0.values.includes(skillByPokedexName(poke.mainSkill)?.id ?? 0))) {
+    const sim = simulateTeam(settings, [input], helpingBonus, { expectedProcs: true, fixedEnergy: input.wakeEnergy ?? produce_produce_ruleParameters.fixedComparisonEnergy })
     const result = sim.members[0]!
     return { ...result, cooking: { energy: sim.meals.reduce((sum, meal) => sum + meal.energy, 0), remain: sim.remain } }
   }
   const subs = unlockedSubskills(input.level, input.subskills)
+  if (!slice && (snapshot.activity.catalog.activities.length || Object.keys(snapshot.activity.overrides ?? {}).length)) {
+    const end = (settings.period === 'week' ? (produce_produce_runtimeParameters.p001 as 7) : 1) * 1440
+    const boundaries = [0, ...Array.from({ length: settings.period === 'week' ? (produce_produce_runtimeParameters.p002 as 7) : 1 }, (_, day) => day * 1440 + (produce_produce_runtimeParameters.p003 as 240)), end]
+    const keys = (produce_config_ruleCatalogs.produceList1.values as unknown as readonly ["helpIntervalMultiplier","berryCountBonus","berryEnergyMultiplier","ingredientCountBonus","skillRateMultiplier","skillLevelBonus","skillStrengthMultiplier"])
+    const signatures = boundaries.slice(0, -1).map(minute => { const row = activityValues(snapshot.activity, settings.island, poke, minute); return JSON.stringify(keys.map(key => row[key])) })
+    if (new Set(signatures).size > 1) {
+    const result = emptyProduceResult()
+    for (let i = 0; i < boundaries.length - 1; i++) {
+      const row = produce(settings, input, helpingBonus, { minute: boundaries[i]!, minutes: boundaries[i + 1]! - boundaries[i]! })
+      for (const key of (produce_config_ruleCatalogs.produceList2.values as unknown as readonly ["helps","berries","berryEnergy","skillProcs","skillEnergy","sneaky"])) result[key] += row[key]
+      for (const [name, amount] of Object.entries(row.ingredients)) result.ingredients[name] = (result.ingredients[name] ?? 0) + amount
+    }
+    return result
+    }
+  }
+  const activity = activityValues(snapshot.activity, settings.island, poke, slice?.minute ?? (produce_produce_runtimeParameters.p004 as 240))
   const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))
-  const energy = Math.min(150, Math.max(0, input.wakeEnergy ?? settings.sleepScore))
+  const energy = Math.min(produce_produce_ruleParameters.energyCap, Math.max(0, input.wakeEnergy ?? settings.sleepScore))
   const favored = settings.berries.includes(poke.berry)
   const ex = exEffects(settings, poke.berry, poke.specialty)
   const seconds = instantInterval(
@@ -89,30 +118,30 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
     favored,
     ribbon.speedCut,
     ex.speed,
-  )
-  const days = settings.period === 'week' ? 7 : 1
-  const helps = seconds > 0 ? (86400 * days) / seconds : 0
+  ) * activity.helpIntervalMultiplier
+  const days = settings.period === 'week' ? (produce_produce_runtimeParameters.p005 as 7) : 1
+  const helps = seconds > 0 ? ((slice?.minutes ?? days * 1440) * 60) / seconds : 0
   const ingRate = findingRate(poke.ingredientRate, input.nature, 'ingredient', subs, 'ingS', 'ingM')
-  const skillRate = Math.min(1, findingRate(poke.skillRate, input.nature, 'skill', subs, 'skillS', 'skillM') * ex.skillMultiplier)
-  const per = berryPerHelp(poke.specialty, subs)
+  const skillRate = Math.min(1, findingRate(poke.skillRate, input.nature, 'skill', subs, 'skillS', 'skillM') * ex.skillMultiplier * activity.skillRateMultiplier)
+  const per = berryPerHelp(poke.specialty, subs) + activity.berryCountBonus
   const snacking = input.carryMode === 'full'
-  const unlocked = input.level >= 60 ? 3 : input.level >= 30 ? 2 : 1
+  const unlocked = input.level >= (produce_produce_runtimeParameters.p006 as 60) ? 3 : input.level >= (produce_produce_runtimeParameters.p007 as 30) ? 2 : 1
   const slots = input.ingredientSlots.slice(0, unlocked).flatMap((lineIndex, slot) => {
     if (lineIndex == null) return []
     const drop = slotDrop(poke.ingredients, slot, lineIndex)
-    return drop ? [{ name: drop.name, amount: drop.amount + ex.ingredientExtra }] : []
+    return drop ? [{ name: drop.name, amount: drop.amount + ex.ingredientExtra + activity.ingredientCountBonus }] : []
   })
   const split = splitHelps(helps, ingRate, skillRate, slots, snacking)
   const berries = cutDecimal(split.berryHelps * per, 1)
-  const unit = berryUnitEnergy(poke.berry, input.level, settings.areaBonus, ex.berryMultiplier)
-  const skillLv = Math.min(skillMaxFor(poke.mainSkill), effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill) + ex.skillLevels)
+  const unit = berryUnitEnergy(poke.berry, input.level, settings.areaBonus, ex.berryMultiplier) * activity.berryEnergyMultiplier
+  const skillLv = Math.min(skillMaxFor(poke.mainSkill), effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill) + ex.skillLevels + activity.skillLevelBonus)
   return {
     helps,
     berries,
     berryEnergy: Math.floor(berries * unit),
     ingredients: split.ingredients,
     skillProcs: split.skillProcs,
-    skillEnergy: Math.floor(split.skillProcs * chargeStrength(poke.mainSkill, skillLv) * (1 + settings.areaBonus)),
+    skillEnergy: Math.floor(split.skillProcs * chargeStrength(poke.mainSkill, skillLv) * (1 + settings.areaBonus) * activity.skillStrengthMultiplier),
     sneaky: snacking ? helps : 0,
     curve: [],
   }

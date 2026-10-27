@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
 import { computed, ref, shallowRef } from 'vue'
 import { ISLANDS, type PokeRow } from '../../calc/data'
 import { formatDp, islandBands, islandPokemon, islandUnlock } from '../../calc/islandMeta'
@@ -8,11 +11,13 @@ import type { IslandId } from '../../types'
 import BerryIcon from '../shared/BerryIcon.vue'
 import DataRow from '../shared/DataRow.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
+const components_data_IslandPane_config_clientDefaults = clientDefaults.modules.components_data_IslandPane
+
 
 const store = useSettingsStore()
 const props = defineProps<{ q: string }>()
-const openId = shallowRef<IslandId | ''>('')
-const view = shallowRef<'band' | 'spread'>('band')
+const openId = shallowRef<IslandId | ''>((components_data_IslandPane_config_clientDefaults["openIdInitial"] as unknown as IslandId | ''))
+const view = shallowRef<'band' | 'spread'>((components_data_IslandPane_config_clientDefaults["viewInitial"] as unknown as 'band' | 'spread'))
 const folded = ref(new Set<string>())
 
 function toggleSleep(sleep: string) {
@@ -20,7 +25,7 @@ function toggleSleep(sleep: string) {
   else folded.value.add(sleep)
 }
 
-const SLEEP_ORDER = ['淺淺入夢', '安然入睡', '深深入眠', '没有特征']
+const SLEEP_ORDER = cloneData(components_data_IslandPane_config_clientDefaults["SLEEP_ORDER"])
 
 const islands = computed(() => ISLANDS.filter((i) => textHit(`${i.name} ${islandUnlock(i.id as IslandId)}`, props.q)))
 const pokemonOf = new Map(ISLANDS.map((i) => [i.id, islandPokemon(i.id as IslandId)]))

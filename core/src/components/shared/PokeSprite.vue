@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { computed, shallowRef, watch } from 'vue'
 import { pokemonIconUrl, pokemonPortraitUrl, pokemonShinyIconUrl, pokemonShinyPortraitUrl } from '../../calc/raeImage'
+const components_shared_PokeSprite_config_clientDefaults = clientDefaults.modules.components_shared_PokeSprite
+
 
 const props = defineProps<{
   id: number
@@ -9,8 +13,8 @@ const props = defineProps<{
   shiny?: boolean
 }>()
 
-const failed = shallowRef(false)
-const useIcon = shallowRef(false)
+const failed = shallowRef(components_shared_PokeSprite_config_clientDefaults["failedInitial"])
+const useIcon = shallowRef(components_shared_PokeSprite_config_clientDefaults["useIconInitial"])
 const hue = computed(() => (props.id * 47) % 360)
 const src = computed(() => {
   if (props.large && !useIcon.value) return (props.shiny && pokemonShinyPortraitUrl(props.id)) || pokemonPortraitUrl(props.id)

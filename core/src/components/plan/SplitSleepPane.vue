@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
+import { useActivities } from '../../composables/useActivities'
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlanStore } from '../../stores/plans'
@@ -12,16 +15,21 @@ import { useSplitSleep } from '../../composables/useSplitSleep'
 import PokePicker from '../shared/PokePicker.vue'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import SplitRecommendation from './SplitRecommendation.vue'
+const components_plan_SplitSleepPane_config_clientDefaults = clientDefaults.modules.components_plan_SplitSleepPane
+
 
 const { plan } = storeToRefs(usePlanStore())
 const settingsStore = useSettingsStore()
 const { settings } = storeToRefs(settingsStore)
 const config = computed(() => plan.value.splitSleep)
 const island = computed({ get: () => settings.value.island, set: value => settingsStore.applyIsland(value) })
-const otherTypes = computed({ get: () => normalizeEventMix(config.value.eventMix) !== 'off', set: value => { config.value.eventMix = value } })
-const options = computed<SplitOptions>(() => ({ ...config.value, island: island.value, strength: plan.value.snorlaxStrength, eventMix: otherTypes.value ? settings.value.sleepEventMix : 'off' }))
+const activity = useActivities(config, () => island.value, () => settings.value.activity)
+const eventMult = activity.field('drowsyPowerMultiplier', () => config.value.eventMult)
+const mixMode = activity.field('eventMix', () => normalizeEventMix(config.value.eventMix) !== 'off' ? settings.value.sleepEventMix : 'off')
+const otherTypes = computed({ get: () => mixMode.value !== 'off', set: value => { mixMode.value = value ? settings.value.sleepEventMix : 'off' } })
+const options = computed<SplitOptions>(() => ({ ...config.value, island: island.value, strength: plan.value.snorlaxStrength, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const statuses = computed(() => options.value.targets.map(target => splitTargetStatus(target, island.value, options.value.strength)))
-const kind = ref<SplitTarget['kind']>('baby'), pokeId = ref(1), face = ref(''), advanced = ref(false), formError = ref('')
+const kind = ref<SplitTarget['kind']>((components_plan_SplitSleepPane_config_clientDefaults["kindInitial"] as unknown as SplitTarget['kind'])), pokeId = ref(components_plan_SplitSleepPane_config_clientDefaults["pokeIdInitial"]), face = ref(components_plan_SplitSleepPane_config_clientDefaults["faceInitial"]), advanced = ref(components_plan_SplitSleepPane_config_clientDefaults["advancedInitial"]), formError = ref(components_plan_SplitSleepPane_config_clientDefaults["formErrorInitial"])
 const allowedIds = computed(() => kind.value === 'baby' ? BABY_POKEMON_IDS.filter(id => babyEfficiencyIslands(id).some(row => row.id === island.value)) : [...new Set(SLEEP_STYLES.filter(row => !row.limited && row.island === island.value).map(row => row.pokeId))])
 const faces = computed(() => SLEEP_STYLES.filter(row => !row.limited && row.island === island.value && row.pokeId === pokeId.value))
 watch(allowedIds, ids => { if (!ids.includes(pokeId.value)) pokeId.value = ids[0] ?? 0 }, { immediate: true })
@@ -47,6 +55,7 @@ const resultIsland = computed(() => ISLANDS.find(row => row.id === result.value?
 
 <template>
   <div class="stack" :aria-busy="busy">
+    <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">恢复本面板自动活动设置</button>
     <p class="muted">固定岛屿与能量，比较两觉合计 100 分和整觉 100 分，寻找多目标的综合方案与各目标最优方案。</p>
     <article class="card stack">
       <div class="split-fields">
@@ -69,7 +78,7 @@ const resultIsland = computed(() => ISLANDS.find(row => row.id === result.value?
       <div v-if="advanced" class="stack advanced">
         <div class="split-fields">
           <div class="field"><label for="split-type">睡眠类型</label><select id="split-type" v-model="config.sleepType" :disabled="busy"><option value="all">每觉自动择优</option><option v-for="type in EFFICIENCY_SLEEP_TYPES" :key="type" :value="type">{{ type }}</option></select></div>
-          <div class="field"><label for="split-event">活动睡意之力倍率</label><select id="split-event" v-model.number="config.eventMult" :disabled="busy"><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select></div>
+          <div class="field"><label for="split-event">活动睡意之力倍率</label><select id="split-event" v-model.number="eventMult" :disabled="busy"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}倍（活动）</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select></div>
         </div>
         <label class="row"><input v-model="otherTypes" type="checkbox" role="switch" :disabled="busy">活动期间遇到其他睡眠类型宝可梦</label>
         <div class="field"><label for="split-iterations">每个研究状态的模拟次数</label><input id="split-iterations" v-model.number="config.iterations" type="number" min="100" max="100000" step="100" :disabled="busy"></div>

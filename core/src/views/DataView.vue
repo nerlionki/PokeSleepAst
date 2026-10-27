@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import clientDefaults from '../data/client-defaults.json'
+
 import { shallowRef } from 'vue'
 import { usePageTab } from '../composables/usePageTab'
 import BerryPane from '../components/data/BerryPane.vue'
@@ -10,8 +12,10 @@ import RecipePane from '../components/data/RecipePane.vue'
 import SkillPane from '../components/data/SkillPane.vue'
 import ItemPane from '../components/data/ItemPane.vue'
 import FlowerPane from '../components/data/FlowerPane.vue'
+const views_DataView_config_clientDefaults = clientDefaults.modules.views_DataView
 
-const q = shallowRef('')
+
+const q = shallowRef(views_DataView_config_clientDefaults["qInitial"])
 const tab = usePageTab(['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'item', 'flower'] as const, 'island')
 </script>
 

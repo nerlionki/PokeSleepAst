@@ -1,15 +1,19 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+
 import { exportText } from '#platform/backup'
 import { shallowRef } from 'vue'
 import { exportNative, exportSdrice, parseBoxText } from '../../calc/boxio'
 import { useBoxStore } from '../../stores/box'
 import { useSettingsStore } from '../../stores/settings'
+const components_profile_BackupPane_config_clientDefaults = clientDefaults.modules.components_profile_BackupPane
+
 
 const box = useBoxStore()
 const settings = useSettingsStore()
-const msg = shallowRef('')
-const incoming = shallowRef('')
-const mode = shallowRef<'native' | 'sdrice'>('native')
+const msg = shallowRef(components_profile_BackupPane_config_clientDefaults["msgInitial"])
+const incoming = shallowRef(components_profile_BackupPane_config_clientDefaults["incomingInitial"])
+const mode = shallowRef<'native' | 'sdrice'>((components_profile_BackupPane_config_clientDefaults["modeInitial"] as unknown as 'native' | 'sdrice'))
 
 async function exportBox() {
   const payload = mode.value === 'sdrice' ? exportSdrice(box.pokemon) : exportNative(box.pokemon)

@@ -26,6 +26,13 @@ for (const file of walk(core)) {
     continue
   }
   let text = fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n')
+  // SFCs move into generated/: resolve JSON against the shared source so both
+  // TS wrappers and components load the same data module without duplicate copies.
+  text = text.replace(/(from\s+['"])(\.[^'"]+\.json)(['"])/g, (_match, before, specifier, after) => {
+    const source = path.resolve(path.dirname(file), specifier)
+    const relative = path.relative(path.dirname(dest), source).replaceAll('\\', '/')
+    return before + (relative.startsWith('.') ? relative : './' + relative) + after
+  })
   text = text.replace(/import UpdateSettings from[^\n]*\n/g, '').replace(/<UpdateSettings\s*\/>/g, '')
   text = text.replace('<article class="card"></article>', '')
   text = text.replace(/\s+v-back="[^"]*"/g, '')

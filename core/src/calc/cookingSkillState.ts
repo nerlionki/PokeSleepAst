@@ -1,9 +1,15 @@
+import ruleParameters from '../data/rule-parameters.json'
+const cookingSkillState_addPot_ruleParameters = ruleParameters.modules.cookingSkillState.addPot
+const cookingSkillState_addCrit_ruleParameters = ruleParameters.modules.cookingSkillState.addCrit
+const cookingSkillState_potSize_ruleParameters = ruleParameters.modules.cookingSkillState.potSize
+const cookingSkillState_cook_ruleParameters = ruleParameters.modules.cookingSkillState.cook
+
 /** 概率分支保留未暴击时的技能加成；仅暴击清零。 */
 export class CookingSkillState {
   private crit = new Map<number, number>([[0, 1]])
   extraPot = 0
 
-  addPot(amount: number) { this.extraPot = Math.min(200, Math.max(0, this.extraPot + amount)) }
+  addPot(amount: number) { this.extraPot = Math.min(cookingSkillState_addPot_ruleParameters.extraPotCap, Math.max(0, this.extraPot + amount)) }
 
   addCrit(choices: { amount: number, probability: number }[]) {
     const total = choices.reduce((sum, choice) => sum + choice.probability, 0)
@@ -12,17 +18,17 @@ export class CookingSkillState {
     const add = (key: number, probability: number) => next.set(key, (next.get(key) ?? 0) + probability)
     for (const [bonus, probability] of this.crit) {
       add(bonus, probability * Math.max(0, 1 - total))
-      for (const choice of choices) add(Math.min(70, bonus + Math.round(choice.amount * 100)), probability * choice.probability)
+      for (const choice of choices) add(Math.min(cookingSkillState_addCrit_ruleParameters.skillCritCapPercent, bonus + Math.round(choice.amount * 100)), probability * choice.probability)
     }
     this.crit = next
   }
 
   potSize(base: number, sunday: boolean, camp: boolean) {
-    return Math.ceil((base * (sunday ? 2 : 1) + this.extraPot) * (camp ? 1.5 : 1))
+    return Math.ceil((base * (sunday ? cookingSkillState_potSize_ruleParameters.sundayPotMultiplier : 1) + this.extraPot) * (camp ? cookingSkillState_potSize_ruleParameters.campPotMultiplier : 1))
   }
 
-  cook(sunday: boolean) {
-    const base = sunday ? 0.3 : 0.1
+  cook(sunday: boolean, activityCritBonus = 0, activityCritMultiplier = 1) {
+    const base = (sunday ? cookingSkillState_cook_ruleParameters.sundayCritChance : cookingSkillState_cook_ruleParameters.normalCritChance) + activityCritBonus
     let chance = 0
     const next = new Map<number, number>()
     for (const [bonus, probability] of this.crit) {
@@ -33,6 +39,6 @@ export class CookingSkillState {
     }
     this.crit = next
     this.extraPot = 0
-    return { chance, multiplier: 1 + chance * (sunday ? 2 : 1) }
+    return { chance, multiplier: 1 + chance * ((sunday ? cookingSkillState_cook_ruleParameters.sundayCritMultiplier : cookingSkillState_cook_ruleParameters.normalCritMultiplier) * activityCritMultiplier - 1) }
   }
 }

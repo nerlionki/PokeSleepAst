@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import clientDefaults from '../../data/client-defaults.json'
+import { cloneData } from '../../calc/dataClone'
+
 import { computed, reactive, ref, shallowRef } from 'vue'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import type { ImportProgress } from '../../calc/ocrImportCore'
@@ -21,6 +24,8 @@ import MemberEditor from '../team/MemberEditor.vue'
 import { SPECIALTY_FILTERS } from '../../calc/specialty'
 import OcrCompletionDialog from './OcrCompletionDialog.vue'
 import { confirmEditedOcrField, normalizeOcrMissing } from '../../calc/ocrCompletion'
+const components_pokemon_BoxPane_config_clientDefaults = clientDefaults.modules.components_pokemon_BoxPane
+
 
 const TYPES = SPECIALTY_FILTERS
 
@@ -36,19 +41,19 @@ function closeOverview() {
 }
 function completeFromOverview(uids: string[]) { closeOverview(); completionQueue.value = uids }
 const box = useBoxStore()
-const picking = shallowRef(false)
-const ocrBusy = shallowRef(false)
-const ocrMsg = shallowRef('')
-const ocrProgress = shallowRef<ImportProgress>({ stage: '请选择截图', completed: 0, total: 0, percent: 0 })
-const filtering = shallowRef(false)
+const picking = shallowRef(components_pokemon_BoxPane_config_clientDefaults["pickingInitial"])
+const ocrBusy = shallowRef(components_pokemon_BoxPane_config_clientDefaults["ocrBusyInitial"])
+const ocrMsg = shallowRef(components_pokemon_BoxPane_config_clientDefaults["ocrMsgInitial"])
+const ocrProgress = shallowRef<ImportProgress>((cloneData(components_pokemon_BoxPane_config_clientDefaults["ocrProgressInitial"]) as unknown as ImportProgress))
+const filtering = shallowRef(components_pokemon_BoxPane_config_clientDefaults["filteringInitial"])
 const query = reactive<BoxQuery>({ ...EMPTY_BOX_QUERY, ingredients: [], subskills: [] })
 
 interface BoxDraft extends BoxPokemon {
   tune: MemberTune
 }
 
-const editing = ref<BoxDraft | null>(null)
-const completionQueue = shallowRef<string[]>([])
+const editing = ref<BoxDraft | null>((components_pokemon_BoxPane_config_clientDefaults["editingInitial"] as unknown as BoxDraft | null))
+const completionQueue = shallowRef<string[]>((cloneData(components_pokemon_BoxPane_config_clientDefaults["completionQueueInitial"]) as unknown as string[]))
 const pendingOcr = computed(() => box.pokemon.filter((pokemon) => normalizeOcrMissing(pokemon.ocrMissing).length))
 const completing = computed(() => completionQueue.value.map((uid) => box.pokemon.find((pokemon) => pokemon.uid === uid))
   .find((pokemon) => pokemon && normalizeOcrMissing(pokemon.ocrMissing).length))

@@ -17,15 +17,16 @@ const tab = usePageTab(['catch', 'sleep', 'split', 'baby', 'completion', 'candy'
   <div class="stack">
     <Segmented
       v-model="tab"
+      class="plan-tabs"
       :options="[
-        { id: 'catch', label: '捕捉刷糖' },
-        { id: 'sleep', label: '睡眠规划' },
-        { id: 'split', label: '目标拆觉' },
-        { id: 'baby', label: '宝宝效率' },
-        { id: 'completion', label: '补齐效率' },
-        { id: 'candy', label: '糖果增强' },
-        { id: 'train', label: '培养规划' },
-        { id: 'whistle', label: '吹哨规划' },
+        { id: 'catch', label: '捕捉\n刷糖' },
+        { id: 'sleep', label: '睡眠\n规划' },
+        { id: 'split', label: '目标\n拆觉' },
+        { id: 'baby', label: '宝宝\n效率' },
+        { id: 'completion', label: '补齐\n效率' },
+        { id: 'candy', label: '糖果\n增强' },
+        { id: 'train', label: '培养\n规划' },
+        { id: 'whistle', label: '吹哨\n规划' },
       ]"
     />
     <CatchPane v-if="tab === 'catch'" />
