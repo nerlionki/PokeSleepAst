@@ -6,6 +6,9 @@ export interface FixedProducer {
   name: string
   total: number
   mode?: string
+  condition?: string
+  ordinary?: number
+  skill?: number
 }
 interface FixedRankings {
   berries: Record<string, FixedProducer[]>

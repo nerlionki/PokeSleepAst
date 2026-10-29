@@ -4,9 +4,10 @@ import { defaultSettings } from './defaults'
 import { skillByPokedexName } from './mainSkills'
 import { produce } from './produce'
 import { snapshotActivity } from './activities'
-import { extremeInput, extremeInputs } from './extremeProduction'
+import { extremeInput, extremeInputs, productionRankingSettings } from './extremeProduction'
 import { resourceRevision } from '../resources/runtime'
 import { compareHelpingBonus } from './member'
+import { simulateTeam } from './timeline'
 
 export interface BerryProducer {
   id: number
@@ -38,17 +39,31 @@ export function berryProducerModes(pokeId: number): CarryMode[] {
 
 const conditions: Partial<Record<CarryMode, string>> = { full: '全时满包', normal: '一般', unlimited: '无持有上限' }
 
+/** Every finite-inventory ranking uses the timeline, including skills whose
+ * general production panel can use a fast formula. This applies ribbon carry
+ * and inventory subskills before modeling overnight filling and sneaky snacking.
+ */
+export function berryProducerYield(settings: Settings, input: ProduceInput) {
+  settings = productionRankingSettings(settings)
+  const helpingBonus = compareHelpingBonus(input.level, input.subskills, 0)
+  if (input.carryMode === 'normal') {
+    return simulateTeam(settings, [input], helpingBonus, {
+      expectedProcs: true, fixedEnergy: input.wakeEnergy ?? 100, skipCooking: true,
+    }).members[0]!
+  }
+  return produce(settings, input, helpingBonus, undefined, { skipCooking: true })
+}
+
 const cache = new Map<string, BerryProducer[]>()
 export function* topBerryProducerSteps(name: string, settings: Settings = defaultSettings()): Generator<void, BerryProducer[]> {
-  const context = snapshotActivity({ ...settings, period: 'day' as const, helpingBonus: 0 })
+  const context = snapshotActivity(productionRankingSettings(settings))
   const key = JSON.stringify([resourceRevision(), name, context])
   if (cache.has(key)) return cache.get(key)!
   const rows: BerryProducer[] = []
   for (const poke of POKEDEX.filter(poke => poke.berry === name && poke.interval > 0)) for (const mode of berryProducerModes(poke.id)) {
     let best: BerryProducer | undefined
     for (const input of extremeInputs(poke.id, 'berries', mode)) {
-      const helpingBonus = compareHelpingBonus(input.level, input.subskills, 0)
-      const result = produce(context, input, helpingBonus, undefined, { skipCooking: true })
+      const result = berryProducerYield(context, input)
       if (!best || result.berries > best.total) {
         const skill = result.skillBerries ?? 0
         best = { id: poke.id, name: poke.name, total: result.berries, ordinary: result.berries - skill,

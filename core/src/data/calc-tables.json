@@ -656,45 +656,68 @@
     },
     "productionRankings": {
       "schemaVersion": 1,
-      "generatedOn": "2026-10-29",
       "level": 70,
       "ribbonHours": 2000,
       "wakeEnergy": 100,
       "helpingBonus": 5,
       "activeSubskills": 4,
-      "sourceVersion": "1.0.0",
-      "sourceHash": "b87e4c0356556f695c3b1ec86089fc51dd91210c367cd7963c970dacc88cb30f",
+      "generatedOn": "2026-10-29",
+      "activityMode": "none",
+      "helpingBonusMode": "actual-five-stacks",
+      "mainSkillMode": "max",
+      "normalInventoryModel": "finite-with-ribbon-carry",
+      "nightSkillStorage": true,
+      "supportSelfShare": 0.2,
+      "includeIngredientGatheringSkills": false,
+      "reference": "https://pks.raenonx.cc/zh/ingredient/chart",
+      "sourceVersion": "1.0.2",
+      "sourceHash": "2582b8d0003068d6d06782929919a681cc97932959bef04e15102b0a3de70b96",
       "berries": {
         "柿仔果": [
           {
             "id": 288,
             "name": "過動猿",
             "total": 406.2,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 406.2,
+            "skill": 0
           },
           {
             "id": 20,
             "name": "拉達",
             "total": 387.4,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 387.4,
+            "skill": 0
           },
           {
             "id": 9004,
             "name": "伊布（佳節）",
             "total": 368.7,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 368.7,
+            "skill": 0
           },
           {
             "id": 288,
             "name": "過動猿",
             "total": 351,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 351,
+            "skill": 0
           },
           {
             "id": 9004,
             "name": "伊布（佳節）",
             "total": 324,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 324,
+            "skill": 0
           }
         ],
         "蘋野果": [
@@ -702,31 +725,46 @@
             "id": 157,
             "name": "火爆獸",
             "total": 476.4,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 476.4,
+            "skill": 0
           },
           {
             "id": 38,
             "name": "九尾",
             "total": 440,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 440,
+            "skill": 0
           },
           {
             "id": 155,
             "name": "火球鼠",
             "total": 435.6,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 435.6,
+            "skill": 0
           },
           {
             "id": 156,
             "name": "火岩鼠",
             "total": 433.4,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 433.4,
+            "skill": 0
           },
           {
             "id": 157,
             "name": "火爆獸",
-            "total": 397.2,
-            "mode": "normal"
+            "total": 405,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 405,
+            "skill": 0
           }
         ],
         "橙橙果": [
@@ -734,31 +772,46 @@
             "id": 160,
             "name": "大力鱷",
             "total": 408.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 408.1,
+            "skill": 0
           },
           {
             "id": 159,
             "name": "藍鱷",
             "total": 382.2,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 382.2,
+            "skill": 0
           },
           {
             "id": 394,
             "name": "波皇子",
             "total": 351.2,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 351.2,
+            "skill": 0
           },
           {
             "id": 394,
             "name": "波皇子",
-            "total": 344.8,
-            "mode": "normal"
+            "total": 344.82263808,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 317.99999999999994,
+            "skill": 26.822638080000033
           },
           {
             "id": 158,
             "name": "小鋸鱷",
             "total": 338.8,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 338.8,
+            "skill": 0
           }
         ],
         "萄葡果": [
@@ -766,63 +819,93 @@
             "id": 26,
             "name": "雷丘",
             "total": 519.4,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 519.4,
+            "skill": 0
           },
           {
             "id": 25,
             "name": "皮卡丘",
             "total": 481.7,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 481.7,
+            "skill": 0
           },
           {
             "id": 9001,
             "name": "皮卡丘（萬聖節）",
             "total": 457.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 457.1,
+            "skill": 0
           },
           {
             "id": 9007,
             "name": "皮卡丘（船長）",
             "total": 457.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 457.1,
+            "skill": 0
           },
           {
             "id": 26,
             "name": "雷丘",
-            "total": 426.3,
-            "mode": "normal"
+            "total": 447,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 447,
+            "skill": 0
           }
         ],
         "金枕果": [
           {
             "id": 254,
             "name": "蜥蜴王",
-            "total": 489.0,
-            "mode": "unlimited"
+            "total": 488.9679999999989,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 297.9999999999992,
+            "skill": 190.96799999999965
           },
           {
             "id": 253,
             "name": "森林蜥蜴",
-            "total": 421.9,
-            "mode": "unlimited"
+            "total": 421.9279999999998,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 242,
+            "skill": 179.92799999999983
           },
           {
             "id": 154,
             "name": "大竺葵",
             "total": 408.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 408.1,
+            "skill": 0
           },
           {
             "id": 153,
             "name": "月桂葉",
             "total": 393.9,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 393.9,
+            "skill": 0
           },
           {
-            "id": 154,
-            "name": "大竺葵",
-            "total": 351,
-            "mode": "normal"
+            "id": 153,
+            "name": "月桂葉",
+            "total": 363,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 363,
+            "skill": 0
           }
         ],
         "莓莓果": [
@@ -830,63 +913,93 @@
             "id": 7007,
             "name": "九尾（阿羅拉的樣子）",
             "total": 393.9,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 393.9,
+            "skill": 0
           },
           {
             "id": 365,
             "name": "帝牙海獅",
             "total": 381.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 381.1,
+            "skill": 0
           },
           {
             "id": 7007,
             "name": "九尾（阿羅拉的樣子）",
-            "total": 370.6,
-            "mode": "normal"
+            "total": 370.5521823743991,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 347.99999999999915,
+            "skill": 22.55218237439996
           },
           {
             "id": 7007,
             "name": "九尾（阿羅拉的樣子）",
-            "total": 366.6,
-            "mode": "unlimited"
+            "total": 366.6199504895991,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 341.99999999999915,
+            "skill": 24.61995048959995
           },
           {
             "id": 365,
             "name": "帝牙海獅",
             "total": 327,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 327,
+            "skill": 0
           }
         ],
         "樱子果": [
           {
             "id": 392,
             "name": "烈焰猴",
-            "total": 494.7,
-            "mode": "unlimited"
+            "total": 494.6792000000008,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 296.00000000000125,
+            "skill": 198.67919999999953
           },
           {
             "id": 257,
             "name": "火焰雞",
             "total": 440,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 440,
+            "skill": 0
           },
           {
             "id": 391,
             "name": "猛火猴",
-            "total": 436.4,
-            "mode": "unlimited"
+            "total": 436.4176000000005,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 256.0000000000008,
+            "skill": 180.4175999999997
           },
           {
             "id": 57,
             "name": "火爆猴",
             "total": 408.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 408.1,
+            "skill": 0
           },
           {
             "id": 257,
             "name": "火焰雞",
-            "total": 386.1,
-            "mode": "normal"
+            "total": 393,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 393,
+            "skill": 0
           }
         ],
         "零余果": [
@@ -894,31 +1007,46 @@
             "id": 24,
             "name": "阿柏怪",
             "total": 336.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 336.1,
+            "skill": 0
           },
           {
             "id": 24,
             "name": "阿柏怪",
-            "total": 265.2,
-            "mode": "normal"
+            "total": 288,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 288,
+            "skill": 0
           },
           {
             "id": 23,
             "name": "阿柏蛇",
             "total": 259.7,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 259.7,
+            "skill": 0
           },
           {
             "id": 23,
             "name": "阿柏蛇",
-            "total": 210.9,
-            "mode": "normal"
+            "total": 216,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 216,
+            "skill": 0
           },
           {
-            "id": 849,
-            "name": "顫弦蠑螈（高調的樣子）",
-            "total": 198,
-            "mode": "normal"
+            "id": 454,
+            "name": "毒骷蛙",
+            "total": 202,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 202,
+            "skill": 0
           }
         ],
         "勿花果": [
@@ -926,31 +1054,46 @@
             "id": 260,
             "name": "巨沼怪",
             "total": 408.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 408.1,
+            "skill": 0
           },
           {
             "id": 259,
             "name": "沼躍魚",
             "total": 371.3,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 371.3,
+            "skill": 0
           },
           {
             "id": 260,
             "name": "巨沼怪",
             "total": 360,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 360,
+            "skill": 0
           },
           {
             "id": 105,
             "name": "嘎啦嘎啦",
             "total": 346.5,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 346.5,
+            "skill": 0
           },
           {
             "id": 259,
             "name": "沼躍魚",
             "total": 336,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 336,
+            "skill": 0
           }
         ],
         "椰木果": [
@@ -958,63 +1101,93 @@
             "id": 85,
             "name": "嘟嘟利",
             "total": 497.4,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 497.4,
+            "skill": 0
           },
           {
             "id": 628,
             "name": "勇士雄鷹",
-            "total": 497.1,
-            "mode": "unlimited"
+            "total": 497.0839999999997,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 290,
+            "skill": 207.08399999999972
           },
           {
             "id": 85,
             "name": "嘟嘟利",
-            "total": 424.2,
-            "mode": "normal"
+            "total": 447,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 447,
+            "skill": 0
           },
           {
             "id": 627,
             "name": "毛頭小鷹",
-            "total": 343.1,
-            "mode": "unlimited"
+            "total": 343.12799999999976,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 204,
+            "skill": 139.12799999999976
           },
           {
             "id": 84,
             "name": "嘟嘟",
             "total": 341.9,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 341.9,
+            "skill": 0
           }
         ],
         "芒芒果": [
           {
             "id": 488,
             "name": "克雷色利亞",
-            "total": 465.0,
-            "mode": "normal"
+            "total": 465.0380000000006,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 288.00000000000017,
+            "skill": 177.0380000000004
           },
           {
             "id": 178,
             "name": "天然鳥",
             "total": 457.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 457.1,
+            "skill": 0
           },
           {
             "id": 178,
             "name": "天然鳥",
             "total": 411,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 411,
+            "skill": 0
           },
           {
             "id": 518,
             "name": "夢夢蝕",
             "total": 408.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 408.1,
+            "skill": 0
           },
           {
             "id": 151,
             "name": "夢幻",
-            "total": 391.1,
-            "mode": "normal"
+            "total": 391.1055807952778,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 374.9999999999988,
+            "skill": 16.105580795278982
           }
         ],
         "木子果": [
@@ -1022,31 +1195,46 @@
             "id": 12,
             "name": "巴大蝶",
             "total": 457.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 457.1,
+            "skill": 0
           },
           {
             "id": 12,
             "name": "巴大蝶",
             "total": 411,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 411,
+            "skill": 0
           },
           {
             "id": 10,
             "name": "綠毛蟲",
             "total": 346.5,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 346.5,
+            "skill": 0
           },
           {
             "id": 10,
             "name": "綠毛蟲",
             "total": 315,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 315,
+            "skill": 0
           },
           {
             "id": 11,
             "name": "鐵甲蛹",
             "total": 309.2,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 309.2,
+            "skill": 0
           }
         ],
         "文柚果": [
@@ -1054,95 +1242,140 @@
             "id": 95,
             "name": "大岩蛇",
             "total": 419.4,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 419.4,
+            "skill": 0
           },
           {
             "id": 697,
             "name": "怪顎龍",
             "total": 408.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 408.1,
+            "skill": 0
           },
           {
             "id": 95,
             "name": "大岩蛇",
             "total": 393,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 393,
+            "skill": 0
           },
           {
             "id": 697,
             "name": "怪顎龍",
             "total": 348,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 348,
+            "skill": 0
           },
           {
             "id": 696,
             "name": "寶寶暴龍",
             "total": 249.9,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 249.9,
+            "skill": 0
           }
         ],
         "墨莓果": [
           {
             "id": 778,
             "name": "謎擬Ｑ",
-            "total": 479.3,
-            "mode": "unlimited"
+            "total": 452.32133105450936,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 280,
+            "skill": 172.32133105450933
           },
           {
             "id": 354,
             "name": "詛咒娃娃",
             "total": 440,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 440,
+            "skill": 0
           },
           {
             "id": 354,
             "name": "詛咒娃娃",
-            "total": 377,
-            "mode": "normal"
+            "total": 381,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 381,
+            "skill": 0
           },
           {
             "id": 353,
             "name": "怨影娃娃",
             "total": 333.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 333.1,
+            "skill": 0
           },
           {
             "id": 94,
             "name": "耿鬼",
-            "total": 300.3,
-            "mode": "normal"
+            "total": 310,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 310,
+            "skill": 0
           }
         ],
         "番荔果": [
           {
             "id": 381,
             "name": "拉帝歐斯",
-            "total": 495.3,
-            "mode": "unlimited"
+            "total": 495.3094399999992,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 217.99999999999977,
+            "skill": 277.3094399999994
           },
           {
             "id": 373,
             "name": "暴飛龍",
             "total": 408.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 408.1,
+            "skill": 0
           },
           {
             "id": 372,
             "name": "甲殼龍",
             "total": 341.9,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 341.9,
+            "skill": 0
           },
           {
             "id": 373,
             "name": "暴飛龍",
             "total": 330,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 330,
+            "skill": 0
           },
           {
             "id": 334,
             "name": "七夕青鳥",
             "total": 326.4,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 326.4,
+            "skill": 0
           }
         ],
         "异奇果": [
@@ -1150,31 +1383,46 @@
             "id": 461,
             "name": "瑪狃拉",
             "total": 423.5,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 423.5,
+            "skill": 0
           },
           {
             "id": 215,
             "name": "狃拉",
             "total": 406.2,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 406.2,
+            "skill": 0
           },
           {
             "id": 491,
             "name": "達克萊伊",
             "total": 378,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 378,
+            "skill": 0
           },
           {
             "id": 229,
             "name": "黑魯加",
             "total": 346.5,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 346.5,
+            "skill": 0
           },
           {
             "id": 215,
             "name": "狃拉",
             "total": 336,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 336,
+            "skill": 0
           }
         ],
         "靛莓果": [
@@ -1182,31 +1430,46 @@
             "id": 208,
             "name": "大鋼蛇",
             "total": 381.1,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 381.1,
+            "skill": 0
           },
           {
             "id": 395,
             "name": "帝王拿波",
             "total": 357,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 357,
+            "skill": 0
           },
           {
             "id": 208,
             "name": "大鋼蛇",
             "total": 348,
-            "mode": "normal"
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 348,
+            "skill": 0
           },
           {
             "id": 395,
             "name": "帝王拿波",
-            "total": 339.6,
-            "mode": "normal"
+            "total": 339.598198272,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 309.00000000000006,
+            "skill": 30.598198271999937
           },
           {
             "id": 395,
             "name": "帝王拿波",
-            "total": 328.0,
-            "mode": "unlimited"
+            "total": 328.03296491520007,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 297.0000000000001,
+            "skill": 31.03296491519994
           }
         ],
         "桃桃果": [
@@ -1214,31 +1477,46 @@
             "id": 959,
             "name": "巨鍛匠",
             "total": 476.4,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 476.4,
+            "skill": 0
+          },
+          {
+            "id": 959,
+            "name": "巨鍛匠",
+            "total": 411,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 411,
+            "skill": 0
           },
           {
             "id": 36,
             "name": "皮可西",
             "total": 408.1,
-            "mode": "full"
-          },
-          {
-            "id": 959,
-            "name": "巨鍛匠",
-            "total": 405.9,
-            "mode": "normal"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 408.1,
+            "skill": 0
           },
           {
             "id": 958,
             "name": "巧鍛匠",
             "total": 393.9,
-            "mode": "full"
+            "mode": "full",
+            "condition": "全时满包",
+            "ordinary": 393.9,
+            "skill": 0
           },
           {
             "id": 36,
             "name": "皮可西",
-            "total": 362.8,
-            "mode": "normal"
+            "total": 362.833646987165,
+            "mode": "normal",
+            "condition": "一般",
+            "ordinary": 345.0000000000009,
+            "skill": 17.833646987164144
           }
         ]
       },
@@ -1252,7 +1530,7 @@
           {
             "id": 151,
             "name": "夢幻",
-            "total": 132.4
+            "total": 132.3
           },
           {
             "id": 914,
@@ -1262,19 +1540,19 @@
         ],
         "2": [
           {
-            "id": 94,
-            "name": "耿鬼",
-            "total": 190.7
-          },
-          {
             "id": 442,
             "name": "花岩怪",
-            "total": 181.4
+            "total": 179.4
           },
           {
             "id": 591,
             "name": "敗露球菇",
             "total": 172.2
+          },
+          {
+            "id": 195,
+            "name": "沼王",
+            "total": 164.9
           }
         ],
         "3": [
@@ -1315,7 +1593,7 @@
           {
             "id": 911,
             "name": "骨紋巨聲鱷",
-            "total": 354.9
+            "total": 291.9
           },
           {
             "id": 910,
@@ -1335,14 +1613,14 @@
             "total": 299.9
           },
           {
-            "id": 94,
-            "name": "耿鬼",
-            "total": 270.4
-          },
-          {
             "id": 148,
             "name": "哈克龍",
             "total": 230.9
+          },
+          {
+            "id": 94,
+            "name": "耿鬼",
+            "total": 222.5
           }
         ],
         "7": [
@@ -1483,11 +1761,6 @@
         ],
         "15": [
           {
-            "id": 71102,
-            "name": "南瓜怪人(小顆種)",
-            "total": 274
-          },
-          {
             "id": 248,
             "name": "班基拉斯",
             "total": 270
@@ -1496,6 +1769,11 @@
             "id": 76,
             "name": "隆隆岩",
             "total": 266.5
+          },
+          {
+            "id": 914,
+            "name": "狂歡浪舞鴨",
+            "total": 262.8
           }
         ],
         "16": [
@@ -1536,17 +1814,17 @@
           {
             "id": 71102,
             "name": "南瓜怪人(小顆種)",
-            "total": 150.4
+            "total": 123.8
           },
           {
             "id": 711,
             "name": "南瓜怪人(中顆種)",
-            "total": 145.8
+            "total": 120
           },
           {
             "id": 71103,
             "name": "南瓜怪人(大顆種)",
-            "total": 141.3
+            "total": 116.4
           }
         ],
         "19": [
@@ -1563,7 +1841,7 @@
           {
             "id": 151,
             "name": "夢幻",
-            "total": 132.4
+            "total": 132.3
           }
         ]
       }

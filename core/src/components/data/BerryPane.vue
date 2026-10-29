@@ -21,6 +21,7 @@ const tab = shallowRef<'energy' | 'production'>('energy')
 const producers = computed(() => current.value ? fixedBerryProducers(current.value.name) : [])
 function showBerry(name: string) { tab.value = 'energy'; open.value = name }
 const amount = (value: number) => value.toFixed(1)
+const conditions: Record<string, string> = { full: '全时满包', normal: '一般', unlimited: '无持有上限' }
 </script>
 
 <template>
@@ -66,10 +67,11 @@ const amount = (value: number) => value.toFixed(1)
           <span class="berry-producer-rank">{{ index + 1 }}</span>
           <PokeSprite :id="p.id" :name="p.name" />
           <div class="berry-producer-info">
-            <strong>{{ p.name }}</strong>
+            <strong>{{ p.name }}（{{ p.condition ?? conditions[p.mode ?? ''] ?? '一般' }}）</strong>
           </div>
           <div class="berry-producer-output">
             <strong>{{ amount(p.total) }}<span> 颗/日</span></strong>
+            <span v-if="p.skill != null && p.skill > 0" class="berry-skill-yield">其中技能 {{ amount(p.skill) }} 颗/日</span>
           </div>
         </div>
         <p v-if="!producers.length" class="muted">暂无产出这种树果的宝可梦。</p>
@@ -89,5 +91,6 @@ const amount = (value: number) => value.toFixed(1)
 .berry-producer-output { display: flex; flex-direction: column; gap: 4px; text-align: right; font-variant-numeric: tabular-nums; }
 .berry-producer-output strong { color: var(--sage); white-space: nowrap; }
 .berry-producer-output strong > span { font-size: var(--font-11); font-weight: 400; }
+.berry-skill-yield { font-size: var(--font-11); color: var(--muted); }
 @media (max-width: 360px) { .berry-producer { flex-wrap: wrap; } .berry-producer-output { margin-left: 26px; flex-basis: calc(100% - 26px); flex-direction: row; justify-content: space-between; align-items: baseline; } }
 </style>

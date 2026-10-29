@@ -1,7 +1,7 @@
 import { POKEDEX } from './data'
 import { defaultSettings } from './defaults'
 import { snapshotActivity } from './activities'
-import { extremeInputs, ingredientYield } from './extremeProduction'
+import { extremeInputs, ingredientYield, productionRankingSettings } from './extremeProduction'
 import { resourceRevision } from '../resources/runtime'
 import type { ProduceInput, Settings } from '../types'
 export interface ProducerRank {
@@ -14,7 +14,7 @@ export interface ProducerRank {
 }
 const cache = new Map<string, ProducerRank[]>()
 export function* topIngredientProducerSteps(ingredientId: number, settings: Settings = defaultSettings()): Generator<void, ProducerRank[]> {
-  const context = snapshotActivity({ ...settings, period: 'day' as const, helpingBonus: 0 })
+  const context = snapshotActivity(productionRankingSettings(settings))
   const key = JSON.stringify([resourceRevision(), ingredientId, context])
   if (cache.has(key)) return cache.get(key)!
   const rows: ProducerRank[] = []

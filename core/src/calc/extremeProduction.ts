@@ -8,6 +8,38 @@ import { produce, findingRate } from './produce'
 import { applyMainSkill, type EffectActor } from './skillEffects'
 import { resolveMemberSkill } from './mew'
 import { compareHelpingBonus } from './member'
+import { createActivityContext } from './activities'
+import { skillStorageLimit } from './specialty'
+import { exEffects } from './exEffects'
+
+/** Production reference data is a permanent baseline, independent of dated events. */
+export function productionRankingSettings(settings: Settings): Settings {
+  return { ...settings, period: 'day', helpingBonus: 0, activity: {
+    startDate: settings.activity?.startDate ?? createActivityContext('day').startDate,
+    catalog: { schemaVersion: 1, version: 'production-no-activities-v1', activities: [] },
+  } }
+}
+
+/** Continuous ingredient collection does not remove overnight skill storage.
+ * E[min(Binomial(n,p), capacity)] credits the skill(s) available on waking.
+ * Fractional helps use the same continuous expectation as the production panel.
+ * Reference: https://pks.raenonx.cc/zh/ingredient/chart
+ */
+export function rankingSkillProcs(helps: number, rate: number, sleepStart: string, sleepEnd: string, capacity: number): number {
+  const minutes = (clock: string) => { const [h, m] = clock.split(':').map(Number); return (h! % 24) * 60 + (m || 0) }
+  const night = helps * ((minutes(sleepEnd) - minutes(sleepStart) + 1440) % 1440) / 1440
+  const probability = Math.min(1, Math.max(0, rate))
+  if (!helps || !probability) return 0
+  let stored: number
+  if (probability === 1) stored = Math.min(capacity, night)
+  else {
+    const zero = Math.exp(night * Math.log1p(-probability))
+    const one = night * probability / (1 - probability) * zero
+    stored = capacity === 1 ? 1 - zero : 2 - 2 * zero - one
+    stored = Math.min(capacity, night * probability, Math.max(0, stored))
+  }
+  return (helps - night) * probability + stored
+}
 
 export interface ExtremeYield {
   input: ProduceInput
@@ -104,6 +136,7 @@ export function* extremeInputs(pokeId: number, objective: 'berries' | 'ingredien
  * Uses the same skill tables and five-person self-target denominator as teams.
  */
 export function ingredientYield(settings: Settings, input: ProduceInput, ingredientId: number): ExtremeYield {
+  settings = productionRankingSettings(settings)
   const poke = pokeById(input.pokeId)!
   const helpingBonus = compareHelpingBonus(input.level, input.subskills, 0)
   const result = produce(settings, input, helpingBonus, undefined, { naturalOnly: true })
@@ -111,10 +144,13 @@ export function ingredientYield(settings: Settings, input: ProduceInput, ingredi
   if (!name) return { input, total: 0, ordinary: 0, skill: 0 }
   const ordinary = result.ingredients[name] ?? 0
   const selected = resolveMemberSkill(poke, input)
+  const skillRate = Math.min(1, findingRate(selected.rate, input.nature, 'skill', input.subskills.slice(0, 4), 'skillS', 'skillM')
+    * exEffects(settings, poke.berry, poke.specialty).skillMultiplier)
+  result.skillProcs = rankingSkillProcs(result.helps, skillRate, settings.sleepStart, settings.sleepEnd, skillStorageLimit(poke.specialty))
   let skill = 0
   const ingRate = findingRate(poke.ingredientRate, input.nature, 'ingredient', input.subskills.slice(0, 4), 'ingS', 'ingM')
   const actor: EffectActor = { poke: { ...poke, mainSkill: selected.name }, input, energy: 100, factor: 1,
-    skillLv: clampSkillLevel(selected.name, input.skillLevel), skillRate: result.helps ? result.skillProcs / result.helps : 0,
+    skillLv: clampSkillLevel(selected.name, input.skillLevel), skillRate,
     unitBerry: 0, result }
   applyMainSkill(actor, [actor], {
     ingredient() {}, pot() {}, crit() {}, charge() {}, skillOnly() {},
