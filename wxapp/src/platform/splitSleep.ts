@@ -1,8 +1,9 @@
+import { withResources, resourceRevision, compatibleCheckpoint } from '../../../core/src/resources/runtime'
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { requireWorkerSupport } from './compatibility'
 import { validateSplitOptions, type SplitCheckpoint, type SplitMessage, type SplitOptions, type SplitResult } from '../../../core/src/calc/splitSleep'
 
-interface SavedTask { options: SplitOptions, checkpoint?: SplitCheckpoint, progress: { completed: number, total: number } }
+interface SavedTask { resourceRevision?: string; options: SplitOptions, checkpoint?: SplitCheckpoint, progress: { completed: number, total: number } }
 export function useSplitSleep(options: Ref<SplitOptions>) {
   const key = 'split-sleep-checkpoint-v1'
   const busy = shallowRef(false), error = shallowRef(''), notice = shallowRef('')
@@ -13,7 +14,7 @@ export function useSplitSleep(options: Ref<SplitOptions>) {
   function persist() {
     if (!task) return
     task.progress = { ...progress.value }; persistedAt = Date.now()
-    try { wx.setStorageSync(key, task) }
+    try { wx.setStorageSync(key, { ...task, resourceRevision: resourceRevision() }) }
     catch { notice.value = '存储空间不足，请保持小程序在前台完成计算' }
   }
   function stop(clear = true) {
@@ -48,7 +49,7 @@ export function useSplitSleep(options: Ref<SplitOptions>) {
         if (foreground && resumeOnKill) { resumeOnKill = false; void launch() }
         else if (foreground) busy.value = false
       })
-      current.postMessage({ splitOptions: snapshot.options, checkpoint: snapshot.checkpoint })
+      current.postMessage(withResources({ splitOptions: snapshot.options, checkpoint: snapshot.checkpoint }))
     } catch (cause) {
       if (active === generation) { error.value = cause instanceof Error ? cause.message : '无法启动计算，请在真机或新版微信中重试'; stop(false) }
     }
@@ -66,7 +67,7 @@ export function useSplitSleep(options: Ref<SplitOptions>) {
   wx.onAppHide?.(hide); wx.onAppShow?.(show)
   try {
     const saved = wx.getStorageSync(key) as SavedTask | undefined
-    if (saved?.options && !validateSplitOptions(saved.options) && JSON.stringify(saved.options) === JSON.stringify(options.value)) {
+    if (saved?.options && compatibleCheckpoint(saved) && !validateSplitOptions(saved.options) && JSON.stringify(saved.options) === JSON.stringify(options.value)) {
       task = saved; progress.value = saved.progress ?? { completed: 0, total: 0 }; notice.value = '正在恢复上次未完成的计算'; void launch()
     }
   } catch { /* Corrupt local records never block a new calculation. */ }

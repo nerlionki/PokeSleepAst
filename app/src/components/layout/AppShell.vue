@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { useFeaturesStore } from '../../../../core/src/stores/features'
 import { taskNavigationLocked } from '../../../../core/src/composables/taskNavigationLock'
+import { usePageTab } from '../../../../core/src/composables/usePageTab'
 import { computed, onMounted, watchEffect } from 'vue'
 import { useAppearanceStore } from '../../../../core/src/stores/appearance'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
@@ -19,6 +21,7 @@ const titles: Record<string, string> = {
 }
 
 const route = useRoute()
+const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
 const title = computed(() => titles[String(route.name)] ?? '宝睡助手')
 const settings = useSettingsStore()
 const updater = useUpdateStore()
@@ -31,6 +34,7 @@ onMounted(async () => {
   void updater.initialize()
   await Promise.all([
     settings.hydrate(),
+    useFeaturesStore().hydrate(),
     appearance.hydrate(),
     useBoxStore().hydrate(),
     useRosterStore().hydrate(),
@@ -40,7 +44,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'dex-shell': route.name === 'pokemon' && pokemonTab === 'dex' }">
     <header class="topbar">
       <div class="brand">
         <small>CAMP RESEARCH</small>

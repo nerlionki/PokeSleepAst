@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'

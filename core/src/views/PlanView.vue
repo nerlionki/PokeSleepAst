@@ -36,6 +36,6 @@ const tab = usePageTab(['catch', 'sleep', 'split', 'baby', 'completion', 'candy'
     <CompletionEfficiencyPane v-else-if="tab === 'completion'" />
     <CandyPane v-else-if="tab === 'candy'" />
     <WhistlePane v-else-if="tab === 'whistle'" />
-    <TrainPane v-else />
+    <TrainPane v-else-if="tab === 'train'" />
   </div>
 </template>

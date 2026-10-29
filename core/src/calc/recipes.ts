@@ -1,4 +1,4 @@
-import extracted0 from '../data/client-defaults.json'
+import extracted0 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { RECIPE_LEVEL_MAX, recipeLevelMult } from './cook'
 import { RECIPES } from './data'

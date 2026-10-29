@@ -1,6 +1,6 @@
-import ruleParameters from '../data/rule-parameters.json'
+import ruleParameters from '../data/rule-parameters.resource'
 /** RAE 睡姿图鉴的逐睡姿奖励：https://pks.raenonx.cc/zh/sleepdex/lookup */
-import rewards from '../data/sleep-rewards.json'
+import rewards from '../data/sleep-rewards.resource'
 import { unlockedSubskills } from './member'
 const sleepRewards_teamResearchBonuses_ruleParameters = ruleParameters.modules.sleepRewards.teamResearchBonuses
 const sleepRewards_boostedResearchReward_ruleParameters = ruleParameters.modules.sleepRewards.boostedResearchReward

@@ -1,14 +1,11 @@
-import { createPinia } from 'pinia'
 import { createApp } from 'vue'
-import App from './App.vue'
-import { router } from './router'
-import './style.css'
-import { Capacitor } from '@capacitor/core'
-import { backDirective, installAndroidBack } from './navigation/back'
-import { confirmAppExit } from './platform/appNavigation'
-import { installAppLogging } from './platform/appLogs'
-
-const app = createApp(App).use(createPinia()).use(router).directive('back', backDirective)
-installAppLogging(app)
-if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') installAndroidBack(router, window, confirmAppExit)
-app.mount('#app')
+import ResourceLoading from '../../core/src/components/shared/ResourceLoading.vue'
+import { updateLoadingProgress } from '../../core/src/resources/loadingProgress'
+import { resourcesReady } from './platform/resources'
+const loading = createApp(ResourceLoading)
+loading.mount('#app')
+void resourcesReady.then(async () => {
+  const { mountApp } = await import('./bootstrap')
+  loading.unmount()
+  mountApp()
+}).catch(() => { updateLoadingProgress({ percent: 100, label: '应用加载失败，请重新打开' }) })

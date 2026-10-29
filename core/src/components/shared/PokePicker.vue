@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
 import { BERRIES, INGREDIENTS, POKEDEX } from '../../calc/data'
@@ -69,42 +69,44 @@ const filterOn = computed(() => Boolean(spec.value || type.value || sleep.value 
     </button>
     <Teleport to="body">
       <div v-if="open" v-back="() => { open = false }" class="overlay picker-overlay" @click.self="open = false">
-        <section class="sheet picker-sheet stack">
-          <div class="row">
+        <section class="sheet picker-sheet">
+          <header class="picker-header">
             <h3>选择宝可梦</h3>
-            <button class="btn ghost" type="button" @click="open = false">关闭</button>
-          </div>
-          <input v-model="q" class="picker-search" placeholder="搜索中文、英文、属性或编号">
-          <div class="picker-filters">
-            <button type="button" :class="{ on: panel === 'spec' || spec }" @click="toggle('spec')">定位</button>
-            <button type="button" :class="{ on: panel === 'type' || type }" @click="toggle('type')">属性</button>
-            <button type="button" :class="{ on: panel === 'sleep' || sleep }" @click="toggle('sleep')">睡眠类型</button>
-            <button type="button" :class="{ on: panel === 'ing' || ing }" @click="toggle('ing')">食材</button>
-            <button type="button" class="ghost" @click="clearFilters">清空筛选</button>
-          </div>
-          <div v-if="panel === 'spec'" class="picker-opts">
-            <button v-for="s in specs" :key="s" type="button" :class="{ on: s === '全部' ? !spec : spec === s }" @click="spec = s === '全部' || spec === s ? '' : s">{{ s }}</button>
-          </div>
-          <div v-else-if="panel === 'type'" class="picker-opts">
-            <button v-for="t in types" :key="t" type="button" :class="{ on: type === t }" @click="type = type === t ? '' : t">{{ t }}</button>
-          </div>
-          <div v-else-if="panel === 'sleep'" class="picker-opts">
-            <button v-for="s in sleeps" :key="s" type="button" :class="{ on: sleep === s }" @click="sleep = sleep === s ? '' : s">{{ s }}</button>
-          </div>
-          <div v-else-if="panel === 'ing'" class="picker-opts">
-            <button v-for="i in INGREDIENTS" :key="i.id" type="button" :class="{ on: ing === i.name }" @click="ing = ing === i.name ? '' : i.name">{{ i.name }}</button>
-          </div>
-          <p class="muted">{{ list.length }} 只宝可梦{{ filterOn ? ' · 已筛选' : ' · 食材按可携带种类筛选' }}</p>
-          <div class="poke-grid">
-            <button v-for="p in list" :key="p.id + p.name" type="button" class="poke-cell" :class="{ on: p.id === model }" @click="pick(p.id)">
-              <PokeSprite :id="p.id" :name="p.name" />
-              <span>{{ props.nameOverrides?.[p.id] ?? p.name }}</span>
-              <em class="berry-name"><BerryIcon :name="p.berry" small />{{ p.berryType }}</em>
-            </button>
-          </div>
-          <p class="muted">超梦等部分种类若缺定位/食材，对应筛选不会命中。</p>
-        </section>
-      </div>
-    </Teleport>
-  </div>
-</template>
+            <button class="btn ghost picker-close" type="button" @click="open = false">关闭</button>
+          </header>
+          <div class="picker-body stack">
+            <input v-model="q" class="picker-search" placeholder="搜索中文、英文、属性或编号">
+            <div class="picker-filters">
+              <button type="button" :class="{ on: panel === 'spec' || spec }" @click="toggle('spec')">定位</button>
+              <button type="button" :class="{ on: panel === 'type' || type }" @click="toggle('type')">属性</button>
+              <button type="button" :class="{ on: panel === 'sleep' || sleep }" @click="toggle('sleep')">睡眠类型</button>
+              <button type="button" :class="{ on: panel === 'ing' || ing }" @click="toggle('ing')">食材</button>
+              <button type="button" class="ghost" @click="clearFilters">清空筛选</button>
+            </div>
+            <div v-if="panel === 'spec'" class="picker-opts">
+              <button v-for="s in specs" :key="s" type="button" :class="{ on: s === '全部' ? !spec : spec === s }" @click="spec = s === '全部' || spec === s ? '' : s">{{ s }}</button>
+            </div>
+            <div v-else-if="panel === 'type'" class="picker-opts">
+              <button v-for="t in types" :key="t" type="button" :class="{ on: type === t }" @click="type = type === t ? '' : t">{{ t }}</button>
+            </div>
+            <div v-else-if="panel === 'sleep'" class="picker-opts">
+              <button v-for="s in sleeps" :key="s" type="button" :class="{ on: sleep === s }" @click="sleep = sleep === s ? '' : s">{{ s }}</button>
+            </div>
+            <div v-else-if="panel === 'ing'" class="picker-opts">
+              <button v-for="i in INGREDIENTS" :key="i.id" type="button" :class="{ on: ing === i.name }" @click="ing = ing === i.name ? '' : i.name">{{ i.name }}</button>
+            </div>
+            <p class="muted">{{ list.length }} 只宝可梦{{ filterOn ? ' · 已筛选' : ' · 食材按可携带种类筛选' }}</p>
+            <div class="poke-grid">
+              <button v-for="p in list" :key="p.id + p.name" type="button" class="poke-cell" :class="{ on: p.id === model }" @click="pick(p.id)">
+                <PokeSprite :id="p.id" :name="p.name" />
+                <span>{{ props.nameOverrides?.[p.id] ?? p.name }}</span>
+                <em class="berry-name"><BerryIcon :name="p.berry" small />{{ p.berryType }}</em>
+              </button>
+            </div>
+            <p class="muted">超梦等部分种类若缺定位/食材，对应筛选不会命中。</p>
+            </div>
+          </section>
+        </div>
+      </Teleport>
+    </div>
+  </template>

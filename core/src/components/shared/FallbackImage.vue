@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { shallowRef, watch } from 'vue'
 const components_shared_FallbackImage_config_clientDefaults = clientDefaults.modules.components_shared_FallbackImage
@@ -16,6 +16,6 @@ function onError() {
 </script>
 
 <template>
-  <img v-if="src && !failed" v-bind="$attrs" :src="src" :alt="alt" @error="onError">
+  <img loading="lazy" decoding="async" v-if="src && !failed" v-bind="$attrs" :src="src" :alt="alt" @error="onError">
   <slot v-else name="fallback" />
 </template>

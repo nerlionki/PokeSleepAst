@@ -1,8 +1,8 @@
-import ruleParameters from '../data/rule-parameters.json'
-import extracted0 from '../data/client-defaults.json'
-import extracted1 from '../data/calc-tables.json'
+import ruleParameters from '../data/rule-parameters.resource'
+import extracted0 from '../data/client-defaults.resource'
+import extracted1 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
-import mythical from '../data/mythical.json'
+import mythical from '../data/mythical.resource'
 import { pokeById } from './data'
 const specialty_config_extracted0 = extracted0.modules.specialty
 const specialty_config_extracted1 = extracted1.modules.specialty

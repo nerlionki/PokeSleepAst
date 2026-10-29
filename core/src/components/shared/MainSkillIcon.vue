@@ -19,5 +19,5 @@ const src = computed(() => (skillId.value ? mainSkillImageUrl(skillId.value) : '
 </script>
 
 <template>
-  <img v-if="src" class="skill-icon" :src="src" :alt="name || ''">
+  <img loading="lazy" decoding="async" v-if="src" class="skill-icon" :src="src" :alt="name || ''">
 </template>

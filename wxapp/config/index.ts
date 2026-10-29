@@ -39,6 +39,11 @@ export default defineConfig({
         .include.add(path.resolve(__dirname, '../../core/src/data')).end()
         .type('javascript/auto')
         .use('compressed-json').loader(path.resolve(__dirname, 'compressed-json.cjs'))
+      // Image indexes are large plain JSON too. Preserve their values while
+      // keeping the resource update feature within the existing main-pack limit.
+      chain.module.rule('compressed-core-data').include
+        .add(path.resolve(__dirname, '../src/platform/image-map.json'))
+        .add(path.resolve(__dirname, '../src/platform/image-manifest.json'))
       chain.externals({ '#image-loader': 'commonjs ./image-loader.js' })
       chain.plugin('native-image-loader-paths').use(NativeImageLoaderPlugin)
       chain.plugin('weapp-tailwindcss').use(WeappTailwindcss, [{

@@ -1,4 +1,4 @@
-import extracted0 from '../data/compatibility-maps.json'
+import extracted0 from '../data/compatibility-maps.resource'
 import { cloneData } from './dataClone'
 import { BERRIES, berryByName } from './data'
 

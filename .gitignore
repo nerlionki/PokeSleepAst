@@ -57,3 +57,8 @@ wxapp/scripts/test-*.mjs
 
 # Local extraction baselines and comparison outputs
 /.tmp/
+
+# Local logs and rotated logs must not be published.
+*.[lL][oO][gG]
+*.[lL][oO][gG].*
+*.[lL][oO][gG]-*

@@ -1,19 +1,19 @@
-import berries from '../data/berries.json'
-import candyDrops from '../data/candy-drops.json'
-import encounterBands from '../data/encounter-bands.json'
-import fallbacks from '../data/fallbacks.json'
-import ingredients from '../data/ingredients.json'
-import islands from '../data/islands.json'
-import mealRecovery from '../data/meal-recovery.json'
-import natures from '../data/natures.json'
-import pokedex from '../data/pokedex.json'
-import potTiers from '../data/pot-tiers.json'
-import ranks from '../data/ranks.json'
-import recipes from '../data/recipes.json'
-import sleepStyles from '../data/sleep-styles.json'
-import subskills from '../data/subskills.json'
-import subskillDraw from '../data/subskill-draw.json'
-import xp from '../data/xp.json'
+import berries from '../data/berries.resource'
+import candyDrops from '../data/candy-drops.resource'
+import encounterBands from '../data/encounter-bands.resource'
+import fallbacks from '../data/fallbacks.resource'
+import ingredients from '../data/ingredients.resource'
+import islands from '../data/islands.resource'
+import mealRecovery from '../data/meal-recovery.resource'
+import natures from '../data/natures.resource'
+import pokedex from '../data/pokedex.resource'
+import potTiers from '../data/pot-tiers.resource'
+import ranks from '../data/ranks.resource'
+import recipes from '../data/recipes.resource'
+import sleepStyles from '../data/sleep-styles.resource'
+import subskills from '../data/subskills.resource'
+import subskillDraw from '../data/subskill-draw.resource'
+import xp from '../data/xp.resource'
 import type { IslandId } from '../types'
 import { foldText } from './text'
 
@@ -66,6 +66,8 @@ export interface SleepStyleRow {
   styleId?: number
   /** 五星活动限定睡姿。每张地图都展示，不进入平时抽选。 */
   limited?: boolean
+  /** Event-specific rank, verified against the event sleep-style override source. */
+  unlockRank?: number
 }
 
 export const SLEEP_STYLES = sleepStyles as SleepStyleRow[]

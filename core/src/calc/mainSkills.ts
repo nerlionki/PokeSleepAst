@@ -1,5 +1,5 @@
-import skillRouting from '../data/compatibility-maps.json'
-import extracted0 from '../data/skill-tables.json'
+import skillRouting from '../data/compatibility-maps.resource'
+import extracted0 from '../data/skill-tables.resource'
 import { cloneData } from './dataClone'
 import { foldText } from './text'
 const mainSkills_config_extracted0 = extracted0.modules.mainSkills

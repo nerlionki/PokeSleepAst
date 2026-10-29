@@ -12,8 +12,9 @@ const tab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
 </script>
 
 <template>
-  <div class="stack">
+  <div class="stack pokemon-view" :class="{ 'dex-view': tab === 'dex' }">
     <Segmented
+      class="pokemon-tabs"
       v-if="!(tab === 'box' && route.query.boxOverview === '1')"
       v-model="tab"
       :inert="taskNavigationLocked"
@@ -25,6 +26,11 @@ const tab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
     />
     <PokedexPane v-if="tab === 'dex'" />
     <BoxPane v-else-if="tab === 'box'" />
-    <SleepGallery v-else />
+    <SleepGallery v-else-if="tab === 'wall'" />
   </div>
 </template>
+
+<style scoped>
+.dex-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.dex-view > .pokemon-tabs { flex-shrink: 0; }
+</style>

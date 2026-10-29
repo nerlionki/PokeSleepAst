@@ -10,7 +10,17 @@ exports.loadImageModule = function (name) {
     "asset-pack4": () => require.async("./asset-pack4/images.js"),
     "asset-pack5": () => require.async("./asset-pack5/images.js"),
     "asset-pack6": () => require.async("./asset-pack6/images.js"),
-    "asset-pack7": () => require.async("./asset-pack7/images.js")
+    "asset-pack7": () => require.async("./asset-pack7/images.js"),
+    "asset-pack8": () => require.async("./asset-pack8/images.js"),
+    "asset-pack9": () => require.async("./asset-pack9/images.js"),
+    "asset-pack10": () => require.async("./asset-pack10/images.js"),
+    "asset-pack11": () => require.async("./asset-pack11/images.js"),
+    "asset-pack12": () => require.async("./asset-pack12/images.js"),
+    "asset-pack13": () => require.async("./asset-pack13/images.js"),
+    "asset-pack14": () => require.async("./asset-pack14/images.js"),
+    "asset-pack15": () => require.async("./asset-pack15/images.js"),
+    "asset-pack16": () => require.async("./asset-pack16/images.js"),
+    "asset-pack17": () => require.async("./asset-pack17/images.js")
   };
   if (!loaders[name]) return Promise.reject(new Error('Invalid image package'));
   return loaders[name]();

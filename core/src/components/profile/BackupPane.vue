@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { exportText } from '#platform/backup'
 import { shallowRef } from 'vue'

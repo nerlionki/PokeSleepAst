@@ -1,6 +1,6 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleCatalogs from '../data/rule-catalogs.json'
-import ruleParameters from '../data/rule-parameters.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleCatalogs from '../data/rule-catalogs.resource'
+import ruleParameters from '../data/rule-parameters.resource'
 import { activityValues, createActivityContext, type ActivityContext } from './activities'
 import { normalizeEventMix } from './sleepRules'
 import type { IslandId, SleepType } from '../types'
@@ -19,7 +19,7 @@ export interface SleepSimulationRequest {
   powers: number[]
   iterations: number
   seed: number
-  options: Pick<DrawOpts, 'activity' | 'researchedBefore' | 'researchLimit' | 'firstResearchExtras' | 'rank' | 'discovered' | 'undiscoveredBoost' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps' | 'researchExpBonus' | 'shardBonus' | 'focusIncense' | 'luckIncense'> & { incenseSession?: 0 | 1 }
+  options: Pick<DrawOpts, 'campTicket' | 'activity' | 'researchedBefore' | 'researchSession' | 'researchLimit' | 'firstResearchExtras' | 'rank' | 'discovered' | 'undiscoveredBoost' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps' | 'researchExpBonus' | 'shardBonus' | 'focusIncense' | 'luckIncense'> & { incenseSession?: 0 | 1 }
 }
 export interface SleepSimulationCheckpoint { version: 4, activity?: ActivityContext, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint }
 export type SleepSimulationRows = ReturnType<typeof sleepExpect>
@@ -35,6 +35,8 @@ function prepareActivityRequest(request: SleepSimulationRequest): SleepSimulatio
 }
 function researchOptions(request: SleepSimulationRequest, index: number): DrawOpts & { seed: number } {
   return { ...request.options,
+    campTicket: Boolean(request.options.campTicket && index === 0 && (request.options.researchSession ?? Number((request.options.researchedBefore ?? 0) > 0)) === 0),
+    researchSession: index > 0 || (request.options.researchSession ?? Number((request.options.researchedBefore ?? 0) > 0)) > 0 ? 1 : 0,
     focusIncense: index === (request.options.incenseSession ?? 0) && request.options.focusIncense,
     luckIncense: index === (request.options.incenseSession ?? 0) && request.options.luckIncense,
     researchedBefore: (request.options.researchedBefore ?? 0) + (index ? encounterCount(request.island, request.powers[0]!) + (request.options.firstResearchExtras ?? 0) : 0), seed: request.seed + index } as DrawOpts & { seed: number }
@@ -44,6 +46,8 @@ function validResearchOptions(request: SleepSimulationRequest) {
     && sleepSimulation_config_ruleCatalogs.validResearchOptionsList0.values.includes(request.options.researchLimit ?? (sleepSimulation_validResearchOptions_runtimeParameters.p002 as 10))
     && [request.options.researchExpBonus ?? 0, request.options.shardBonus ?? 0].every(value => Number.isInteger(value) && value >= 0 && value <= (sleepSimulation_validResearchOptions_runtimeParameters.p003 as 5))
     && [0,1].includes(request.options.incenseSession ?? 0)
+    && [0,1].includes(request.options.researchSession ?? 0)
+    && !(request.options.researchSession === 1 && request.powers.length > 1)
 }
 /** Runs exclusively inside a platform worker; each split session keeps its own seed/budget. */
 export function simulateSleep(request: SleepSimulationRequest, emit: (message: SleepSimulationMessage) => void): void {

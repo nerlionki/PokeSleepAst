@@ -17,7 +17,7 @@ const files = walk(dist)
 for (const worker of ['baby.js', 'sleep.js', 'ocr.js']) if (!fs.existsSync(path.join(dist, 'workers', worker))) throw Error('Missing background calculation worker: ' + worker)
 const require = createRequire(import.meta.url)
 const compressedJson = require('../config/compressed-json.cjs')
-for (const file of walk(path.resolve(root, '../core/src/data')).filter(file => file.endsWith('.json'))) {
+for (const file of [...walk(path.resolve(root, '../core/src/data')).filter(file => file.endsWith('.json')), ...['image-map.json', 'image-manifest.json'].map(name => path.join(root, 'src/platform', name))]) {
   const source = fs.readFileSync(file, 'utf8')
   const module = { exports: {} }
   runInNewContext(compressedJson(source), { module, require, Uint8Array, wx: {
@@ -28,9 +28,16 @@ for (const file of walk(path.resolve(root, '../core/src/data')).filter(file => f
   } }, { filename: file })
   if (JSON.stringify(module.exports) !== JSON.stringify(JSON.parse(source))) throw Error(`Compressed JSON changed data: ${file}`)
 }
-console.log('Verified lossless synchronous decompression of every shared data table.')
+console.log('Verified lossless synchronous decompression of every shared data table and both image indexes.')
 const images = JSON.parse(fs.readFileSync(path.join(root, 'src/platform/image-map.json'), 'utf8'))
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'src/platform/image-manifest.json'), 'utf8'))
+const imageKinds = new Map()
+for (const [file, url] of Object.entries(images)) {
+  const pack = manifest[url]?.pack
+  const kind = file.includes('/shiny/') ? 'shiny' : 'ordinary'
+  if (imageKinds.has(pack) && imageKinds.get(pack) !== kind) throw Error(`Shiny images must load independently: ${pack}`)
+  imageKinds.set(pack, kind)
+}
 for (const folder of [path.resolve(root, '../core/src/assets/imgs'), path.resolve(root, '../core/public')]) {
   for (const file of walk(folder).filter(file => /\.(webp|png|jpe?g)$/i.test(file))) {
     const key = path.relative(folder, file).replaceAll('\\', '/')
@@ -128,10 +135,24 @@ console.log(`Verified native image require paths from ${importingChunks.length} 
 
 // Native WXML cannot match Vue attribute scopes; verify Tailwind output as well.
 const nativeCss = files.filter(file => file.endsWith('.wxss')).map(file => fs.readFileSync(file, 'utf8')).join('\n')
+// Taro can emit selectors that pass Webpack but fail WeChat's native WXSS parser.
+const postcss = require('postcss')
+for (const file of files.filter(file => file.endsWith('.wxss'))) {
+  postcss.parse(fs.readFileSync(file, 'utf8'), { from: file }).walkRules(rule => {
+    if (/:(?:not|is|where|has)\s*\(|[>+~]\s*:(?!:)/i.test(rule.selector)) {
+      throw Error(`Unsupported native WXSS selector in ${path.relative(dist, file)}: ${rule.selector}`)
+    }
+  })
+}
 if (/\[data-v-[^\]]+\]/.test(nativeCss)) throw Error('Native CSS contains unsupported Vue attribute scopes')
 if (!nativeCss.includes('wx-s-')) throw Error('Missing native class scopes')
 const nativeJs = files.filter(file => file.endsWith('.js') && !/asset-pack|ocr-pack/.test(file)).map(file => fs.readFileSync(file, 'utf8')).join('\n')
+const pokemonJs = fs.readFileSync(path.join(dist, 'pages/pokemon/index.js'), 'utf8')
+if (!/"scroll-y"\s*:\s*(?:true|!0)/.test(pokemonJs) || /"scroll-y"\s*:\s*""/.test(pokemonJs)) {
+  throw Error('Pokemon virtual list must enable native vertical scrolling with a boolean true')
+}
 for (const scope of new Set(nativeCss.match(/wx-s-[a-f0-9]{10}/g))) if (!nativeJs.includes(scope)) throw Error('Style scope is not attached to native elements: ' + scope)
 if (!/tw[^{}]*flex[^{}]*\{[^}]*display\s*:\s*flex/.test(nativeCss)) throw Error('Missing compiled Tailwind flex utilities')
 if (nativeCss.includes('var(--tw-spacing)') && !/--tw-spacing\s*:/.test(nativeCss)) throw Error('Tailwind spacing variable is missing')
 console.log('Verified native class scopes, compiled Tailwind utilities and spacing variables.')
+console.log('Verified the Pokemon virtual list enables native vertical scrolling.')

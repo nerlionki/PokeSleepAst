@@ -97,6 +97,76 @@ export default defineAppConfig({
       ]
     },
     {
+      "name": "asset-pack8",
+      "root": "asset-pack8",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack9",
+      "root": "asset-pack9",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack10",
+      "root": "asset-pack10",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack11",
+      "root": "asset-pack11",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack12",
+      "root": "asset-pack12",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack13",
+      "root": "asset-pack13",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack14",
+      "root": "asset-pack14",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack15",
+      "root": "asset-pack15",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack16",
+      "root": "asset-pack16",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "name": "asset-pack17",
+      "root": "asset-pack17",
+      "pages": [
+        "index"
+      ]
+    },
+    {
       "name": "ocr-pack0",
       "root": "ocr-pack0",
       "pages": [

@@ -1,12 +1,13 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleCatalogs from '../data/rule-catalogs.json'
-import ruleParameters from '../data/rule-parameters.json'
-import extracted0 from '../data/client-defaults.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleCatalogs from '../data/rule-catalogs.resource'
+import ruleParameters from '../data/rule-parameters.resource'
+import extracted0 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import type { BoxPokemon, Settings } from '../types'
 import { berryByName, NATURES, pokeById } from './data'
 import { berryUnitEnergy as unitEnergy } from './berry'
 import { exEffects } from './exEffects'
+import { activityBerrySettings, createActivityContext } from './activities'
 import { energyMultiplier, levelInterval } from './helpSpeed'
 import { berryCount, slotDrop } from './ingredients'
 import { unlockedSubskills } from './member'
@@ -67,6 +68,7 @@ export interface WhistleResult {
  * https://wikiwiki.jp/poke_sleep/どうぐ/おてつだいホイッスル
  */
 export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBonus: number): WhistleMember {
+  settings = activityBerrySettings(settings, createActivityContext('research', settings.activity))
   const poke = pokeById(pokemon.pokeId)
   if (!poke) throw new Error('宝可梦资料不存在')
   const subs = unlockedSubskills(pokemon.level, pokemon.subskills)

@@ -1,5 +1,5 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import extracted0 from '../data/client-defaults.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import extracted0 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { BERRIES, INGREDIENTS, pokeById, SUBSKILLS } from './data'
 import { MAIN_SKILLS } from './mainSkills'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { newUid } from '../../calc/uid'
 import { computed, shallowRef } from 'vue'
@@ -7,12 +7,16 @@ import { storeToRefs } from 'pinia'
 import { CATCH_MODES, recommendThree, type CatchGoal, type CatchPurpose } from '../../calc/catch'
 import { resolvedSleepdex, sleepdexState } from '../../calc/sleep'
 import { usePlanStore } from '../../stores/plans'
+import { useSettingsStore } from '../../stores/settings'
+import { useActivities } from '../../composables/useActivities'
 import PokePicker from '../shared/PokePicker.vue'
 const components_plan_CatchPane_config_clientDefaults = clientDefaults.modules.components_plan_CatchPane
 
 
 const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
+const { settings } = storeToRefs(useSettingsStore())
+const activity = useActivities(settings, () => settings.value.island)
 const columns = shallowRef<ReturnType<typeof recommendThree> | null>((components_plan_CatchPane_config_clientDefaults["columnsInitial"] as unknown as ReturnType<typeof recommendThree> | null))
 const stamped = shallowRef(components_plan_CatchPane_config_clientDefaults["stampedInitial"])
 const selectedMode = shallowRef(components_plan_CatchPane_config_clientDefaults["selectedModeInitial"])
@@ -24,6 +28,7 @@ const fingerprint = computed(() => JSON.stringify({
   mode: plan.value.sleepdexMode,
   dex: plan.value.sleepdex,
   excluded: plan.value.sleepdexExcluded,
+  activity: activity.context.value,
 }))
 const dirty = computed(() => stamped.value !== '' && stamped.value !== fingerprint.value)
 
@@ -61,7 +66,7 @@ function coverage(pokeId: number) {
 }
 
 function generate() {
-  columns.value = recommendThree(plan.value.catchGoals, discovered.value, [selectedMode.value])
+  columns.value = recommendThree(plan.value.catchGoals, discovered.value, [selectedMode.value], activity.context.value)
   stamped.value = fingerprint.value
 }
 
@@ -122,7 +127,7 @@ function purposeLabel(purpose: CatchPurpose) {
       <article v-for="pick in col.results" :key="pick.islandId" class="card rec-card">
         <header class="row">
           <strong>{{ pick.island }}</strong>
-          <span class="muted">命中 {{ pick.count }} · {{ pick.score }}</span>
+          <span class="muted">命中 {{ pick.count }} / {{ pick.score }}</span>
         </header>
         <div v-for="group in pick.sleepGroups" :key="group.sleepType" class="rec-sleep">
           <span>{{ group.sleepType }}</span>

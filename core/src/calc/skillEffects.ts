@@ -1,7 +1,7 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleCatalogs from '../data/rule-catalogs.json'
-import ruleParameters from '../data/rule-parameters.json'
-import extracted0 from '../data/skill-tables.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleCatalogs from '../data/rule-catalogs.resource'
+import ruleParameters from '../data/rule-parameters.resource'
+import extracted0 from '../data/skill-tables.resource'
 import { cloneData } from './dataClone'
 import { INGREDIENTS, berryByName, pokeById } from './data'
 import { MAIN_SKILLS, clampSkillLevel, mainSkillValue, skillByPokedexName } from './mainSkills'
@@ -80,6 +80,7 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
     const food = (amount: number, pool = INGREDIENTS) => { for (const ingredient of pool) context.ingredient(actor, ingredient.name, amount * w / pool.length) }
     const berry = (target: EffectActor, amount: number) => {
       target.result.berries += amount * w
+      target.result.skillBerries = (target.result.skillBerries ?? 0) + amount * w
       target.result.berryEnergy += amount * w * target.unitBerry
     }
     const matchingSpecies = Math.min((skillEffects_applyMainSkill_runtimeParameters.p002 as 5), Math.max(1, new Set(team.filter(member => member.poke.berry === actor.poke.berry).map(member => member.poke.id)).size)) - 1
@@ -132,7 +133,7 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
         break
       }
       case 9:
-        for (const target of team) context.help(target, value('帮忙') * w / team.length)
+        for (const target of team) context.help(target, value('帮忙') * w / Math.max(team.length, actor.input.supportTeamSize ?? team.length))
         break
       case 14:
         for (const target of team) context.help(target, BOOST[level-1]![matchingSpecies]! * w)

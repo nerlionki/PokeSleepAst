@@ -1,4 +1,4 @@
-import ruleCatalogs from '../data/rule-catalogs.json'
+import ruleCatalogs from '../data/rule-catalogs.resource'
 /** Wiki research model; UP multipliers are simulator assumptions, not confirmed game rates. */
 export type EventMix = 'off' | 'some' | 'all'
 import { EVENT_PARAMETERS } from './activities'

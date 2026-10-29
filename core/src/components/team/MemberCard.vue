@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { resolveMemberSkill } from '../../calc/mew'
@@ -14,6 +14,8 @@ import { natureStatFactor } from '../../calc/natureLabels'
 import { ribbonBonus, stagesLeft } from '../../calc/ribbon'
 import { carryLimit } from '../../calc/timeline'
 import { useSettingsStore } from '../../stores/settings'
+import { activityBerrySettings } from '../../calc/activities'
+import { useActivities } from '../../composables/useActivities'
 import type { CarryMode, ProduceResult } from '../../types'
 import BerryIcon from '../shared/BerryIcon.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
@@ -39,7 +41,9 @@ const props = defineProps<{
   label?: string
 }>()
 
-const { settings } = storeToRefs(useSettingsStore())
+const { settings: rawSettings } = storeToRefs(useSettingsStore())
+const activity = useActivities(rawSettings, () => rawSettings.value.island)
+const settings = computed(() => activityBerrySettings(rawSettings.value, activity.context.value))
 const STAT: Record<string, string> = (cloneData(components_team_MemberCard_config_clientDefaults["STAT"]) as unknown as Record<string, string>)
 
 const poke = computed(() => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, reactive, shallowRef, onMounted, watch } from 'vue'
 import { calculateBoxOverview, defaultOverviewBonuses, formatOverviewAmount, type OverviewBonuses } from '../../calc/boxOverview'

@@ -353,8 +353,49 @@ h1, h2, h3 { font-family: "Noto Serif SC", serif; margin: 0; }
   padding: 8px 10px;
 }
 .poke-pick-txt { display: grid; gap: 2px; }
-.picker-overlay { z-index: 30; align-items: stretch; }
-.picker-sheet { max-height: calc(96dvh - var(--safe-top)); }
+.picker-overlay {
+  z-index: 30;
+  align-items: stretch;
+  grid-template-rows: minmax(0, 1fr);
+}
+.picker-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.picker-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+}
+.picker-header h3 { margin: 0; min-width: 0; }
+.picker-close {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 44px;
+  padding: 0 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.picker-body {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-content: start;
+  padding: 2px;
+  overscroll-behavior-y: contain;
+}
 .picker-search {
   width: 100%;
   background: var(--ink);

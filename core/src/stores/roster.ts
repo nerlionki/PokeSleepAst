@@ -1,5 +1,5 @@
 
-import clientDefaults from '../data/client-defaults.json'
+import clientDefaults from '../data/client-defaults.resource'
 import { cloneData } from '../calc/dataClone'
 import { newUid } from '../calc/uid'
 import { teamRestrictionError } from '../calc/teamRestrictions'
@@ -21,7 +21,10 @@ interface RosterFile {
   slots: (string | null)[]
   customs: TeamCustom[]
   tunes: Record<string, MemberTune>
+  teams?: SavedTeam[]
+  activeTeamId?: string
 }
+export interface SavedTeam { id: string; name: string; slots: (string | null)[]; customs: TeamCustom[]; tunes: Record<string, MemberTune> }
 
 function five(slots: unknown): (string | null)[] {
   const list = Array.isArray(slots) ? slots.slice(0, 5) : []
@@ -35,6 +38,39 @@ export const useRosterStore = defineStore('roster', () => {
   const tunes = ref<Record<string, MemberTune>>((cloneData(stores_roster_config_clientDefaults["tunesInitial"]) as unknown as Record<string, MemberTune>))
   const ready = ref(stores_roster_config_clientDefaults["readyInitial"])
   const error = ref(stores_roster_config_clientDefaults["errorInitial"])
+  const teams = ref<SavedTeam[]>([])
+  const activeTeamId = ref('')
+  function currentTeam(): SavedTeam {
+    return cloneData({ id: activeTeamId.value, name: teams.value.find(team => team.id === activeTeamId.value)?.name ?? '我的队伍', slots: slots.value, customs: customs.value, tunes: tunes.value })
+  }
+  function teamList() { return teams.value.map(team => team.id === activeTeamId.value ? currentTeam() : team) }
+  function selectTeam(id: string) {
+    const target = teams.value.find(team => team.id === id)
+    if (!target || id === activeTeamId.value) return
+    teams.value = teamList()
+    activeTeamId.value = id
+    slots.value = five(target.slots)
+    customs.value = cloneData(target.customs).map(item => ({ ...item, tune: { ...defaultTune(), ...item.tune } }))
+    tunes.value = cloneData(target.tunes)
+    error.value = ''
+  }
+  function createTeam() {
+    const id = newUid()
+    teams.value = [...teamList(), { id, name: `队伍 ${teams.value.length + 1}`, slots: five([]), customs: [], tunes: {} }]
+    selectTeam(id)
+    return id
+  }
+  function renameTeam(id: string, name: string) {
+    teams.value = teams.value.map(team => team.id === id ? { ...team, name: name.trim() || '我的队伍' } : team)
+  }
+  function deleteTeam(id: string) {
+    if (id === activeTeamId.value) {
+      const next = teams.value.find(team => team.id !== id)
+      if (next) selectTeam(next.id)
+      else { activeTeamId.value = ''; slots.value = five([]); customs.value = []; tunes.value = {} }
+    }
+    teams.value = teams.value.filter(team => team.id !== id)
+  }
 
   function memberOf(uid: string | null) {
     return customs.value.find(item => item.uid === uid) ?? useBoxStore().pokemon.find(item => item.uid === uid)
@@ -56,13 +92,21 @@ export const useRosterStore = defineStore('roster', () => {
       slots.value = five(saved.slots)
       customs.value = Array.isArray(saved.customs) ? saved.customs.map((item) => ({ ...item, tune: { ...defaultTune(), ...item.tune } })) : []
       tunes.value = saved.tunes && typeof saved.tunes === 'object' ? saved.tunes : {}
+      teams.value = Array.isArray(saved.teams) ? saved.teams.filter(team => team && typeof team.id === 'string').map(team => ({ ...team, slots: five(team.slots), customs: Array.isArray(team.customs) ? team.customs : [], tunes: team.tunes ?? {} })) : []
+      activeTeamId.value = teams.value.some(team => team.id === saved.activeTeamId) ? saved.activeTeamId! : teams.value[0]?.id ?? ''
+    }
+    if (!teams.value.length && slots.value.some(Boolean)) {
+      activeTeamId.value = newUid()
+      teams.value = [currentTeam()]
     }
     ready.value = true
   }
 
-  watch([slots, customs, tunes], () => {
+  let saving = Promise.resolve()
+  watch([slots, customs, tunes, teams, activeTeamId], () => {
     if (!ready.value) return
-    void saveJson('roster', { slots: slots.value, customs: customs.value, tunes: tunes.value })
+    const snapshot = cloneData({ slots: slots.value, customs: customs.value, tunes: tunes.value, teams: teamList(), activeTeamId: activeTeamId.value })
+    saving = saving.then(() => saveJson('roster', snapshot)).catch(() => { error.value = '队伍未能保存，请检查本机存储空间。' })
   }, { deep: true })
 
   function setSlot(index: number, uid: string | null) {
@@ -124,5 +168,5 @@ export const useRosterStore = defineStore('roster', () => {
     return copy.uid
   }
 
-  return { slots, customs, tunes, ready, error, hydrate, setSlot, addCustom, updateCustom, setTune, duplicateCustom }
+  return { slots, customs, tunes, teams, activeTeamId, teamList, selectTeam, createTeam, renameTeam, deleteTeam, ready, error, hydrate, setSlot, addCustom, updateCustom, setTune, duplicateCustom }
 })

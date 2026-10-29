@@ -1,4 +1,4 @@
-import source from '../data/sleep-last-roll-source.json'
+import source from '../data/sleep-last-roll-source.resource'
 import { sleepStyleInternalId } from './sleepRewards'
 
 const excluded = new Set<number>(source.excludedInternalIds)

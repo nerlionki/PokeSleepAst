@@ -23,6 +23,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.json.JSONObject;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 
 /** User-initiated offline calculation, independent of the Activity and its WebView. */
 public class CalculationService extends Service {
@@ -75,9 +79,9 @@ public class CalculationService extends Service {
             if (id != null && id.equals(activeId)) send(id, new JSObject().put("type", "error").put("message", "已取消计算"));
             cancel(id); return START_NOT_STICKY;
         }
-        String kind = intent.getStringExtra("kind"), request = intent.getStringExtra("request");
+        String kind = intent.getStringExtra("kind"), request = intent.getStringExtra("requestFile");
         if (id == null || request == null) { stopSelf(startId); return START_NOT_STICKY; }
-        if (activeId != null) { send(id, new JSObject().put("type", "error").put("message", "另一个后台任务正在运行，请先取消")); return START_NOT_STICKY; }
+        if (activeId != null) { discardRequest(request); send(id, new JSObject().put("type", "error").put("message", "另一个后台任务正在运行，请先取消")); return START_NOT_STICKY; }
         activeId = id; sequence = 0;
         Notification notification = notification(id, "息屏或切换应用后继续运行");
         if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
@@ -97,9 +101,21 @@ public class CalculationService extends Service {
         JSObject event = new JSObject(); event.put("id", id); event.put("sequence", ++sequence); event.put("message", message);
         snapshots.put(id, event); BackgroundCalculationPlugin.publish(event);
     }
-    private void calculate(String id, String kind, String request, int startId) {
+    private File checkedRequest(String filename) throws IOException {
+        File file = new File(filename).getCanonicalFile();
+        if (!file.getParentFile().equals(getCacheDir().getCanonicalFile()) || !file.getName().startsWith("calculation-") || !file.getName().endsWith(".json")) throw new IOException("计算参数文件无效");
+        return file;
+    }
+    private void discardRequest(String filename) { try { checkedRequest(filename).delete(); } catch (Exception ignored) {} }
+    private void calculate(String id, String kind, String requestPath, int startId) {
         JSObject terminal = null;
         try (JavaScriptSandbox engine = JavaScriptSandbox.createConnectedInstanceAsync(this).get(30, TimeUnit.SECONDS)) {
+            File requestFile = checkedRequest(requestPath);
+            String request;
+            try {
+                if (requestFile.length() > 16_000_000) throw new IOException("计算参数过大");
+                request = new String(Files.readAllBytes(requestFile.toPath()), StandardCharsets.UTF_8);
+            } finally { requestFile.delete(); }
             sandbox = engine;
             if (!id.equals(activeId)) return;
             if (!engine.isFeatureSupported(JavaScriptSandbox.JS_FEATURE_EVALUATE_FROM_FD)
@@ -129,6 +145,7 @@ public class CalculationService extends Service {
         } catch (Exception error) {
             if (id.equals(activeId)) terminal = new JSObject().put("type", "error").put("message", "后台计算失败：" + error.getMessage());
         } finally {
+            discardRequest(requestPath);
             sandbox = null;
             JSObject completed = terminal;
             main.post(() -> {

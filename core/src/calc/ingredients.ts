@@ -1,8 +1,7 @@
-import ruleParameters from '../data/rule-parameters.json'
-import extracted0 from '../data/calc-tables.json'
-import extracted1 from '../data/client-defaults.json'
+import ruleParameters from '../data/rule-parameters.resource'
+import extracted0 from '../data/calc-tables.resource'
+import extracted1 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
-import { POKEDEX } from './data'
 import { isAllRounderId } from './specialty'
 import type { IngredientSlots } from '../types'
 const ingredients_config_extracted0 = extracted0.modules.ingredients
@@ -163,64 +162,4 @@ export function friendTiers(group: number | null | undefined) {
   }))
 }
 
-export interface ProducerRank {
-  id: number
-  name: string
-}
-
-function qtyAt60(line: IngredientLine) {
-  return line.amounts.at(-1) ?? 0
-}
-
-/** 60 级合法食材配置下，每次食材帮忙期望拿到的数量。 */
-function bestExpected(lines: IngredientLine[], ingredientId: number) {
-  if (lines.length > 3) {
-    const line = lines.find((item) => item.id === ingredientId)
-    return line ? qtyAt60(line) : 0
-  }
-  const first = lines[0]
-  if (!first) return 0
-  const second = lines[1]
-  const third = lines[2]
-  const slot2 = second ? [first, second] : [first]
-  const slot3 = [first, ...(second ? [second] : []), ...(third ? [third] : [])]
-  let best = 0
-  for (const mid of slot2) {
-    for (const last of slot3) {
-      const slots = [first, mid, last]
-      const sum = slots.reduce((total, slot) => total + (slot.id === ingredientId ? qtyAt60(slot) : 0), 0)
-      best = Math.max(best, sum / slots.length)
-    }
-  }
-  return best
-}
-
-let producerCache: Map<number, ProducerRank[]> | null = null
-
-function producerTable() {
-  if (producerCache) return producerCache
-  const scores = new Map<number, { id: number, name: string, score: number }[]>()
-  for (const poke of POKEDEX) {
-    const seen = new Set<number>()
-    for (const line of poke.ingredients) {
-      if (seen.has(line.id)) continue
-      seen.add(line.id)
-      const expected = bestExpected(poke.ingredients, line.id)
-      if (expected <= 0 || poke.interval <= 0) continue
-      const score = expected * poke.ingredientRate / poke.interval
-      const list = scores.get(line.id) ?? []
-      list.push({ id: poke.id, name: poke.name, score })
-      scores.set(line.id, list)
-    }
-  }
-  producerCache = new Map()
-  for (const [id, list] of scores) {
-    list.sort((a, b) => b.score - a.score || a.id - b.id)
-    producerCache.set(id, list.slice(0, 3).map(({ id: pokeId, name }) => ({ id: pokeId, name })))
-  }
-  return producerCache
-}
-
-export function topIngredientProducers(ingredientId: number): ProducerRank[] {
-  return producerTable().get(ingredientId) ?? []
-}
+export { topIngredientProducers, topIngredientProducerSteps, type ProducerRank } from './ingredientProduction'

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "2026-10-27",
+  "version": "2026-10-28",
   "modules": {
     "activities": {
       "validateActivityOverridesList0": {
@@ -22,7 +22,8 @@
       "parseActivityCatalogList1": {
         "values": [
           "target",
-          "effects"
+          "effects",
+          "firstResearchOnly"
         ],
         "context": "onlyKeys(rule, ['target', 'effects'], '活动规则')"
       },
@@ -53,7 +54,11 @@
           "endsOn",
           "weekdays",
           "rules",
-          "phases"
+          "phases",
+          "stacking",
+          "spawns",
+          "miniCandyBoost",
+          "favoriteBerries"
         ],
         "context": "onlyKeys(v, ['id', 'name', 'source', 'priority', 'startsOn', 'endsOn', 'weekdays', 'rules', 'phases'], '活动')"
       },
@@ -62,7 +67,8 @@
           "startsOn",
           "endsOn",
           "weekdays",
-          "rules"
+          "rules",
+          "spawns"
         ],
         "context": "onlyKeys(p, ['startsOn', 'endsOn', 'weekdays', 'rules'], '活动阶段')"
       },

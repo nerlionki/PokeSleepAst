@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef, watch } from 'vue'
 import { POT_TIERS, RECIPES } from '../../calc/data'

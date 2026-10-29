@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef, watch } from 'vue'
 import { pokemonIconUrl, pokemonPortraitUrl, pokemonShinyIconUrl, pokemonShinyPortraitUrl } from '../../calc/raeImage'
@@ -36,7 +36,7 @@ function onError() {
 </script>
 
 <template>
-  <img
+  <img loading="lazy" decoding="async"
     v-if="!failed"
     class="sprite"
     :class="{ lg: large }"

@@ -7,7 +7,7 @@ const seeds = flower.seeds
 <template>
   <div class="stack">
     <article class="card stack">
-      <div class="row"><img class="flower-icon" :src="flower.icon" :alt="flower.name"><h3>{{ flower.name }}</h3></div>
+      <div class="row"><img loading="lazy" decoding="async" class="flower-icon" :src="flower.icon" :alt="flower.name"><h3>{{ flower.name }}</h3></div>
       <p>{{ flower.description }}</p>
       <p class="muted">{{ flower.rules }}</p>
     </article>

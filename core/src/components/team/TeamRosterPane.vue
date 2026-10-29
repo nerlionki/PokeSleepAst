@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { computed, shallowRef } from 'vue'
@@ -19,6 +19,8 @@ import MemberCard from './MemberCard.vue'
 import MemberEditor from './MemberEditor.vue'
 const components_team_TeamRosterPane_config_clientDefaults = clientDefaults.modules.components_team_TeamRosterPane
 
+
+const props = withDefaults(defineProps<{ editorOnly?: boolean; productionOnly?: boolean }>(), { editorOnly: false, productionOnly: false })
 
 const LEVELS = cloneData(components_team_TeamRosterPane_config_clientDefaults["LEVELS"])
 
@@ -67,18 +69,18 @@ function toInput(member: SlotMember): ProduceInput & { uid: string, name: string
 
 const analyzed = computed(() => members.value.flatMap((member) => (member && !member.napping ? [toInput(member)] : [])))
 const teamError = computed(() => teamRestrictionError(members.value.flatMap(member => member ? [member] : [])))
-const result = computed(() => teamProduce(settings.value, teamError.value ? [] : analyzed.value))
+const result = computed(() => props.editorOnly ? null : teamProduce(settings.value, teamError.value ? [] : analyzed.value))
 
 const slotResult = computed(() => {
   let cursor = components_team_TeamRosterPane_config_clientDefaults["cursor"]
   return members.value.map((member) => {
     if (!member || member.napping) return null
-    return result.value.members[cursor++] ?? null
+    return result.value?.members[cursor++] ?? null
   })
 })
 
-const bagRows = computed(() => Object.entries(result.value.bag).sort((a, b) => b[1] - a[1]))
-const events = computed(() => result.value.events.slice(0, settings.value.period === 'week' ? 40 : 24))
+const bagRows = computed(() => Object.entries(result.value?.bag ?? {}).sort((a, b) => b[1] - a[1]))
+const events = computed(() => (result.value?.events ?? []).slice(0, settings.value.period === 'week' ? 40 : 24))
 
 const editingDraft = computed({
   get(): MemberDraft | null {
@@ -172,6 +174,7 @@ function saveCustomToBox() {
 <template>
   <div class="stack">
     <p v-if="teamError || roster.error" class="amber" role="alert">{{ teamError || roster.error }}请调整队伍后计算。</p>
+    <template v-if="!props.editorOnly && result">
     <div class="lv-row">
       <span class="muted">LV</span>
       <button type="button" :class="{ on: level === null }" @click="level = null">原级</button>
@@ -195,11 +198,12 @@ function saveCustomToBox() {
       <p class="muted">技能食材、活力与扩锅采用期望状态近似，料理暴击保留概率分支。挥指按 26 种候选等概率估算；道具奖励单列，不自动使用。变身／模仿按队友等概率估算，抽到特殊宝可梦或复制技能时失败并使用能量填充S。</p>
     </article>
 
+    </template>
     <div class="slot-grid">
-      <article v-for="(member, idx) in members" :key="idx" class="slot-card roster-slot" :class="{ rich: member }">
+      <article v-for="(member, idx) in members" v-show="!props.productionOnly || member" :key="idx" class="slot-card roster-slot" :class="{ rich: member }">
         <template v-if="member">
           <MemberCard
-            v-if="slotResult[idx]"
+            v-if="!props.editorOnly && slotResult[idx] && result"
             :poke-id="member.pokeId"
             :level="level ?? member.level"
             :nature="member.nature"
@@ -213,14 +217,15 @@ function saveCustomToBox() {
             :helping-bonus="result.helpingBonus"
             :label="boxLabel(member)"
           />
+          <div v-else-if="props.editorOnly" class="row"><PokeSprite :id="member.pokeId" :name="boxLabel(member)" /><strong>{{ boxLabel(member) }} · Lv.{{ member.level }}</strong></div>
           <p v-else class="muted">{{ boxLabel(member) }}{{ teamError ? '：队伍不符合限制，已暂停计算。' : ' 在午睡岛，不计入产量。' }}</p>
-          <div class="row">
+          <div v-if="!props.productionOnly" class="row">
             <button class="btn ghost" type="button" @click="editing = member.uid">编辑</button>
             <button class="btn ghost" type="button" @click="copySlot(idx)">复制</button>
             <button class="btn ghost" type="button" @click="removeSlot(idx)">移除</button>
           </div>
         </template>
-        <template v-else>
+        <template v-else-if="!props.productionOnly">
           <span class="slot-empty">空</span>
           <button class="btn" type="button" @click="picking = idx">从盒子</button>
           <button class="btn ghost" type="button" @click="adding = idx">自定义</button>
@@ -228,7 +233,7 @@ function saveCustomToBox() {
       </article>
     </div>
 
-    <template v-if="view === 'detail'">
+    <template v-if="!props.editorOnly && result && view === 'detail'">
       <article class="card stack">
         <h3>食材袋</h3>
         <p v-if="!bagRows.length" class="muted">还没有入库食材。</p>
@@ -241,7 +246,7 @@ function saveCustomToBox() {
       </article>
     </template>
 
-    <article v-else-if="view === 'time'" class="card stack">
+    <article v-else-if="!props.editorOnly && result && view === 'time'" class="card stack">
       <h3>技能发动时点</h3>
       <p v-if="!events.length" class="muted">本周期没有发动记录。</p>
       <p v-for="(event, i) in events" :key="i" class="muted">{{ clockOf(event.minute) }} · {{ event.name }} · {{ kindLabel(event.kind) }}</p>

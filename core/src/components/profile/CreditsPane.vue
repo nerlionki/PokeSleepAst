@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 const components_profile_CreditsPane_config_clientDefaults = clientDefaults.modules.components_profile_CreditsPane
 

@@ -1,5 +1,5 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleCatalogs from '../data/rule-catalogs.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleCatalogs from '../data/rule-catalogs.resource'
 import { snapshotActivity } from './activities'
 import { RECIPES, pokeById } from './data'
 import { produce } from './produce'

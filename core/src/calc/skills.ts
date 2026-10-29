@@ -1,5 +1,5 @@
-import extracted0 from '../data/skill-tables.json'
-import extracted1 from '../data/client-defaults.json'
+import extracted0 from '../data/skill-tables.resource'
+import extracted1 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { mainSkillValue, skillByPokedexName } from './mainSkills'
 const skills_config_extracted0 = extracted0.modules.skills

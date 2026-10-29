@@ -1,6 +1,6 @@
-import clientFactoryDefaults from '../data/client-defaults.json'
+import clientFactoryDefaults from '../data/client-defaults.resource'
 
-import clientDefaults from '../data/client-defaults.json'
+import clientDefaults from '../data/client-defaults.resource'
 import { cloneData } from '../calc/dataClone'
 const ui_appearance_config_clientDefaults = clientDefaults.modules.ui_appearance
 const factory_appearance_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_appearance

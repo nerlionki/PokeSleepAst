@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { useActivities } from '../../composables/useActivities'
+import { activitySleepStyles } from '../../calc/activities'
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlanStore } from '../../stores/plans'
@@ -28,10 +29,11 @@ const eventMult = activity.field('drowsyPowerMultiplier', () => config.value.eve
 const mixMode = activity.field('eventMix', () => normalizeEventMix(config.value.eventMix) !== 'off' ? settings.value.sleepEventMix : 'off')
 const otherTypes = computed({ get: () => mixMode.value !== 'off', set: value => { mixMode.value = value ? settings.value.sleepEventMix : 'off' } })
 const options = computed<SplitOptions>(() => ({ ...config.value, island: island.value, strength: plan.value.snorlaxStrength, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
-const statuses = computed(() => options.value.targets.map(target => splitTargetStatus(target, island.value, options.value.strength)))
+const statuses = computed(() => options.value.targets.map(target => splitTargetStatus(target, island.value, options.value.strength, activity.context.value)))
 const kind = ref<SplitTarget['kind']>((components_plan_SplitSleepPane_config_clientDefaults["kindInitial"] as unknown as SplitTarget['kind'])), pokeId = ref(components_plan_SplitSleepPane_config_clientDefaults["pokeIdInitial"]), face = ref(components_plan_SplitSleepPane_config_clientDefaults["faceInitial"]), advanced = ref(components_plan_SplitSleepPane_config_clientDefaults["advancedInitial"]), formError = ref(components_plan_SplitSleepPane_config_clientDefaults["formErrorInitial"])
-const allowedIds = computed(() => kind.value === 'baby' ? BABY_POKEMON_IDS.filter(id => babyEfficiencyIslands(id).some(row => row.id === island.value)) : [...new Set(SLEEP_STYLES.filter(row => !row.limited && row.island === island.value).map(row => row.pokeId))])
-const faces = computed(() => SLEEP_STYLES.filter(row => !row.limited && row.island === island.value && row.pokeId === pokeId.value))
+const currentStyles = computed(() => activitySleepStyles(SLEEP_STYLES, activity.context.value))
+const allowedIds = computed(() => kind.value === 'baby' ? BABY_POKEMON_IDS.filter(id => babyEfficiencyIslands(id, undefined, activity.context.value).some(row => row.id === island.value)) : [...new Set(currentStyles.value.filter(row => row.island === island.value).map(row => row.pokeId))])
+const faces = computed(() => currentStyles.value.filter(row => row.island === island.value && row.pokeId === pokeId.value))
 watch(allowedIds, ids => { if (!ids.includes(pokeId.value)) pokeId.value = ids[0] ?? 0 }, { immediate: true })
 watch(faces, rows => { if (!rows.some(row => styleKey(row.pokeId, row.stars, row.styleId) === face.value)) { const first = rows[0]; face.value = first ? styleKey(first.pokeId, first.stars, first.styleId) : '' } }, { immediate: true })
 const { busy, error, notice, progress, result, dirty, calculate, cancel } = useSplitSleep(options)
@@ -62,6 +64,7 @@ const resultIsland = computed(() => ISLANDS.find(row => row.id === result.value?
         <div class="field"><label for="split-island">岛屿</label><select id="split-island" v-model="island" :disabled="busy"><option v-for="row in ISLANDS" :key="row.id" :value="row.id">{{ row.name }}</option></select></div>
         <div class="field"><label for="split-strength">卡比兽能量</label><input id="split-strength" v-model.number="plan.snorlaxStrength" type="number" min="0" step="1" inputmode="numeric" :disabled="busy"></div>
       </div>
+      <label class="row"><input v-model="config.campTicket" :disabled="busy" type="checkbox" role="switch"> 露营券 +1（只加第一觉）</label>
       <h3>目标</h3>
       <p v-if="!config.targets.length" class="muted">添加宝宝或指定睡姿，支持混选多个目标。</p>
       <div v-for="(target, index) in config.targets" :key="splitTargetKey(target)" class="target-row">
@@ -102,7 +105,7 @@ const resultIsland = computed(() => ISLANDS.find(row => row.id === result.value?
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
     <template v-if="result">
       <p v-if="dirty" class="amber">参数已修改，以下为上次计算结果，请重新计算。</p>
-      <p class="muted">{{ resultIsland }} · 能量 {{ result.options.strength.toLocaleString('zh-CN') }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟／状态 · 倍率 ×{{ result.options.eventMult }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }}。结果为本次候选搜索的模拟估计。</p>
+      <p class="muted">{{ resultIsland }} · 能量 {{ result.options.strength.toLocaleString('zh-CN') }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟／状态 · 倍率 ×{{ result.options.eventMult }} · 露营券：{{ result.options.campTicket ? '开启' : '关闭' }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }}。结果为本次候选搜索的模拟估计。</p>
       <p v-for="status in resultNotices" :key="status.label" class="amber">{{ status.label }}：{{ status.reason }}</p>
       <p v-for="metric in zeroMetrics" :key="`zero-${metric.targetIndex}-${metric.kind}`" class="muted">{{ metric.label }}：未解锁或本次模拟收益为 0，不参与综合评分。</p>
       <SplitRecommendation :key="`${JSON.stringify(result.options)}-combined`" title="综合推荐" :result="result" :optimum="result.combined" />

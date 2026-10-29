@@ -1,10 +1,11 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import extracted0 from '../data/calc-tables.json'
-import extracted1 from '../data/client-defaults.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import extracted0 from '../data/calc-tables.resource'
+import extracted1 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { ISLANDS, POKEDEX, SLEEP_STYLES, pokeById } from './data'
 import { familyOf } from './candyPlan'
 import { styleKey } from './sleep'
+import { activitySleepStyles, createActivityContext, type ActivitySelection } from './activities'
 import type { IslandId } from '../types'
 const catch_config_extracted0 = extracted0.modules.catch
 const catch_config_extracted1 = extracted1.modules.catch
@@ -47,21 +48,6 @@ const STAR_FACTOR = cloneData(catch_config_extracted0.STAR_FACTOR)
 const SLEEP_ORDER = cloneData(catch_config_extracted1.SLEEP_ORDER)
 const DEFER = new Set<IslandId>((cloneData(catch_config_extracted0.DEFER) as IslandId[]))
 
-const speciesByIsland = new Map(ISLANDS.map((island) => [island.id, new Set(island.species)]))
-const starsOnIsland = new Map<string, Map<number, number[]>>()
-for (const style of SLEEP_STYLES) {
-  if (style.stars < 1 || (style.stars > (catch_module_runtimeParameters.p001 as 4) && !style.limited)) continue
-  if (!style.limited && !speciesByIsland.get(style.island)?.has(style.pokeId)) continue
-  let island = starsOnIsland.get(style.island)
-  if (!island) {
-    island = new Map()
-    starsOnIsland.set(style.island, island)
-  }
-  const have = island.get(style.pokeId) ?? []
-  if (!have.includes(style.stars)) have.push(style.stars)
-  island.set(style.pokeId, have)
-}
-
 export const CATCH_MODES = cloneData(catch_config_extracted1.CATCH_MODES)
 
 function mergeGoals(goals: CatchGoal[]) {
@@ -90,14 +76,23 @@ export function recommendIslands(
   goals: CatchGoal[],
   weights: { catch?: number, candy?: number } = {},
   discovered: readonly string[] = [],
+  activity?: ActivitySelection,
 ): CatchIslandPick[] {
+  const styles = activitySleepStyles(SLEEP_STYLES, createActivityContext('research', activity))
+  const starsOnIsland = new Map<string, Map<number, number[]>>()
+  for (const style of styles) {
+    if (style.stars < 1 || style.stars > (catch_module_runtimeParameters.p001 as 4)) continue
+    const map = starsOnIsland.get(style.island) ?? new Map<number, number[]>()
+    starsOnIsland.set(style.island, map)
+    map.set(style.pokeId, [...new Set([...(map.get(style.pokeId) ?? []), style.stars])])
+  }
   const found = new Set(discovered)
   const targets = mergeGoals(goals)
   const picks: CatchIslandPick[] = []
 
   for (const island of ISLANDS) {
-    const species = new Set(island.species)
     const styleMap = starsOnIsland.get(island.id)
+    const species = new Set(styleMap?.keys())
     const sleepGroups: CatchSleepGroup[] = []
 
     for (const sleepType of SLEEP_ORDER) {
@@ -107,7 +102,7 @@ export function recommendIslands(
         if (!poke) continue
         const islandStars = styleMap?.get(target.pokeId) ?? []
         const stars = target.purpose === 'sleep'
-          ? islandStars.filter((star) => target.stars.includes(star) && SLEEP_STYLES.some((style) => style.island === island.id && style.pokeId === target.pokeId && style.stars === star && !found.has(styleKey(style.pokeId, style.stars, style.styleId))))
+          ? islandStars.filter((star) => target.stars.includes(star) && styles.some((style) => style.island === island.id && style.pokeId === target.pokeId && style.stars === star && !found.has(styleKey(style.pokeId, style.stars, style.styleId))))
           : []
         const factor = target.purpose === 'sleep'
           ? (STAR_FACTOR[Math.min(stars.length, (catch_recommendIslands_runtimeParameters.p001 as 4))] ?? 0)
@@ -148,10 +143,10 @@ export function recommendIslands(
   })
 }
 
-export function recommendThree(goals: CatchGoal[], discovered: readonly string[] = [], modes: readonly string[] = CATCH_MODES.map((mode) => mode.id)) {
+export function recommendThree(goals: CatchGoal[], discovered: readonly string[] = [], modes: readonly string[] = CATCH_MODES.map((mode) => mode.id), activity?: ActivitySelection) {
   return CATCH_MODES.filter((mode) => modes.includes(mode.id)).map((mode) => ({
     id: mode.id,
     name: mode.name,
-    results: recommendIslands(goals.filter((goal) => mode.purposes.includes(goal.purpose)), mode.weights, discovered),
+    results: recommendIslands(goals.filter((goal) => mode.purposes.includes(goal.purpose)), mode.weights, discovered, activity),
   }))
 }

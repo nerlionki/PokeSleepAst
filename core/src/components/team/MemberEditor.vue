@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { computed, shallowRef, watch } from 'vue'
 import { NATURES, SUBSKILLS, pokeById } from '../../calc/data'
 import { clearIngredientSlot, ingredientColumns, setIngredientChoice } from '../../calc/ingredients'
-import { applySilverSeed, exclusiveSubskills, silverSeedCandidates, stepGoldSeed, stepMemberEvolutions, stepSkillLevel, subskillLevelBonus, switchMemberEvolution, undoSilverSeed, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
+import { applySilverSeed, silverSeedCandidates, stepGoldSeed, stepMemberEvolutions, stepSkillLevel, subskillLevelBonus, switchMemberEvolution, undoSilverSeed, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
 import { evolutionDepth, evolutionStages } from '../../calc/evolution'
 import { MEW_SKILLS, normalizeMewSkill } from '../../calc/mew'
 import { skillMaxFor } from '../../calc/mainSkills'
@@ -34,7 +34,6 @@ function natureMark(stat: string | null, arrow: string) {
 }
 
 const natureOpen = shallowRef(components_team_MemberEditor_config_clientDefaults["natureOpenInitial"])
-const subPick = shallowRef<number | null>((components_team_MemberEditor_config_clientDefaults["subPickInitial"] as unknown as number | null))
 const silverOpen = shallowRef(components_team_MemberEditor_config_clientDefaults["silverOpenInitial"])
 const silverChoices = computed(() => silverSeedCandidates(model.value.level, model.value.subskills))
 const skillBonus = computed(() => subskillLevelBonus(model.value.level, model.value.subskills))
@@ -44,7 +43,16 @@ const maxEvolutions = computed(() => evolutionDepth(model.value.pokeId))
 const board = computed(() => poke.value ? ingredientColumns(poke.value.ingredients) : [])
 const skillMax = computed(() => skillMaxFor(poke.value?.mainSkill ?? ''))
 const ribbon = computed(() => ribbonBonus(model.value.tune.ribbonHours, stagesLeft(model.value.pokeId)))
-const subChoices = computed(() => exclusiveSubskills(SUBSKILLS, model.value.subskills, subPick.value ?? -1))
+const subChoices = computed(() => model.value.subskills.filter(Boolean).length < 5 ? SUBSKILLS : model.value.subskills.flatMap(id => {
+  const item = SUBSKILLS.find(skill => skill.id === id)
+  return item ? [item] : []
+}))
+function chooseSub(id: string) {
+  const selected = model.value.subskills.indexOf(id)
+  if (selected >= 0) { setSub(selected, ''); return }
+  const empty = Array.from({ length: 5 }, (_, index) => index).find(index => !model.value.subskills[index])
+  if (empty !== undefined) setSub(empty, id)
+}
 
 function patch(partial: Partial<MemberDraft>) {
   model.value = { ...model.value, ...partial }
@@ -78,11 +86,10 @@ function setSub(index: number, id: string) {
   next[index] = id
   patch({ subskills: next, tune: { ...model.value.tune, silverSeedHistory: [] } })
   emit('confirm', `subskill${index}` as OcrMissingField)
-  subPick.value = null
 }
 
 function subName(id: string) {
-  return SUBSKILLS.find((item) => item.id === id)?.name ?? ''
+  return SUBSKILLS.find(item => item.id === id)?.name ?? ''
 }
 
 function chooseIngredient(column: number, lineIndex: number) {
@@ -229,20 +236,17 @@ function stepEvolution(delta: number) {
       <button type="button" @click="setSkill(skillMax)">MAX</button>
     </div>
 
-    <div class="sub-grid">
-      <button v-for="(gate, index) in SUBSKILL_GATES" :key="gate" type="button" class="sub-slot" @click="subPick = subPick === index ? null : index">
-        <span class="chip">{{ gate }}</span>
-        <SubskillIcon v-if="model.subskills[index]" :id="model.subskills[index]" />
-        <span>{{ subName(model.subskills[index] ?? '') || '—' }}</span>
-        <span v-if="model.subskills[index]" class="muted" @click.stop="setSub(index, '')">×</span>
-      </button>
-    </div>
-    <div v-if="subPick !== null" class="picker-opts">
-      <button v-for="item in subChoices" :key="item.id" type="button" :class="{ on: model.subskills[subPick] === item.id }" @click="setSub(subPick, item.id)">
-        <SubskillIcon :id="item.id" />
-        {{ item.name }}
-      </button>
-    </div>
+    <section class="stack subskill-section" aria-label="副技能">
+      <p class="muted">副技能 {{ model.subskills.filter(Boolean).length }}/5 · 点击已选技能可移除</p>
+      <div class="picker-opts subskill-tags">
+        <button v-for="item in subChoices" :key="item.id" type="button" class="chip" :class="{ on: model.subskills.includes(item.id) }" :aria-pressed="model.subskills.includes(item.id)" @click="chooseSub(item.id)">
+          <b v-if="model.subskills.includes(item.id)" class="subskill-level">Lv.{{ SUBSKILL_GATES[model.subskills.indexOf(item.id)] }}</b>
+          <SubskillIcon :id="item.id" />
+          <span>{{ item.name }}</span>
+          <span v-if="model.subskills.includes(item.id)" aria-hidden="true">×</span>
+        </button>
+      </div>
+    </section>
 
     <button class="btn ghost" type="button" @click="natureOpen = !natureOpen">性格 · {{ model.nature }}</button>
     <div v-if="natureOpen" class="picker-opts">
@@ -270,3 +274,9 @@ function stepEvolution(delta: number) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.subskill-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.subskill-tags button { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 40px; white-space: normal; text-align: left; }
+.subskill-level { flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: var(--font-12); }
+</style>

@@ -1,5 +1,5 @@
-import ruleParameters from '../data/rule-parameters.json'
-import extracted0 from '../data/calc-tables.json'
+import ruleParameters from '../data/rule-parameters.resource'
+import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 import type { CookMeal, MealCategory, Settings } from '../types'
 import { INGREDIENTS, RECIPES } from './data'

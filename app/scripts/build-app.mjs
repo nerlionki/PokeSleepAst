@@ -153,7 +153,7 @@ if (wantIos && process.platform !== 'darwin') {
   process.exit(1)
 }
 
-run('npm', ['run', 'build'])
+run('npm', ['run', 'build'], appRoot, { VITE_APP_DEBUG: String(mode === 'debug') })
 if (target === 'android' || target === 'all') buildAndroid()
 if (wantIos) buildIos()
 if (target === 'all' && process.platform !== 'darwin') {

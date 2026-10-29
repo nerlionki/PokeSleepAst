@@ -1,7 +1,7 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import extracted0 from '../data/compatibility-maps.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import extracted0 from '../data/compatibility-maps.resource'
 import { cloneData } from './dataClone'
-import evolution from '../data/evolution.json'
+import evolution from '../data/evolution.resource'
 import { NATURES, pokeById } from './data'
 const evolution_config_extracted0 = extracted0.modules.evolution
 const evolution_conditionText_runtimeParameters = runtimeParameters.modules.evolution.conditionText.values

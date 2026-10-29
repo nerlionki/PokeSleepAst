@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
 import { pokeHit } from '../../calc/pokeSearch'
@@ -9,6 +9,8 @@ import { resolvedSleepdex, styleKey } from '../../calc/sleep'
 import { sleepReward } from '../../calc/sleepRewards'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
+import { useActivities } from '../../composables/useActivities'
+import { activitySleepStyles } from '../../calc/activities'
 import type { IslandId } from '../../types'
 import PokeSprite from '../shared/PokeSprite.vue'
 const components_plan_SleepGallery_config_clientDefaults = clientDefaults.modules.components_plan_SleepGallery
@@ -17,6 +19,7 @@ const components_plan_SleepGallery_config_clientDefaults = clientDefaults.module
 const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
 const { settings } = storeToRefs(useSettingsStore())
+const activity = useActivities(settings, () => settings.value.island)
 
 const islandIds = new Set(ISLANDS.map((island) => island.id))
 const pokeOf = new Map(POKEDEX.map((poke) => [poke.id, poke]))
@@ -39,7 +42,7 @@ const foundKeys = computed(() => new Set(resolvedSleepdex(plan.value)))
 
 const filtered = computed(() => {
   const found = foundKeys.value
-  return SLEEP_STYLES.filter((style) => {
+  return [...activitySleepStyles(SLEEP_STYLES, activity.context.value), ...SLEEP_STYLES.filter(style => style.limited)].filter((style) => {
     if (!islandIds.has(style.island)) return false
     if (island.value !== 'all' && style.island !== island.value) return false
     const poke = pokeOf.get(style.pokeId)

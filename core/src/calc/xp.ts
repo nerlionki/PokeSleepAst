@@ -1,6 +1,6 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleParameters from '../data/rule-parameters.json'
-import extracted0 from '../data/calc-tables.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleParameters from '../data/rule-parameters.resource'
+import extracted0 from '../data/calc-tables.resource'
 import { natureByName, XP_TABLE } from './data'
 import { EVENT_PARAMETERS } from './activities'
 const xp_config_extracted0 = extracted0.modules.xp

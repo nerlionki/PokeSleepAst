@@ -10,6 +10,7 @@ versionCode(appVersion)
 export default defineConfig({
   publicDir: '../core/public',
   plugins: [vue()],
+  worker: { format: 'es' },
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
   resolve: {
     dedupe: ['vue', 'pinia'],

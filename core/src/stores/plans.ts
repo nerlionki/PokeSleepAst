@@ -1,5 +1,5 @@
 
-import clientDefaults from '../data/client-defaults.json'
+import clientDefaults from '../data/client-defaults.resource'
 import { cloneData } from '../calc/dataClone'
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
@@ -10,6 +10,7 @@ import { DEFAULT_BABY_EFFICIENCY, DEFAULT_COMPLETION_EFFICIENCY, normalizeBabyEf
 import { DEFAULT_WHISTLE, normalizeWhistleOptions, type WhistleOptions } from '../calc/whistle'
 import { loadJson, saveJson } from '../storage'
 import { defaultSplitOptions, normalizeSplitOptions, type SplitOptions } from '../calc/splitSleep'
+import type { CompletionEfficiencyOptions } from '../calc/completionEfficiency'
 const stores_plans_config_clientDefaults = clientDefaults.modules.stores_plans
 
 
@@ -31,7 +32,7 @@ interface PlanState {
   candyRows: CandyRow[]
   candyStocks: Record<string, number>
   babyEfficiency: BabyEfficiencyOptions
-  completionEfficiency: BabyEfficiencyOptions
+  completionEfficiency: CompletionEfficiencyOptions
   whistle: WhistleOptions
   splitSleep: SplitOptions
 }
@@ -53,20 +54,21 @@ const empty: PlanState = {
   candyRows: cloneData(stores_plans_config_clientDefaults["empty_candyRows"]),
   candyStocks: cloneData(stores_plans_config_clientDefaults["empty_candyStocks"]),
   babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY },
-  completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY },
+  completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY, selectionMode: 'sleepdex' },
   whistle: { ...DEFAULT_WHISTLE },
   splitSleep: defaultSplitOptions(),
 }
 
 export const usePlanStore = defineStore('plans', () => {
-  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY }, completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY }, whistle: { ...DEFAULT_WHISTLE }, splitSleep: defaultSplitOptions() })
+  const plan = ref<PlanState>({ ...empty, babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY }, completionEfficiency: { ...DEFAULT_COMPLETION_EFFICIENCY, selectionMode: 'sleepdex' }, whistle: { ...DEFAULT_WHISTLE }, splitSleep: defaultSplitOptions() })
   const ready = ref(stores_plans_config_clientDefaults["readyInitial"])
 
   async function hydrate() {
     const saved = await loadJson<Partial<PlanState>>('plans', empty)
     const babyEfficiency = { ...DEFAULT_BABY_EFFICIENCY, ...saved.babyEfficiency }
     babyEfficiency.pokeId = normalizeBabyEfficiencyPokemonId(babyEfficiency.pokeId)
-    const completionEfficiency = { ...DEFAULT_COMPLETION_EFFICIENCY, ...saved.completionEfficiency }
+    const selectionMode = saved.completionEfficiency?.selectionMode === 'free' ? 'free' : 'sleepdex'
+    const completionEfficiency: CompletionEfficiencyOptions = { ...DEFAULT_COMPLETION_EFFICIENCY, ...saved.completionEfficiency, selectionMode }
     plan.value = {
       ...empty,
       ...saved,
@@ -79,7 +81,7 @@ export const usePlanStore = defineStore('plans', () => {
       whistle: normalizeWhistleOptions(saved.whistle),
       splitSleep: normalizeSplitOptions(saved.splitSleep),
       babyEfficiency: validateBabyEfficiency(babyEfficiency) ? { ...DEFAULT_BABY_EFFICIENCY } : babyEfficiency,
-      completionEfficiency: validateBabyEfficiency(completionEfficiency) ? { ...DEFAULT_COMPLETION_EFFICIENCY } : completionEfficiency,
+      completionEfficiency: validateBabyEfficiency(completionEfficiency) ? { ...DEFAULT_COMPLETION_EFFICIENCY, selectionMode } : completionEfficiency,
     }
     ready.value = true
   }

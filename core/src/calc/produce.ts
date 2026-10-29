@@ -1,8 +1,8 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleCatalogs from '../data/rule-catalogs.json'
-import ruleParameters from '../data/rule-parameters.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleCatalogs from '../data/rule-catalogs.resource'
+import ruleParameters from '../data/rule-parameters.resource'
 import { resolveMemberSkill } from './mew'
-import { activityValues, snapshotActivity } from './activities'
+import { activityBerrySettings, activityValues, snapshotActivity } from './activities'
 import { simulateTeam } from './timeline'
 import type { ProduceInput, ProduceResult, Settings } from '../types'
 import { exEffects } from './exEffects'
@@ -31,7 +31,7 @@ function berryPerHelp(specialty: string, subskills: string[]): number {
   return n
 }
 
-function findingRate(base: number, nature: string, stat: 'ingredient' | 'skill', subskills: string[], small: string, medium: string): number {
+export function findingRate(base: number, nature: string, stat: 'ingredient' | 'skill', subskills: string[], small: string, medium: string): number {
   const bonus = 1 + (subskills.includes(small) ? produce_findingRate_ruleParameters.findingS : 0) + (subskills.includes(medium) ? produce_findingRate_ruleParameters.findingM : 0)
   return Math.min(1, base * natureStatFactor(nature, stat) * bonus)
 }
@@ -51,10 +51,11 @@ export function splitHelps(
   skillRate: number,
   slots: { name: string, amount: number }[],
   snacking: boolean,
+  slotCount = slots.length,
 ): { berryHelps: number, ingredients: Record<string, number>, skillProcs: number } {
   let skillProcs = cutDecimal(helps * skillRate, 1)
   if (snacking) skillProcs = 0
-  let foodHelps = slots.length ? cutDecimal(helps * ingRate, 2) : 0
+  let foodHelps = slots.length ? cutDecimal(helps * ingRate * slots.length / Math.max(slots.length, slotCount), 2) : 0
   if (snacking) foodHelps = 0
   const berryHelps = Math.max(0, cutDecimal(helps - foodHelps, 2))
   const ingredients: Record<string, number> = {}
@@ -72,7 +73,7 @@ export function splitHelps(
  * 个体对比用的日产量。按全天维持传入活力（对比页传满活力）的固定间隔取期望值。
  * 产量拆法对齐 pokeSleepCalc 的 getOneDayHelpCount / getOneDayEnergy。
  */
-export function produce(settings: Settings, input: ProduceInput, helpingBonus = settings.helpingBonus, slice?: { minute: number, minutes: number }): ProduceResult {
+export function produce(settings: Settings, input: ProduceInput, helpingBonus = settings.helpingBonus, slice?: { minute: number, minutes: number }, comparison?: { naturalOnly?: boolean; skipCooking?: boolean }): ProduceResult {
   const snapshot = snapshotActivity(settings)
   settings = snapshot
   const species = pokeById(input.pokeId)
@@ -80,8 +81,8 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   const poke = species && selected ? { ...species, mainSkill: selected.name, skillRate: selected.rate } : undefined
   if (!poke) return emptyProduceResult()
   // 纯能量/回复技能在固定活力比较中可使用等价快速公式，其余统一技能结算。
-  if (input.carryMode !== 'full' && (input.pokeId === 151 || !produce_config_ruleCatalogs.produceList0.values.includes(skillByPokedexName(poke.mainSkill)?.id ?? 0))) {
-    const sim = simulateTeam(settings, [input], helpingBonus, { expectedProcs: true, fixedEnergy: input.wakeEnergy ?? produce_produce_ruleParameters.fixedComparisonEnergy })
+  if (!comparison?.naturalOnly && input.carryMode !== 'full' && (input.pokeId === 151 || !produce_config_ruleCatalogs.produceList0.values.includes(skillByPokedexName(poke.mainSkill)?.id ?? 0))) {
+    const sim = simulateTeam(settings, [input], helpingBonus, { expectedProcs: true, fixedEnergy: input.wakeEnergy ?? produce_produce_ruleParameters.fixedComparisonEnergy, skipCooking: comparison?.skipCooking })
     const result = sim.members[0]!
     return { ...result, cooking: { energy: sim.meals.reduce((sum, meal) => sum + meal.energy, 0), remain: sim.remain } }
   }
@@ -90,11 +91,11 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
     const end = (settings.period === 'week' ? (produce_produce_runtimeParameters.p001 as 7) : 1) * 1440
     const boundaries = [0, ...Array.from({ length: settings.period === 'week' ? (produce_produce_runtimeParameters.p002 as 7) : 1 }, (_, day) => day * 1440 + (produce_produce_runtimeParameters.p003 as 240)), end]
     const keys = (produce_config_ruleCatalogs.produceList1.values as unknown as readonly ["helpIntervalMultiplier","berryCountBonus","berryEnergyMultiplier","ingredientCountBonus","skillRateMultiplier","skillLevelBonus","skillStrengthMultiplier"])
-    const signatures = boundaries.slice(0, -1).map(minute => { const row = activityValues(snapshot.activity, settings.island, poke, minute); return JSON.stringify(keys.map(key => row[key])) })
+    const signatures = boundaries.slice(0, -1).map(minute => { const row = activityValues(snapshot.activity, settings.island, poke, minute); return JSON.stringify([keys.map(key => row[key]), activityBerrySettings(snapshot, snapshot.activity, minute).berries]) })
     if (new Set(signatures).size > 1) {
     const result = emptyProduceResult()
     for (let i = 0; i < boundaries.length - 1; i++) {
-      const row = produce(settings, input, helpingBonus, { minute: boundaries[i]!, minutes: boundaries[i + 1]! - boundaries[i]! })
+      const row = produce(settings, input, helpingBonus, { minute: boundaries[i]!, minutes: boundaries[i + 1]! - boundaries[i]! }, comparison)
       for (const key of (produce_config_ruleCatalogs.produceList2.values as unknown as readonly ["helps","berries","berryEnergy","skillProcs","skillEnergy","sneaky"])) result[key] += row[key]
       for (const [name, amount] of Object.entries(row.ingredients)) result.ingredients[name] = (result.ingredients[name] ?? 0) + amount
     }
@@ -102,6 +103,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
     }
   }
   const activity = activityValues(snapshot.activity, settings.island, poke, slice?.minute ?? (produce_produce_runtimeParameters.p004 as 240))
+  settings = activityBerrySettings(snapshot, snapshot.activity, slice?.minute ?? 240)
   const ribbon = ribbonBonus(input.ribbonHours ?? 0, stagesLeft(poke.id))
   const energy = Math.min(produce_produce_ruleParameters.energyCap, Math.max(0, input.wakeEnergy ?? settings.sleepScore))
   const favored = settings.berries.includes(poke.berry)
@@ -131,7 +133,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
     const drop = slotDrop(poke.ingredients, slot, lineIndex)
     return drop ? [{ name: drop.name, amount: drop.amount + ex.ingredientExtra + activity.ingredientCountBonus }] : []
   })
-  const split = splitHelps(helps, ingRate, skillRate, slots, snacking)
+  const split = splitHelps(helps, ingRate, skillRate, slots, snacking, comparison?.naturalOnly ? unlocked : slots.length)
   const berries = cutDecimal(split.berryHelps * per, 1)
   const unit = berryUnitEnergy(poke.berry, input.level, settings.areaBonus, ex.berryMultiplier) * activity.berryEnergyMultiplier
   const skillLv = Math.min(skillMaxFor(poke.mainSkill), effectiveSkillLevel(input.level, input.skillLevel, input.subskills, poke.mainSkill) + ex.skillLevels + activity.skillLevelBonus)

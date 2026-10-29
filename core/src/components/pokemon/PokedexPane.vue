@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
@@ -10,11 +10,13 @@ import { pokeHit } from '../../calc/pokeSearch'
 import { compareDex } from '../../calc/pokedexOrder'
 import { evolutionStages } from '../../calc/evolution'
 import { homeText } from '../../calc/islandMeta'
+import { useActivities } from '../../composables/useActivities'
 import { berryCount, friendTiers, ingredientColumns } from '../../calc/ingredients'
 import { mythicalSeed, SPECIALTY_FILTERS, specialtyHit, specialtyLabel } from '../../calc/specialty'
 import { useSettingsStore } from '../../stores/settings'
 import BerryIcon from '../shared/BerryIcon.vue'
 import MainSkillIcon from '../shared/MainSkillIcon.vue'
+import VirtualPokedex from './VirtualPokedex.vue'
 import DrawerSheet from '../shared/DrawerSheet.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
@@ -31,6 +33,7 @@ const berry = shallowRef(components_pokemon_PokedexPane_config_clientDefaults["b
 const skill = shallowRef(components_pokemon_PokedexPane_config_clientDefaults["skillInitial"])
 const selected = shallowRef<number | null>((components_pokemon_PokedexPane_config_clientDefaults["selectedInitial"] as unknown as number | null))
 const { settings } = storeToRefs(useSettingsStore())
+const activity = useActivities(settings, () => settings.value.island)
 
 const sleepTypes = computed(() => ['全部', ...new Set(POKEDEX.map((p) => p.sleepType))])
 const skills = computed(() => ['全部', ...new Set(POKEDEX.map((p) => p.mainSkill))])
@@ -51,7 +54,7 @@ const stages = computed(() => detail.value ? evolutionStages(detail.value.id) : 
 const homes = computed(() => {
   const poke = detail.value
   if (!poke) return '资料未列'
-  return homeText(poke.id)
+  return homeText(poke.id, activity.context.value)
 })
 const favored = (name: string) => settings.value.berries.includes(name)
 
@@ -61,31 +64,26 @@ function toggle(which: typeof panel.value) {
 </script>
 
 <template>
-  <div class="stack">
-    <input v-model="q" class="picker-search" placeholder="搜索中文、英文或图鉴编号">
-    <div class="picker-filters">
+  <div class="stack dex-pane">
+    <input v-model="q" class="picker-search dex-fixed" placeholder="搜索中文、英文或图鉴编号">
+    <div class="picker-filters dex-fixed">
       <button v-for="s in ['全部', ...SPECIALTY_FILTERS]" :key="s" type="button" :class="{ on: spec === s }" @click="spec = s">{{ s }}</button>
       <button type="button" :class="{ on: panel === 'sleep' || sleep !== '全部' }" @click="toggle('sleep')">睡眠</button>
       <button type="button" :class="{ on: panel === 'berry' || berry !== '全部' }" @click="toggle('berry')">树果</button>
       <button type="button" :class="{ on: panel === 'skill' || skill !== '全部' }" @click="toggle('skill')">技能</button>
     </div>
-    <div v-if="panel === 'sleep'" class="picker-opts">
+    <div v-if="panel === 'sleep'" class="picker-opts dex-fixed">
       <button v-for="s in sleepTypes" :key="s" type="button" :class="{ on: sleep === s }" @click="sleep = s">{{ s }}</button>
     </div>
-    <div v-else-if="panel === 'berry'" class="picker-opts">
+    <div v-else-if="panel === 'berry'" class="picker-opts dex-fixed">
       <button type="button" :class="{ on: berry === '全部' }" @click="berry = '全部'">全部</button>
       <button v-for="b in BERRIES" :key="b.name" type="button" :class="{ on: berry === b.name }" @click="berry = b.name"><BerryIcon :name="b.name" />{{ b.name }}</button>
     </div>
-    <div v-else-if="panel === 'skill'" class="picker-opts">
+    <div v-else-if="panel === 'skill'" class="picker-opts dex-fixed">
       <button v-for="s in skills" :key="s" type="button" :class="{ on: skill === s }" @click="skill = s"><MainSkillIcon v-if="s !== '全部'" :name="s" />{{ s }}</button>
     </div>
-    <p class="muted">{{ list.length }} 只</p>
-    <div class="poke-wall">
-      <button v-for="p in list" :key="p.id + p.name" type="button" class="poke-wall-cell" @click="selected = p.id">
-        <PokeSprite :id="p.id" :name="p.name" />
-        <span>{{ p.name }}</span>
-      </button>
-    </div>
+    <p class="muted dex-fixed">{{ list.length }} 只</p>
+    <VirtualPokedex :items="list" @pick="selected = $event" />
     <DrawerSheet v-if="detail" :title="detail.name" @close="selected = null">
       <div class="row">
         <PokeSprite :id="detail.id" :name="detail.name" large />
@@ -151,3 +149,9 @@ function toggle(which: typeof panel.value) {
     </DrawerSheet>
   </div>
 </template>
+
+<style scoped>
+.dex-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.dex-fixed { flex-shrink: 0; }
+.dex-pane > .picker-opts { max-height: 25vh; overflow-y: auto; }
+</style>

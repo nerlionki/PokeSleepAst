@@ -1,7 +1,8 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleCatalogs from '../data/rule-catalogs.json'
-import extracted0 from '../data/client-defaults.json'
-import extracted1 from '../data/calc-tables.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import { publicImage } from '#platform/images'
+import ruleCatalogs from '../data/rule-catalogs.resource'
+import extracted0 from '../data/client-defaults.resource'
+import extracted1 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 const items_config_extracted0 = extracted0.modules.items
 const items_config_extracted1 = extracted1.modules.items
@@ -35,7 +36,7 @@ export const ITEMS: ItemEntry[] = groups.flatMap(([category, rows]) => rows.map(
   id,
   name,
   category,
-  icon: `/items/${items_config_ruleCatalogs.moduleList1.values.includes(id) ? (items_module_runtimeParameters.p003 as 115) : id}.webp`,
+  icon: publicImage(`items/${items_config_ruleCatalogs.moduleList1.values.includes(id) ? (items_module_runtimeParameters.p003 as 115) : id}.webp`),
   sourceUrl: `${BASE}${id}`,
   ...(category === '进化道具' ? {
     acquisition: '一般兑换处：1,400 睡眠点数（每月限购 5 个）。',

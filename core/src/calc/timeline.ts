@@ -1,7 +1,7 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleParameters from '../data/rule-parameters.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleParameters from '../data/rule-parameters.resource'
 import { applyMainSkill, type EffectActor } from './skillEffects'
-import { activityValues, snapshotActivity, type ActivityValues } from './activities'
+import { activityBerrySettings, activityValues, snapshotActivity, type ActivityValues } from './activities'
 import { CookingSkillState } from './cookingSkillState'
 import { teamRestrictionError } from './teamRestrictions'
 import { resolveMemberSkill } from './mew'
@@ -83,6 +83,8 @@ export interface SkillEvent {
 }
 
 export interface SimOpts {
+  /** Fixed-energy yield rankings do not need the independent cooking optimizer. */
+  skipCooking?: boolean
   alwaysProc?: boolean
   /** 个体排行使用发动次数期望，不因确定性伪随机采样把低概率技能收益变为 0。 */
   expectedProcs?: boolean
@@ -130,7 +132,7 @@ export function simulateTeam(
   opts: SimOpts = {},
 ): { members: ProduceResult[], events: SkillEvent[], meals: ReturnType<typeof cookMeals>['meals'], bag: Record<string, number>, remain: Record<string, number> } {
   const snapshot = snapshotActivity(settings)
-  settings = snapshot
+  settings = activityBerrySettings(snapshot, snapshot.activity, 0)
   const restriction = teamRestrictionError(roster)
   if (restriction) throw new Error(restriction)
   const days = settings.period === 'week' ? timeline_simulateTeam_ruleParameters.weeklyDays : 1
@@ -198,17 +200,21 @@ export function simulateTeam(
   // 每次独立模拟从迁岛后的空领域开始；睡眠与每天切换不重置。
   let berryZone = 0
   const baseBerryUnits = members.map(member => member.unitBerry)
-  const bases = members.map(member => ({ perHelp: member.perHelp, skillRate: member.skillRate, skillLv: member.skillLv }))
+  const bases = members.map(member => ({ perHelp: member.perHelp, skillRate: member.skillRate / exEffects(settings, member.poke.berry, member.poke.specialty).skillMultiplier, skillLv: effectiveSkillLevel(member.input.level, member.input.skillLevel, member.input.subskills, member.poke.mainSkill) }))
   function refreshActivities(minute: number) {
+    const before = members.map(member => intervalOf(member, minute))
+    settings = activityBerrySettings(snapshot, snapshot.activity, minute)
     members.forEach((member, index) => {
-      const before = intervalOf(member, minute)
+      const ex = exEffects(settings, member.poke.berry, member.poke.specialty)
+      member.favored = settings.berries.includes(member.poke.berry)
       member.activity = activityValues(snapshot.activity, settings.island, member.poke, minute)
       member.perHelp = bases[index]!.perHelp + member.activity.berryCountBonus
-      member.skillRate = Math.min(1, bases[index]!.skillRate * member.activity.skillRateMultiplier)
-      member.skillLv = Math.min(skillMaxFor(member.poke.mainSkill), bases[index]!.skillLv + member.activity.skillLevelBonus)
+      member.skillRate = Math.min(1, bases[index]!.skillRate * ex.skillMultiplier * member.activity.skillRateMultiplier)
+      member.skillLv = Math.min(skillMaxFor(member.poke.mainSkill), bases[index]!.skillLv + ex.skillLevels + member.activity.skillLevelBonus)
       member.fill = chargeStrength(member.poke.mainSkill, member.skillLv)
+      baseBerryUnits[index] = berryUnitEnergy(member.poke.berry, member.input.level, settings.areaBonus, ex.berryMultiplier)
       member.unitBerry = baseBerryUnits[index]! * member.activity.berryEnergyMultiplier * (member.poke.berryType === '超能' ? 1 + berryZone : 1)
-      if (member.next > minute) member.next = minute + (member.next - minute) * intervalOf(member, minute) / before
+      if (member.next > minute) member.next = minute + (member.next - minute) * intervalOf(member, minute) / before[index]!
     })
   }
   refreshActivities(0)
@@ -255,6 +261,7 @@ export function simulateTeam(
     const berries = amount * (1 - foodChance) * m.perHelp
     m.result.helps += amount
     m.result.berries += berries
+    m.result.skillBerries = (m.result.skillBerries ?? 0) + berries
     m.result.berryEnergy += berries * m.unitBerry
   }
 
@@ -440,7 +447,7 @@ export function simulateTeam(
     extraQueue.splice(0, extraQueue.length, ...extraQueue.filter((q) => q.minute > t))
 
     completeHelps(t, true)
-    if (settings.meals && !asleep && [timeline_simulateTeam_ruleParameters.breakfastMinute,timeline_simulateTeam_ruleParameters.lunchMinute,timeline_simulateTeam_ruleParameters.dinnerMinute].includes(clock) && meals.length < timeline_simulateTeam_ruleParameters.weeklyMealLimit) {
+    if (!opts.skipCooking && settings.meals && !asleep && [timeline_simulateTeam_ruleParameters.breakfastMinute,timeline_simulateTeam_ruleParameters.lunchMinute,timeline_simulateTeam_ruleParameters.dinnerMinute].includes(clock) && meals.length < timeline_simulateTeam_ruleParameters.weeklyMealLimit) {
       const sunday = settings.period === 'week' && Math.floor(t / 1440) === timeline_simulateTeam_ruleParameters.sundayIndex
       const activity = activityValues(snapshot.activity, settings.island, undefined, t)
       const pot = Math.ceil(cooking.potSize(settings.potSize, sunday || settings.sundayPot, settings.goodCamp) * activity.potSizeMultiplier)
