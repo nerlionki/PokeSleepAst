@@ -661,7 +661,7 @@
       "wakeEnergy": 100,
       "helpingBonus": 5,
       "activeSubskills": 4,
-      "generatedOn": "2026-10-29",
+      "generatedOn": "2026-10-30",
       "activityMode": "none",
       "helpingBonusMode": "actual-five-stacks",
       "mainSkillMode": "max",
@@ -670,8 +670,8 @@
       "supportSelfShare": 0.2,
       "includeIngredientGatheringSkills": false,
       "reference": "https://pks.raenonx.cc/zh/ingredient/chart",
-      "sourceVersion": "1.0.2",
-      "sourceHash": "2582b8d0003068d6d06782929919a681cc97932959bef04e15102b0a3de70b96",
+      "sourceVersion": "1.0.3",
+      "sourceHash": "df72c0026f15912d1310094334a81b6ba16a7da47f7c365cae428834f9098093",
       "berries": {
         "柿仔果": [
           {
@@ -722,6 +722,15 @@
         ],
         "蘋野果": [
           {
+            "id": 390,
+            "name": "小火焰猴",
+            "total": 489.0360000000002,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 222.00000000000023,
+            "skill": 267.03599999999994
+          },
+          {
             "id": 157,
             "name": "火爆獸",
             "total": 476.4,
@@ -755,15 +764,6 @@
             "mode": "full",
             "condition": "全时满包",
             "ordinary": 433.4,
-            "skill": 0
-          },
-          {
-            "id": 157,
-            "name": "火爆獸",
-            "total": 405,
-            "mode": "normal",
-            "condition": "一般",
-            "ordinary": 405,
             "skill": 0
           }
         ],
@@ -865,20 +865,29 @@
           {
             "id": 254,
             "name": "蜥蜴王",
-            "total": 488.9679999999989,
+            "total": 619.455999999999,
             "mode": "unlimited",
             "condition": "无持有上限",
-            "ordinary": 297.9999999999992,
-            "skill": 190.96799999999965
+            "ordinary": 281.9999999999993,
+            "skill": 337.4559999999997
           },
           {
             "id": 253,
             "name": "森林蜥蜴",
-            "total": 421.9279999999998,
+            "total": 541.88,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 242,
-            "skill": 179.92799999999983
+            "skill": 299.88
+          },
+          {
+            "id": 252,
+            "name": "木守宮",
+            "total": 449.41999999999996,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 190,
+            "skill": 259.41999999999996
           },
           {
             "id": 154,
@@ -896,15 +905,6 @@
             "mode": "full",
             "condition": "全时满包",
             "ordinary": 393.9,
-            "skill": 0
-          },
-          {
-            "id": 153,
-            "name": "月桂葉",
-            "total": 363,
-            "mode": "normal",
-            "condition": "一般",
-            "ordinary": 363,
             "skill": 0
           }
         ],
@@ -959,11 +959,20 @@
           {
             "id": 392,
             "name": "烈焰猴",
-            "total": 494.6792000000008,
+            "total": 627.1320000000009,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 296.00000000000125,
-            "skill": 198.67919999999953
+            "skill": 331.1319999999996
+          },
+          {
+            "id": 391,
+            "name": "猛火猴",
+            "total": 556.6960000000006,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 256.0000000000008,
+            "skill": 300.6959999999998
           },
           {
             "id": 257,
@@ -973,15 +982,6 @@
             "condition": "全时满包",
             "ordinary": 440,
             "skill": 0
-          },
-          {
-            "id": 391,
-            "name": "猛火猴",
-            "total": 436.4176000000005,
-            "mode": "unlimited",
-            "condition": "无持有上限",
-            "ordinary": 256.0000000000008,
-            "skill": 180.4175999999997
           },
           {
             "id": 57,
@@ -1098,6 +1098,15 @@
         ],
         "椰木果": [
           {
+            "id": 628,
+            "name": "勇士雄鷹",
+            "total": 635.1399999999999,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 290,
+            "skill": 345.1399999999999
+          },
+          {
             "id": 85,
             "name": "嘟嘟利",
             "total": 497.4,
@@ -1105,15 +1114,6 @@
             "condition": "全时满包",
             "ordinary": 497.4,
             "skill": 0
-          },
-          {
-            "id": 628,
-            "name": "勇士雄鷹",
-            "total": 497.0839999999997,
-            "mode": "unlimited",
-            "condition": "无持有上限",
-            "ordinary": 290,
-            "skill": 207.08399999999972
           },
           {
             "id": 85,
@@ -1127,11 +1127,11 @@
           {
             "id": 627,
             "name": "毛頭小鷹",
-            "total": 343.12799999999976,
+            "total": 440.4304000000005,
             "mode": "unlimited",
             "condition": "无持有上限",
-            "ordinary": 204,
-            "skill": 139.12799999999976
+            "ordinary": 190.00000000000054,
+            "skill": 250.43039999999993
           },
           {
             "id": 84,
@@ -1147,11 +1147,11 @@
           {
             "id": 488,
             "name": "克雷色利亞",
-            "total": 465.0380000000006,
+            "total": 495.0919679999996,
             "mode": "normal",
             "condition": "一般",
-            "ordinary": 288.00000000000017,
-            "skill": 177.0380000000004
+            "ordinary": 269.9999999999999,
+            "skill": 225.09196799999972
           },
           {
             "id": 178,
@@ -1183,11 +1183,11 @@
           {
             "id": 151,
             "name": "夢幻",
-            "total": 391.1055807952778,
+            "total": 396.1904831722339,
             "mode": "normal",
             "condition": "一般",
-            "ordinary": 374.9999999999988,
-            "skill": 16.105580795278982
+            "ordinary": 374.99999999999875,
+            "skill": 21.190483172235105
           }
         ],
         "木子果": [
@@ -1288,11 +1288,11 @@
           {
             "id": 778,
             "name": "謎擬Ｑ",
-            "total": 452.32133105450936,
+            "total": 616.4368844397566,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 280,
-            "skill": 172.32133105450933
+            "skill": 336.43688443975657
           },
           {
             "id": 354,
@@ -1335,11 +1335,11 @@
           {
             "id": 381,
             "name": "拉帝歐斯",
-            "total": 495.3094399999992,
+            "total": 564.6367999999993,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 217.99999999999977,
-            "skill": 277.3094399999994
+            "skill": 346.63679999999954
           },
           {
             "id": 373,
@@ -1512,11 +1512,11 @@
           {
             "id": 36,
             "name": "皮可西",
-            "total": 362.833646987165,
+            "total": 368.6006740735517,
             "mode": "normal",
             "condition": "一般",
             "ordinary": 345.0000000000009,
-            "skill": 17.833646987164144
+            "skill": 23.600674073550813
           }
         ]
       },
@@ -1844,7 +1844,8 @@
             "total": 132.3
           }
         ]
-      }
+      },
+      "berrySkillScope": "five-member-converted-to-ranked-berry"
     }
   }
 }
