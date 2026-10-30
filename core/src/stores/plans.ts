@@ -11,6 +11,7 @@ import { DEFAULT_WHISTLE, normalizeWhistleOptions, type WhistleOptions } from '.
 import { loadJson, saveJson } from '../storage'
 import { defaultSplitOptions, normalizeSplitOptions, type SplitOptions } from '../calc/splitSleep'
 import type { CompletionEfficiencyOptions } from '../calc/completionEfficiency'
+import { normalizeEncounterGoals, type EncounterGoal } from '../calc/encounterPlan'
 const stores_plans_config_clientDefaults = clientDefaults.modules.stores_plans
 
 
@@ -29,6 +30,7 @@ interface PlanState {
   rare: boolean
   shinyUp: boolean
   catchGoals: CatchGoal[]
+  encounterGoals: EncounterGoal[]
   candyRows: CandyRow[]
   candyStocks: Record<string, number>
   babyEfficiency: BabyEfficiencyOptions
@@ -51,6 +53,7 @@ const empty: PlanState = {
   rare: (stores_plans_config_clientDefaults["empty_rare"] as true),
   shinyUp: (stores_plans_config_clientDefaults["empty_shinyUp"] as false),
   catchGoals: cloneData(stores_plans_config_clientDefaults["empty_catchGoals"]),
+  encounterGoals: [],
   candyRows: cloneData(stores_plans_config_clientDefaults["empty_candyRows"]),
   candyStocks: cloneData(stores_plans_config_clientDefaults["empty_candyStocks"]),
   babyEfficiency: { ...DEFAULT_BABY_EFFICIENCY },
@@ -76,6 +79,7 @@ export const usePlanStore = defineStore('plans', () => {
       sleepdexMode: saved.sleepdexMode ?? ((saved.sleepdex?.length ?? 0) > 0 ? 'list' : 'all'),
       sleepdexExcluded: saved.sleepdexExcluded ?? [],
       catchGoals: saved.catchGoals ?? [],
+      encounterGoals: normalizeEncounterGoals(saved.encounterGoals),
       candyRows: saved.candyRows ?? [],
       candyStocks: migrateCandyStocks(saved.candyStocks ?? {}),
       whistle: normalizeWhistleOptions(saved.whistle),

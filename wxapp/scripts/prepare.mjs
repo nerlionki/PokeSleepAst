@@ -8,6 +8,9 @@ const core = path.join(root, 'core/src')
 const generated = path.join(wxRoot, 'src/generated')
 const require = createRequire(path.join(wxRoot, 'package.json'))
 const { nativeScopedStyles, stripWebCheckboxStyles } = require('./config/native-scoped-styles.cjs')
+const { nativePokePickerScroll } = require('./config/poke-picker-scroll.cjs')
+const { nativeCandyListScroll } = require('./config/candy-list-scroll.cjs')
+const { withHomeListAd } = require('./config/home-list-ad.cjs')
 const write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, value) }
 const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(f => f.isDirectory() ? walk(path.join(dir, f.name)) : [path.join(dir, f.name)])
 function clean(dir) {
@@ -67,6 +70,9 @@ for (const file of walk(core)) {
     text = text.replace(new RegExp(`<${tag}\\b((?:[^"'>]|"[^"]*"|'[^']*')*)>`, 'g'), (_match, attrs) => `<${component}${attrs.replace(/\s*\/$/, '')}${['input', 'img'].includes(tag) ? ' />' : '>'}`)
     text = text.replace(new RegExp(`</${tag}>`, 'g'), `</${component}>`)
   }
+  if (rel === 'components/shared/PokePicker.vue') text = nativePokePickerScroll(text)
+  if (rel === 'components/plan/CandyPane.vue') text = nativeCandyListScroll(text)
+  if (rel === 'components/pokemon/PokedexPane.vue') text = withHomeListAd(text)
   if (rel === 'components/pokemon/VirtualPokedex.vue') {
     // Native scroll-view needs a bounded viewport: percentage height on a flex
     // item can otherwise expand with the virtual spacers and get clipped by
@@ -187,6 +193,7 @@ write(path.join(wxRoot, 'src/app.config.ts'), `export default defineAppConfig(${
 const esbuild = require('esbuild')
 fs.mkdirSync(path.join(wxRoot, 'src/workers'), { recursive: true })
 // Share one CommonJS calculation module to keep the worker subpackage below 2 MB.
+const { schedulerSource, calculationWorkerEntry } = require('./config/calculation-worker.cjs')
 await esbuild.build({ stdin: { contents: `import { babyEfficiencySteps } from './core/src/calc/babyEfficiency';
 import { sleepSimulationSteps } from './core/src/calc/sleepSimulation';
 import { scoreSearchSteps } from './core/src/calc/scoreSearch';
@@ -208,13 +215,10 @@ export function runSleep(request) {
 export function runScore(request) {
  run(scoreSearchSteps(request), state => { worker.postMessage({type:'checkpoint',checkpoint:state}); worker.postMessage({type:'progress',completed:state.phase==='search'?state.index:state.policies.length+state.index,total:state.policies.length+5}); });
 }
-function run(steps, checkpoint) {
- const tick = () => { try { const next = steps.next(); if(next.done) worker.postMessage({type:'result',result:next.value}); else { checkpoint(next.value); setTimeout(tick,0); } } catch(error) { worker.postMessage({type:'error',message:error.message||'计算失败'}); } };
- tick();
-}`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/calculation.js'), bundle: true, platform: 'neutral', format: 'cjs', target: 'es2020', minify: true,
+${schedulerSource}`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/calculation.js'), bundle: true, platform: 'neutral', format: 'cjs', target: 'es2020', minify: true,
 plugins: [{ name: 'calculation-images', setup(build) { build.onResolve({ filter: /^#platform\/images$/ }, () => ({ path: 'images', namespace: 'calculation' })); build.onLoad({ filter: /.*/, namespace: 'calculation' }, () => ({ contents: 'export const localImage = () => ""; export const publicImage = () => ""; export const bundledImage = value => value', loader: 'js' })); } }] })
 for (const [name, handler] of [['baby', 'runBaby'], ['sleep', 'runSleep'], ['score', 'runScore']]) {
-  write(path.join(wxRoot, `src/workers/${name}.js`), `let run; worker.onMessage(message => { if (!run) { globalThis.__sleepastResources = message.__sleepastResources; run = require('./calculation.js').${handler}; } run(message); });\n`)
+  write(path.join(wxRoot, `src/workers/${name}.js`), calculationWorkerEntry(handler))
 }
 write(path.join(wxRoot, 'src/workers/ocr.js'), "let receive; worker.onMessage(message => { if (!receive) { globalThis.__sleepastResources = message.__sleepastResources; require('./calculation.js').installImportWorker(worker, handler => { receive = handler; }); } receive(message); });\n")
 // Read ONNX protobuf metadata directly; preparing WeChat does not require Web inference.

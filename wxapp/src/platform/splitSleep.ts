@@ -1,6 +1,7 @@
 import { withResources, resourceRevision, compatibleCheckpoint } from '../../../core/src/resources/runtime'
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { requireWorkerSupport } from './compatibility'
+import { workerErrorMessage } from './workerError'
 import { validateSplitOptions, type SplitCheckpoint, type SplitMessage, type SplitOptions, type SplitResult } from '../../../core/src/calc/splitSleep'
 
 interface SavedTask { resourceRevision?: string; options: SplitOptions, checkpoint?: SplitCheckpoint, progress: { completed: number, total: number } }
@@ -31,6 +32,11 @@ export function useSplitSleep(options: Ref<SplitOptions>) {
       await new Promise<void>((resolve, reject) => wx.preDownloadSubpackage({ packageType: 'workers', success: () => resolve(), fail: reject }))
       if (active !== generation || disposed || !foreground) return
       const current = wx.createWorker('workers/baby.js', { useExperimentalWorker: true }); worker = current
+      current.onError?.((event) => {
+        if (worker !== current || active !== generation) return
+        error.value = workerErrorMessage(event, '后台计算失败，请重新尝试')
+        stop()
+      })
       current.onMessage(event => {
         if (worker !== current || active !== generation) return
         const message = event as unknown as SplitMessage

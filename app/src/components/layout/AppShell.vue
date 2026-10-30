@@ -22,6 +22,7 @@ const titles: Record<string, string> = {
 
 const route = useRoute()
 const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
+const planTab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle'] as const, 'sleep')
 const title = computed(() => titles[String(route.name)] ?? '宝睡助手')
 const settings = useSettingsStore()
 const updater = useUpdateStore()
@@ -44,7 +45,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'dex-shell': route.name === 'pokemon' && pokemonTab === 'dex' }">
+  <div class="app-shell" :class="{ 'dex-shell': route.name === 'pokemon' && pokemonTab === 'dex', 'candy-shell': route.name === 'plan' && planTab === 'candy' }">
     <header class="topbar">
       <div class="brand">
         <small>CAMP RESEARCH</small>

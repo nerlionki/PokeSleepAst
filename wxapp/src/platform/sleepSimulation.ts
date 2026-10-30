@@ -2,6 +2,7 @@ import { withResources, resourceRevision, compatibleCheckpoint } from '../../../
 import { createSleepSimulationTask, type SleepSimulationWorker } from '../../../core/src/composables/sleepSimulationTask'
 import type { SleepSimulationCheckpoint, SleepSimulationMessage, SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
 import { requireWorkerSupport } from './compatibility'
+import { workerErrorMessage } from './workerError'
 const STORAGE_KEY = 'sleep-simulation-checkpoint-v1'
 export function useSleepSimulation() {
   const state = createSleepSimulationTask(async (isActive) => {
@@ -17,8 +18,12 @@ export function useSleepSimulation() {
       catch { state.notice.value = '存储空间不足，请保持小程序在前台完成模拟' }
     }
     const start = () => {
-      if (disposed || !isActive() || worker) return
+      if (disposed || !isActive() || worker || !request) return
       const current = wx.createWorker('workers/sleep.js', { useExperimentalWorker: true }); worker = current
+      current.onError?.((event) => {
+        if (worker !== current || disposed) return
+        onMessage({ type: 'error', message: workerErrorMessage(event, '后台模拟失败，请重新尝试') })
+      })
       current.onMessage((event) => {
         if (worker !== current || disposed) return
         const message = event as unknown as SleepSimulationMessage
@@ -45,10 +50,13 @@ export function useSleepSimulation() {
       }
     }
     wx.onAppHide?.(hide); wx.onAppShow?.(show)
-    start()
     const adapter: SleepSimulationWorker = {
-      onMessage(callback) { onMessage = callback }, onError() { /* Process termination is recovered on app show. */ },
-      postMessage(value) { request = value; checkpoint = value.checkpoint; persist(); worker?.postMessage(withResources({ ...value, checkpoint })) },
+      onMessage(callback) { onMessage = callback }, onError() { /* Native errors are forwarded as error messages. */ },
+      postMessage(value) {
+        request = value; checkpoint = value.checkpoint; persist()
+        if (worker) worker.postMessage(withResources({ ...value, checkpoint }))
+        else start()
+      },
       terminate() {
         if (disposed) return
         disposed = true; worker?.terminate(); worker = null

@@ -4,10 +4,12 @@ import clientDefaults from '../../data/client-defaults.resource'
 import { useActivities } from '../../composables/useActivities'
 import { useSettingsStore } from '../../stores/settings'
 import FormField from '../shared/FormField.vue'
+import { useCandyViewport } from '#platform/candyViewport'
 import { newUid } from '../../calc/uid'
 import { computed, ref, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { boxLabel } from '../../calc/boxFilter'
+import { pokeById } from '../../calc/data'
 import { CANDY_BOOSTS, CANDY_PRESETS, candyBoostPolicy, candyRowFromBox, evolutionLevels, familyOf, planCandy, type CandyBoostId, type CandyRow } from '../../calc/candyPlan'
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
@@ -15,6 +17,7 @@ import type { BoxPokemon } from '../../types'
 import PokePicker from '../shared/PokePicker.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 const components_plan_CandyPane_config_clientDefaults = clientDefaults.modules.components_plan_CandyPane
+const candyViewport = useCandyViewport()
 
 
 const { settings } = storeToRefs(useSettingsStore())
@@ -25,6 +28,7 @@ const box = useBoxStore()
 const mode = shallowRef<CandyBoostId>((components_plan_CandyPane_config_clientDefaults["modeInitial"] as unknown as CandyBoostId))
 const importing = shallowRef(components_plan_CandyPane_config_clientDefaults["importingInitial"])
 const imported = ref(new Set<string>())
+const expandedRows = ref(new Set<string>())
 const boxList = computed(() => [...box.pokemon].reverse())
 
 function openImport() {
@@ -45,8 +49,9 @@ const active = computed(() => plans.value[mode.value])
 const boost = computed(() => candyBoostPolicy(mode.value, activity.context.value))
 
 function addRow() {
+  const id = newUid()
   plan.value.candyRows.push({
-    id: newUid(),
+    id,
     pokeId: 1,
     method: 'target',
     start: 1,
@@ -56,10 +61,17 @@ function addRow() {
     nature: 'flat',
     remaining: null,
   })
+  expandedRows.value.add(id)
 }
 
 function removeRow(id: string) {
   plan.value.candyRows = plan.value.candyRows.filter((row) => row.id !== id)
+  expandedRows.value.delete(id)
+}
+
+function toggleRow(id: string) {
+  if (expandedRows.value.has(id)) expandedRows.value.delete(id)
+  else expandedRows.value.add(id)
 }
 
 function moveRow(index: number, step: number) {
@@ -90,24 +102,36 @@ function statusOf(index: number) {
   return '充足'
 }
 
+function missingOf(index: number) {
+  const result = active.value.results[index]
+  if (!result || result.error) return statusOf(index)
+  return `缺糖 ${result.missing.toLocaleString('zh-CN')} 颗`
+}
+
 const presets = CANDY_PRESETS
 </script>
 
 <template>
-  <div class="stack">
+  <div class="stack candy-pane">
+    <div class="stack candy-context">
     <p class="muted">同一进化家族共用当前糖果，按行顺序扣。大型增强经验 ×{{ CANDY_BOOSTS.christmas.exp }}、梦碎 ×{{ CANDY_BOOSTS.christmas.shards }}、额度 {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}。迷你增强按活动日期开放并计算当日额度，不含睡眠经验。</p>
     <p v-if="mode === 'mini' && !active.available" class="amber">当前活动日期未开放迷你糖果增强。</p>
     <div class="seg">
       <button type="button" :class="{ on: mode === 'christmas' }" @click="mode = 'christmas'">大型增强</button>
         <button type="button" :class="{ on: mode === 'mini' }" @click="mode = 'mini'">迷你增强</button>
     </div>
-    <div class="row">
-      <article class="card">
-        <p class="muted">大型增强 · {{ plans.christmas.candies.toLocaleString('zh-CN') }} / {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }} 颗</p>
+    </div>
+    <div class="stack candy-workspace" :style="candyViewport">
+    <div class="stack candy-toolbar">
+    <div class="candy-boost-stats">
+      <article class="card candy-boost-stat">
+        <p class="muted">大型增强</p>
+        <p>{{ plans.christmas.candies.toLocaleString('zh-CN') }} / {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }} 颗</p>
         <p>梦碎 {{ plans.christmas.shards.toLocaleString('zh-CN') }}</p>
       </article>
-      <article class="card">
-        <p class="muted">迷你增强 · {{ plans.mini.candies.toLocaleString('zh-CN') }} / {{ plans.mini.quota.toLocaleString('zh-CN') }} 颗{{ plans.mini.daily ? '（当天）' : '' }}</p>
+      <article class="card candy-boost-stat">
+        <p class="muted">迷你增强{{ plans.mini.daily ? '（当天）' : '' }}</p>
+        <p>{{ plans.mini.candies.toLocaleString('zh-CN') }} / {{ plans.mini.quota.toLocaleString('zh-CN') }} 颗</p>
         <p>梦碎 {{ plans.mini.shards.toLocaleString('zh-CN') }}</p>
       </article>
     </div>
@@ -117,11 +141,29 @@ const presets = CANDY_PRESETS
       <button class="btn" type="button" @click="addRow">新增宝可梦</button>
       <button class="btn" type="button" :disabled="!box.pokemon.length" @click="openImport">从 Box 导入</button>
     </div>
+    </div>
+    <div class="stack candy-list" aria-label="糖果增强宝可梦列表" tabindex="0">
     <article v-for="(row, index) in plan.candyRows" :key="row.id" class="card stack">
-      <div class="plan-goal-top">
-        <span class="muted">{{ index + 1 }}</span>
-        <PokePicker v-model="row.pokeId" />
+      <div class="candy-row-top">
+        <template v-if="expandedRows.has(row.id)">
+          <span class="muted">{{ index + 1 }}</span>
+          <PokePicker v-model="row.pokeId" class="candy-row-picker" />
+        </template>
+        <template v-else>
+          <PokeSprite :id="row.pokeId" :name="pokeById(row.pokeId)?.name" large />
+          <strong class="candy-missing" :class="{ amber: active.results[index]?.missing || active.results[index]?.error }">{{ missingOf(index) }}</strong>
+        </template>
+        <button
+          class="candy-info-toggle"
+          :class="{ on: expandedRows.has(row.id) }"
+          type="button"
+          :aria-expanded="expandedRows.has(row.id)"
+          :aria-label="expandedRows.has(row.id) ? '收起糖果规划' : '查看糖果规划详情'"
+          :title="expandedRows.has(row.id) ? '收起糖果规划' : '查看糖果规划详情'"
+          @click="toggleRow(row.id)"
+        >{{ expandedRows.has(row.id) ? '收起' : '详情' }}</button>
       </div>
+      <template v-if="expandedRows.has(row.id)">
       <div class="row">
         <FormField v-slot="{ id }" label="当前糖果"><input :id="id" :value="stockOf(row.pokeId)" type="number" min="0" @change="setStock(row.pokeId, Number(($event.target as HTMLInputElement).value))"></FormField>
         <FormField v-slot="{ id }" label="输入方式"><select :id="id" v-model="row.method">
@@ -176,8 +218,11 @@ const presets = CANDY_PRESETS
         <button class="btn ghost" type="button" :disabled="index === plan.candyRows.length - 1" @click="moveRow(index, 1)">下移</button>
         <button class="btn ghost" type="button" @click="removeRow(row.id)">删除</button>
       </div>
+      </template>
     </article>
     <p v-if="!plan.candyRows.length" class="muted">新增宝可梦，填写目标等级或要花的糖果。</p>
+    </div>
+    </div>
     <div v-if="importing" v-back="() => { importing = false }" class="overlay" @click.self="importing = false">
       <section class="sheet stack">
         <div class="row">
@@ -194,3 +239,18 @@ const presets = CANDY_PRESETS
     </div>
   </div>
 </template>
+
+<style scoped>
+.candy-workspace { height: var(--candy-frame-height, calc(100vh - 12px)); min-height: 0; display: flex; flex-direction: column; }
+.candy-context, .candy-toolbar { flex: 0 0 auto; }
+.candy-toolbar { position: sticky; top: var(--candy-sticky-top, 0px); z-index: 4; background: var(--ink); }
+.candy-list { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; align-content: start; overscroll-behavior-y: contain; padding: 2px; }
+.candy-boost-stats { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 10px; min-width: 0; }
+.candy-boost-stat { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; gap: 4px; padding: 10px; font-size: var(--font-12); overflow-wrap: anywhere; }
+.candy-boost-stat p { margin: 0; }
+.candy-row-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.candy-row-picker, .candy-missing { flex: 1; min-width: 0; }
+.candy-info-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-width: 44px; height: 44px; margin: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: var(--font-12); line-height: 1; white-space: nowrap; }
+.candy-info-toggle.on { border-color: var(--amber); color: var(--amber); }
+.candy-info-toggle:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
+</style>

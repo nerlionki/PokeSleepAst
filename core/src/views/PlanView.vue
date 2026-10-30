@@ -4,13 +4,14 @@ import CandyPane from '../components/plan/CandyPane.vue'
 import BabyEfficiencyPane from '../components/plan/BabyEfficiencyPane.vue'
 import CompletionEfficiencyPane from '../components/plan/CompletionEfficiencyPane.vue'
 import CatchPane from '../components/plan/CatchPane.vue'
+import EncounterPane from '../components/plan/EncounterPane.vue'
 import SleepPane from '../components/plan/SleepPane.vue'
 import WhistlePane from '../components/plan/WhistlePane.vue'
 import TrainPane from '../components/plan/TrainPane.vue'
 import SplitSleepPane from '../components/plan/SplitSleepPane.vue'
 import Segmented from '../components/shared/Segmented.vue'
 
-const tab = usePageTab(['catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle'] as const, 'sleep')
+const tab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle'] as const, 'sleep')
 </script>
 
 <template>
@@ -19,6 +20,7 @@ const tab = usePageTab(['catch', 'sleep', 'split', 'baby', 'completion', 'candy'
       v-model="tab"
       class="plan-tabs"
       :options="[
+        { id: 'encounter', label: '遇见\n规划' },
         { id: 'catch', label: '捕捉\n刷糖' },
         { id: 'sleep', label: '睡眠\n规划' },
         { id: 'split', label: '目标\n拆觉' },
@@ -29,7 +31,8 @@ const tab = usePageTab(['catch', 'sleep', 'split', 'baby', 'completion', 'candy'
         { id: 'whistle', label: '吹哨\n规划' },
       ]"
     />
-    <CatchPane v-if="tab === 'catch'" />
+    <EncounterPane v-if="tab === 'encounter'" />
+    <CatchPane v-else-if="tab === 'catch'" />
     <SleepPane v-else-if="tab === 'sleep'" />
     <SplitSleepPane v-else-if="tab === 'split'" />
     <BabyEfficiencyPane v-else-if="tab === 'baby'" />

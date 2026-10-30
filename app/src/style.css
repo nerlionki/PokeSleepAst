@@ -6,3 +6,5 @@
 /* The dex owns the available viewport: only its virtual list scrolls. */
 .dex-shell { height: 100dvh; min-height: 0; overflow: hidden; grid-template-rows: auto minmax(0, 1fr) auto; }
 .dex-shell > .page { min-height: 0; display: flex; flex-direction: column; padding-bottom: 12px; overflow: hidden; }
+.candy-shell > .page { padding-bottom: 12px; }
+.candy-shell > .topbar { background: var(--ink); }

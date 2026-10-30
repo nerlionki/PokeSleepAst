@@ -1,11 +1,12 @@
 import { withResources, resourceRevision, compatibleCheckpoint } from '../../../core/src/resources/runtime'
 import { requireWorkerSupport } from './compatibility'
+import { workerErrorMessage } from './workerError'
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { validateBabyEfficiency, type BabyEfficiencyCheckpoint, type BabyEfficiencyOptions, type BabyEfficiencyResult, type EfficiencyProgress } from '../../../core/src/calc/babyEfficiency'
 import type { BabyEfficiencyMessage } from '../../../core/src/calc/babyEfficiencyMessages'
 interface SavedTask { resourceRevision?: string; options: BabyEfficiencyOptions, checkpoint?: BabyEfficiencyCheckpoint, progress: EfficiencyProgress }
-export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
-  const STORAGE_KEY = options.value.completionTarget != null ? 'completion-efficiency-checkpoint-v1' : 'baby-efficiency-checkpoint-v1'
+export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?: string) {
+  const STORAGE_KEY = taskKey ? `encounter-efficiency-${taskKey}-v1` : options.value.completionTarget != null ? 'completion-efficiency-checkpoint-v1' : 'baby-efficiency-checkpoint-v1'
   const busy = shallowRef(false), error = shallowRef(''), notice = shallowRef('')
   const result = shallowRef<BabyEfficiencyResult | null>(null)
   const progress = shallowRef<EfficiencyProgress>({ percent: 0, island: '', evaluatedStates: 0 })
@@ -33,6 +34,11 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
       if (active !== generation || disposed || !foreground) return
       const current = wx.createWorker('workers/baby.js', { useExperimentalWorker: true })
       worker = current
+      current.onError?.((event) => {
+        if (worker !== current || active !== generation) return
+        error.value = workerErrorMessage(event, '后台计算失败，请重新尝试')
+        stop()
+      })
       current.onMessage((event) => {
         if (worker !== current || active !== generation) return
         const message = event as unknown as BabyEfficiencyMessage

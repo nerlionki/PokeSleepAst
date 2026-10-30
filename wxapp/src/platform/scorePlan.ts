@@ -3,6 +3,7 @@ import { createScorePlanTask, type ScoreWorker } from '../../../core/src/composa
 import { scoreFingerprint } from '../../../core/src/calc/scoreSearch'
 import type { ScoreCheckpoint, ScoreMessage, ScoreRequest } from '../../../core/src/calc/scorePlan'
 import { requireWorkerSupport } from './compatibility'
+import { workerErrorMessage } from './workerError'
 const KEY = 'score-plan-checkpoint-v1'
 export function useScorePlan(currentInput: () => ScoreRequest) {
   const task = createScorePlanTask(async notice => {
@@ -14,6 +15,10 @@ export function useScorePlan(currentInput: () => ScoreRequest) {
     const start = () => {
       if (disposed || worker || !request) return
       const current = wx.createWorker('workers/score.js', { useExperimentalWorker: true }); worker = current
+      current.onError?.((event) => {
+        if (worker !== current || disposed) return
+        adapter.onmessage?.({ data: { type: 'error', message: workerErrorMessage(event, '后台规划失败，请重新尝试') } })
+      })
       current.onMessage(event => {
         if (disposed || worker !== current) return
         const data = event as unknown as ScoreMessage

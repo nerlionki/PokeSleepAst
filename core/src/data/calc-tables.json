@@ -670,8 +670,8 @@
       "supportSelfShare": 0.2,
       "includeIngredientGatheringSkills": false,
       "reference": "https://pks.raenonx.cc/zh/ingredient/chart",
-      "sourceVersion": "1.0.3",
-      "sourceHash": "df72c0026f15912d1310094334a81b6ba16a7da47f7c365cae428834f9098093",
+      "sourceVersion": "1.0.4",
+      "sourceHash": "d270e6dc913e4fc8c1f767bca26f2d3859ecc191ac6dc8bf1ce8aa04b9a41491",
       "berries": {
         "柿仔果": [
           {
@@ -722,15 +722,6 @@
         ],
         "蘋野果": [
           {
-            "id": 390,
-            "name": "小火焰猴",
-            "total": 489.0360000000002,
-            "mode": "unlimited",
-            "condition": "无持有上限",
-            "ordinary": 222.00000000000023,
-            "skill": 267.03599999999994
-          },
-          {
             "id": 157,
             "name": "火爆獸",
             "total": 476.4,
@@ -738,6 +729,15 @@
             "condition": "全时满包",
             "ordinary": 476.4,
             "skill": 0
+          },
+          {
+            "id": 390,
+            "name": "小火焰猴",
+            "total": 462.3324000000002,
+            "mode": "unlimited",
+            "condition": "无持有上限",
+            "ordinary": 222.00000000000023,
+            "skill": 240.33239999999995
           },
           {
             "id": 38,
@@ -865,29 +865,29 @@
           {
             "id": 254,
             "name": "蜥蜴王",
-            "total": 619.455999999999,
+            "total": 585.7103999999989,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 281.9999999999993,
-            "skill": 337.4559999999997
+            "skill": 303.7103999999996
           },
           {
             "id": 253,
             "name": "森林蜥蜴",
-            "total": 541.88,
+            "total": 511.89199999999994,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 242,
-            "skill": 299.88
+            "skill": 269.89199999999994
           },
           {
             "id": 252,
             "name": "木守宮",
-            "total": 449.41999999999996,
+            "total": 423.47799999999995,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 190,
-            "skill": 259.41999999999996
+            "skill": 233.47799999999995
           },
           {
             "id": 154,
@@ -959,20 +959,20 @@
           {
             "id": 392,
             "name": "烈焰猴",
-            "total": 627.1320000000009,
+            "total": 594.0188000000009,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 296.00000000000125,
-            "skill": 331.1319999999996
+            "skill": 298.0187999999996
           },
           {
             "id": 391,
             "name": "猛火猴",
-            "total": 556.6960000000006,
+            "total": 526.6264000000006,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 256.0000000000008,
-            "skill": 300.6959999999998
+            "skill": 270.62639999999976
           },
           {
             "id": 257,
@@ -1100,11 +1100,11 @@
           {
             "id": 628,
             "name": "勇士雄鷹",
-            "total": 635.1399999999999,
+            "total": 600.6259999999999,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 290,
-            "skill": 345.1399999999999
+            "skill": 310.62599999999986
           },
           {
             "id": 85,
@@ -1127,11 +1127,11 @@
           {
             "id": 627,
             "name": "毛頭小鷹",
-            "total": 440.4304000000005,
+            "total": 415.3873600000005,
             "mode": "unlimited",
             "condition": "无持有上限",
-            "ordinary": 190.00000000000054,
-            "skill": 250.43039999999993
+            "ordinary": 190.00000000000057,
+            "skill": 225.38735999999994
           },
           {
             "id": 84,
@@ -1147,11 +1147,11 @@
           {
             "id": 488,
             "name": "克雷色利亞",
-            "total": 495.0919679999996,
+            "total": 487.3301759999996,
             "mode": "normal",
             "condition": "一般",
             "ordinary": 269.9999999999999,
-            "skill": 225.09196799999972
+            "skill": 217.3301759999997
           },
           {
             "id": 178,
@@ -1183,11 +1183,11 @@
           {
             "id": 151,
             "name": "夢幻",
-            "total": 396.1904831722339,
+            "total": 394.91925757799487,
             "mode": "normal",
             "condition": "一般",
-            "ordinary": 374.99999999999875,
-            "skill": 21.190483172235105
+            "ordinary": 374.9999999999988,
+            "skill": 19.919257577996074
           }
         ],
         "木子果": [
@@ -1288,11 +1288,11 @@
           {
             "id": 778,
             "name": "謎擬Ｑ",
-            "total": 616.4368844397566,
+            "total": 575.4079960934448,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 280,
-            "skill": 336.43688443975657
+            "skill": 295.4079960934448
           },
           {
             "id": 354,
@@ -1335,11 +1335,11 @@
           {
             "id": 381,
             "name": "拉帝歐斯",
-            "total": 564.6367999999993,
+            "total": 547.3049599999993,
             "mode": "unlimited",
             "condition": "无持有上限",
             "ordinary": 217.99999999999977,
-            "skill": 346.63679999999954
+            "skill": 329.3049599999995
           },
           {
             "id": 373,
@@ -1512,11 +1512,11 @@
           {
             "id": 36,
             "name": "皮可西",
-            "total": 368.6006740735517,
+            "total": 367.15891730195506,
             "mode": "normal",
             "condition": "一般",
             "ordinary": 345.0000000000009,
-            "skill": 23.600674073550813
+            "skill": 22.158917301954148
           }
         ]
       },
@@ -1845,7 +1845,7 @@
           }
         ]
       },
-      "berrySkillScope": "five-member-converted-to-ranked-berry"
+      "berrySkillScope": "self-and-three-teammates-converted-to-ranked-berry"
     }
   }
 }

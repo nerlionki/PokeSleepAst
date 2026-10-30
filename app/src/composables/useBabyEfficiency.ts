@@ -4,7 +4,7 @@ import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { validateBabyEfficiency, type BabyEfficiencyOptions, type BabyEfficiencyResult, type EfficiencyProgress } from '../calc/babyEfficiency'
 import type { BabyEfficiencyMessage } from '../calc/babyEfficiencyMessages'
 
-export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
+export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, _taskKey?: string) {
   const busy = shallowRef(false)
   const error = shallowRef('')
   const notice = shallowRef('')

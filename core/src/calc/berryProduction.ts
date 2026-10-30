@@ -27,7 +27,7 @@ export interface BerryProducer {
 /** User-confirmed extreme panels: Lv70, 2000-hour ribbon, fixed 100 energy,
  * capped main skill, five Helping Bonuses and optimized nature/subskills/food.
  * Legacy inventory modes retain separate ranking places. Direct skill berries
- * for four teammates are converted to the ranked berry; support helps stay self-only.
+ * for three teammates are converted to the ranked berry; support helps stay self-only.
  */
 export function berryProducerInput(pokeId: number, carryMode: CarryMode = 'preset'): ProduceInput {
   return extremeInput(pokeId, carryMode)
@@ -44,10 +44,11 @@ export function berryProducerModes(pokeId: number): CarryMode[] {
 
 const conditions: Partial<Record<CarryMode, string>> = { full: '全时满包', normal: '一般', unlimited: '无持有上限' }
 
-/** User-confirmed 2026-10-30: include the other four teammates' direct skill
+/** User-confirmed 2026-10-30: include three teammates' direct skill
  * berries as the current berry. Reuse shared skill effects (including disguise),
  * without adding their natural production or support-help production. Duplicate
  * species preserve the default one-species skill tier; no team combo is assumed.
+ * This berry conversion count does not change the confirmed five Helping Bonuses.
  */
 function teammateSkillBerries(input: ProduceInput, procs: number): number {
   if (input.carryMode === 'full' || procs <= 0) return 0
@@ -56,7 +57,7 @@ function teammateSkillBerries(input: ProduceInput, procs: number): number {
   const skill = skillByPokedexName(selected.name, poke.id)
   // Copying requires real teammates; the default solo panel has no copy target.
   if (!skill || skill.id === 18 || skill.id === 19) return 0
-  const actors: EffectActor[] = Array.from({ length: 5 }, () => ({
+  const actors: EffectActor[] = Array.from({ length: 4 }, () => ({
     poke: { ...poke, mainSkill: selected.name }, input, energy: 100, factor: 1,
     skillLv: effectiveSkillLevel(input.level, input.skillLevel, input.subskills, selected.name),
     skillRate: selected.rate, unitBerry: 0,
