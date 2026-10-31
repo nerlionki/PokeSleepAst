@@ -35,7 +35,7 @@ function applyImport(replace: boolean) {
     }
     if (replace) box.replaceAll(parsed.pokemon)
     else box.merge(parsed.pokemon)
-    const label = parsed.source === 'iqdooh' ? 'iqdooh' : parsed.source === 'sdrice' ? 'sdrice' : parsed.source === 'rae' ? 'RAE' : parsed.source === 'native' ? '本机' : '混合'
+    const label = parsed.source === 'iqdooh' ? 'iqdooh' : parsed.source === 'sdrice' ? 'sdrice' : parsed.source === 'native' ? '本机' : '混合'
     msg.value = `${replace ? '覆盖' : '合并'}导入 ${parsed.pokemon.length} 只（${label}）${parsed.skipped ? `，跳过 ${parsed.skipped}` : ''}`
   }
   catch {
@@ -52,7 +52,7 @@ async function wipe() {
 <template>
     <article class="card stack">
       <h3>本机备份</h3>
-      <p class="muted">可导入本机 / sdrice 盒子数组 / RAE pokebox / iqdooh 宝可梦盒备份 JSON。缺失字段可在 Box 中补全。</p>
+      <p class="muted">可导入本机 / sdrice 盒子数组 / iqdooh 宝可梦盒备份 JSON。缺失字段可在 Box 中补全。</p>
       <div class="field">
         <label>导出格式</label>
         <select v-model="mode">
@@ -61,7 +61,7 @@ async function wipe() {
         </select>
       </div>
       <button class="btn" type="button" @click="exportBox">导出 Box JSON</button>
-      <textarea v-model="incoming" rows="6" placeholder="粘贴本机、sdrice、RAE 或 iqdooh Box JSON"></textarea>
+      <textarea v-model="incoming" rows="6" placeholder="粘贴本机、sdrice 或 iqdooh Box JSON"></textarea>
       <div class="row">
         <button class="btn sage" type="button" @click="applyImport(false)">合并导入</button>
         <button class="btn ghost" type="button" @click="applyImport(true)">覆盖导入</button>

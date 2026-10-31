@@ -2,6 +2,7 @@
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { useActivities } from '../../composables/useActivities'
+import { activityHasPokemonUp } from '../../calc/activities'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import { computed, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -48,7 +49,11 @@ const pickedRank = computed({
   get: () => rank.value,
   set: (value) => { plan.value.snorlaxStrength = rankStrength(island.value, value) },
 })
-const dp = computed(() => drowsyPower(plan.value.sleepScore, plan.value.snorlaxStrength, eventMult.value))
+// The overview recommends a full day's 100 points; simulation keeps the selected score.
+const overviewScore = 100
+const dp = computed(() => drowsyPower(overviewScore, plan.value.snorlaxStrength, eventMult.value))
+const overview = computed(() => maxEncounters(island.value, overviewScore, plan.value.snorlaxStrength, eventMult.value))
+const overviewSplitHelps = computed(() => overview.value.best.total > overview.value.single)
 
 const result = computed(() => maxEncounters(
   island.value,
@@ -57,14 +62,15 @@ const result = computed(() => maxEncounters(
   eventMult.value,
 ))
 const splitHelps = computed(() => result.value.best.total > result.value.single)
-/** null 表示跟随推荐：拆分能多抓时拆分。改岛屿、分数、能量或加成后回到推荐。 */
+/** null 表示跟随推荐：拆分能多抓时拆分。改岛屿、能量或加成后回到推荐。 */
 const manualWhole = shallowRef<boolean | null>((components_plan_SleepPane_config_clientDefaults["manualWholeInitial"] as unknown as boolean | null))
 const whole = computed(() => researchSession.value === 1 || (manualWhole.value ?? !splitHelps.value))
-const caught = computed(() => whole.value ? result.value.single : result.value.best.total)
+const overviewWhole = computed(() => researchSession.value === 1 || (manualWhole.value ?? !overviewSplitHelps.value))
+const caught = computed(() => overviewWhole.value ? overview.value.single : overview.value.best.total)
 const shown = computed(() => caught.value + (plan.value.campTicket && researchSession.value === 0 ? 1 : 0))
 const nextCatch = computed(() => strengthToNext(
   island.value,
-  plan.value.sleepScore,
+  overviewScore,
   plan.value.snorlaxStrength,
   eventMult.value,
 ))
@@ -75,6 +81,11 @@ const mixMode = activity.field('eventMix', () => 'off')
 const otherTypes = computed({ get: () => mixMode.value !== 'off', set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' } })
 const researchedBefore = shallowRef(components_plan_SleepPane_config_clientDefaults["researchedBeforeInitial"])
 const specialEncountered = shallowRef(components_plan_SleepPane_config_clientDefaults["specialEncounteredInitial"])
+const specialEncounterDefault = computed(() => activityHasPokemonUp(activity.context.value, island.value))
+// A stable key preserves manual changes across clock ticks within the same day.
+watch(() => `${activity.context.value.startDate}|${island.value}|${specialEncounterDefault.value}`, () => {
+  specialEncountered.value = specialEncounterDefault.value
+}, { immediate: true, flush: 'sync' })
 const firstResearchExtras = shallowRef(components_plan_SleepPane_config_clientDefaults["firstResearchExtrasInitial"])
 const eventMix = mixMode
 const resultTab = shallowRef<'encounters' | 'candies'>((components_plan_SleepPane_config_clientDefaults["resultTabInitial"] as unknown as 'encounters' | 'candies'))
@@ -83,7 +94,7 @@ watch(() => [researchBonuses.value, focusIncense.value, luckIncense.value, incen
 const percent = computed(() => progress.value.total ? Math.floor(progress.value.completed / progress.value.total * 100) : 0)
 let drawSeed = components_plan_SleepPane_config_clientDefaults["drawSeed"]
 
-watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, eventMult.value], () => {
+watch(() => [island.value, plan.value.snorlaxStrength, eventMult.value], () => {
   manualWhole.value = null
 })
 watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, eventMult.value, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, shinyUp.value, activity.context.value, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded, researchedBefore.value, researchSession.value, specialEncountered.value, firstResearchExtras.value, plan.value.campTicket], () => {
@@ -148,18 +159,19 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
     </div>
     <article class="card stack">
       <p class="sleep-brief">
-        <button type="button" :disabled="busy" :class="{ on: whole }" @click="manualWhole = !whole">{{ whole ? '不拆分' : '拆分' }}</button>
+        <button type="button" :disabled="busy" :class="{ on: overviewWhole }" @click="manualWhole = !overviewWhole">{{ overviewWhole ? '不拆分' : '拆分' }}</button>
         <span>
-          满睡眠{{ sleepClock(plan.sleepScore) }}，可捕捉{{ shown }}只，
-          {{ plan.sleepScore }}分，获得{{ Math.round(dp).toLocaleString('zh-CN') }}睡意之力，掉{{ energyLost(plan.sleepScore) }}点活力
+          每日满睡眠{{ sleepClock(overviewScore) }}，可捕捉{{ shown }}只，
+          {{ overviewScore }}分，获得{{ Math.round(dp).toLocaleString('zh-CN') }}睡意之力，掉{{ energyLost(overviewScore) }}点活力
         </span>
       </p>
-      <p v-if="!whole && splitHelps" class="muted">
-        第一觉 {{ sleepClock(result.best.a) }}（{{ result.best.a }} 分）{{ result.best.first }} 只，
-        第二觉 {{ sleepClock(result.best.b) }}（{{ result.best.b }} 分）{{ result.best.second }} 只
+      <p v-if="!overviewWhole && overviewSplitHelps" class="muted">
+        第一觉 {{ sleepClock(overview.best.a) }}（{{ overview.best.a }} 分）{{ overview.best.first }} 只，
+        第二觉 {{ sleepClock(overview.best.b) }}（{{ overview.best.b }} 分）{{ overview.best.second }} 只
       </p>
-      <p v-else-if="!whole" class="muted">这个岛屿和分数下拆分不会多抓，按一觉睡满计算。</p>
-      <p v-else-if="splitHelps" class="muted">拆成两觉可以多抓 {{ result.best.total - result.single }} 只，点「不拆分」切换为拆分查看拆法。</p>
+      <p v-else-if="!overviewWhole" class="muted">这个岛屿每日 100 分下拆分不会多抓，按一觉睡满计算。</p>
+      <p v-else-if="overviewSplitHelps" class="muted">拆成两觉可以多抓 {{ overview.best.total - overview.single }} 只，点「不拆分」切换为拆分查看拆法。</p>
+      <p class="muted">顶部按每日 100 分推荐；下方模拟使用所选睡眠分数。</p>
       <p v-if="nextCatch">距离抓{{ nextCatch.count }}只还需 {{ nextCatch.need.toLocaleString('zh-CN') }} 能量</p>
       <p v-else class="muted">这个睡意之力已经到 8 只。</p>
     </article>

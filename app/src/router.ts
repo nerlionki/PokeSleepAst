@@ -11,9 +11,9 @@ export const router = createRouter({
   routes: [
     { path: '/', redirect: '/pokemon' },
     { path: '/pokemon', name: 'pokemon', component: PokemonView, meta: { backTabs: ['dex', 'box', 'wall'] } },
-    { path: '/plan', name: 'plan', component: PlanView, meta: { backTabs: ['sleep', 'encounter', 'catch', 'split', 'baby', 'completion', 'candy', 'train'] } },
+    { path: '/plan', name: 'plan', component: PlanView, meta: { backTabs: ['sleep', 'encounter', 'catch', 'split', 'baby', 'completion', 'candy', 'train', 'sp'] } },
     { path: '/team', name: 'team', component: TeamView, meta: { backTabs: ['team', 'cmp', 'score'] } },
-    { path: '/data', name: 'data', component: DataView, meta: { backTabs: ['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot'] } },
+    { path: '/data', name: 'data', component: DataView, meta: { backTabs: ['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'bundles'] } },
     { path: '/profile', name: 'profile', component: ProfileView, meta: { backTabs: ['home', 'backup', 'settings', 'appearance', 'credits', 'update'] } },
   ],
 })

@@ -6,10 +6,10 @@ const props = defineProps<{ items: readonly { id: number; name: string }[] }>()
 const emit = defineEmits<{ pick: [id: number] }>()
 const scrollTop = shallowRef(0)
 const revision = shallowRef(0)
-const ROW_HEIGHT = shallowRef(virtualRowHeight(110))
+const ROW_HEIGHT = shallowRef(virtualRowHeight(94))
 const windowHeight = shallowRef(virtualViewportHeight())
 let stopResize: (() => void) | undefined
-onMounted(() => { stopResize = watchVirtualViewport(() => { ROW_HEIGHT.value = virtualRowHeight(110); windowHeight.value = virtualViewportHeight() }) })
+onMounted(() => { stopResize = watchVirtualViewport(() => { ROW_HEIGHT.value = virtualRowHeight(94); windowHeight.value = virtualViewportHeight() }) })
 onBeforeUnmount(() => stopResize?.())
 const start = computed(() => Math.max(0, Math.floor(scrollTop.value / ROW_HEIGHT.value) - 2))
 const end = computed(() => Math.min(Math.ceil(props.items.length / 3), start.value + Math.ceil(windowHeight.value / ROW_HEIGHT.value) + 4))
@@ -35,5 +35,5 @@ watch(() => props.items, () => { scrollTop.value = 0; revision.value++ })
 </template>
 <style scoped>
 .virtual-dex { flex: 1; min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; }
-.virtual-dex-grid { grid-auto-rows: 110px; row-gap: 0; }
+.virtual-dex-grid { grid-auto-rows: 86px; row-gap: 8px; padding-bottom: 8px; }
 </style>

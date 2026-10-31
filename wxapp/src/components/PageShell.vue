@@ -9,7 +9,7 @@ import { useAppearanceStore } from '../../../core/src/stores/appearance'
 import { luminance } from '../../../core/src/ui/appearance'
 const props = defineProps<{ page: string }>()
 const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
-const planTab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle'] as const, 'sleep')
+const planTab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle', 'sp'] as const, 'sleep')
 const appearance = useAppearanceStore()
 function applyBars() {
   if (route.name !== props.page) return

@@ -4,13 +4,14 @@ import clientDefaults from '../../data/client-defaults.resource'
 import { computed, shallowRef } from 'vue'
 import { POKEDEX } from '../../calc/data'
 import { pokeHit } from '../../calc/pokeSearch'
+import { compareDex } from '../../calc/pokedexOrder'
 import PokeSprite from './PokeSprite.vue'
 const components_shared_SpeciesSheet_config_clientDefaults = clientDefaults.modules.components_shared_SpeciesSheet
 
 
 const emit = defineEmits<{ pick: [id: number], close: [] }>()
 const q = shallowRef(components_shared_SpeciesSheet_config_clientDefaults["qInitial"])
-const list = computed(() => POKEDEX.filter((poke) => pokeHit(poke, q.value)))
+const list = computed(() => POKEDEX.filter((poke) => pokeHit(poke, q.value)).sort(compareDex))
 </script>
 
 <template>

@@ -137,6 +137,17 @@ export function activeActivities(context: ActivityContext, minute = activities_a
   return context.catalog.activities.filter(event => active(event, date)).sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id))
 }
 const valueCache = new WeakMap<ActivityContext, Map<string, ActivityValues>>()
+/** User-selected planning convention: any applicable encounter UP enables the
+ * special-encounter default. This is a default, not proof of an actual encounter.
+ */
+export function activityHasPokemonUp(context: ActivityContext, island: string): boolean {
+  const date = activityDate(context)
+  return activeActivities(context).some(event =>
+    [event, ...(event.phases ?? []).filter(phase => active(phase, date))].some(phase =>
+      phase.rules.some(rule => (rule.effects.encounterWeightMultiplier ?? 1) > 1
+        && (!rule.target?.islands || rule.target.islands.includes(island)))))
+}
+
 export function activityValues(context: ActivityContext, island: string, pokemon?: ActivityPokemon, minute = activities_activityValues_runtimeParameters.p001, fallback?: ActivityOverrides, researchSession = 0): ActivityValues {
   let cache = valueCache.get(context)
   if (!cache) { cache = new Map(); valueCache.set(context, cache) }

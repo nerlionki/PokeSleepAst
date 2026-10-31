@@ -10,8 +10,9 @@ import WhistlePane from '../components/plan/WhistlePane.vue'
 import TrainPane from '../components/plan/TrainPane.vue'
 import SplitSleepPane from '../components/plan/SplitSleepPane.vue'
 import Segmented from '../components/shared/Segmented.vue'
+import SpPane from '../components/plan/SpPane.vue'
 
-const tab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle'] as const, 'sleep')
+const tab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle', 'sp'] as const, 'sleep')
 </script>
 
 <template>
@@ -29,6 +30,7 @@ const tab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'complet
         { id: 'candy', label: '糖果\n增强' },
         { id: 'train', label: '培养\n规划' },
         { id: 'whistle', label: '吹哨\n规划' },
+        { id: 'sp', label: 'SP\n计算' },
       ]"
     />
     <EncounterPane v-if="tab === 'encounter'" />
@@ -40,5 +42,6 @@ const tab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'complet
     <CandyPane v-else-if="tab === 'candy'" />
     <WhistlePane v-else-if="tab === 'whistle'" />
     <TrainPane v-else-if="tab === 'train'" />
+    <SpPane v-else-if="tab === 'sp'" />
   </div>
 </template>
