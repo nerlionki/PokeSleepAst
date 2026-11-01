@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { defaultSkillLevel } from '../../calc/member'
+
+import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -79,6 +82,10 @@ function pauseCompletion(pokemon: BoxPokemon) {
   completionQueue.value = []
 }
 
+async function removePokemon(uid: string) {
+  if (await confirmRemoval('确认从盒子删除此宝可梦？')) box.remove(uid)
+}
+
 function blank(pokeId: number): BoxDraft {
   return {
     uid: '',
@@ -87,10 +94,10 @@ function blank(pokeId: number): BoxDraft {
     nature: '勤奋',
     subskills: ['', '', '', '', ''],
     ingredientSlots: [0, 1, 2],
-    skillLevel: 1,
+    skillLevel: defaultSkillLevel(pokeId),
     name: '',
     napping: false,
-    tune: defaultTune(),
+    tune: defaultTune(pokeId),
   }
 }
 
@@ -191,11 +198,11 @@ const activeFilters = computed(() => filterCount(query))
         <div class="stack">
           <button v-if="pokemon.ocrMissing?.length" class="btn" type="button" @click="resumeCompletion(pokemon)">补全</button>
           <button class="btn ghost" type="button" @click="openEdit(pokemon)">编辑</button>
-          <button class="btn ghost" type="button" @click="box.remove(pokemon.uid)">删除</button>
+          <button class="btn ghost" type="button" @click="removePokemon(pokemon.uid)">删除</button>
         </div>
       </div>
     </div>
-    <div v-if="filtering" v-back="() => { filtering = false }" class="overlay" @click.self="filtering = false">
+    <div v-if="filtering" v-back="() => { filtering = false }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="filtering = false">
       <section class="sheet stack">
         <div class="row">
           <h3>筛选</h3>
@@ -257,7 +264,7 @@ const activeFilters = computed(() => filterCount(query))
       </section>
     </div>
     <SpeciesSheet v-if="picking" @close="picking = false" @pick="pickSpecies" />
-    <div v-if="editing" v-back="() => { editing = null }" class="overlay" @click.self="editing = null">
+    <div v-if="editing" v-back="() => { editing = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="editing = null">
       <section class="sheet stack">
         <div class="row">
           <h3>{{ editing.uid ? '编辑个体' : '新建个体' }}<ShinyMark v-if="editing.shiny" /></h3>

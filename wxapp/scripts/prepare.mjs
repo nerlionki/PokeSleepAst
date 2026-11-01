@@ -1,3 +1,4 @@
+import { isBundledImage } from '../../core/src/resources/imagePolicy.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -96,6 +97,7 @@ for (const file of walk(core)) {
   if (rel === 'components/shared/SubskillIcon.vue') {
     if (!imports.some(line => line.startsWith('import WxImage '))) imports.push("import WxImage from '../../../components/WxImage.vue'")
     text = `<script setup lang="ts">
+import FallbackImage from './FallbackImage.vue'
 import { computed } from 'vue'
 import { SUBSKILLS } from '../../calc/data'
 import { subskillImageUrl } from '../../calc/raeImage'
@@ -103,7 +105,7 @@ const props = defineProps<{ id: string; locked?: boolean }>()
 const skill = computed(() => SUBSKILLS.find(item => item.id === props.id))
 const src = computed(() => subskillImageUrl(props.id))
 </script>
-<template><WxImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="skill.name" /></template>
+<template><FallbackImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="skill.name" /></template>
 `
   }
   // Use Tailwind layout utilities only in native Box views; App keeps its grid.
@@ -119,6 +121,7 @@ const src = computed(() => subskillImageUrl(props.id))
         .replace('display: grid; grid-template-columns: 20px 48px minmax(0, 1fr) auto;', 'display: flex;')
     }
   }
+  text = text.replace(/<scroll-view\b([^>]*\bscroll-x[^>]*)>/g, '<scroll-view @touchstart.stop @touchend.stop @touchcancel.stop$1>')
   if (imports.length) text = text.replace(/(<script setup[^>]*>)/, '$1\n' + imports.join('\n'))
   write(dest, nativeScopedStyles(text, rel))
 }
@@ -133,7 +136,7 @@ const skillImageNumbers = Object.fromEntries([...fs.readFileSync(path.join(core,
 const skillColors = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(core, 'data/subskills.json'))).map(skill => [skillImageNumbers[skill.id], { gold: '#e2a423', blue: '#3c86d6', white: '#f4f7fb' }[skill.rarity]]))
 const assetRoots = [path.join(core, 'assets/imgs'), path.join(root, 'core/public')]
 const isShinyAsset = rel => rel.includes('/shiny/')
-const assets = assetRoots.flatMap(dir => walk(dir).filter(file => /\.(webp|png|jpe?g)$/i.test(file)).map(file => ({ file, rel: path.relative(dir, file).replaceAll('\\', '/') }))).sort((a, b) => Number(isShinyAsset(a.rel)) - Number(isShinyAsset(b.rel)) || a.rel.localeCompare(b.rel, 'en'))
+const assets = assetRoots.flatMap(dir => walk(dir).filter(file => /\.(webp|png|jpe?g)$/i.test(file)).map(file => ({ file, rel: path.relative(dir, file).replaceAll('\\', '/') }))).filter(asset => isBundledImage(asset.rel)).sort((a, b) => Number(isShinyAsset(a.rel)) - Number(isShinyAsset(b.rel)) || a.rel.localeCompare(b.rel, 'en'))
 let payload = {}
 let shinyPack = false
 const flush = () => write(path.join(wxRoot, 'src', `asset-pack${pack}`, 'images.js'), `module.exports=${JSON.stringify(payload)};\n`)

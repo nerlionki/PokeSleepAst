@@ -16,10 +16,10 @@ function change(event: unknown) {
 }
 </script>
 <template>
-  <view v-if="type === 'checkbox'" class="wx-switch-control"><switch :checked="Boolean(current)" :disabled="disabled" :color="appearance.palette.amber" @change="change" /></view>
-  <slider v-else-if="type === 'range'" class="wx-range" :disabled="disabled" :value="Math.round(Number(current) * sliderScale)" :min="Math.round(Number(min ?? 0) * sliderScale)" :max="Math.round(Number(max ?? 100) * sliderScale)" :step="Math.max(1, Math.round(Number(step ?? 1) * sliderScale))" :active-color="appearance.palette.amber" @change="change" @changing="change" />
-  <picker v-else-if="type === 'time'" class="wx-control" mode="time" :disabled="disabled" :value="String(current)" @change="change"><view class="wx-select">{{ current || '选择时间' }}</view></picker>
-  <input v-else class="wx-control wx-input" :type="type === 'number' ? 'digit' : 'text'" :value="String(current)" :placeholder="placeholder" :disabled="disabled" @input="change" />
+  <view v-if="type === 'checkbox'" class="wx-switch-control"><switch @touchstart.stop @touchend.stop @touchcancel.stop :checked="Boolean(current)" :disabled="disabled" :color="appearance.palette.amber" @change="change" /></view>
+  <slider @touchstart.stop @touchend.stop @touchcancel.stop v-else-if="type === 'range'" class="wx-range" :disabled="disabled" :value="Math.round(Number(current) * sliderScale)" :min="Math.round(Number(min ?? 0) * sliderScale)" :max="Math.round(Number(max ?? 100) * sliderScale)" :step="Math.max(1, Math.round(Number(step ?? 1) * sliderScale))" :active-color="appearance.palette.amber" @change="change" @changing="change" />
+  <picker @touchstart.stop @touchend.stop @touchcancel.stop v-else-if="type === 'time'" class="wx-control" mode="time" :disabled="disabled" :value="String(current)" @change="change"><view class="wx-select">{{ current || '选择时间' }}</view></picker>
+  <input @touchstart.stop @touchend.stop @touchcancel.stop v-else class="wx-control wx-input" :type="type === 'number' ? 'digit' : 'text'" :value="String(current)" :placeholder="placeholder" :disabled="disabled" @input="change" />
 </template>
 <style>
 .wx-switch-control { display: inline-flex; align-items: center; flex: none; width: 52px; height: 32px; }

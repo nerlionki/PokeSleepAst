@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { useActivities } from '../../composables/useActivities'
@@ -64,7 +65,8 @@ function addRow() {
   expandedRows.value.add(id)
 }
 
-function removeRow(id: string) {
+async function removeRow(id: string) {
+  if (!await confirmRemoval('确认删除此糖果规划？')) return
   plan.value.candyRows = plan.value.candyRows.filter((row) => row.id !== id)
   expandedRows.value.delete(id)
 }

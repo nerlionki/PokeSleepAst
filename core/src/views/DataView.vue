@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTabSwipe } from '../composables/useTabSwipe'
 import clientDefaults from '../data/client-defaults.resource'
 
 import { shallowRef } from 'vue'
@@ -20,10 +21,11 @@ const views_DataView_config_clientDefaults = clientDefaults.modules.views_DataVi
 
 const q = shallowRef(views_DataView_config_clientDefaults["qInitial"])
 const tab = usePageTab(['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'item', 'flower', 'bundles'] as const, 'island')
+const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'item', 'flower', 'bundles'] as const).filter(id => features.enabled('data', id)))
 </script>
 
 <template>
-  <div class="stack">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
     <input v-model="q" class="picker-search" placeholder="搜索功能或名称">
     <div class="seg seg-4 plan-tabs">
       <button v-if="features.enabled('data', 'island')" type="button" :class="{ on: tab === 'island' }" @click="tab = 'island'">营地</button>

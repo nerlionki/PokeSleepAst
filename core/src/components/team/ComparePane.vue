@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { defaultSkillLevel } from '../../calc/member'
+
+import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -65,8 +68,8 @@ function blank(pokeId: number, uid = `c-${newUid()}`): CustomPanel {
     nature: '勤奋',
     subskills: ['', '', '', '', ''],
     ingredientSlots: [0, 1, 2],
-    skillLevel: 1,
-    tune: defaultTune(),
+    skillLevel: defaultSkillLevel(pokeId),
+    tune: defaultTune(pokeId),
   }
 }
 
@@ -117,7 +120,8 @@ function addCustom(pokeId: number) {
   editing.value = row.uid
 }
 
-function remove(uid: string) {
+async function remove(uid: string) {
+  if (!await confirmRemoval('确认移除此对比宝可梦？')) return
   customs.value = customs.value.filter((p) => p.uid !== uid)
   selected.value = selected.value.filter((id) => id !== uid)
   if (editing.value === uid) editing.value = null
@@ -259,7 +263,7 @@ function saveCustomToBox() {
       </article>
     </div>
 
-    <div v-if="picking" v-back="() => { picking = false }" class="overlay" @click.self="picking = false">
+    <div v-if="picking" v-back="() => { picking = false }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="picking = false">
       <section class="sheet stack">
         <h3>加入比较</h3>
         <button v-for="p in box.pokemon" :key="p.uid" class="data-row" type="button" @click="take(p.uid)">
@@ -273,7 +277,7 @@ function saveCustomToBox() {
 
     <SpeciesSheet v-if="adding" @close="adding = false" @pick="addCustom" />
 
-    <div v-if="editingPanel" v-back="() => { editing = null }" class="overlay" @click.self="editing = null">
+    <div v-if="editingPanel" v-back="() => { editing = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="editing = null">
       <section class="sheet stack">
         <div class="row">
           <h3>{{ customs.some((item) => item.uid === editing) ? '自定义面板' : '编辑个体' }}</h3>

@@ -1,3 +1,4 @@
+import { isBundledImage } from '../../core/src/resources/imagePolicy.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -41,6 +42,7 @@ for (const [file, url] of Object.entries(images)) {
 for (const folder of [path.resolve(root, '../core/src/assets/imgs'), path.resolve(root, '../core/public')]) {
   for (const file of walk(folder).filter(file => /\.(webp|png|jpe?g)$/i.test(file))) {
     const key = path.relative(folder, file).replaceAll('\\', '/')
+    if (!isBundledImage(key)) continue
     if (!images[key]) throw Error(`Source image missing from WeChat: ${key}`)
   }
 }
@@ -52,9 +54,10 @@ for (const url of Object.values(images)) {
   const data = Buffer.from(modules.get(item.pack)[item.key] ?? '', 'base64')
   if (data.length !== item.size || data.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || `${createHash('sha256').update(data).digest('hex')}.png` !== item.file) throw Error(`Invalid image payload: ${url}`)
 }
-for (const folder of ['berry/', 'ingredient/', 'mainSkill/', 'meal/', 'pokemon/icons/', 'pokemon/portrait/', 'subSkill/', 'items/', 'sprites/']) {
+for (const folder of ['berry/', 'ingredient/', 'pokemon/icons/', 'pokemon/portrait/']) {
   if (!Object.keys(images).some(key => key.startsWith(folder))) throw Error(`Missing image category ${folder}`)
 }
+if (Object.keys(images).some(file => !isBundledImage(file))) throw Error('Unexpected bundled image category')
 const bridge = fs.readFileSync(path.join(dist, 'image-loader.js'), 'utf8')
 if (!bridge.includes('require.async(') || bridge.includes('wx.loadSubpackage')) throw Error('Invalid native async image bridge')
 const literalImports = new Set([...bridge.matchAll(/require\.async\(\s*["']\.\/(asset-pack\d+)\/images\.js["']\s*\)/g)].map(match => match[1]))

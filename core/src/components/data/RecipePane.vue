@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTabSwipe } from '../../composables/useTabSwipe'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
@@ -23,10 +24,11 @@ const list = computed(() => {
     return b.baseEnergy - a.baseEnergy || a.pot - b.pot
   })
 })
+const swipe = useTabSwipe(category, () => MEAL_CATEGORIES.map(category => category.id))
 </script>
 
 <template>
-  <div class="stack">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
     <div class="seg seg-3">
       <button
         v-for="c in MEAL_CATEGORIES"

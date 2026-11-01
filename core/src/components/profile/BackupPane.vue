@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { exportText } from '#platform/backup'
@@ -26,13 +27,14 @@ async function exportBox() {
   }
 }
 
-function applyImport(replace: boolean) {
+async function applyImport(replace: boolean) {
   try {
     const parsed = parseBoxText(incoming.value)
     if (!parsed.pokemon.length) {
       msg.value = '没有可导入的宝可梦，请检查 JSON 格式与图鉴编号；盒子未修改'
       return
     }
+    if (replace && !await confirmRemoval('确认覆盖盒子？当前盒子内的宝可梦将被替换。')) return
     if (replace) box.replaceAll(parsed.pokemon)
     else box.merge(parsed.pokemon)
     const label = parsed.source === 'iqdooh' ? 'iqdooh' : parsed.source === 'sdrice' ? 'sdrice' : parsed.source === 'native' ? '本机' : '混合'
@@ -44,6 +46,7 @@ function applyImport(replace: boolean) {
 }
 
 async function wipe() {
+  if (!await confirmRemoval('确认清空盒子并重置设置？')) return
   box.replaceAll([])
   settings.reset()
   msg.value = '已清空盒子并重置设置'

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useFeaturesStore } from '../stores/features'
+import { useTabSwipe } from '../composables/useTabSwipe'
 import { taskNavigationLocked } from '../composables/taskNavigationLock'
 import { useRoute } from 'vue-router'
 import { usePageTab } from '../composables/usePageTab'
@@ -9,10 +11,12 @@ import Segmented from '../components/shared/Segmented.vue'
 
 const route = useRoute()
 const tab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
+const features = useFeaturesStore()
+const swipe = useTabSwipe(tab, () => (['dex', 'box', 'wall'] as const).filter(id => features.enabled('pokemon', id)), () => route.query.boxOverview === '1')
 </script>
 
 <template>
-  <div class="stack pokemon-view" :class="{ 'dex-view': tab === 'dex' }">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack pokemon-view" :class="{ 'dex-view': tab === 'dex' }">
     <Segmented
       class="pokemon-tabs"
       v-if="!(tab === 'box' && route.query.boxOverview === '1')"

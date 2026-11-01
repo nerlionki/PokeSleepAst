@@ -77,6 +77,7 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?:
   try {
     const saved = wx.getStorageSync?.(STORAGE_KEY) as SavedTask | undefined
     if (saved?.options && compatibleCheckpoint(saved) && !validateBabyEfficiency(saved.options)
+      && saved.options.objective === options.value.objective
       && (options.value.completionTarget == null || saved.options.completionTarget === options.value.completionTarget)) {
       task = saved; progress.value = saved.progress ?? { percent: 0, island: '', evaluatedStates: 0 }; notice.value = '正在恢复上次未完成的计算'; void launch()
     }

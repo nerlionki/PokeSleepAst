@@ -17,5 +17,5 @@ function onError() {
 
 <template>
   <img loading="lazy" decoding="async" v-if="src && !failed" v-bind="$attrs" :src="src" :alt="alt" @error="onError">
-  <slot v-else name="fallback" />
+  <slot v-else name="fallback"><span class="image-fallback">{{ alt }}</span></slot>
 </template>

@@ -21,8 +21,14 @@ export interface MemberDraft extends ProduceInput {
   tune: MemberTune
 }
 
-export function defaultTune(): MemberTune {
-  return cloneData(defaultMemberConfig.modules.factory_member.defaultTune) as MemberTune
+/** User default: one base skill level plus the current species' evolution depth. */
+export function defaultSkillLevel(pokeId: number): number {
+  return Math.min(skillMaxFor(pokeById(pokeId)?.mainSkill ?? ''), evolutionDepth(pokeId) + 1)
+}
+
+export function defaultTune(pokeId?: number): MemberTune {
+  const tune = cloneData(defaultMemberConfig.modules.factory_member.defaultTune) as MemberTune
+  return pokeId == null ? tune : { ...tune, evolutions: evolutionDepth(pokeId) }
 }
 
 /** 同链切换用于个体规划；保留面板配置，按阶段差联动进化次数与主技能等级。 */

@@ -12,7 +12,7 @@ import SpResult from './SpResult.vue'
 const box = useBoxStore()
 function blank(id?: number): MemberDraft {
   const { ribbonHours, ...input } = defaultSpInput(id)
-  return { ...input, tune: { ...defaultTune(), ribbonHours } }
+  return { ...input, tune: { ...defaultTune(input.pokeId), ribbonHours } }
 }
 const input = ref<MemberDraft>(blank())
 const selected = ref('')

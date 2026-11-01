@@ -10,8 +10,9 @@ const props = defineProps<{
 
 const skill = computed(() => SUBSKILLS.find((item) => item.id === props.id))
 const src = computed(() => subskillImageUrl(props.id))
+const failed = shallowRef(false)
 const loadedMask = shallowRef('')
-watch(src, () => { loadedMask.value = '' })
+watch(src, () => { loadedMask.value = ''; failed.value = false })
 const mask = computed(() => {
   const url = `url("${loadedMask.value || src.value}")`
   return { maskImage: url, WebkitMaskImage: url }
@@ -20,7 +21,7 @@ const mask = computed(() => {
 
 <template>
   <span
-    v-if="skill"
+    v-if="skill && src && !failed"
     class="sub-ico"
     :class="[`rarity-${skill.rarity}`, { locked }]"
     :style="mask"
@@ -28,8 +29,9 @@ const mask = computed(() => {
     :aria-label="skill.name"
     :title="skill.name"
   >
-    <img class="sub-mask-loader" :src="src" alt="" aria-hidden="true" @load="loadedMask = ($event.target as HTMLImageElement).src">
+    <img class="sub-mask-loader" :src="src" alt="" aria-hidden="true" @error="failed = true" @load="loadedMask = ($event.target as HTMLImageElement).src">
   </span>
+  <span v-else-if="skill">{{ skill.name }}</span>
 </template>
 <style scoped>
 .sub-mask-loader { display: none; }

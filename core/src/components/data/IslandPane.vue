@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTabSwipe } from '../../composables/useTabSwipe'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -45,6 +46,7 @@ function groups(id: string) {
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
   })
 }
+const swipe = useTabSwipe(view, () => ['band', 'spread'] as const)
 </script>
 
 <template>
@@ -78,11 +80,11 @@ function groups(id: string) {
           <template v-else>每周随机三颗</template>
         </p>
         <p v-if="i.id === 'cyanex'" class="muted">副树果从排除已选主树果后的其余 17 种中任选两种，不可重复。</p>
-        <div class="seg">
+        <div class="seg" @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel">
           <button type="button" :class="{ on: view === 'band' }" @click="view = 'band'">只数</button>
           <button type="button" :class="{ on: view === 'spread' }" @click="view = 'spread'">分布</button>
         </div>
-        <template v-if="view === 'band'">
+        <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel"><template v-if="view === 'band'">
           <p v-for="b in islandBands(i.id as IslandId)" :key="b.count">
             {{ b.count }} 只 · 卡比兽能量 {{ formatDp(b.min) }}{{ b.max == null ? ' 及以上' : ` – ${formatDp(b.max)}` }}
           </p>
@@ -103,6 +105,7 @@ function groups(id: string) {
             </div>
           </section>
         </template>
+        </div>
       </div>
     </article>
   </div>

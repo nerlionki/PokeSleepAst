@@ -28,6 +28,8 @@ export const MAX_EFFICIENCY_DROWSY_POWER = (babyEfficiency_config_extracted0.MAX
 
 export type EfficiencyPrecision = 'low' | 'medium' | 'high'
 export interface BabyEfficiencyOptions {
+  /** Omitted for the legacy planner, which optimizes both metrics. */
+  objective?: 'catch' | 'candy'
   activity?: ActivitySelection
   pokeId: number
   /** 指定时搜索这一条睡姿的每日至少一次概率，不合并物种或同星睡姿。 */
@@ -98,6 +100,7 @@ export interface BabyEfficiencyResult {
 export interface EfficiencyProgress { percent: number, island: string, evaluatedStates: number }
 
 export function validateBabyEfficiency(options: BabyEfficiencyOptions): string | null {
+  if (options.objective != null && options.objective !== 'catch' && options.objective !== 'candy') return '请选择有效的效率目标'
   if (options.completionTarget != null) {
     if (!activitySleepStyles(SLEEP_STYLES, createActivityContext('research', options.activity)).some(style => style.pokeId === options.pokeId && styleKey(style.pokeId, style.stars, style.styleId) === options.completionTarget)) return '请选择可参与普通研究的未收集睡姿'
   } else if (!BABY_POKEMON_IDS.includes(normalizeBabyEfficiencyPokemonId(options.pokeId))) return '请选择进化链的一阶段宝可梦'
@@ -299,7 +302,7 @@ export function* babyEfficiencySteps(
   options = { ...options, activity: createActivityContext('research', options.activity ?? checkpoint?.options.activity) }
   islands ??= efficiencyIslands(options.pokeId, options.completionTarget, options.activity)
   const completion = options.completionTarget != null
-  const goals: readonly ('catch' | 'candy')[] = (completion ? babyEfficiency_config_ruleCatalogs.babyEfficiencyStepsList0.values : babyEfficiency_config_ruleCatalogs.babyEfficiencyStepsList1.values) as readonly ('catch' | 'candy')[]
+  const goals: readonly ('catch' | 'candy')[] = completion ? ['catch'] : options.objective ? [options.objective] : ['catch', 'candy']
   options = { ...options, pokeId: completion ? options.pokeId : normalizeBabyEfficiencyPokemonId(options.pokeId) }
   const targetPokeIds = babyEfficiencyTargetIds(options.pokeId)
   if (!completion && options.pokeId === 710 && JSON.stringify(checkpoint?.targetPokeIds) !== JSON.stringify(targetPokeIds)) checkpoint = undefined
@@ -407,24 +410,22 @@ export function* babyEfficiencySteps(
       for (let index = 0; index < starts.length; index += stride) evaluate(index)
       evaluate(starts.length - 1)
       if (options.precision === 'medium') {
-        const neighbors = [...leaders.catch.indexes, ...leaders.candy.indexes].flatMap((index) => [index - 1, index + 1])
+        const neighbors = goals.flatMap(goal => leaders[goal].indexes).flatMap((index) => [index - 1, index + 1])
         for (const index of neighbors) evaluate(index)
       }
       if (options.precision !== 'high') {
         // Complete the contiguous plateau for every coarse winner, including skipped segments.
-        const queue = [...leaders.catch.indexes, ...leaders.candy.indexes]
+        const queue = goals.flatMap(goal => leaders[goal].indexes)
         const expanded = new Set<number>()
         for (let cursor = 0; cursor < queue.length; cursor++) {
           const index = queue[cursor]!
           if (expanded.has(index)) continue
           expanded.add(index)
           const current = values.get(index)!
-          if (!(current.catch > 0 && current.catch === leaders.catch.value)
-            && !(current.candy > 0 && current.candy === leaders.candy.value)) continue
+          if (!goals.some(goal => current[goal] > 0 && current[goal] === leaders[goal].value)) continue
           for (const neighbor of [index - 1, index + 1]) {
             const metric = evaluate(neighbor)
-            if (metric && ((metric.catch > 0 && metric.catch === leaders.catch.value)
-              || (metric.candy > 0 && metric.candy === leaders.candy.value))) queue.push(neighbor)
+            if (metric && goals.some(goal => metric[goal] > 0 && metric[goal] === leaders[goal].value)) queue.push(neighbor)
           }
         }
       }
@@ -442,7 +443,7 @@ export function* babyEfficiencySteps(
       yield save(index + 1)
     }
     if (options.precision === 'medium' && options.splitSleep !== false) {
-      const extra = [...new Set([...localLeaders.catch.splits, ...localLeaders.candy.splits]
+      const extra = [...new Set(goals.flatMap(goal => localLeaders[goal].splits)
         .flatMap((score) => [score - 1, score + 1]).filter((score) => score >= 1 && score <= (babyEfficiency_babyEfficiencySteps_runtimeParameters.p012 as 99) && !baseSplits.includes(score)))]
       for (const [index, split] of extra.entries()) {
         if (baseSplits.length + index < resumeIndex) continue

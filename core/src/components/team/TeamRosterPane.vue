@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -143,7 +144,8 @@ function copySlot(index: number) {
   }
 }
 
-function removeSlot(index: number) {
+async function removeSlot(index: number) {
+  if (!await confirmRemoval('确认从队伍移除此宝可梦？')) return
   const uid = roster.slots[index]
   roster.setSlot(index, null)
   if (editing.value === uid) editing.value = null
@@ -252,7 +254,7 @@ function saveCustomToBox() {
       <p v-for="(event, i) in events" :key="i" class="muted">{{ clockOf(event.minute) }} · {{ event.name }} · {{ kindLabel(event.kind) }}</p>
     </article>
 
-    <div v-if="picking !== null" v-back="() => { picking = null }" class="overlay" @click.self="picking = null">
+    <div v-if="picking !== null" v-back="() => { picking = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="picking = null">
       <section class="sheet stack">
         <h3>放入槽位 {{ picking + 1 }}</h3>
         <p v-if="roster.error" class="amber" role="alert">{{ roster.error }}</p>
@@ -267,7 +269,7 @@ function saveCustomToBox() {
 
     <SpeciesSheet v-if="adding !== null" @close="adding = null" @pick="pickSpecies" />
 
-    <div v-if="editingDraft" v-back="() => { editing = null }" class="overlay" @click.self="editing = null">
+    <div v-if="editingDraft" v-back="() => { editing = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="editing = null">
       <section class="sheet stack">
         <div class="row">
           <h3>{{ editingDraft && editing?.startsWith('custom-') ? '自定义面板' : '编辑个体' }}</h3>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useFeaturesStore } from '../stores/features'
+import { useTabSwipe } from '../composables/useTabSwipe'
 import clientDefaults from '../data/client-defaults.resource'
 
 import { shallowRef } from 'vue'
@@ -15,10 +17,12 @@ const views_TeamView_config_clientDefaults = clientDefaults.modules.views_TeamVi
 const settingsStore = useSettingsStore()
 const adjusting = shallowRef(views_TeamView_config_clientDefaults["adjustingInitial"])
 const tab = usePageTab(['team', 'cmp', 'score'] as const, 'team')
+const features = useFeaturesStore()
+const swipe = useTabSwipe(tab, () => (['team', 'cmp', 'score'] as const).filter(id => features.enabled('team', id)))
 </script>
 
 <template>
-  <div class="stack">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
     <button class="btn ghost" type="button" :aria-expanded="adjusting" @click="adjusting = !adjusting">配队加成设置</button>
     <section v-if="adjusting" class="card stack"><p class="muted">修改立即同步全局设置。</p><EnvironmentFields :value="settingsStore.settings" @change="settingsStore.setEnvironment" /></section>
     <Segmented v-model="tab" :options="[{ id: 'team', label: '我的队伍' }, { id: 'cmp', label: '个体对比' }, { id: 'score', label: '冲分规划' }]" />

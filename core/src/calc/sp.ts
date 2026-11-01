@@ -1,3 +1,4 @@
+import { defaultSkillLevel } from './member'
 import model from '../data/sp-model.json'
 import { NATURES, ingredientByName, pokeById } from './data'
 import { berryEnergyAt } from './berry'
@@ -45,11 +46,10 @@ function trunc(value: number, digits: number) {
 export function defaultSpInput(pokeId = model.defaults.pokeId): SpInput {
   const poke = pokeById(pokeId)
   if (!poke) throw Error('请选择有效的宝可梦')
-  const skill = skillByPokedexName(poke.mainSkill, poke.id)
   const columns = ingredientColumns(poke.ingredients)
   return { ...model.defaults, pokeId, subskills: [...model.defaults.subskills],
     ingredientSlots: columns.map((column, index) => column.find(cell => cell.index === model.defaults.ingredientSlots[index])?.index ?? column[0]?.index ?? null) as IngredientSlots,
-    skillLevel: poke.specialty === '技能型' ? skill?.maxLevel ?? 1 : model.defaults.skillLevel }
+    skillLevel: defaultSkillLevel(pokeId) }
 }
 
 /** Editor/Box skillLevel is the base level; add unlocked subskills exactly once. */

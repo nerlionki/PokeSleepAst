@@ -10,8 +10,9 @@ export function usePageTab<T extends string>(tabs: readonly T[], fallback: T) {
   return computed<T>({
     get: () => {
       const page = route.path.replace(/^\//, '')
+      const requested = page === 'plan' && ['catch', 'baby', 'completion'].includes(String(route.query.tab)) && tabs.includes('encounter' as T) ? 'encounter' : route.query.tab
       const available = tabs.filter(tab => features.enabled(page, tab))
-      return (available.includes(route.query.tab as T) ? route.query.tab : available.includes(fallback) ? fallback : available[0] ?? '') as T
+      return (available.includes(requested as T) ? requested : available.includes(fallback) ? fallback : available[0] ?? '') as T
     },
     set: (tab) => { void router.push({ path: route.path, query: { ...route.query, tab } }) },
   })

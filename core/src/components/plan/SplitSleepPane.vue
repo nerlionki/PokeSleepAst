@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { useActivities } from '../../composables/useActivities'
@@ -53,6 +54,12 @@ const resultGroups = computed(() => (['count', 'candy', 'probability'] as const)
 const resultNotices = computed(() => result.value?.options.targets.map(target => splitTargetStatus(target, result.value!.options.island, result.value!.options.strength)).filter(status => status.reason) ?? [])
 const zeroMetrics = computed(() => result.value?.metrics.filter((_, index) => result.value!.maxima[index] === 0) ?? [])
 const resultIsland = computed(() => ISLANDS.find(row => row.id === result.value?.options.island)?.name ?? '')
+async function removeTarget(index: number) {
+  const target = config.value.targets[index]
+  if (!await confirmRemoval('确认移除此拆觉目标？')) return
+  const current = config.value.targets.indexOf(target!)
+  if (current >= 0) config.value.targets.splice(current, 1)
+}
 </script>
 
 <template>
@@ -69,7 +76,7 @@ const resultIsland = computed(() => ISLANDS.find(row => row.id === result.value?
       <p v-if="!config.targets.length" class="muted">添加宝宝或指定睡姿，支持混选多个目标。</p>
       <div v-for="(target, index) in config.targets" :key="splitTargetKey(target)" class="target-row">
         <div class="target-info"><strong>{{ statuses[index]?.label }}</strong><span class="muted">{{ target.kind === 'baby' ? '宝宝 · 全部星级 · 同家族糖果' : '指定睡姿 · 每日至少一次概率' }}</span><span v-if="statuses[index]?.reason" class="amber">{{ statuses[index]?.reason }}</span></div>
-        <button class="btn ghost" type="button" :disabled="busy" :aria-label="`移除目标 ${statuses[index]?.label}`" @click="config.targets.splice(index, 1)">移除</button>
+        <button class="btn ghost" type="button" :disabled="busy" :aria-label="`移除目标 ${statuses[index]?.label}`" @click="removeTarget(index)">移除</button>
       </div>
       <div v-if="!busy" class="stack add-target">
         <div class="field"><label for="split-target-kind">添加目标类型</label><select id="split-target-kind" v-model="kind"><option value="baby">宝宝</option><option value="style">指定睡姿</option></select></div>

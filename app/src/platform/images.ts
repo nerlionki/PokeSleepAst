@@ -1,5 +1,6 @@
 import { activeSnapshot, remoteImage, RESOURCE_ORIGIN } from '../../../core/src/resources/runtime'
-const localImages = import.meta.glob('../../../core/src/assets/imgs/**/*.webp', {
+import { isBundledImage } from '../../../core/src/resources/imagePolicy'
+const localImages = import.meta.glob(['../../../core/src/assets/imgs/berry/*.webp', '../../../core/src/assets/imgs/ingredient/*.webp', '../../../core/src/assets/imgs/pokemon/{icons,portrait}/*.webp'], {
   eager: true,
   query: '?url',
   import: 'default',
@@ -7,9 +8,6 @@ const localImages = import.meta.glob('../../../core/src/assets/imgs/**/*.webp', 
 
 const imageByFile = new Map<string, string>()
 const absolute = (src: string) => typeof document === 'undefined' ? src : new URL(src, document.baseURI).href
-function preferRemote(local: string, remote: string): string {
-  return remote || local
-}
 for (const [key, url] of Object.entries(localImages)) {
   const file = key.split('assets/imgs/')[1]
   if (file) imageByFile.set(file, url)
@@ -17,17 +15,18 @@ for (const [key, url] of Object.entries(localImages)) {
 
 export function localImage(file: string): string {
   const local = imageByFile.get(file) ?? ''
-  return preferRemote(local, remoteImage(`images/${file}`))
+  return isBundledImage(file) ? local || remoteImage(`images/${file}`) : remoteImage(`images/${file}`)
 }
 
-export function publicImage(file: string): string { return preferRemote(`/${file}`, remoteImage(file)) }
+export function publicImage(file: string): string { return remoteImage(file) }
 export function bundledImage(src: string): string {
   const match = Object.entries(activeSnapshot()?.manifest.assets ?? {}).find(([,item]) => RESOURCE_ORIGIN + item.path === src)
-  if (!match) return src
+  if (!match) return ''
+  if (!isBundledImage(match[0])) return ''
   return match[0].startsWith('images/') ? imageByFile.get(match[0].slice(7)) ?? '' : '/' + match[0]
 }
 
-/** Network images are requested first; only a failed request loads its bundled copy. */
+/** Only ordinary Pokémon, berries and ingredients may use bundled fallbacks. */
 export function installImageFallbacks() {
   const onError = (event: Event) => {
     if (!(event.target instanceof HTMLImageElement)) return

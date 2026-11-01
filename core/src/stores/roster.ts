@@ -1,3 +1,4 @@
+import { defaultSkillLevel } from '../calc/member'
 
 import clientDefaults from '../data/client-defaults.resource'
 import { cloneData } from '../calc/dataClone'
@@ -135,8 +136,8 @@ export const useRosterStore = defineStore('roster', () => {
       nature: '勤奋',
       subskills: ['', '', '', '', ''],
       ingredientSlots: [0, 1, 2],
-      skillLevel: 1,
-      tune: defaultTune(),
+      skillLevel: defaultSkillLevel(pokeId),
+      tune: defaultTune(pokeId),
     }
     customs.value = [...customs.value, member]
     setSlot(index, uid)

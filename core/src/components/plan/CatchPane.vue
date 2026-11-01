@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { newUid } from '../../calc/uid'
@@ -41,7 +42,8 @@ function addGoal() {
   })
 }
 
-function removeGoal(id: string) {
+async function removeGoal(id: string) {
+  if (!await confirmRemoval('确认删除此捕捉刷糖目标？')) return
   plan.value.catchGoals = plan.value.catchGoals.filter((goal) => goal.id !== id)
 }
 

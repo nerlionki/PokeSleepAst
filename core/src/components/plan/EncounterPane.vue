@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmRemoval } from '#platform/confirm'
 import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlanStore } from '../../stores/plans'
@@ -42,7 +43,8 @@ function add(purpose: CatchPurpose) {
   goals.value.push(goal)
   selectedId.value = goal.id
 }
-function remove(id: string) {
+async function remove(id: string) {
+  if (!await confirmRemoval('确认删除此遇见目标？')) return
   if (busy.value) return
   plan.value.encounterGoals = goals.value.filter(goal => goal.id !== id)
   if (selectedId.value === id) selectedId.value = ''

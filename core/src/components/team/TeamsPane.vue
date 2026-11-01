@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmRemoval } from '#platform/confirm'
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRosterStore } from '../../stores/roster'
@@ -19,7 +20,18 @@ function navigate(page?: string, id?: string) {
 }
 function create() { const id = roster.createTeam(); navigate('new', id) }
 function member(id: string, customs: { uid: string; pokeId: number }[]) { return customs.find(item => item.uid === id) ?? box.pokemon.find(item => item.uid === id) }
-function cancel() { if (route.query.teamPage === 'new' && team.value) roster.deleteTeam(team.value.id); navigate() }
+async function cancel() {
+  if (route.query.teamPage === 'new' && team.value) {
+    if (!await confirmRemoval('确认取消新建并删除此队伍？')) return
+    roster.deleteTeam(team.value.id)
+  }
+  navigate()
+}
+async function removeTeam(id: string) {
+  if (!await confirmRemoval('确认删除此队伍？')) return
+  roster.deleteTeam(id)
+  navigate()
+}
 </script>
 <template>
   <div class="stack">
@@ -52,7 +64,7 @@ function cancel() { if (route.query.teamPage === 'new' && team.value) roster.del
       </div>
       <label class="field"><span>队伍名称</span><input :value="team.name" maxlength="30" @change="roster.renameTeam(team.id, ($event.target as HTMLInputElement).value)"></label>
       <TeamRosterPane :key="team.id" editor-only />
-      <button v-if="route.query.teamPage !== 'new'" class="btn ghost" type="button" @click="roster.deleteTeam(team.id); navigate()">删除队伍</button>
+      <button v-if="route.query.teamPage !== 'new'" class="btn ghost" type="button" @click="removeTeam(team.id)">删除队伍</button>
     </template>
     <p v-if="roster.error" class="amber" role="alert">{{ roster.error }}</p>
   </div>
