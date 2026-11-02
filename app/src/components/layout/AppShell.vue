@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useFeaturesStore } from '../../../../core/src/stores/features'
+import TabIcon from './TabIcon.vue'
 import { taskNavigationLocked } from '../../../../core/src/composables/taskNavigationLock'
 import { usePageTab } from '../../../../core/src/composables/usePageTab'
 import { computed, onMounted, watchEffect } from 'vue'
@@ -57,23 +58,23 @@ onMounted(async () => {
     </main>
     <nav class="tabbar" :inert="taskNavigationLocked" :aria-disabled="taskNavigationLocked">
       <RouterLink :to="{ name: 'pokemon' }">
-        <span class="tab-ico" aria-hidden="true">●</span>
+        <TabIcon name="pokemon" />
         宝可梦
       </RouterLink>
       <RouterLink :to="{ name: 'plan' }">
-        <span class="tab-ico" aria-hidden="true">▤</span>
+        <TabIcon name="plan" />
         规划
       </RouterLink>
       <RouterLink :to="{ name: 'team' }">
-        <span class="tab-ico" aria-hidden="true">☰</span>
+        <TabIcon name="team" />
         配队
       </RouterLink>
       <RouterLink :to="{ name: 'data' }">
-        <span class="tab-ico" aria-hidden="true">▦</span>
+        <TabIcon name="data" />
         资料
       </RouterLink>
       <RouterLink :to="{ name: 'profile' }">
-        <span class="tab-ico" aria-hidden="true">○</span>
+        <TabIcon name="profile" />
         我的
       </RouterLink>
     </nav>

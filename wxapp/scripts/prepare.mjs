@@ -191,7 +191,8 @@ for (const item of subPackages) {
 }
 const pages = ['pokemon', 'plan', 'team', 'data', 'profile']
 const labels = ['宝可梦', '规划', '配队', '资料', '我的']
-write(path.join(wxRoot, 'src/app.config.ts'), `export default defineAppConfig(${JSON.stringify({ pages: pages.map(p => `pages/${p}/index`), window: { navigationBarTitleText: '宝睡助手', navigationBarBackgroundColor: '#081018', navigationBarTextStyle: 'white', backgroundColor: '#081018' }, tabBar: { color: '#93a4b5', selectedColor: '#7fcec0', backgroundColor: '#101a26', list: pages.map((p, i) => ({ pagePath: `pages/${p}/index`, text: labels[i] })) }, subPackages, workers: { path: 'workers', isSubpackage: true }, lazyCodeLoading: 'requiredComponents' }, null, 2)})\n`)
+const tabBarItems = await require('./config/tabbar-icons.cjs').createTabBarItems(sharp, path.join(wxRoot, 'src/assets/tabbar'), pages, labels)
+write(path.join(wxRoot, 'src/app.config.ts'), `export default defineAppConfig(${JSON.stringify({ pages: pages.map(p => `pages/${p}/index`), window: { navigationBarTitleText: '宝睡助手', navigationBarBackgroundColor: '#081018', navigationBarTextStyle: 'white', backgroundColor: '#081018' }, tabBar: { color: '#93a4b5', selectedColor: '#7fcec0', backgroundColor: '#101a26', list: tabBarItems }, subPackages, workers: { path: 'workers', isSubpackage: true }, lazyCodeLoading: 'requiredComponents' }, null, 2)})\n`)
 // Native Worker gets its own pure-core bundle; no Vue or platform code enters it.
 const esbuild = require('esbuild')
 fs.mkdirSync(path.join(wxRoot, 'src/workers'), { recursive: true })

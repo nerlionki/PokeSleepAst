@@ -51,7 +51,7 @@ const picking = shallowRef(components_pokemon_BoxPane_config_clientDefaults["pic
 const ocrBusy = shallowRef(components_pokemon_BoxPane_config_clientDefaults["ocrBusyInitial"])
 const ocrMsg = shallowRef(components_pokemon_BoxPane_config_clientDefaults["ocrMsgInitial"])
 const ocrProgress = shallowRef<ImportProgress>((cloneData(components_pokemon_BoxPane_config_clientDefaults["ocrProgressInitial"]) as unknown as ImportProgress))
-const filtering = shallowRef(components_pokemon_BoxPane_config_clientDefaults["filteringInitial"])
+const filterPanel = shallowRef<'none' | 'sleep' | 'berry' | 'skill' | 'advanced'>('none')
 const query = reactive<Omit<BoxQuery, 'berryType' | 'specialty' | 'mainSkill'> & { berryType: string[]; specialty: string[]; mainSkill: string[]; sleepTypes: string[] }>({ ...EMPTY_BOX_QUERY, berryType: selectionList(EMPTY_BOX_QUERY.berryType), specialty: selectionList(EMPTY_BOX_QUERY.specialty), mainSkill: selectionList(EMPTY_BOX_QUERY.mainSkill), sleepTypes: [], ingredients: [], subskills: [] })
 
 interface BoxDraft extends BoxPokemon {
@@ -149,6 +149,7 @@ function save() {
 }
 
 function clearFilters() {
+  filterPanel.value = 'none'
   query.text = ''; query.sleepTypes = []
   query.berryType = []
   query.specialty = []
@@ -162,6 +163,8 @@ function clearFilters() {
 
 const filtered = computed(() => [...box.pokemon].reverse().filter((pokemon) => boxMatches(pokemon, query)))
 const activeFilters = computed(() => filterCount(query))
+function toggleFilter(panel: typeof filterPanel.value) { filterPanel.value = filterPanel.value === panel ? 'none' : panel }
+const advancedCount = computed(() => Number(query.ingredients.length > 0) + Number(query.subskills.length > 0))
 </script>
 
 <template>
@@ -174,8 +177,63 @@ const activeFilters = computed(() => filterCount(query))
       <button class="btn" type="button" @click="openOverview">Box 概览</button>
       <button class="btn" type="button" @click="picking = true">新增宝可梦</button>
       <button class="btn" type="button" :disabled="ocrBusy" @click="pickShots">导入</button>
-      <button v-if="box.pokemon.length" class="btn" type="button" :class="{ on: activeFilters }" @click="filtering = true">{{ activeFilters ? `筛选 ${activeFilters}` : '筛选' }}</button>
     </div>
+    <div class="row box-search">
+      <input v-model="query.text" class="picker-search" placeholder="搜索昵称、中文、英文或图鉴编号">
+      <button class="btn ghost" type="button" @click="clearFilters">重置</button>
+    </div>
+    <div class="picker-filters">
+      <button v-for="item in ['全部', ...TYPES]" :key="item" type="button" :class="{ on: item === '全部' ? !query.specialty.length : query.specialty.includes(item) }" @click="toggleChoice(query.specialty, item, TYPES)">{{ item }}</button>
+      <button type="button" :class="{ on: filterPanel === 'sleep' || query.sleepTypes.length > 0 }" :aria-expanded="filterPanel === 'sleep'" @click="toggleFilter('sleep')">睡眠</button>
+      <button type="button" :class="{ on: filterPanel === 'berry' || query.berryType.length > 0 }" :aria-expanded="filterPanel === 'berry'" @click="toggleFilter('berry')">树果</button>
+      <button type="button" :class="{ on: filterPanel === 'skill' || query.mainSkill.length > 0 }" :aria-expanded="filterPanel === 'skill'" @click="toggleFilter('skill')">技能</button>
+      <button type="button" :class="{ on: filterPanel === 'advanced' || advancedCount > 0 }" :aria-expanded="filterPanel === 'advanced'" @click="toggleFilter('advanced')">更多筛选{{ advancedCount ? ` ${advancedCount}` : '' }}</button>
+    </div>
+    <div v-if="filterPanel === 'sleep'" class="picker-opts">
+      <button type="button" :class="{ on: !query.sleepTypes.length }" @click="query.sleepTypes = []">全部</button>
+      <button v-for="item in sleepTypes" :key="item" type="button" :class="{ on: query.sleepTypes.includes(item) }" @click="toggleChoice(query.sleepTypes, item, sleepTypes)">{{ item }}</button>
+    </div>
+    <div v-else-if="filterPanel === 'berry'" class="picker-opts">
+      <button type="button" :class="{ on: !query.berryType.length }" @click="query.berryType = []">全部</button>
+      <button v-for="item in FILTER_CATALOG.berries" :key="item.name" type="button" :class="{ on: query.berryType.includes(item.type) }" @click="toggleChoice(query.berryType, item.type, FILTER_CATALOG.berries.map(item => item.type))"><BerryIcon :name="item.name" />{{ item.name }}</button>
+    </div>
+    <div v-else-if="filterPanel === 'skill'" class="picker-opts">
+      <button type="button" :class="{ on: !query.mainSkill.length }" @click="query.mainSkill = []">全部</button>
+      <button v-for="item in FILTER_CATALOG.skills" :key="item" type="button" :class="{ on: query.mainSkill.includes(item) }" @click="toggleChoice(query.mainSkill, item, FILTER_CATALOG.skills)"><MainSkillIcon :name="item" />{{ item }}</button>
+    </div>
+    <section v-else-if="filterPanel === 'advanced'" class="stack" aria-label="Box 专有筛选">
+      <div class="row">
+        <p class="muted">食材</p>
+        <div class="seg">
+          <button type="button" :class="{ on: query.ingredientLock === 'unlocked' }" @click="query.ingredientLock = 'unlocked'">已解锁</button>
+          <button type="button" :class="{ on: query.ingredientLock === 'locked' }" @click="query.ingredientLock = 'locked'">未解锁</button>
+        </div>
+      </div>
+      <div class="picker-opts">
+        <button type="button" :class="{ on: !query.ingredients.length }" @click="query.ingredients = []">全部</button>
+        <button v-for="item in FILTER_CATALOG.ingredients" :key="item.id" type="button" :class="{ on: query.ingredients.includes(item.name) }" @click="toggleChoice(query.ingredients, item.name, FILTER_CATALOG.ingredients.map(item => item.name))">
+          <IngredientIcon :id="item.id" :name="item.name" small />{{ item.name }}
+        </button>
+      </div>
+      <div class="row">
+        <p class="muted">副技能</p>
+        <div class="seg">
+          <button type="button" :class="{ on: query.subskillCombine === 'and' }" @click="query.subskillCombine = 'and'">并且</button>
+          <button type="button" :class="{ on: query.subskillCombine === 'or' }" @click="query.subskillCombine = 'or'">或者</button>
+        </div>
+        <div class="seg">
+          <button type="button" :class="{ on: query.subskillLock === 'unlocked' }" @click="query.subskillLock = 'unlocked'">已解锁</button>
+          <button type="button" :class="{ on: query.subskillLock === 'locked' }" @click="query.subskillLock = 'locked'">未解锁</button>
+        </div>
+      </div>
+      <div class="picker-opts">
+        <button type="button" :class="{ on: !query.subskills.length }" @click="query.subskills = []">全部</button>
+        <button v-for="item in FILTER_CATALOG.subskills" :key="item.id" type="button" :class="{ on: query.subskills.includes(item.id) }" @click="toggleChoice(query.subskills, item.id, FILTER_CATALOG.subskills.map(item => item.id))">
+          <SubskillIcon :id="item.id" />{{ item.name }}
+        </button>
+      </div>
+    </section>
+    <p class="muted">{{ filtered.length }} / {{ box.pokemon.length }} 只{{ activeFilters ? ` · 已启用 ${activeFilters} 项筛选` : '' }}</p>
     <p v-if="ocrMsg" class="amber">{{ ocrMsg }}</p>
     <div v-if="pendingOcr.length" class="card row">
       <span class="muted">{{ pendingOcr.length }} 只宝可梦有待补全字段</span>
@@ -202,67 +260,6 @@ const activeFilters = computed(() => filterCount(query))
         </div>
       </div>
     </div>
-    <div v-if="filtering" v-back="() => { filtering = false }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="filtering = false">
-      <section class="sheet stack">
-        <div class="row">
-          <h3>筛选</h3>
-          <button class="btn ghost" type="button" @click="clearFilters">清除</button>
-          <button class="btn ghost" type="button" @click="filtering = false">完成</button>
-        </div>
-        <div class="field">
-          <label>名称</label>
-          <input v-model="query.text" placeholder="搜索名称">
-        </div>
-        <p class="muted">树果属性</p>
-        <div class="picker-opts">
-          <button type="button" :class="{ on: !query.berryType.length }" @click="query.berryType = []">全部</button>
-          <button v-for="item in FILTER_CATALOG.berries" :key="item.name" type="button" :class="{ on: query.berryType.includes(item.type) }" @click="toggleChoice(query.berryType, item.type, FILTER_CATALOG.berries.map(item => item.type))">
-            <BerryIcon :name="item.name" />{{ item.name }}
-          </button>
-        </div>
-        <p class="muted">睡眠类型</p><div class="picker-opts"><button type="button" :class="{ on: !query.sleepTypes.length }" @click="query.sleepTypes = []">全部</button><button v-for="sleep in sleepTypes" :key="sleep" type="button" :class="{ on: query.sleepTypes.includes(sleep) }" @click="toggleChoice(query.sleepTypes, sleep, sleepTypes)">{{ sleep }}</button></div>
-        <p class="muted">类型</p>
-        <div class="picker-opts">
-          <button type="button" :class="{ on: !query.specialty.length }" @click="query.specialty = []">全部</button>
-          <button v-for="item in TYPES" :key="item" type="button" :class="{ on: query.specialty.includes(item) }" @click="toggleChoice(query.specialty, item, TYPES)">{{ item }}</button>
-        </div>
-        <div class="row">
-          <p class="muted">食材</p>
-          <div class="seg">
-            <button type="button" :class="{ on: query.ingredientLock === 'unlocked' }" @click="query.ingredientLock = 'unlocked'">已解锁</button>
-            <button type="button" :class="{ on: query.ingredientLock === 'locked' }" @click="query.ingredientLock = 'locked'">未解锁</button>
-          </div>
-        </div>
-        <div class="picker-opts">
-          <button type="button" :class="{ on: !query.ingredients.length }" @click="query.ingredients = []">全部</button>
-          <button v-for="item in FILTER_CATALOG.ingredients" :key="item.id" type="button" :class="{ on: query.ingredients.includes(item.name) }" @click="toggleChoice(query.ingredients, item.name, FILTER_CATALOG.ingredients.map(item => item.name))">
-            <IngredientIcon :id="item.id" :name="item.name" small />{{ item.name }}
-          </button>
-        </div>
-        <p class="muted">主技能</p>
-        <div class="picker-opts">
-          <button type="button" :class="{ on: !query.mainSkill.length }" @click="query.mainSkill = []">全部</button>
-          <button v-for="item in FILTER_CATALOG.skills" :key="item" type="button" :class="{ on: query.mainSkill.includes(item) }" @click="toggleChoice(query.mainSkill, item, FILTER_CATALOG.skills)"><MainSkillIcon :name="item" />{{ item }}</button>
-        </div>
-        <div class="row">
-          <p class="muted">副技能</p>
-          <div class="seg">
-            <button type="button" :class="{ on: query.subskillCombine === 'and' }" @click="query.subskillCombine = 'and'">并且</button>
-            <button type="button" :class="{ on: query.subskillCombine === 'or' }" @click="query.subskillCombine = 'or'">或者</button>
-          </div>
-          <div class="seg">
-            <button type="button" :class="{ on: query.subskillLock === 'unlocked' }" @click="query.subskillLock = 'unlocked'">已解锁</button>
-            <button type="button" :class="{ on: query.subskillLock === 'locked' }" @click="query.subskillLock = 'locked'">未解锁</button>
-          </div>
-        </div>
-        <div class="picker-opts">
-          <button type="button" :class="{ on: !query.subskills.length }" @click="query.subskills = []">全部</button>
-          <button v-for="item in FILTER_CATALOG.subskills" :key="item.id" type="button" :class="{ on: query.subskills.includes(item.id) }" @click="toggleChoice(query.subskills, item.id, FILTER_CATALOG.subskills.map(item => item.id))">
-            <SubskillIcon :id="item.id" />{{ item.name }}
-          </button>
-        </div>
-      </section>
-    </div>
     <SpeciesSheet v-if="picking" @close="picking = false" @pick="pickSpecies" />
     <div v-if="editing" v-back="() => { editing = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="editing = null">
       <section class="sheet stack">
@@ -281,3 +278,9 @@ const activeFilters = computed(() => filterCount(query))
     <OcrCompletionDialog v-if="completing && !editing" :key="completing.uid" :pokemon="completing" :remaining="completionQueue.length" @save="saveCompletion" @pause="pauseCompletion" />
   </div>
 </template>
+
+<style scoped>
+.box-search { flex-wrap: nowrap; }
+.box-search > .picker-search { flex: 1; min-width: 0; width: 0; }
+.box-search > button { flex-shrink: 0; }
+</style>

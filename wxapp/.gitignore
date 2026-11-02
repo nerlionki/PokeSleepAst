@@ -1,6 +1,7 @@
 node_modules/
 dist/
 src/generated/
+src/assets/tabbar/
 src/asset-pack*/
 src/ocr-pack*/
 src/workers/

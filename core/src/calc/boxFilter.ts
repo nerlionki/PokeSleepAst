@@ -6,7 +6,8 @@ import { MAIN_SKILLS } from './mainSkills'
 import { SUBSKILL_GATES } from './member'
 import { selectionList, matchesChoice } from './multiChoice'
 import { specialtyHit } from './specialty'
-import { foldText, textHit } from './text'
+import { foldText } from './text'
+import { pokeHit } from './pokeSearch'
 import type { BoxPokemon } from '../types'
 const boxFilter_config_extracted0 = extracted0.modules.boxFilter
 const boxFilter_slotOpen_runtimeParameters = runtimeParameters.modules.boxFilter.slotOpen.values
@@ -98,7 +99,7 @@ function skillHit(mainSkill: string, selected: string): boolean {
 export function boxMatches(pokemon: BoxPokemon, query: BoxQuery): boolean {
   const poke = pokeById(pokemon.pokeId)
   if (!poke) return false
-  if (query.text && !textHit(boxLabel(pokemon), query.text)) return false
+  if (!pokeHit(poke, query.text, boxLabel(pokemon))) return false
   if (!matchesChoice(selectionList(query.berryType), poke.berryType)) return false
   if (selectionList(query.specialty).length && !selectionList(query.specialty).some(value => specialtyHit(poke.specialty, value))) return false
   if (!matchesChoice(query.sleepTypes ?? [], poke.sleepType)) return false

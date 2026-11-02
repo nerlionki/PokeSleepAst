@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useTabSwipe } from '../../composables/useTabSwipe'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { useActivities } from '../../composables/useActivities'
@@ -143,7 +142,6 @@ const perSleep = computed(() => ({
   shards: rewards.value.shards / BATCH,
 }))
 const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits: 1 })
-const swipe = useTabSwipe(resultTab, () => ['encounters', 'candies'] as const, () => !seenTotal.value || busy.value)
 </script>
 
 <template>
@@ -224,7 +222,7 @@ const swipe = useTabSwipe(resultTab, () => ['encounters', 'candies'] as const, (
       {{ ISLANDS.find((i) => i.id === island)?.name }}评级 {{ rank }}<template v-if="nextRank">，再 {{ nextRank.need.toLocaleString('zh-CN') }} 能量升到 {{ nextRank.rank }}</template>。
       露营券加 1 只。分数按满睡眠 8 小时 30 分 = 100 分换算。
     </p>
-    <article class="expect-board" @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel">
+    <article class="expect-board">
       <div class="row">
         <button class="btn sage" type="button" :disabled="busy" @click="calculate">{{ busy ? '正在模拟…' : '计算 4000 次' }}</button>
       </div>

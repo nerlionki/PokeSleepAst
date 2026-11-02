@@ -10,6 +10,14 @@ const compatibility = JSON.parse(fs.readFileSync(path.join(root, 'config/compati
 const packageVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).version
 if (compatibility.minimumMiniProgramVersion !== packageVersion || compatibility.minimumBaseLibraryVersion !== '2.27.3') throw Error('Invalid minimum supported versions')
 const config = JSON.parse(fs.readFileSync(path.join(dist, 'app.json')))
+for (const item of config.tabBar.list) {
+  for (const key of ['iconPath', 'selectedIconPath']) {
+    const icon = item[key]
+    if (typeof icon !== 'string' || !/^assets\/tabbar\/[a-z]+-(normal|selected)\.png$/.test(icon)) throw Error(`Missing native tab icon: ${item.pagePath}/${key}`)
+    const data = fs.readFileSync(path.join(dist, icon))
+    if (data.length > 40 * 1024 || data.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') throw Error(`Invalid native tab icon: ${icon}`)
+  }
+}
 const project = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json')))
 if (project.appid !== 'wxa305c12ee6676e08') throw Error('Incorrect AppID')
 if (config.pages.length !== 5) throw Error('Missing feature pages')

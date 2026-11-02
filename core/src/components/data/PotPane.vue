@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { useTabSwipe } from '../../composables/useTabSwipe'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef, watch } from 'vue'
 import { POT_TIERS, RECIPES } from '../../calc/data'
-import { MEAL_CATEGORIES, type RecipeRow } from '../../calc/recipes'
+import { compareRecipeEnergyDescending, MEAL_CATEGORIES, type RecipeRow } from '../../calc/recipes'
 import { RECIPE_LEVEL_MAX, recipeLevelOf } from '../../calc/cook'
 import { useSettingsStore } from '../../stores/settings'
 import { textHit } from '../../calc/text'
@@ -39,14 +38,15 @@ function spent(upto: number) {
 }
 
 const recipes = computed(() => RECIPES.filter((r) => r.category === category.value && textHit(r.name, props.q)))
+const compareEnergy = (a: RecipeRow, b: RecipeRow) => compareRecipeEnergyDescending(a, b)
 
 const ready = computed(() => recipes.value
   .filter((r) => tier.value && r.pot <= tier.value.pot)
-  .sort((a, b) => b.pot - a.pot || b.baseEnergy - a.baseEnergy))
+  .sort(compareEnergy))
 
 const overflow = computed(() => {
   const max = POT_TIERS[POT_TIERS.length - 1].pot
-  return recipes.value.filter((r) => r.pot > max).sort((a, b) => b.pot - a.pot || b.baseEnergy - a.baseEnergy)
+  return recipes.value.filter((r) => r.pot > max).sort(compareEnergy)
 })
 
 const later = computed(() => POT_TIERS.slice(index.value + 1).map((row, offset) => {
@@ -58,18 +58,17 @@ const later = computed(() => POT_TIERS.slice(index.value + 1).map((row, offset) 
     total: spent(at),
     recipes: recipes.value
       .filter((r) => r.pot > prev && r.pot <= row.pot)
-      .sort((a, b) => b.pot - a.pot || b.baseEnergy - a.baseEnergy),
+      .sort(compareEnergy),
   }
 }))
 
 function shift(step: number) {
   index.value = Math.min(POT_TIERS.length - 1, Math.max(minimumIndex.value, index.value + step))
 }
-const swipe = useTabSwipe(category, () => MEAL_CATEGORIES.map(category => category.id))
 </script>
 
 <template>
-  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
+  <div class="stack">
     <div v-if="tier" class="pot-bar">
       <button type="button" aria-label="上一档" :disabled="index <= minimumIndex" @click="shift(-1)">‹</button>
       <div>

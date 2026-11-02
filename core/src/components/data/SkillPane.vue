@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useTabSwipe } from '../../composables/useTabSwipe'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
@@ -48,11 +47,10 @@ const holders = computed(() => {
 function toggle(id: number) {
   open.value = open.value === id ? 0 : id
 }
-const swipe = useTabSwipe(part, () => ['main', 'sub'] as const)
 </script>
 
 <template>
-  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
+  <div class="stack">
     <div class="seg">
       <button type="button" :class="{ on: part === 'main' }" @click="part = 'main'">主技能</button>
       <button type="button" :class="{ on: part === 'sub' }" @click="part = 'sub'">副技能</button>

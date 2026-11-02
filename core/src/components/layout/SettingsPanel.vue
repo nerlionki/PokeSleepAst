@@ -8,6 +8,7 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { POT_TIERS, RECIPES } from '../../calc/data'
 import { categoryLabel, RECIPE_LEVEL_MAX, recipeLevelOf } from '../../calc/cook'
+import { compareRecipeEnergyDescending } from '../../calc/recipes'
 import EnvironmentFields from '../shared/EnvironmentFields.vue'
 import MealIcon from '../shared/MealIcon.vue'
 import { useSettingsStore } from '../../stores/settings'
@@ -26,7 +27,8 @@ const maxPotSize = Math.max(...POT_TIERS.map(tier => tier.pot))
 const recipeGroups = computed(() => (['curry', 'salad', 'dessert'] as MealCategory[]).map((c) => ({
   id: c,
   label: categoryLabel(c),
-  recipes: RECIPES.filter((r) => r.category === c && !r.mix),
+  recipes: RECIPES.filter((r) => r.category === c && !r.mix)
+    .sort((a, b) => compareRecipeEnergyDescending(a, b)),
 })))
 
 function setRecipeLevel(name: string, level: number) {

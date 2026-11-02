@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useTabSwipe } from '../../composables/useTabSwipe'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
@@ -23,7 +22,6 @@ const producers = computed(() => current.value ? fixedBerryProducers(current.val
 function showBerry(name: string) { tab.value = 'energy'; open.value = name }
 const amount = (value: number) => value.toFixed(1)
 const conditions: Record<string, string> = { full: '全时满包', normal: '一般', unlimited: '无持有上限' }
-const swipe = useTabSwipe(tab, () => ['energy', 'production'] as const)
 </script>
 
 <template>
@@ -42,7 +40,7 @@ const swipe = useTabSwipe(tab, () => ['energy', 'production'] as const)
       </button>
     </div>
     <DrawerSheet v-if="current" :title="current.name" @close="open = ''">
-      <div class="stack" @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel">
+      <div class="stack">
       <div class="row">
         <BerryIcon :name="current.name" large />
         <div>

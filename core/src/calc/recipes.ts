@@ -15,6 +15,15 @@ export function dishEnergy(baseEnergy: number, level: number): number {
   return Math.round(baseEnergy * recipeLevelMult(level))
 }
 
+/** Display order uses base energy so editing recipe levels never reorders a list. */
+export function compareRecipeEnergyDescending(
+  a: Pick<RecipeRow, 'baseEnergy' | 'pot' | 'name'>,
+  b: Pick<RecipeRow, 'baseEnergy' | 'pot' | 'name'>,
+): number {
+  return b.baseEnergy - a.baseEnergy
+    || a.pot - b.pot || a.name.localeCompare(b.name, 'zh-CN')
+}
+
 export function bonusLabel(bonus: number): string {
   const pct = Math.round(bonus * 100)
   return `+${pct}%（${(1 + bonus).toFixed(2)}x）`

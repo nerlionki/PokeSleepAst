@@ -7,7 +7,7 @@ import MealIcon from '../shared/MealIcon.vue'
 
 defineProps<{
   recipe: RecipeRow
-  level: number
+  level?: number
   editableLevel?: boolean
 }>()
 

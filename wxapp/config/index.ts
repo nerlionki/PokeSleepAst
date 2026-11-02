@@ -22,6 +22,7 @@ export default defineConfig({
   },
   defineConstants: { __APP_VERSION__: JSON.stringify(JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8')).version) },
   copy: { patterns: [
+    { from: 'src/assets/tabbar', to: 'dist/assets/tabbar' },
     { from: 'src/workers', to: 'dist/workers' },
     { from: 'src/native/image-loader.js', to: 'dist/image-loader.js' },
     ...fs.readdirSync(path.resolve(__dirname, '../src')).filter(name => /^(asset|ocr)-pack\d+$/.test(name)).map(name => ({ from: `src/${name}`, to: `dist/${name}`, ignore: ['**/*.vue', '**/*.ts'] })),

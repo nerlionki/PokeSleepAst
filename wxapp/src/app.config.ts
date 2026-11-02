@@ -19,23 +19,33 @@ export default defineAppConfig({
     "list": [
       {
         "pagePath": "pages/pokemon/index",
-        "text": "宝可梦"
+        "text": "宝可梦",
+        "iconPath": "assets/tabbar/pokemon-normal.png",
+        "selectedIconPath": "assets/tabbar/pokemon-selected.png"
       },
       {
         "pagePath": "pages/plan/index",
-        "text": "规划"
+        "text": "规划",
+        "iconPath": "assets/tabbar/plan-normal.png",
+        "selectedIconPath": "assets/tabbar/plan-selected.png"
       },
       {
         "pagePath": "pages/team/index",
-        "text": "配队"
+        "text": "配队",
+        "iconPath": "assets/tabbar/team-normal.png",
+        "selectedIconPath": "assets/tabbar/team-selected.png"
       },
       {
         "pagePath": "pages/data/index",
-        "text": "资料"
+        "text": "资料",
+        "iconPath": "assets/tabbar/data-normal.png",
+        "selectedIconPath": "assets/tabbar/data-selected.png"
       },
       {
         "pagePath": "pages/profile/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "assets/tabbar/profile-normal.png",
+        "selectedIconPath": "assets/tabbar/profile-selected.png"
       }
     ]
   },

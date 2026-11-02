@@ -2,13 +2,14 @@
 import { onBeforeUnmount, onMounted, shallowRef, useId, watch } from 'vue'
 import { resolveBundledImagePath, resolveImagePath } from '../platform/images'
 import { whenImageVisible } from '../platform/imageVisibility'
+import { nextTick as afterNativeRender } from '@tarojs/taro'
 const props = defineProps<{ src?: string; alt?: string }>()
 const emit = defineEmits<{ error: [] }>()
 const loaded = shallowRef('')
 const visible = shallowRef(false)
 const imageId = 'resource-image-' + useId().replace(/[^a-zA-Z0-9_-]/g, '')
 let stopObserving: (() => void) | undefined
-onMounted(() => { stopObserving = whenImageVisible(imageId, () => { visible.value = true }) })
+onMounted(() => { stopObserving = whenImageVisible(imageId, () => { visible.value = true }, afterNativeRender) })
 onBeforeUnmount(() => stopObserving?.())
 let localFailed = false
 async function onError() {

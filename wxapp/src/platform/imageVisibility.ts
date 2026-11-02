@@ -2,7 +2,7 @@ type Start = () => void
 interface Group { pending: Map<string, Start>; observer?: WechatMiniprogram.IntersectionObserver; scheduled: boolean }
 const groups = new WeakMap<object, Group>()
 /** Share one native observer per page; off-screen images do not download. */
-export function whenImageVisible(id: string, start: Start): () => void {
+export function whenImageVisible(id: string, start: Start, afterRender: (callback: () => void) => void = callback => wx.nextTick(callback)): () => void {
   if (typeof wx === 'undefined' || typeof wx.createIntersectionObserver !== 'function' || typeof getCurrentPages !== 'function') { start(); return () => {} }
   const page = getCurrentPages().at(-1)
   if (!page) { start(); return () => {} }
@@ -12,7 +12,9 @@ export function whenImageVisible(id: string, start: Start): () => void {
   current.pending.set(id, start)
   if (!current.scheduled) {
     current.scheduled = true
-    wx.nextTick(() => {
+    // Taro's render callback waits for setData; wx.nextTick alone can run before
+    // a newly opened picker has any native image nodes for observeAll to find.
+    afterRender(() => {
       current.scheduled = false
       current.observer?.disconnect()
       if (!current.pending.size) return

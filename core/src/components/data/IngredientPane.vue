@@ -5,6 +5,7 @@ import { computed, shallowRef } from 'vue'
 import { INGREDIENTS, RECIPES } from '../../calc/data'
 import { fixedIngredientProducers } from '../../calc/precomputedProduction'
 import { textHit } from '../../calc/text'
+import { compareRecipeEnergyDescending } from '../../calc/recipes'
 import DataRow from '../shared/DataRow.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import MealIcon from '../shared/MealIcon.vue'
@@ -20,7 +21,7 @@ const list = computed(() => INGREDIENTS.filter((i) => textHit(i.name, props.q)))
 const top = fixedIngredientProducers
 
 function usesOf(id: number) {
-  return RECIPES.filter((r) => !r.mix && r.ingredients.some((ing) => ing.id === id)).map((r) => ({
+  return RECIPES.filter((r) => !r.mix && r.ingredients.some((ing) => ing.id === id)).sort((a, b) => compareRecipeEnergyDescending(a, b)).map((r) => ({
     name: r.name,
     count: r.ingredients.find((ing) => ing.id === id)?.count ?? 0,
     pot: r.pot,

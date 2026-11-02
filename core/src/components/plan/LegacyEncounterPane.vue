@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useTabSwipe } from '../../composables/useTabSwipe'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFeaturesStore } from '../../stores/features'
@@ -24,11 +23,10 @@ const tab = computed({
   },
   set: value => { void router.push({ path: route.path, query: { ...route.query, tab: 'encounter', encounterVersion: 'legacy', legacyTab: value } }) },
 })
-const swipe = useTabSwipe(tab, () => options.filter(option => features.enabled('plan', option.id)).map(option => option.id))
 </script>
 
 <template>
-  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
+  <div class="stack">
     <Segmented v-model="tab" :options="options" />
     <CatchPane v-if="tab === 'catch'" />
     <BabyEfficiencyPane v-else-if="tab === 'baby'" />

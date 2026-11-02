@@ -26,7 +26,7 @@ const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skil
 
 <template>
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
-    <input v-model="q" class="picker-search" placeholder="搜索功能或名称">
+    <input v-if="tab !== 'recipe'" v-model="q" class="picker-search" placeholder="搜索功能或名称">
     <div class="seg seg-4 plan-tabs">
       <button v-if="features.enabled('data', 'island')" type="button" :class="{ on: tab === 'island' }" @click="tab = 'island'">营地</button>
       <button v-if="features.enabled('data', 'berry')" type="button" :class="{ on: tab === 'berry' }" @click="tab = 'berry'">树果</button>
@@ -43,7 +43,7 @@ const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skil
     <IslandPane v-if="tab === 'island'" :q="q" />
     <BerryPane v-else-if="tab === 'berry'" :q="q" />
     <IngredientPane v-else-if="tab === 'ing'" :q="q" />
-    <RecipePane v-else-if="tab === 'recipe'" :q="q" />
+    <RecipePane v-else-if="tab === 'recipe'" />
     <SkillPane v-else-if="tab === 'skill'" :q="q" />
     <NaturePane v-else-if="tab === 'nature'" :q="q" />
     <PotPane v-else-if="tab === 'pot'" :q="q" />
