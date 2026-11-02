@@ -1,4 +1,4 @@
-import ruleParameters from '../data/rule-parameters.json'
+import ruleParameters from '../data/rule-parameters.resource'
 import type { EnergyPoint, Settings, ProduceInput } from '../types'
 import { MEAL_RECOVERY } from './data'
 import { energyMultiplier } from './helpSpeed'

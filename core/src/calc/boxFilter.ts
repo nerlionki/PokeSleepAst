@@ -1,9 +1,10 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import extracted0 from '../data/client-defaults.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import extracted0 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { BERRIES, INGREDIENTS, pokeById, SUBSKILLS } from './data'
 import { MAIN_SKILLS } from './mainSkills'
 import { SUBSKILL_GATES } from './member'
+import { selectionList, matchesChoice } from './multiChoice'
 import { specialtyHit } from './specialty'
 import { foldText, textHit } from './text'
 import type { BoxPokemon } from '../types'
@@ -16,9 +17,10 @@ export type Combine = 'and' | 'or'
 
 export interface BoxQuery {
   text: string
-  berryType: string
-  specialty: string
-  mainSkill: string
+  berryType: string | string[]
+  specialty: string | string[]
+  mainSkill: string | string[]
+  sleepTypes?: string[]
   ingredients: string[]
   ingredientLock: LockMode
   subskills: string[]
@@ -97,9 +99,10 @@ export function boxMatches(pokemon: BoxPokemon, query: BoxQuery): boolean {
   const poke = pokeById(pokemon.pokeId)
   if (!poke) return false
   if (query.text && !textHit(boxLabel(pokemon), query.text)) return false
-  if (query.berryType && poke.berryType !== query.berryType) return false
-  if (!specialtyHit(poke.specialty, query.specialty)) return false
-  if (!skillHit(poke.mainSkill, query.mainSkill)) return false
+  if (!matchesChoice(selectionList(query.berryType), poke.berryType)) return false
+  if (selectionList(query.specialty).length && !selectionList(query.specialty).some(value => specialtyHit(poke.specialty, value))) return false
+  if (!matchesChoice(query.sleepTypes ?? [], poke.sleepType)) return false
+  if (selectionList(query.mainSkill).length && !selectionList(query.mainSkill).some(value => skillHit(poke.mainSkill, value))) return false
   if (!matchTagged(ingredientTags(pokemon), query.ingredients, query.ingredientLock, 'or')) return false
   if (!matchTagged(subskillTags(pokemon), query.subskills, query.subskillLock, query.subskillCombine)) return false
   return true
@@ -120,5 +123,5 @@ export const FILTER_CATALOG: FilterCatalog = {
 }
 
 export function filterCount(query: BoxQuery): number {
-  return [query.text.trim(), query.berryType, query.specialty, query.mainSkill, query.ingredients.length, query.subskills.length].filter(Boolean).length
+  return [query.text.trim(), selectionList(query.berryType).length, selectionList(query.specialty).length, selectionList(query.mainSkill).length, query.sleepTypes?.length, query.ingredients.length, query.subskills.length].filter(Boolean).length
 }

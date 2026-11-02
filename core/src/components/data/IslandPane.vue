@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import { useTabSwipe } from '../../composables/useTabSwipe'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { computed, ref, shallowRef } from 'vue'
 import { ISLANDS, type PokeRow } from '../../calc/data'
 import { formatDp, islandBands, islandPokemon, islandUnlock } from '../../calc/islandMeta'
 import { useSettingsStore } from '../../stores/settings'
+import { useActivities } from '../../composables/useActivities'
 import { textHit } from '../../calc/text'
 import type { IslandId } from '../../types'
 import BerryIcon from '../shared/BerryIcon.vue'
@@ -15,6 +17,7 @@ const components_data_IslandPane_config_clientDefaults = clientDefaults.modules.
 
 
 const store = useSettingsStore()
+const activity = useActivities(computed(() => store.settings), () => store.settings.island)
 const props = defineProps<{ q: string }>()
 const openId = shallowRef<IslandId | ''>((components_data_IslandPane_config_clientDefaults["openIdInitial"] as unknown as IslandId | ''))
 const view = shallowRef<'band' | 'spread'>((components_data_IslandPane_config_clientDefaults["viewInitial"] as unknown as 'band' | 'spread'))
@@ -28,11 +31,11 @@ function toggleSleep(sleep: string) {
 const SLEEP_ORDER = cloneData(components_data_IslandPane_config_clientDefaults["SLEEP_ORDER"])
 
 const islands = computed(() => ISLANDS.filter((i) => textHit(`${i.name} ${islandUnlock(i.id as IslandId)}`, props.q)))
-const pokemonOf = new Map(ISLANDS.map((i) => [i.id, islandPokemon(i.id as IslandId)]))
+const pokemonOf = computed(() => new Map(ISLANDS.map((i) => [i.id, islandPokemon(i.id as IslandId, activity.context.value)])))
 
 function groups(id: string) {
   const buckets = new Map<string, PokeRow[]>()
-  for (const poke of pokemonOf.get(id) ?? []) {
+  for (const poke of pokemonOf.value.get(id) ?? []) {
     const list = buckets.get(poke.sleepType) ?? []
     list.push(poke)
     buckets.set(poke.sleepType, list)
@@ -43,6 +46,7 @@ function groups(id: string) {
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
   })
 }
+const swipe = useTabSwipe(view, () => ['band', 'spread'] as const)
 </script>
 
 <template>
@@ -76,11 +80,11 @@ function groups(id: string) {
           <template v-else>每周随机三颗</template>
         </p>
         <p v-if="i.id === 'cyanex'" class="muted">副树果从排除已选主树果后的其余 17 种中任选两种，不可重复。</p>
-        <div class="seg">
+        <div class="seg" @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel">
           <button type="button" :class="{ on: view === 'band' }" @click="view = 'band'">只数</button>
           <button type="button" :class="{ on: view === 'spread' }" @click="view = 'spread'">分布</button>
         </div>
-        <template v-if="view === 'band'">
+        <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel"><template v-if="view === 'band'">
           <p v-for="b in islandBands(i.id as IslandId)" :key="b.count">
             {{ b.count }} 只 · 卡比兽能量 {{ formatDp(b.min) }}{{ b.max == null ? ' 及以上' : ` – ${formatDp(b.max)}` }}
           </p>
@@ -101,6 +105,7 @@ function groups(id: string) {
             </div>
           </section>
         </template>
+        </div>
       </div>
     </article>
   </div>

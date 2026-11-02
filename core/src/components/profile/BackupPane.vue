@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import { confirmRemoval } from '#platform/confirm'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { exportText } from '#platform/backup'
 import { shallowRef } from 'vue'
@@ -26,16 +27,17 @@ async function exportBox() {
   }
 }
 
-function applyImport(replace: boolean) {
+async function applyImport(replace: boolean) {
   try {
     const parsed = parseBoxText(incoming.value)
     if (!parsed.pokemon.length) {
       msg.value = '没有可导入的宝可梦，请检查 JSON 格式与图鉴编号；盒子未修改'
       return
     }
+    if (replace && !await confirmRemoval('确认覆盖盒子？当前盒子内的宝可梦将被替换。')) return
     if (replace) box.replaceAll(parsed.pokemon)
     else box.merge(parsed.pokemon)
-    const label = parsed.source === 'iqdooh' ? 'iqdooh' : parsed.source === 'sdrice' ? 'sdrice' : parsed.source === 'rae' ? 'RAE' : parsed.source === 'native' ? '本机' : '混合'
+    const label = parsed.source === 'iqdooh' ? 'iqdooh' : parsed.source === 'sdrice' ? 'sdrice' : parsed.source === 'native' ? '本机' : '混合'
     msg.value = `${replace ? '覆盖' : '合并'}导入 ${parsed.pokemon.length} 只（${label}）${parsed.skipped ? `，跳过 ${parsed.skipped}` : ''}`
   }
   catch {
@@ -44,6 +46,7 @@ function applyImport(replace: boolean) {
 }
 
 async function wipe() {
+  if (!await confirmRemoval('确认清空盒子并重置设置？')) return
   box.replaceAll([])
   settings.reset()
   msg.value = '已清空盒子并重置设置'
@@ -52,7 +55,7 @@ async function wipe() {
 <template>
     <article class="card stack">
       <h3>本机备份</h3>
-      <p class="muted">可导入本机 / sdrice 盒子数组 / RAE pokebox / iqdooh 宝可梦盒备份 JSON。缺失字段可在 Box 中补全。</p>
+      <p class="muted">可导入本机 / sdrice 盒子数组 / iqdooh 宝可梦盒备份 JSON。缺失字段可在 Box 中补全。</p>
       <div class="field">
         <label>导出格式</label>
         <select v-model="mode">
@@ -61,7 +64,7 @@ async function wipe() {
         </select>
       </div>
       <button class="btn" type="button" @click="exportBox">导出 Box JSON</button>
-      <textarea v-model="incoming" rows="6" placeholder="粘贴本机、sdrice、RAE 或 iqdooh Box JSON"></textarea>
+      <textarea v-model="incoming" rows="6" placeholder="粘贴本机、sdrice 或 iqdooh Box JSON"></textarea>
       <div class="row">
         <button class="btn sage" type="button" @click="applyImport(false)">合并导入</button>
         <button class="btn ghost" type="button" @click="applyImport(true)">覆盖导入</button>

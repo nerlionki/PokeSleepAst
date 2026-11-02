@@ -1,5 +1,5 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleParameters from '../data/rule-parameters.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleParameters from '../data/rule-parameters.resource'
 import type { IslandId } from '../types'
 import { islandById, natureByName } from './data'
 import { POKEMON_LEVEL_MAX } from './xp'

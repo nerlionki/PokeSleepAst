@@ -1,7 +1,7 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleParameters from '../data/rule-parameters.json'
-import extracted0 from '../data/calc-tables.json'
-import { EVENT_PARAMETERS, activityValues, createActivityContext, type ActivitySelection } from './activities'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleParameters from '../data/rule-parameters.resource'
+import extracted0 from '../data/calc-tables.resource'
+import { EVENT_PARAMETERS, activityMiniCandyBoost, activityValues, createActivityContext, type ActivitySelection } from './activities'
 import { pokeById } from './data'
 import type { ExpGroup, TrainingProgress } from './xp'
 import { advanceTrainingState, expTo, feedTrainingState as baseFeedTrainingState, groupMult, natureExpFactor, xpCandy } from './xp'
@@ -59,7 +59,8 @@ export function trainPlan(input: TrainInput) {
     const event = effects(day)
     return baseFeedTrainingState(progress, count, target, nature, group, (typeof boost === 'number' ? boost : boost ? EVENT_PARAMETERS.candyBoosts.christmas.exp : 1) * event.candyExpMultiplier, shards * event.candyShardMultiplier)
   }
-  const boostPolicy = input.boost === 'none' ? undefined : EVENT_PARAMETERS.candyBoosts[input.boost === 'mini' ? 'mini' : 'christmas']
+  const mini = input.boost === 'mini' ? activityMiniCandyBoost(activity) : undefined
+  const boostPolicy = input.boost === 'none' ? undefined : mini ?? EVENT_PARAMETERS.candyBoosts[input.boost === 'mini' ? 'mini' : 'christmas']
 
   const gap = xpCandy({
     from: input.from,
@@ -78,6 +79,7 @@ export function trainPlan(input: TrainInput) {
   const boostShard = boostPolicy?.shards ?? 1
   const initial = { level: input.from, exp: expTo(input.to) * groupMult(input.group) - gap.exp }
   const boosted = Math.min(Math.max(0, Math.floor(input.boostCandy)), usable)
+  const boostError = input.boost === 'mini' && mini === null ? '当前活动日期未开放迷你糖果增强' : mini && boosted > mini.dailyLimit ? `迷你糖果增强每天最多 ${mini.dailyLimit} 颗，请分日规划` : ''
   const fedBoost = gap.error ? initial : feedTrainingState(initial, boosted, input.to, input.nature, input.group, boostPolicy?.exp ?? 1, boostShard).progress
   const fed = gap.error ? initial : feedTrainingState(fedBoost, usable - boosted, input.to, input.nature, input.group).progress
   const feedExp = fed.exp - initial.exp
@@ -119,7 +121,7 @@ export function trainPlan(input: TrainInput) {
   const boostedCost = gap.error ? { progress: initial, candies: 0, shards: 0 } : feedTrainingState(initial, boosted, input.to, input.nature, input.group, boostPolicy?.exp ?? 1, boostShard)
   const normalCost = gap.error ? { candies: 0, shards: 0 } : feedTrainingState(boostedCost.progress, Infinity, input.to, input.nature, input.group)
   return {
-    error: gap.error,
+    error: gap.error || boostError,
     needExp: gap.exp,
     candy: gap.error ? NaN : boostedCost.candies + normalCost.candies,
     shards: gap.error ? NaN : boostedCost.shards + normalCost.shards,

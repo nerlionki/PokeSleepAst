@@ -1,5 +1,5 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import extracted0 from '../data/skill-tables.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import extracted0 from '../data/skill-tables.resource'
 import { cloneData } from './dataClone'
 import type { ProduceInput } from '../types'
 import { MAIN_SKILLS, skillByPokedexName } from './mainSkills'

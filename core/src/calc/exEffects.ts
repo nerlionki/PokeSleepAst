@@ -1,4 +1,4 @@
-import ruleParameters from '../data/rule-parameters.json'
+import ruleParameters from '../data/rule-parameters.resource'
 import type { Settings } from '../types'
 import { islandById } from './data'
 const exEffects_exEffects_ruleParameters = ruleParameters.modules.exEffects.exEffects

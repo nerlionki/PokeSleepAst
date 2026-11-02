@@ -1,4 +1,4 @@
-import ruleParameters from '../data/rule-parameters.json'
+import ruleParameters from '../data/rule-parameters.resource'
 const cookingSkillState_addPot_ruleParameters = ruleParameters.modules.cookingSkillState.addPot
 const cookingSkillState_addCrit_ruleParameters = ruleParameters.modules.cookingSkillState.addCrit
 const cookingSkillState_potSize_ruleParameters = ruleParameters.modules.cookingSkillState.potSize

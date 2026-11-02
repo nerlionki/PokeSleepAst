@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import { useTabSwipe } from '../../composables/useTabSwipe'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef, watch } from 'vue'
 import { POT_TIERS, RECIPES } from '../../calc/data'
@@ -64,10 +65,11 @@ const later = computed(() => POT_TIERS.slice(index.value + 1).map((row, offset) 
 function shift(step: number) {
   index.value = Math.min(POT_TIERS.length - 1, Math.max(minimumIndex.value, index.value + step))
 }
+const swipe = useTabSwipe(category, () => MEAL_CATEGORIES.map(category => category.id))
 </script>
 
 <template>
-  <div class="stack">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
     <div v-if="tier" class="pot-bar">
       <button type="button" aria-label="上一档" :disabled="index <= minimumIndex" @click="shift(-1)">‹</button>
       <div>

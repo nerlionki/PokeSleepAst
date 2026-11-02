@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { resolveMemberSkill } from '../../calc/mew'
 import { skillMaxFor } from '../../calc/mainSkills'
 import { exEffects } from '../../calc/exEffects'
-import { computed } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ingredientByName, natureByName, pokeById } from '../../calc/data'
 import { energyMultiplier, instantInterval } from '../../calc/helpSpeed'
@@ -14,6 +14,8 @@ import { natureStatFactor } from '../../calc/natureLabels'
 import { ribbonBonus, stagesLeft } from '../../calc/ribbon'
 import { carryLimit } from '../../calc/timeline'
 import { useSettingsStore } from '../../stores/settings'
+import { activityBerrySettings } from '../../calc/activities'
+import { useActivities } from '../../composables/useActivities'
 import type { CarryMode, ProduceResult } from '../../types'
 import BerryIcon from '../shared/BerryIcon.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
@@ -38,8 +40,11 @@ const props = defineProps<{
   helpingBonus?: number
   label?: string
 }>()
+const showIndividualInfo = shallowRef(false)
 
-const { settings } = storeToRefs(useSettingsStore())
+const { settings: rawSettings } = storeToRefs(useSettingsStore())
+const activity = useActivities(rawSettings, () => rawSettings.value.island)
+const settings = computed(() => activityBerrySettings(rawSettings.value, activity.context.value))
 const STAT: Record<string, string> = (cloneData(components_team_MemberCard_config_clientDefaults["STAT"]) as unknown as Record<string, string>)
 
 const poke = computed(() => {
@@ -132,8 +137,34 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <span class="member-type"><BerryIcon :name="poke.berry" />{{ poke.berryType }}</span>
       <strong>{{ label || poke.name }} <em>#{{ poke.id }}</em></strong>
       <b>Lv {{ level }}</b>
+      <button
+        class="member-info-toggle"
+        :class="{ on: showIndividualInfo }"
+        type="button"
+        :aria-expanded="showIndividualInfo"
+        :aria-label="showIndividualInfo ? '收起个体信息' : '查看个体信息详情'"
+        :title="showIndividualInfo ? '收起个体信息' : '查看个体信息详情'"
+        @click="showIndividualInfo = !showIndividualInfo"
+      >{{ showIndividualInfo ? '收起' : '详情' }}</button>
     </header>
     <PokeSprite :id="poke.id" :name="poke.name" large />
+    <div v-if="!showIndividualInfo" class="member-summary">
+      <p v-if="poke.specialty === '树果型' || poke.specialty === '全部'" class="member-line berry">
+        <span><BerryIcon :name="poke.berry" small /> 树果产量</span>
+        <b>{{ result.berries.toFixed(2) }} 颗</b>
+      </p>
+      <template v-if="poke.specialty === '食材型' || poke.specialty === '全部'">
+        <p v-for="row in ingRows" :key="row.name" class="member-line ing">
+          <span><IngredientIcon :id="row.id" :name="row.name" small /> {{ row.name }}</span>
+          <b>{{ row.count.toFixed(2) }} 个</b>
+        </p>
+        <p v-if="!ingRows.length" class="member-line ing"><span>食材产量</span><b>0.00 个</b></p>
+      </template>
+      <p v-if="poke.specialty === '技能型' || poke.specialty === '全部'" class="member-line quiet">
+        <span>技能触发</span><b>{{ result.skillProcs.toFixed(2) }} 次</b>
+      </p>
+    </div>
+    <template v-else>
     <div class="member-ings">
       <template v-for="(line, index) in lines" :key="index">
         <span v-if="index" class="member-plus">+</span>
@@ -203,5 +234,13 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <p class="member-line ing"><span>技能食材原始能量（不计总分）</span><b>{{ Math.round(skillFoodEnergy).toLocaleString('zh-CN') }}</b></p>
       <p v-for="(count, name) in result.skillIngredients" :key="name" class="member-line quiet"><span>{{ name }}</span><b>{{ count.toFixed(2) }}</b></p>
     </template>
+    </template>
   </article>
 </template>
+
+<style scoped>
+.member-info-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-width: 44px; height: 44px; margin: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: var(--font-12); line-height: 1; white-space: nowrap; }
+.member-info-toggle.on { border-color: var(--amber); color: var(--amber); }
+.member-info-toggle:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
+.member-summary { display: flex; flex-direction: column; gap: 6px; width: 100%; min-width: 0; }
+</style>

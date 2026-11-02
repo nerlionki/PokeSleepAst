@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FallbackImage from './FallbackImage.vue'
 import { computed } from 'vue'
 import { MAIN_SKILLS, skillByPokedexName } from '../../calc/mainSkills'
 import { mainSkillImageUrl } from '../../calc/raeImage'
@@ -19,5 +20,5 @@ const src = computed(() => (skillId.value ? mainSkillImageUrl(skillId.value) : '
 </script>
 
 <template>
-  <img v-if="src" class="skill-icon" :src="src" :alt="name || ''">
+  <FallbackImage loading="lazy" decoding="async" class="skill-icon" :src="src" :alt="name || MAIN_SKILLS.find(skill => skill.id === skillId)?.name || '主技能'" />
 </template>

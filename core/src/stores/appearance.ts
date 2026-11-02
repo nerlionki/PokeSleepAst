@@ -1,5 +1,5 @@
 
-import clientDefaults from '../data/client-defaults.json'
+import clientDefaults from '../data/client-defaults.resource'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { appearancePalette, appearanceVariables, defaultAppearance, normalizeAppearance } from '../ui/appearance'

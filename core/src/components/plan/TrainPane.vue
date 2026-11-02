@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { useActivities } from '../../composables/useActivities'
-import { CANDY_BOOSTS } from '../../calc/candyPlan'
+import { CANDY_BOOSTS, candyBoostPolicy } from '../../calc/candyPlan'
 import FormField from '../shared/FormField.vue'
 import { computed, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -37,6 +37,7 @@ const boostCandy = shallowRef(components_plan_TrainPane_config_clientDefaults["b
 const group = shallowRef<'normal' | 'pseudo' | 'legendary' | 'mythical'>((components_plan_TrainPane_config_clientDefaults["groupInitial"] as unknown as 'normal' | 'pseudo' | 'legendary' | 'mythical'))
 const { settings } = storeToRefs(useSettingsStore())
 const activity = useActivities(settings, () => settings.value.island)
+const miniBoost = computed(() => candyBoostPolicy('mini', activity.context.value))
 
 watch(uid, (id) => {
   const p = box.pokemon.find((x) => x.uid === id)
@@ -116,7 +117,7 @@ const result = computed(() => trainPlan({
     <FormField v-slot="{ id }" label="每日额外产糖"><input :id="id" v-model.number="dailyCandy" type="number"></FormField>
     <FormField v-slot="{ id }" label="增强窗口"><select :id="id" v-model="boost">
         <option value="none">无</option>
-        <option value="mini">{{ CANDY_BOOSTS.mini.name }} ×{{ CANDY_BOOSTS.mini.exp }} 经验 ×{{ CANDY_BOOSTS.mini.shards }} 梦碎</option>
+        <option value="mini" :disabled="!miniBoost.available">{{ miniBoost.name }} ×{{ miniBoost.exp }} 经验 ×{{ miniBoost.shards }} 梦碎{{ miniBoost.available ? `（当天${miniBoost.quota}颗）` : '（未开放）' }}</option>
         <option value="normal">{{ CANDY_BOOSTS.christmas.name }} ×{{ CANDY_BOOSTS.christmas.exp }} 经验 ×{{ CANDY_BOOSTS.christmas.shards }} 梦碎</option>
       </select></FormField>
     <FormField v-slot="{ id }" label="增强期喂糖"><input :id="id" v-model.number="boostCandy" type="number"></FormField>

@@ -312,6 +312,11 @@
     "components_profile_CreditsPane": {
       "SOURCES": [
         {
+          "name": "miku佬",
+          "note": "感谢miku佬提供域名支持",
+          "links": []
+        },
+        {
           "name": "金属佬",
           "note": "感谢金属佬对宝宝效率 tab 和各个岛屿保底睡姿的校对。",
           "links": []

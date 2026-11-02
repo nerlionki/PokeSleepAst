@@ -1,11 +1,11 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import clientFactoryDefaults from '../data/client-defaults.json'
-import extracted0 from '../data/client-defaults.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import clientFactoryDefaults from '../data/client-defaults.resource'
+import extracted0 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { newUid } from './uid'
-import { EVENT_PARAMETERS, activityValues, createActivityContext, type ActivitySelection } from './activities'
-import growth from '../data/growth-meta.json'
-import legacyStockKeys from '../data/legacy-candy-stock-keys.json'
+import { EVENT_PARAMETERS, activityMiniCandyBoost, activityValues, createActivityContext, type ActivitySelection } from './activities'
+import growth from '../data/growth-meta.resource'
+import legacyStockKeys from '../data/legacy-candy-stock-keys.resource'
 import type { BoxPokemon } from '../types'
 import { natureByName, pokeById } from './data'
 import { candyExpAtLevel, shardsTo } from './xp'
@@ -41,6 +41,12 @@ export interface CandyResult {
 export const CANDY_BOOSTS = EVENT_PARAMETERS.candyBoosts
 
 export type CandyBoostId = keyof typeof CANDY_BOOSTS
+
+export function candyBoostPolicy(mode: CandyBoostId, activity?: ActivitySelection) {
+  const base = CANDY_BOOSTS[mode]
+  const event = mode === 'mini' ? activityMiniCandyBoost(createActivityContext('research', activity)) : undefined
+  return { ...base, ...(event ?? {}), quota: event ? event.dailyLimit : event === null ? 0 : base.quota, available: event !== null, daily: !!event }
+}
 
 const MAX_LEVEL = (candyPlan_config_extracted0.MAX_LEVEL as 70)
 const curves = growth.exp as Record<string, number[]>
@@ -105,7 +111,8 @@ function levelGap(exp: number[], level: number): number {
 }
 
 export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: number, activity?: ActivitySelection, island = ''): CandyResult {
-  const boost = CANDY_BOOSTS[mode]
+  const boost = candyBoostPolicy(mode, activity)
+  if (!boost.available) return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: '当前活动日期未开放迷你糖果增强' }
   const poke = pokeById(row.pokeId)
   if (!poke) return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: '请选择宝可梦' }
   const effects = activityValues(createActivityContext('research', activity), island, poke)
@@ -166,7 +173,8 @@ export function planCandy(rows: CandyRow[], stocks: Record<string, number>, mode
     missing += result.missing
     return result
   })
-  const quota = CANDY_BOOSTS[mode].quota
+  const policy = candyBoostPolicy(mode, activity)
+  const quota = policy.quota
   return {
     results,
     candies,
@@ -174,5 +182,8 @@ export function planCandy(rows: CandyRow[], stocks: Record<string, number>, mode
     missing,
     over: Math.max(0, candies - quota),
     invalid: results.filter((row) => row.error).length,
+    quota,
+    available: policy.available,
+    daily: policy.daily,
   }
 }

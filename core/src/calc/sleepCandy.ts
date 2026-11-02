@@ -1,5 +1,5 @@
-import evolution from '../data/evolution.json'
-import growth from '../data/growth-meta.json'
+import evolution from '../data/evolution.resource'
+import growth from '../data/growth-meta.resource'
 import { POKEDEX, pokeById } from './data'
 import { nationalDex } from './pokedexOrder'
 

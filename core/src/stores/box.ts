@@ -1,5 +1,5 @@
 
-import clientDefaults from '../data/client-defaults.json'
+import clientDefaults from '../data/client-defaults.resource'
 import { cloneData } from '../calc/dataClone'
 import { normalizeMewSkill } from '../calc/mew'
 import { newUid } from '../calc/uid'

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
-import { computed, shallowRef } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
+import { selectionList, toggleChoice, matchesChoice } from '../../calc/multiChoice'
+import { specialtyHit } from '../../calc/specialty'
 import { pokeHit } from '../../calc/pokeSearch'
 import { storeToRefs } from 'pinia'
 import { BERRIES, ISLANDS, POKEDEX, SLEEP_STYLES } from '../../calc/data'
@@ -9,7 +11,8 @@ import { resolvedSleepdex, styleKey } from '../../calc/sleep'
 import { sleepReward } from '../../calc/sleepRewards'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
-import type { IslandId } from '../../types'
+import { useActivities } from '../../composables/useActivities'
+import { activitySleepStyles } from '../../calc/activities'
 import PokeSprite from '../shared/PokeSprite.vue'
 const components_plan_SleepGallery_config_clientDefaults = clientDefaults.modules.components_plan_SleepGallery
 
@@ -17,16 +20,17 @@ const components_plan_SleepGallery_config_clientDefaults = clientDefaults.module
 const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
 const { settings } = storeToRefs(useSettingsStore())
+const activity = useActivities(settings, () => settings.value.island)
 
 const islandIds = new Set(ISLANDS.map((island) => island.id))
 const pokeOf = new Map(POKEDEX.map((poke) => [poke.id, poke]))
-const island = shallowRef<IslandId | 'all'>(settings.value.island)
+const island = ref<string[]>([settings.value.island])
 const nameQuery = shallowRef(components_plan_SleepGallery_config_clientDefaults["nameQueryInitial"])
-const stars = shallowRef(components_plan_SleepGallery_config_clientDefaults["starsInitial"])
+const stars = ref<number[]>([])
 const view = shallowRef<'all' | 'found' | 'missing'>((components_plan_SleepGallery_config_clientDefaults["viewInitial"] as unknown as 'all' | 'found' | 'missing'))
-const berryType = shallowRef(components_plan_SleepGallery_config_clientDefaults["berryTypeInitial"])
-const specialty = shallowRef(components_plan_SleepGallery_config_clientDefaults["specialtyInitial"])
-const sleepType = shallowRef(components_plan_SleepGallery_config_clientDefaults["sleepTypeInitial"])
+const berryType = ref(selectionList(components_plan_SleepGallery_config_clientDefaults["berryTypeInitial"]))
+const specialty = ref(selectionList(components_plan_SleepGallery_config_clientDefaults["specialtyInitial"]))
+const sleepType = ref(selectionList(components_plan_SleepGallery_config_clientDefaults["sleepTypeInitial"]))
 const panel = shallowRef<'none' | 'type' | 'spec' | 'sleep'>((components_plan_SleepGallery_config_clientDefaults["panelInitial"] as unknown as 'none' | 'type' | 'spec' | 'sleep'))
 const page = shallowRef(components_plan_SleepGallery_config_clientDefaults["pageInitial"])
 const PAGE = (components_plan_SleepGallery_config_clientDefaults["PAGE"] as 48)
@@ -39,18 +43,18 @@ const foundKeys = computed(() => new Set(resolvedSleepdex(plan.value)))
 
 const filtered = computed(() => {
   const found = foundKeys.value
-  return SLEEP_STYLES.filter((style) => {
+  return [...activitySleepStyles(SLEEP_STYLES, activity.context.value), ...SLEEP_STYLES.filter(style => style.limited)].filter((style) => {
     if (!islandIds.has(style.island)) return false
-    if (island.value !== 'all' && style.island !== island.value) return false
+    if (!matchesChoice(island.value, style.island)) return false
     const poke = pokeOf.get(style.pokeId)
     if (nameQuery.value && !(poke ? pokeHit(poke, nameQuery.value, style.name) : false)) return false
-    if (stars.value && style.stars !== stars.value) return false
+    if (stars.value.length && !stars.value.includes(style.stars)) return false
     const key = styleKey(style.pokeId, style.stars, style.styleId)
     if (view.value === 'found' && !found.has(key)) return false
     if (view.value === 'missing' && found.has(key)) return false
-    if (berryType.value && poke?.berryType !== berryType.value) return false
-    if (specialty.value && poke?.specialty !== specialty.value) return false
-    if (sleepType.value && style.sleepType !== sleepType.value) return false
+    if (!matchesChoice(berryType.value, poke?.berryType)) return false
+    if (specialty.value.length && !specialty.value.some(value => specialtyHit(poke?.specialty ?? '', value))) return false
+    if (!matchesChoice(sleepType.value, style.sleepType)) return false
     return true
   })
 })
@@ -78,8 +82,9 @@ function resetPage() {
   page.value = 0
 }
 
-function pickIsland(id: IslandId | 'all') {
-  island.value = id
+function pickIsland(id: string) {
+  if (id === 'all') island.value = []
+  else toggleChoice(island.value, id, ISLANDS.map(item => item.id))
   resetPage()
 }
 
@@ -94,9 +99,10 @@ function togglePanel(which: typeof panel.value) {
 
 function pickChip(which: 'type' | 'spec' | 'sleep', value: string) {
   const current = which === 'type' ? berryType : which === 'spec' ? specialty : sleepType
-  current.value = current.value === value ? '' : value
+  toggleChoice(current.value, value, which === 'type' ? types.value : which === 'spec' ? specs.value : sleeps.value)
   resetPage()
 }
+function resetFilters() { nameQuery.value = ''; berryType.value = []; specialty.value = []; sleepType.value = []; island.value = [settings.value.island]; stars.value = []; view.value = 'all'; panel.value = 'none'; resetPage() }
 </script>
 
 <template>
@@ -107,18 +113,15 @@ function pickChip(which: 'type' | 'spec' | 'sleep', value: string) {
     </article>
     <div class="field">
       <label>地图</label>
-      <select :value="island" @change="pickIsland(($event.target as HTMLSelectElement).value as IslandId | 'all')">
-        <option value="all">全部地图</option>
-        <option v-for="item in ISLANDS" :key="item.id" :value="item.id">{{ item.name }}</option>
-      </select>
+      <div class="picker-opts"><button type="button" :class="{ on: !island.length }" @click="pickIsland('all')">全部地图</button><button v-for="item in ISLANDS" :key="item.id" type="button" :class="{ on: island.includes(item.id) }" @click="pickIsland(item.id)">{{ item.name }}</button></div>
     </div>
     <div class="field">
       <label>宝可梦</label>
-      <input :value="nameQuery" placeholder="宝可梦名称" @input="setName(($event.target as HTMLInputElement).value)">
+      <div class="row gallery-search"><input :value="nameQuery" placeholder="宝可梦名称" @input="setName(($event.target as HTMLInputElement).value)"><button class="btn ghost" type="button" @click="resetFilters">重置</button></div>
     </div>
     <div class="seg seg-4">
-      <button type="button" :class="{ on: stars === 0 }" @click="stars = 0; resetPage()">全部星</button>
-      <button v-for="n in 5" :key="n" type="button" :class="{ on: stars === n }" @click="stars = n; resetPage()">★{{ n }}</button>
+      <button type="button" :class="{ on: !stars.length }" @click="stars = []; resetPage()">全部星</button>
+      <button v-for="n in 5" :key="n" type="button" :class="{ on: stars.includes(n) }" @click="toggleChoice(stars, n, [1, 2, 3, 4, 5]); resetPage()">★{{ n }}</button>
     </div>
     <div class="seg seg-3">
       <button type="button" :class="{ on: view === 'all' }" @click="view = 'all'; resetPage()">全部</button>
@@ -126,18 +129,21 @@ function pickChip(which: 'type' | 'spec' | 'sleep', value: string) {
       <button type="button" :class="{ on: view === 'missing' }" @click="invert">反选</button>
     </div>
     <div class="picker-filters">
-      <button type="button" :class="{ on: panel === 'type' || berryType }" @click="togglePanel('type')">属性</button>
-      <button type="button" :class="{ on: panel === 'spec' || specialty }" @click="togglePanel('spec')">类型</button>
-      <button type="button" :class="{ on: panel === 'sleep' || sleepType }" @click="togglePanel('sleep')">睡眠类型</button>
+      <button type="button" :class="{ on: panel === 'type' || berryType.length > 0 }" @click="togglePanel('type')">属性</button>
+      <button type="button" :class="{ on: panel === 'spec' || specialty.length > 0 }" @click="togglePanel('spec')">类型</button>
+      <button type="button" :class="{ on: panel === 'sleep' || sleepType.length > 0 }" @click="togglePanel('sleep')">睡眠类型</button>
     </div>
     <div v-if="panel === 'type'" class="picker-opts">
-      <button v-for="item in types" :key="item" type="button" :class="{ on: berryType === item }" @click="pickChip('type', item)">{{ item }}</button>
+      <button type="button" :class="{ on: !berryType.length }" @click="pickChip('type', '全部')">全部</button>
+      <button v-for="item in types" :key="item" type="button" :class="{ on: berryType.includes(item) }" @click="pickChip('type', item)">{{ item }}</button>
     </div>
     <div v-else-if="panel === 'spec'" class="picker-opts">
-      <button v-for="item in specs" :key="item" type="button" :class="{ on: specialty === item }" @click="pickChip('spec', item)">{{ item }}</button>
+      <button type="button" :class="{ on: !specialty.length }" @click="pickChip('spec', '全部')">全部</button>
+      <button v-for="item in specs" :key="item" type="button" :class="{ on: specialty.includes(item) }" @click="pickChip('spec', item)">{{ item }}</button>
     </div>
     <div v-else-if="panel === 'sleep'" class="picker-opts">
-      <button v-for="item in sleeps" :key="item" type="button" :class="{ on: sleepType === item }" @click="pickChip('sleep', item)">{{ item }}</button>
+      <button type="button" :class="{ on: !sleepType.length }" @click="pickChip('sleep', '全部')">全部</button>
+      <button v-for="item in sleeps" :key="item" type="button" :class="{ on: sleepType.includes(item) }" @click="pickChip('sleep', item)">{{ item }}</button>
     </div>
     <p v-if="view === 'missing'" class="muted">当前选中的是还没有收集到的睡姿。</p>
     <p class="muted">{{ filtered.length }} 个睡姿 · 第 {{ Math.min(page + 1, pages) }}/{{ pages }} 页</p>
@@ -164,3 +170,9 @@ function pickChip(which: 'type' | 'spec' | 'sleep', value: string) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.gallery-search { flex-wrap: nowrap; }
+.gallery-search > input { flex: 1; min-width: 0; width: 0; }
+.gallery-search > button { flex-shrink: 0; }
+</style>

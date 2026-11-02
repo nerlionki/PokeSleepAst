@@ -1,6 +1,6 @@
-import runtimeParameters from '../data/runtime-parameters.json'
-import ruleCatalogs from '../data/rule-catalogs.json'
-import extracted0 from '../data/compatibility-maps.json'
+import runtimeParameters from '../data/runtime-parameters.resource'
+import ruleCatalogs from '../data/rule-catalogs.resource'
+import extracted0 from '../data/compatibility-maps.resource'
 import { cloneData } from './dataClone'
 import { normalizeMewSkill } from './mew'
 import type { BoxPokemon } from '../types'
@@ -13,7 +13,7 @@ const boxio_config_ruleCatalogs = ruleCatalogs.modules.boxio
 const boxio_fromAny_runtimeParameters = runtimeParameters.modules.boxio.fromAny.values
 
 
-export type BoxSource = 'native' | 'sdrice' | 'rae' | 'iqdooh' | 'mixed'
+export type BoxSource = 'native' | 'sdrice' | 'iqdooh' | 'mixed'
 
 const NATURE_EN: Record<string, string> = (cloneData(boxio_config_extracted0.NATURE_EN) as unknown as Record<string, string>)
 
@@ -129,15 +129,13 @@ function extractList(raw: unknown): { list: unknown[], source: BoxSource } {
   if (Array.isArray(raw)) {
     if (raw.some(item => asRecord(item)?.dex != null)) return { list: raw, source: 'iqdooh' }
     if (raw.length && asRecord(raw[0])?.pokemonId != null) return { list: raw, source: 'sdrice' }
-    if (raw.length && (asRecord(raw[0])?.pokemon != null || asRecord(raw[0])?.pokeId != null)) return { list: raw, source: 'rae' }
+    if (raw.length && asRecord(raw[0])?.pokeId != null && asRecord(raw[0])?.uid) return { list: raw, source: 'native' }
     return { list: raw, source: 'mixed' }
   }
   const o = asRecord(raw)
   if (!o) return { list: [], source: 'mixed' }
   if (o.version === 1 && Array.isArray(o.entries)) return { list: o.entries, source: 'iqdooh' }
   if (Array.isArray(o.pokemon) && o.schemaVersion) return { list: o.pokemon, source: 'native' }
-  const rae = o.pokebox ?? o.PokeBox ?? o.pokeBox ?? asRecord(o.data)?.pokebox ?? o.pokemons
-  if (Array.isArray(rae)) return { list: rae, source: 'rae' }
   if (Array.isArray(o.list) && o.list[0] && asRecord(o.list[0])?.pokemonId != null) return { list: o.list, source: 'sdrice' }
   if (Array.isArray(o.list)) return { list: o.list, source: 'mixed' }
   return { list: [], source: 'mixed' }
@@ -175,7 +173,10 @@ function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
       tune: o.tune && typeof o.tune === 'object' ? o.tune as BoxPokemon['tune'] : undefined,
     }
   }
-  const pokeId = pokeIdOf(o.pokemonId ?? o.pokemon ?? o.pokeId ?? o.pid ?? o.id)
+  // Generic arrays/lists still accept the supported formats, but do not infer
+  // a Pokemon from obsolete external-format aliases such as pokemon/pid/id.
+  if (o.pokemonId == null) return null
+  const pokeId = pokeIdOf(o.pokemonId)
   if (!pokeId) return null
   const uid = String(o.uid ?? o.uuid ?? o.dataId ?? `imp-${source}-${pokeId}-${o.level ?? 1}-${Math.random().toString((boxio_fromAny_runtimeParameters.p001 as 16)).slice(2, (boxio_fromAny_runtimeParameters.p002 as 8))}`)
   return {

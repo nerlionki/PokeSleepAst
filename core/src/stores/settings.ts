@@ -1,5 +1,5 @@
 
-import clientDefaults from '../data/client-defaults.json'
+import clientDefaults from '../data/client-defaults.resource'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { canPickBerries, defaultSettings, EX_MAIN, helpMaxSettings, idealSettings, mergeSettings, normalizeEx2Berries, work18Settings } from '../calc/defaults'

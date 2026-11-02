@@ -1,6 +1,6 @@
-import extracted0 from '../data/calc-tables.json'
+import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
-import left from '../data/evolution-left.json'
+import left from '../data/evolution-left.resource'
 const ribbon_config_extracted0 = extracted0.modules.ribbon
 
 

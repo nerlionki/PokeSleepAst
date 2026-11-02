@@ -1,6 +1,8 @@
+import { withResources, resourceRevision, compatibleCheckpoint } from '../../../core/src/resources/runtime'
 import { createSleepSimulationTask, type SleepSimulationWorker } from '../../../core/src/composables/sleepSimulationTask'
 import type { SleepSimulationCheckpoint, SleepSimulationMessage, SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
 import { requireWorkerSupport } from './compatibility'
+import { workerErrorMessage } from './workerError'
 const STORAGE_KEY = 'sleep-simulation-checkpoint-v1'
 export function useSleepSimulation() {
   const state = createSleepSimulationTask(async (isActive) => {
@@ -12,12 +14,16 @@ export function useSleepSimulation() {
     let onMessage: (message: SleepSimulationMessage) => void = () => {}
     const persist = () => {
       if (!request) return
-      try { wx.setStorageSync?.(STORAGE_KEY, { ...request, checkpoint }) }
+      try { wx.setStorageSync?.(STORAGE_KEY, { ...request, checkpoint, resourceRevision: resourceRevision() }) }
       catch { state.notice.value = '存储空间不足，请保持小程序在前台完成模拟' }
     }
     const start = () => {
-      if (disposed || !isActive() || worker) return
+      if (disposed || !isActive() || worker || !request) return
       const current = wx.createWorker('workers/sleep.js', { useExperimentalWorker: true }); worker = current
+      current.onError?.((event) => {
+        if (worker !== current || disposed) return
+        onMessage({ type: 'error', message: workerErrorMessage(event, '后台模拟失败，请重新尝试') })
+      })
       current.onMessage((event) => {
         if (worker !== current || disposed) return
         const message = event as unknown as SleepSimulationMessage
@@ -32,7 +38,7 @@ export function useSleepSimulation() {
           try { start() } catch { onMessage({ type: 'error', message: '无法恢复模拟，请重新计算' }) }
         }
       })
-      if (request) current.postMessage({ ...request, checkpoint })
+      if (request) current.postMessage(withResources({ ...request, checkpoint }))
     }
     const hide = () => { foreground = false; resumeOnKill = true; persist(); state.notice.value = request ? '微信可能暂停模拟，返回前台后自动续算' : '' }
     const show = () => {
@@ -44,10 +50,13 @@ export function useSleepSimulation() {
       }
     }
     wx.onAppHide?.(hide); wx.onAppShow?.(show)
-    start()
     const adapter: SleepSimulationWorker = {
-      onMessage(callback) { onMessage = callback }, onError() { /* Process termination is recovered on app show. */ },
-      postMessage(value) { request = value; checkpoint = value.checkpoint; persist(); worker?.postMessage({ ...value, checkpoint }) },
+      onMessage(callback) { onMessage = callback }, onError() { /* Native errors are forwarded as error messages. */ },
+      postMessage(value) {
+        request = value; checkpoint = value.checkpoint; persist()
+        if (worker) worker.postMessage(withResources({ ...value, checkpoint }))
+        else start()
+      },
       terminate() {
         if (disposed) return
         disposed = true; worker?.terminate(); worker = null
@@ -58,8 +67,8 @@ export function useSleepSimulation() {
     return adapter
   })
   try {
-    const saved = wx.getStorageSync?.(STORAGE_KEY) as SleepSimulationRequest | undefined
-    if (saved?.powers?.length && Number.isInteger(saved.iterations) && saved.iterations > 0 && saved.iterations <= 100000) {
+    const saved = wx.getStorageSync?.(STORAGE_KEY) as (SleepSimulationRequest & { resourceRevision?: string }) | undefined
+    if (saved?.powers?.length && compatibleCheckpoint(saved) && Number.isInteger(saved.iterations) && saved.iterations > 0 && saved.iterations <= 100000) {
       void state.calculate(saved); state.notice.value = '正在恢复上次未完成的模拟'
     }
   } catch { /* Ignore corrupt storage; new calculations remain available. */ }

@@ -25,7 +25,7 @@ const otherTypes = computed({
   set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' },
 })
 const simulationOptions = computed(() => ({ ...options.value, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
-const islands = computed(() => babyEfficiencyIslands(options.value.pokeId))
+const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, undefined, activity.context.value))
 const sleepTypes = EFFICIENCY_SLEEP_TYPES
 watch(islands, () => {
   if (islands.value.length <= 1 || !islands.value.some((island) => island.id === options.value.island)) options.value.island = 'all'
@@ -47,6 +47,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
         <div class="field"><label for="baby-island">岛屿</label><select id="baby-island" v-model="options.island" :disabled="busy"><option value="all">全部</option><template v-if="islands.length > 1"><option v-for="island in islands" :key="island.id" :value="island.id">{{ island.name }}</option></template></select></div>
         <div class="field"><label for="baby-sleep-type">睡眠类型</label><select id="baby-sleep-type" v-model="options.sleepType" :disabled="busy"><option value="all">全部 · 自动择优</option><option v-for="type in sleepTypes" :key="type" :value="type">{{ type }}</option></select></div>
       </div>
+      <label class="row"><input v-model="options.campTicket" :disabled="busy" type="checkbox" role="switch"> 露营券 +1（只加第一觉）</label>
       <label class="row"><input v-model="options.splitSleep" :disabled="busy" type="checkbox" role="switch"> 拆分睡眠</label>
       <p class="muted">{{ options.splitSleep ? '计算两觉的最佳分数比例；选择具体睡眠类型时，两觉都使用该类型。' : '只计算一觉 100 分。' }}</p>
       <p class="muted">捕捉统计 {{ targetName }} 的全部星级睡姿。糖果统计 {{ family }} 的睡眠研究奖励。</p>
@@ -66,7 +67,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
     <template v-if="result">
       <p v-if="dirty" class="amber">参数已修改，请重新计算更新结果。</p>
-      <p class="muted">{{ resultName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }} · {{ result.options.island === 'all' ? '全部岛屿' : ISLANDS.find((island) => island.id === result?.options.island)?.name }} · {{ result.options.splitSleep ? '拆觉' : '整觉' }} · {{ result.options.sleepType === 'all' ? '睡眠类型自动择优' : result.options.sleepType }}。预期收益只计普通睡眠研究；第11只起家族糖果按每只1颗结算，捕捉数量不减少；列出本次搜索中收益最高的方案。</p>
+      <p class="muted">{{ resultName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }} · 露营券：{{ result.options.campTicket ? '开启' : '关闭' }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }} · {{ result.options.island === 'all' ? '全部岛屿' : ISLANDS.find((island) => island.id === result?.options.island)?.name }} · {{ result.options.splitSleep ? '拆觉' : '整觉' }} · {{ result.options.sleepType === 'all' ? '睡眠类型自动择优' : result.options.sleepType }}。预期收益计入已开启的露营券额外研究；第11只起家族糖果按每只1颗结算，捕捉数量不减少；列出本次搜索中收益最高的方案。</p>
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-catch`" title="捕捉只数最多" unit="只" :optimum="result.catch" :precision="result.options.precision" />
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-candy`" title="家族糖果最多" unit="颗" :optimum="result.candy" :precision="result.options.precision" />
     </template>

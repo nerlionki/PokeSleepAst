@@ -1,3 +1,4 @@
+import { withResources } from '../../../core/src/resources/runtime'
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core'
 import { recordAppLog } from './appLogs'
 export interface CalculationWorker<Request, Message> {
@@ -28,7 +29,7 @@ export function createCalculationWorker<Request, Message>(kind: 'baby' | 'sleep'
   if (Capacitor.getPlatform() !== 'android') {
     const worker = browserWorker()
     const adapter: CalculationWorker<Request, Message> = { onmessage: null, onerror: null,
-      postMessage: (request) => worker.postMessage(request), terminate: () => worker.terminate() }
+      postMessage: (request) => worker.postMessage(withResources(request)), terminate: () => worker.terminate() }
     worker.onmessage = (event) => { logMessage(event.data, 'worker'); adapter.onmessage?.({ data: event.data as Message }) }
     worker.onerror = (event) => { recordAppLog('calculation.worker', event.error ?? event.message, { kind }); adapter.onerror?.(event) }
     return adapter
@@ -66,7 +67,7 @@ export function createCalculationWorker<Request, Message>(kind: 'baby' | 'sleep'
           fallback.onmessage = (event) => { if (!disposed) { logMessage(event.data, 'foreground'); adapter.onmessage?.({ data: event.data as Message }) } }
           fallback.onerror = (error) => { if (!disposed) { recordAppLog('calculation.foreground', error.error ?? error.message, { kind }); adapter.onerror?.(error) } }
           onFallback('原生后台计算暂不可用，已改用前台计算并重新开始；请保持应用在前台，息屏或切换应用可能暂停。')
-          fallback.postMessage(request)
+          fallback.postMessage(withResources(request))
           recordAppLog('calculation.fallback', '已使用原参数重新启动前台计算', { kind }, 'warn')
         } catch (error) {
           fallback?.terminate(); fallback = null
@@ -79,7 +80,7 @@ export function createCalculationWorker<Request, Message>(kind: 'baby' | 'sleep'
           listener = await native.addListener('calculationMessage', receive)
           if (disposed || usingFallback) { await listener.remove(); listener = null; return }
           window.addEventListener('appCalculationResume', resume)
-          await native.start({ id, kind, request })
+          await native.start({ id, kind, request: withResources(request) })
           // Cancellation can happen while the native service is being created.
           if (disposed || usingFallback) await native.cancel({ id })
           else resume()

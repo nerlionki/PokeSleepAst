@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import { defaultSkillLevel } from '../../calc/member'
+
+import { confirmRemoval } from '#platform/confirm'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { computed, reactive, ref, shallowRef } from 'vue'
@@ -8,6 +11,8 @@ import type { ImportProgress } from '../../calc/ocrImportCore'
 import { useRoute, useRouter } from 'vue-router'
 import BoxOverview from './BoxOverview.vue'
 import { FILTER_CATALOG, boxLabel, boxMatches, EMPTY_BOX_QUERY, filterCount, type BoxQuery } from '../../calc/boxFilter'
+import { selectionList, toggleChoice } from '../../calc/multiChoice'
+import { POKEDEX } from '../../calc/data'
 import { defaultTune } from '../../calc/member'
 import { importScreenshotSelection } from '#platform/screenshots'
 import { hasShiny } from '../../calc/raeImage'
@@ -28,6 +33,7 @@ const components_pokemon_BoxPane_config_clientDefaults = clientDefaults.modules.
 
 
 const TYPES = SPECIALTY_FILTERS
+const sleepTypes = [...new Set(POKEDEX.map(poke => poke.sleepType))]
 
 const route = useRoute()
 const router = useRouter()
@@ -46,7 +52,7 @@ const ocrBusy = shallowRef(components_pokemon_BoxPane_config_clientDefaults["ocr
 const ocrMsg = shallowRef(components_pokemon_BoxPane_config_clientDefaults["ocrMsgInitial"])
 const ocrProgress = shallowRef<ImportProgress>((cloneData(components_pokemon_BoxPane_config_clientDefaults["ocrProgressInitial"]) as unknown as ImportProgress))
 const filtering = shallowRef(components_pokemon_BoxPane_config_clientDefaults["filteringInitial"])
-const query = reactive<BoxQuery>({ ...EMPTY_BOX_QUERY, ingredients: [], subskills: [] })
+const query = reactive<Omit<BoxQuery, 'berryType' | 'specialty' | 'mainSkill'> & { berryType: string[]; specialty: string[]; mainSkill: string[]; sleepTypes: string[] }>({ ...EMPTY_BOX_QUERY, berryType: selectionList(EMPTY_BOX_QUERY.berryType), specialty: selectionList(EMPTY_BOX_QUERY.specialty), mainSkill: selectionList(EMPTY_BOX_QUERY.mainSkill), sleepTypes: [], ingredients: [], subskills: [] })
 
 interface BoxDraft extends BoxPokemon {
   tune: MemberTune
@@ -76,6 +82,10 @@ function pauseCompletion(pokemon: BoxPokemon) {
   completionQueue.value = []
 }
 
+async function removePokemon(uid: string) {
+  if (await confirmRemoval('确认从盒子删除此宝可梦？')) box.remove(uid)
+}
+
 function blank(pokeId: number): BoxDraft {
   return {
     uid: '',
@@ -84,10 +94,10 @@ function blank(pokeId: number): BoxDraft {
     nature: '勤奋',
     subskills: ['', '', '', '', ''],
     ingredientSlots: [0, 1, 2],
-    skillLevel: 1,
+    skillLevel: defaultSkillLevel(pokeId),
     name: '',
     napping: false,
-    tune: defaultTune(),
+    tune: defaultTune(pokeId),
   }
 }
 
@@ -138,17 +148,11 @@ function save() {
   editing.value = null
 }
 
-function toggle(list: string[], id: string) {
-  const index = list.indexOf(id)
-  if (index >= 0) list.splice(index, 1)
-  else list.push(id)
-}
-
 function clearFilters() {
-  query.text = ''
-  query.berryType = ''
-  query.specialty = ''
-  query.mainSkill = ''
+  query.text = ''; query.sleepTypes = []
+  query.berryType = []
+  query.specialty = []
+  query.mainSkill = []
   query.ingredients = []
   query.subskills = []
   query.ingredientLock = 'unlocked'
@@ -194,11 +198,11 @@ const activeFilters = computed(() => filterCount(query))
         <div class="stack">
           <button v-if="pokemon.ocrMissing?.length" class="btn" type="button" @click="resumeCompletion(pokemon)">补全</button>
           <button class="btn ghost" type="button" @click="openEdit(pokemon)">编辑</button>
-          <button class="btn ghost" type="button" @click="box.remove(pokemon.uid)">删除</button>
+          <button class="btn ghost" type="button" @click="removePokemon(pokemon.uid)">删除</button>
         </div>
       </div>
     </div>
-    <div v-if="filtering" v-back="() => { filtering = false }" class="overlay" @click.self="filtering = false">
+    <div v-if="filtering" v-back="() => { filtering = false }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="filtering = false">
       <section class="sheet stack">
         <div class="row">
           <h3>筛选</h3>
@@ -211,15 +215,16 @@ const activeFilters = computed(() => filterCount(query))
         </div>
         <p class="muted">树果属性</p>
         <div class="picker-opts">
-          <button type="button" :class="{ on: !query.berryType }" @click="query.berryType = ''">不限</button>
-          <button v-for="item in FILTER_CATALOG.berries" :key="item.name" type="button" :class="{ on: query.berryType === item.type }" @click="query.berryType = item.type">
+          <button type="button" :class="{ on: !query.berryType.length }" @click="query.berryType = []">全部</button>
+          <button v-for="item in FILTER_CATALOG.berries" :key="item.name" type="button" :class="{ on: query.berryType.includes(item.type) }" @click="toggleChoice(query.berryType, item.type, FILTER_CATALOG.berries.map(item => item.type))">
             <BerryIcon :name="item.name" />{{ item.name }}
           </button>
         </div>
+        <p class="muted">睡眠类型</p><div class="picker-opts"><button type="button" :class="{ on: !query.sleepTypes.length }" @click="query.sleepTypes = []">全部</button><button v-for="sleep in sleepTypes" :key="sleep" type="button" :class="{ on: query.sleepTypes.includes(sleep) }" @click="toggleChoice(query.sleepTypes, sleep, sleepTypes)">{{ sleep }}</button></div>
         <p class="muted">类型</p>
         <div class="picker-opts">
-          <button type="button" :class="{ on: !query.specialty }" @click="query.specialty = ''">不限</button>
-          <button v-for="item in TYPES" :key="item" type="button" :class="{ on: query.specialty === item }" @click="query.specialty = item">{{ item }}</button>
+          <button type="button" :class="{ on: !query.specialty.length }" @click="query.specialty = []">全部</button>
+          <button v-for="item in TYPES" :key="item" type="button" :class="{ on: query.specialty.includes(item) }" @click="toggleChoice(query.specialty, item, TYPES)">{{ item }}</button>
         </div>
         <div class="row">
           <p class="muted">食材</p>
@@ -229,14 +234,15 @@ const activeFilters = computed(() => filterCount(query))
           </div>
         </div>
         <div class="picker-opts">
-          <button v-for="item in FILTER_CATALOG.ingredients" :key="item.id" type="button" :class="{ on: query.ingredients.includes(item.name) }" @click="toggle(query.ingredients, item.name)">
+          <button type="button" :class="{ on: !query.ingredients.length }" @click="query.ingredients = []">全部</button>
+          <button v-for="item in FILTER_CATALOG.ingredients" :key="item.id" type="button" :class="{ on: query.ingredients.includes(item.name) }" @click="toggleChoice(query.ingredients, item.name, FILTER_CATALOG.ingredients.map(item => item.name))">
             <IngredientIcon :id="item.id" :name="item.name" small />{{ item.name }}
           </button>
         </div>
         <p class="muted">主技能</p>
         <div class="picker-opts">
-          <button type="button" :class="{ on: !query.mainSkill }" @click="query.mainSkill = ''">不限</button>
-          <button v-for="item in FILTER_CATALOG.skills" :key="item" type="button" :class="{ on: query.mainSkill === item }" @click="query.mainSkill = item"><MainSkillIcon :name="item" />{{ item }}</button>
+          <button type="button" :class="{ on: !query.mainSkill.length }" @click="query.mainSkill = []">全部</button>
+          <button v-for="item in FILTER_CATALOG.skills" :key="item" type="button" :class="{ on: query.mainSkill.includes(item) }" @click="toggleChoice(query.mainSkill, item, FILTER_CATALOG.skills)"><MainSkillIcon :name="item" />{{ item }}</button>
         </div>
         <div class="row">
           <p class="muted">副技能</p>
@@ -250,14 +256,15 @@ const activeFilters = computed(() => filterCount(query))
           </div>
         </div>
         <div class="picker-opts">
-          <button v-for="item in FILTER_CATALOG.subskills" :key="item.id" type="button" :class="{ on: query.subskills.includes(item.id) }" @click="toggle(query.subskills, item.id)">
+          <button type="button" :class="{ on: !query.subskills.length }" @click="query.subskills = []">全部</button>
+          <button v-for="item in FILTER_CATALOG.subskills" :key="item.id" type="button" :class="{ on: query.subskills.includes(item.id) }" @click="toggleChoice(query.subskills, item.id, FILTER_CATALOG.subskills.map(item => item.id))">
             <SubskillIcon :id="item.id" />{{ item.name }}
           </button>
         </div>
       </section>
     </div>
     <SpeciesSheet v-if="picking" @close="picking = false" @pick="pickSpecies" />
-    <div v-if="editing" v-back="() => { editing = null }" class="overlay" @click.self="editing = null">
+    <div v-if="editing" v-back="() => { editing = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="editing = null">
       <section class="sheet stack">
         <div class="row">
           <h3>{{ editing.uid ? '编辑个体' : '新建个体' }}<ShinyMark v-if="editing.shiny" /></h3>

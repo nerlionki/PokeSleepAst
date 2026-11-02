@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { computed, shallowRef, watch } from 'vue'
 import { NATURES, SUBSKILLS, pokeById } from '../../calc/data'
 import { clearIngredientSlot, ingredientColumns, setIngredientChoice } from '../../calc/ingredients'
-import { applySilverSeed, exclusiveSubskills, silverSeedCandidates, stepGoldSeed, stepMemberEvolutions, stepSkillLevel, subskillLevelBonus, switchMemberEvolution, undoSilverSeed, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
+import { applySilverSeed, silverSeedCandidates, stepGoldSeed, stepMemberEvolutions, stepSkillLevel, subskillLevelBonus, switchMemberEvolution, undoSilverSeed, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
 import { evolutionDepth, evolutionStages } from '../../calc/evolution'
 import { MEW_SKILLS, normalizeMewSkill } from '../../calc/mew'
 import { skillMaxFor } from '../../calc/mainSkills'
@@ -17,11 +17,13 @@ import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import MainSkillIcon from '../shared/MainSkillIcon.vue'
 import SubskillIcon from '../shared/SubskillIcon.vue'
+import type { MemberEditorField } from './memberEditorFields'
 const components_team_MemberEditor_config_clientDefaults = clientDefaults.modules.components_team_MemberEditor
 
 
 const model = defineModel<MemberDraft>({ required: true })
-const props = withDefaults(defineProps<{ actions?: boolean, shiny?: boolean }>(), { actions: true, shiny: false })
+const props = withDefaults(defineProps<{ actions?: boolean, shiny?: boolean, ignore?: readonly MemberEditorField[] }>(), { actions: true, shiny: false, ignore: () => [] })
+const visible = (field: MemberEditorField) => !props.ignore.includes(field)
 const emit = defineEmits<{ copy: [], remove: [], confirm: [field: OcrMissingField] }>()
 
 const LEVELS = cloneData(components_team_MemberEditor_config_clientDefaults["LEVELS"])
@@ -34,7 +36,6 @@ function natureMark(stat: string | null, arrow: string) {
 }
 
 const natureOpen = shallowRef(components_team_MemberEditor_config_clientDefaults["natureOpenInitial"])
-const subPick = shallowRef<number | null>((components_team_MemberEditor_config_clientDefaults["subPickInitial"] as unknown as number | null))
 const silverOpen = shallowRef(components_team_MemberEditor_config_clientDefaults["silverOpenInitial"])
 const silverChoices = computed(() => silverSeedCandidates(model.value.level, model.value.subskills))
 const skillBonus = computed(() => subskillLevelBonus(model.value.level, model.value.subskills))
@@ -44,7 +45,16 @@ const maxEvolutions = computed(() => evolutionDepth(model.value.pokeId))
 const board = computed(() => poke.value ? ingredientColumns(poke.value.ingredients) : [])
 const skillMax = computed(() => skillMaxFor(poke.value?.mainSkill ?? ''))
 const ribbon = computed(() => ribbonBonus(model.value.tune.ribbonHours, stagesLeft(model.value.pokeId)))
-const subChoices = computed(() => exclusiveSubskills(SUBSKILLS, model.value.subskills, subPick.value ?? -1))
+const subChoices = computed(() => model.value.subskills.filter(Boolean).length < 5 ? SUBSKILLS : model.value.subskills.flatMap(id => {
+  const item = SUBSKILLS.find(skill => skill.id === id)
+  return item ? [item] : []
+}))
+function chooseSub(id: string) {
+  const selected = model.value.subskills.indexOf(id)
+  if (selected >= 0) { setSub(selected, ''); return }
+  const empty = Array.from({ length: 5 }, (_, index) => index).find(index => !model.value.subskills[index])
+  if (empty !== undefined) setSub(empty, id)
+}
 
 function patch(partial: Partial<MemberDraft>) {
   model.value = { ...model.value, ...partial }
@@ -78,11 +88,10 @@ function setSub(index: number, id: string) {
   next[index] = id
   patch({ subskills: next, tune: { ...model.value.tune, silverSeedHistory: [] } })
   emit('confirm', `subskill${index}` as OcrMissingField)
-  subPick.value = null
 }
 
 function subName(id: string) {
-  return SUBSKILLS.find((item) => item.id === id)?.name ?? ''
+  return SUBSKILLS.find(item => item.id === id)?.name ?? ''
 }
 
 function chooseIngredient(column: number, lineIndex: number) {
@@ -132,7 +141,7 @@ function stepEvolution(delta: number) {
 
 <template>
   <div class="stack member-editor">
-    <div v-if="poke" class="row">
+    <div v-if="poke && visible('profile')" class="row">
       <PokeSprite :id="poke.id" :name="poke.name" :shiny="props.shiny" />
       <div>
         <strong>{{ poke.name }}</strong>
@@ -140,7 +149,7 @@ function stepEvolution(delta: number) {
       </div>
     </div>
 
-    <section v-if="stages.length > 1" class="evo-chain" aria-label="进化链">
+    <section v-if="stages.length > 1 && visible('evolutionChain')" class="evo-chain" aria-label="进化链">
       <h3>进化链</h3>
       <div class="evo-stages">
         <template v-for="(stage, index) in stages" :key="index">
@@ -157,7 +166,7 @@ function stepEvolution(delta: number) {
       </div>
     </section>
 
-    <label v-if="poke?.id === 151" class="field">
+    <label v-if="poke?.id === 151 && visible('mewSkill')" class="field">
       <span>十项全能 · 当前习得技能</span>
       <select :value="normalizeMewSkill(model.mewSkill)" @change="patch({ mewSkill: Number(($event.target as HTMLSelectElement).value) })">
         <option v-for="skill in MEW_SKILLS" :key="skill.id" :value="skill.id">{{ skill.name }} · {{ (skill.rate * 100).toFixed(2) }}%</option>
@@ -165,6 +174,7 @@ function stepEvolution(delta: number) {
       <small class="muted">保留十项全能等级，效果按所选技能等级上限计算。</small>
     </label>
 
+    <template v-if="visible('level')">
     <div class="lv-row">
       <span class="muted">LV</span>
       <button v-for="lv in LEVELS" :key="lv" type="button" :class="{ on: model.level === lv }" @click="setLevel(lv)">{{ lv }}</button>
@@ -173,11 +183,13 @@ function stepEvolution(delta: number) {
       <input :value="model.level" type="range" min="1" :max="POKEMON_LEVEL_MAX" @input="setLevel(Number(($event.target as HTMLInputElement).value))">
       <b>Lv.{{ model.level }}</b>
     </label>
-    <label class="field">
+    </template>
+    <label v-if="visible('exp')" class="field">
       <span>LV↑ EXP</span>
       <input :value="model.tune.exp" type="number" min="0" @input="patchTune({ exp: Math.max(0, Number(($event.target as HTMLInputElement).value) || 0) })">
     </label>
 
+    <template v-if="visible('ingredients')">
     <div class="ing-board">
       <section v-for="(col, colIndex) in board" :key="colIndex" class="ing-col">
         <h3>Lv {{ [1, 30, 60][colIndex] }}</h3>
@@ -199,14 +211,15 @@ function stepEvolution(delta: number) {
       </section>
     </div>
     <p class="muted">亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽。{{ isAllRounder(poke) ? 'Lv.1 必须选择食材，不能留空。' : '第 1 槽固定。' }}</p>
+    </template>
 
-    <div class="tune-row">
+    <div v-if="visible('evolutions')" class="tune-row">
       <span>进化次数</span>
       <button type="button" :disabled="model.tune.evolutions <= 0" @click="stepEvolution(-1)">−</button>
       <b>{{ model.tune.evolutions }}</b>
       <button type="button" :disabled="model.tune.evolutions >= maxEvolutions" @click="stepEvolution(1)">+</button>
     </div>
-    <div class="tune-row">
+    <div v-if="visible('seeds')" class="tune-row">
       <span>金种子</span>
       <button type="button" :disabled="model.tune.goldSeeds <= 0" @click="stepGold(-1)">−</button>
       <b>{{ model.tune.goldSeeds }}</b>
@@ -216,34 +229,32 @@ function stepEvolution(delta: number) {
       <b>{{ model.tune.silverSeeds }}</b>
       <button type="button" :disabled="!silverChoices.length || model.tune.silverSeeds >= 9" @click="silverOpen = !silverOpen">+</button>
     </div>
-    <div v-if="silverOpen" class="picker-opts">
+    <div v-if="visible('seeds') && silverOpen" class="picker-opts">
       <button v-for="choice in silverChoices" :key="choice.index" type="button" @click="stepSilver(choice.index)">
         Lv.{{ SUBSKILL_GATES[choice.index] }} · {{ subName(choice.from) }} → {{ subName(choice.to) }}
       </button>
     </div>
-    <div class="tune-row">
-      <span>技能</span>
+    <div v-if="visible('skill')" class="tune-row">
+      <span>主技能</span>
       <button type="button" @click="setSkill(model.skillLevel - 1)">−</button>
       <b>LV {{ model.skillLevel }} / {{ skillMax }}</b>
       <button type="button" @click="setSkill(model.skillLevel + 1)">+</button>
       <button type="button" @click="setSkill(skillMax)">MAX</button>
     </div>
 
-    <div class="sub-grid">
-      <button v-for="(gate, index) in SUBSKILL_GATES" :key="gate" type="button" class="sub-slot" @click="subPick = subPick === index ? null : index">
-        <span class="chip">{{ gate }}</span>
-        <SubskillIcon v-if="model.subskills[index]" :id="model.subskills[index]" />
-        <span>{{ subName(model.subskills[index] ?? '') || '—' }}</span>
-        <span v-if="model.subskills[index]" class="muted" @click.stop="setSub(index, '')">×</span>
-      </button>
-    </div>
-    <div v-if="subPick !== null" class="picker-opts">
-      <button v-for="item in subChoices" :key="item.id" type="button" :class="{ on: model.subskills[subPick] === item.id }" @click="setSub(subPick, item.id)">
-        <SubskillIcon :id="item.id" />
-        {{ item.name }}
-      </button>
-    </div>
+    <section v-if="visible('subskills')" class="stack subskill-section" aria-label="副技能">
+      <p class="muted">副技能 {{ model.subskills.filter(Boolean).length }}/5 · 点击已选技能可移除</p>
+      <div class="picker-opts subskill-tags">
+        <button v-for="item in subChoices" :key="item.id" type="button" class="chip" :class="{ on: model.subskills.includes(item.id) }" :aria-pressed="model.subskills.includes(item.id)" @click="chooseSub(item.id)">
+          <b v-if="model.subskills.includes(item.id)" class="subskill-level">Lv.{{ SUBSKILL_GATES[model.subskills.indexOf(item.id)] }}</b>
+          <SubskillIcon :id="item.id" />
+          <span>{{ item.name }}</span>
+          <span v-if="model.subskills.includes(item.id)" aria-hidden="true">×</span>
+        </button>
+      </div>
+    </section>
 
+    <template v-if="visible('nature')">
     <button class="btn ghost" type="button" @click="natureOpen = !natureOpen">性格 · {{ model.nature }}</button>
     <div v-if="natureOpen" class="picker-opts">
       <button v-for="nature in NATURES" :key="nature.name" type="button" :class="{ on: model.nature === nature.name }" @click="patch({ nature: nature.name }); natureOpen = false">
@@ -251,22 +262,33 @@ function stepEvolution(delta: number) {
       </button>
     </div>
 
+    </template>
+    <template v-if="visible('ribbon')">
     <p class="muted">睡饱饱勋章 · 还能进化 {{ stagesLeft(model.pokeId) }} 次</p>
     <div class="lv-row">
       <button v-for="hours in RIBBON_HOURS" :key="hours" type="button" :class="{ on: model.tune.ribbonHours === hours }" @click="patchTune({ ribbonHours: hours })">
         {{ hours === 0 ? '无' : `${hours}小时` }}
       </button>
     </div>
-    <p class="muted">持有 +{{ ribbon.carry }}{{ ribbon.speedCut ? `，帮忙间隔缩短 ${Math.round(ribbon.speedCut * 100)}%，帮忙速度变快` : '，帮忙间隔不变' }}</p>
+    <p class="muted"><template v-if="visible('ribbonCarry')">持有 +{{ ribbon.carry }}，</template>{{ ribbon.speedCut ? `帮忙间隔缩短 ${Math.round(ribbon.speedCut * 100)}%，帮忙速度变快` : '帮忙间隔不变' }}</p>
+    </template>
 
+    <template v-if="visible('carryMode')">
     <p class="muted">持有上限计算模式</p>
     <div class="seg seg-4">
       <button v-for="mode in MODES" :key="mode.id" type="button" :class="{ on: model.tune.carryMode === mode.id }" @click="patchTune({ carryMode: mode.id })">{{ mode.label }}</button>
     </div>
 
-    <div v-if="props.actions" class="row editor-actions">
+    </template>
+    <div v-if="props.actions && visible('actions')" class="row editor-actions">
       <button class="btn ghost" type="button" @click="emit('copy')">复制</button>
       <button class="btn ghost rose" type="button" @click="emit('remove')">移除</button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.subskill-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.subskill-tags button { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 40px; white-space: normal; text-align: left; }
+.subskill-level { flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: var(--font-12); }
+</style>

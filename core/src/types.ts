@@ -92,6 +92,8 @@ export interface MemberTune {
 }
 
 export interface ProduceInput {
+  /** 独立产量榜的帮手支援分母；未传时沿用实际队伍人数。 */
+  supportTeamSize?: number
   pokeId: number
   level: number
   nature: string
@@ -118,6 +120,8 @@ export interface EnergyPoint {
 }
 
 export interface ProduceResult {
+  /** 已包含在 berries 中的个人技能树果（含技能额外帮忙）。 */
+  skillBerries?: number
   /** 技能直接获取及额外帮忙获取的食材，包含在总产物中。 */
   skillIngredients?: Record<string, number>
   /** 梦幻／挥指单只模拟：总分计实际料理，技能食材与剩余食材单列。 */

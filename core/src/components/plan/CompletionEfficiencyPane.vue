@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useActivities } from '../../composables/useActivities'
+import { activitySleepStyles, createActivityContext } from '../../calc/activities'
 import { computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
-import { missingCompletionStyles } from '../../calc/completionEfficiency'
+import { completionTargets } from '../../calc/completionEfficiency'
 import { EVENT_BONUSES, styleKey } from '../../calc/sleep'
 import { ISLANDS, SLEEP_STYLES } from '../../calc/data'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
@@ -19,10 +20,10 @@ const router = useRouter()
 const { plan } = storeToRefs(usePlanStore())
 const { settings } = storeToRefs(useSettingsStore())
 const options = computed(() => plan.value.completionEfficiency)
-const targets = computed(() => missingCompletionStyles(plan.value))
+const targets = computed(() => completionTargets(plan.value, options.value.selectionMode, activity.context.value))
 const pokeIds = computed(() => [...new Set(targets.value.map(style => style.pokeId))])
 const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId))
-const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, options.value.completionTarget))
+const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, options.value.completionTarget, activity.context.value))
 const activity = useActivities(options, () => options.value.island ?? 'all', () => settings.value.activity)
 const eventMult = activity.field('drowsyPowerMultiplier', () => options.value.eventMult)
 const mixMode = activity.field('eventMix', () => normalizeEventMix(options.value.eventMix) !== 'off' ? settings.value.sleepEventMix : 'off')
@@ -45,27 +46,35 @@ watch(islands, available => {
 }, { immediate: true })
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions)
 const resultTarget = computed(() => result.value && targets.value.find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
-const resultStyle = computed(() => result.value && SLEEP_STYLES.find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
-// 图鉴变化后，已收集目标不再参与计算，也不继续展示旧的补齐推荐。
+const resultStyle = computed(() => result.value && activitySleepStyles(SLEEP_STYLES, createActivityContext('research', result.value.options.activity)).find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
+// In dex mode a newly collected face leaves the target list; free mode keeps it.
 watch(() => [options.value.pokeId, options.value.completionTarget], () => { if (busy.value) cancel() })
+watch(() => options.value.selectionMode, () => {
+  if (busy.value) cancel()
+  result.value = null
+  error.value = ''
+  notice.value = ''
+}, { flush: 'sync' })
 </script>
 
 <template>
   <div class="stack" :aria-busy="busy">
     <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">恢复本面板自动活动设置</button>
-    <p class="muted">每天合计 100 分，寻找指定未收集睡姿至少出现一次的最佳方案。拆觉时，两觉使用相同卡比兽能量。</p>
+    <div class="field"><label for="completion-selection">目标选择方式</label><select id="completion-selection" v-model="options.selectionMode" :disabled="busy"><option value="sleepdex">根据睡姿图鉴</option><option value="free">自由选择</option></select></div>
+    <p class="muted">每天合计 100 分，寻找指定{{ options.selectionMode === 'free' ? '' : '未收集' }}睡姿至少出现一次的最佳方案。拆觉时，两觉使用相同卡比兽能量。</p>
     <article v-if="!targets.length" class="card stack">
-      <h3>暂无可补齐的普通睡姿</h3>
-      <p class="muted">请先在睡姿图鉴中取消勾选尚未收集的睡姿，再回来计算。</p>
-      <button class="btn ghost" type="button" @click="router.push({ path: '/pokemon', query: { tab: 'wall' } })">前往睡姿图鉴</button>
+      <h3>{{ options.selectionMode === 'free' ? '当前暂无可选择的睡姿' : '暂无可补齐的普通睡姿' }}</h3>
+      <p class="muted">{{ options.selectionMode === 'free' ? '当前资料中没有可参与研究的睡姿。' : '请先在睡姿图鉴中取消勾选尚未收集的睡姿，或切换为自由选择。' }}</p>
+      <button v-if="options.selectionMode !== 'free'" class="btn ghost" type="button" @click="router.push({ path: '/pokemon', query: { tab: 'wall' } })">前往睡姿图鉴</button>
     </article>
     <article v-else class="card stack">
-      <div class="field"><label>目标宝可梦 · 仅未收集</label><PokePicker v-model="options.pokeId" :allowed-ids="pokeIds" /></div>
+      <div class="field"><label>目标宝可梦 · {{ options.selectionMode === 'free' ? '全部可研究睡姿' : '仅未收集' }}</label><PokePicker v-model="options.pokeId" :allowed-ids="pokeIds" /></div>
       <div class="field"><label for="completion-target">目标睡姿</label><select id="completion-target" v-model="options.completionTarget" :disabled="busy"><option v-for="style in faces" :key="styleKey(style.pokeId, style.stars, style.styleId)" :value="styleKey(style.pokeId, style.stars, style.styleId)">{{ style.stars }}★ · {{ style.styleName }}</option></select></div>
       <div class="efficiency-fields">
         <div class="field"><label for="completion-island">岛屿</label><select id="completion-island" v-model="options.island" :disabled="busy"><option value="all">全部 · 自动择优</option><option v-for="island in islands" :key="island.id" :value="island.id">{{ island.name }}</option></select></div>
         <div class="field"><label for="completion-sleep-type">睡眠类型</label><select id="completion-sleep-type" v-model="options.sleepType" :disabled="busy"><option value="all">全部 · 自动择优</option><option v-for="type in EFFICIENCY_SLEEP_TYPES" :key="type" :value="type">{{ type }}</option></select></div>
       </div>
+      <label class="row"><input v-model="options.campTicket" :disabled="busy" type="checkbox" role="switch"> 露营券 +1（只加第一觉）</label>
       <label class="row"><input v-model="options.splitSleep" :disabled="busy" type="checkbox" role="switch"> 比较拆分睡眠</label>
       <p class="muted">{{ options.splitSleep ? '同时比较整觉 100 分和两觉合计 100 分；指定睡眠类型时，两觉均使用该类型。' : '只计算一觉 100 分。' }}</p>
       <div class="field"><label for="completion-event">活动睡意之力倍率</label><select id="completion-event" v-model.number="eventMult" :disabled="busy"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}倍（活动）</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select></div>
@@ -81,7 +90,7 @@ watch(() => [options.value.pokeId, options.value.completionTarget], () => { if (
     <p v-if="notice" class="muted" role="status">{{ notice }}</p>
     <template v-if="result && resultTarget">
       <p v-if="dirty" class="amber">参数已修改，请重新计算更新结果。</p>
-      <p class="muted">{{ resultStyle?.name }} · {{ resultStyle?.stars }}★ {{ resultStyle?.styleName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }} · {{ result.options.island === 'all' ? '全部岛屿' : ISLANDS.find(island => island.id === result?.options.island)?.name }}。列出本次搜索中每日补齐概率最高的方案。</p>
+      <p class="muted">{{ resultStyle?.name }} · {{ resultStyle?.stars }}★ {{ resultStyle?.styleName }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟 · 睡意之力 ×{{ result.options.eventMult }} · 露营券：{{ result.options.campTicket ? '开启' : '关闭' }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }} · {{ result.options.island === 'all' ? '全部岛屿' : ISLANDS.find(island => island.id === result?.options.island)?.name }}。列出本次搜索中每日补齐概率最高的方案。</p>
       <BabyEfficiencyResult :key="JSON.stringify(result.options)" title="每日补齐概率最高" unit="%" :optimum="result.catch" :precision="result.options.precision" probability />
     </template>
     <ProgressDialog :open="busy" title="正在计算补齐效率" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="'已模拟 ' + progress.evaluatedStates.toLocaleString('zh-CN') + ' 个抽取状态'" cancellable cancel-text="取消计算" @cancel="cancel" />

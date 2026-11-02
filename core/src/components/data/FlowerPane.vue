@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FallbackImage from '../shared/FallbackImage.vue'
 import { EVENT_PARAMETERS } from '../../calc/activities'
 const flower = EVENT_PARAMETERS.flower
 const seeds = flower.seeds
@@ -7,7 +8,7 @@ const seeds = flower.seeds
 <template>
   <div class="stack">
     <article class="card stack">
-      <div class="row"><img class="flower-icon" :src="flower.icon" :alt="flower.name"><h3>{{ flower.name }}</h3></div>
+      <div class="row"><FallbackImage loading="lazy" decoding="async" class="flower-icon" :src="flower.icon" :alt="flower.name" /><h3>{{ flower.name }}</h3></div>
       <p>{{ flower.description }}</p>
       <p class="muted">{{ flower.rules }}</p>
     </article>

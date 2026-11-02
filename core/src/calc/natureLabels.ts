@@ -1,5 +1,5 @@
-import extracted0 from '../data/calc-tables.json'
-import extracted1 from '../data/client-defaults.json'
+import extracted0 from '../data/calc-tables.resource'
+import extracted1 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import type { NatureStat } from '../types'
 import { natureByName } from './data'

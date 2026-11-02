@@ -7,7 +7,7 @@ defineProps<{
 
 <template>
   <button type="button" class="data-row" :class="{ 'no-lead': !$slots.lead }">
-    <span v-if="$slots.lead" class="data-row-lead"><slot name="lead" /></span>
+    <div v-if="$slots.lead" class="data-row-lead"><slot name="lead" /></div>
     <span class="data-row-txt">
       <strong>{{ title }}</strong>
       <em v-if="subtitle">{{ subtitle }}</em>

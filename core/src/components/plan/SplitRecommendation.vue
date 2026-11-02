@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { computed, ref } from 'vue'
@@ -39,7 +39,7 @@ const mainValue = computed(() => {
             <span>{{ result.candidates[index]!.sleeps.length === 1 ? '整觉' : `第 ${sleepIndex + 1} 觉` }}</span>
             <strong>{{ sleep.score }} 分 · {{ sleepClock(sleep.score) }}</strong>
             <span>{{ sleep.sleepType }}</span>
-            <small class="muted">睡意之力 {{ format(sleep.power) }} · {{ sleep.encounters }} 只普通研究</small>
+            <small class="muted">睡意之力 {{ format(sleep.power) }} · {{ sleep.encounters }} 只普通研究{{ result.options.campTicket && sleepIndex === 0 ? ' + 露营券 1 只' : '' }}</small>
           </div>
         </div>
         <button v-if="group.indices.length > (expanded[group.key] ?? 1)" class="btn ghost" type="button" @click="expanded[group.key] = (expanded[group.key] ?? 1) + 20">展开其余并列分配（剩余 {{ group.indices.length - (expanded[group.key] ?? 1) }}）</button>

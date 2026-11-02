@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { SUBSKILLS } from '../../calc/data'
 import { subskillImageUrl } from '../../calc/raeImage'
 
@@ -9,20 +9,30 @@ const props = defineProps<{
 }>()
 
 const skill = computed(() => SUBSKILLS.find((item) => item.id === props.id))
+const src = computed(() => subskillImageUrl(props.id))
+const failed = shallowRef(false)
+const loadedMask = shallowRef('')
+watch(src, () => { loadedMask.value = ''; failed.value = false })
 const mask = computed(() => {
-  const url = `url("${subskillImageUrl(props.id)}")`
+  const url = `url("${loadedMask.value || src.value}")`
   return { maskImage: url, WebkitMaskImage: url }
 })
 </script>
 
 <template>
   <span
-    v-if="skill"
+    v-if="skill && src && !failed"
     class="sub-ico"
     :class="[`rarity-${skill.rarity}`, { locked }]"
     :style="mask"
     role="img"
     :aria-label="skill.name"
     :title="skill.name"
-  />
+  >
+    <img class="sub-mask-loader" :src="src" alt="" aria-hidden="true" @error="failed = true" @load="loadedMask = ($event.target as HTMLImageElement).src">
+  </span>
+  <span v-else-if="skill">{{ skill.name }}</span>
 </template>
+<style scoped>
+.sub-mask-loader { display: none; }
+</style>

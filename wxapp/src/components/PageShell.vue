@@ -3,10 +3,13 @@ import { onMounted, shallowRef, watch } from 'vue'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { taskNavigationLocked } from '../../../core/src/composables/taskNavigationLock'
 import { hydrate } from '../platform/hydrate'
+import { usePageTab } from '../../../core/src/composables/usePageTab'
 import { route } from '../platform/router'
 import { useAppearanceStore } from '../../../core/src/stores/appearance'
 import { luminance } from '../../../core/src/ui/appearance'
 const props = defineProps<{ page: string }>()
+const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
+const planTab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle', 'sp'] as const, 'sleep')
 const appearance = useAppearanceStore()
 function applyBars() {
   if (route.name !== props.page) return
@@ -28,7 +31,7 @@ onMounted(() => { active(); void load() })
 useDidShow(() => { active(); applyBars() })
 </script>
 <template>
-  <view class="appearance-root" :style="appearance.variables">
+  <view class="appearance-root" :class="{ 'dex-page-shell': page === 'pokemon' && pokemonTab === 'dex', 'candy-page-shell': page === 'plan' && planTab === 'candy' }" :style="appearance.variables">
     <view v-if="error" class="card stack"><text>{{ error }}</text><button class="btn" @tap="load">重试</button></view>
     <view v-else-if="!ready" class="muted">正在加载本机数据…</view>
     <view v-else class="page"><slot /></view>
@@ -36,4 +39,7 @@ useDidShow(() => { active(); applyBars() })
 </template>
 <style>
 .appearance-root { min-height: 100vh; background: var(--ink); color: var(--text); font-size: var(--font-16); }
+.dex-page-shell { height: 100vh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.dex-page-shell > .page { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 12px; overflow: hidden; }
+.candy-page-shell > .page { padding-bottom: 12px; }
 </style>

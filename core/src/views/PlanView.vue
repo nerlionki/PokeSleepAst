@@ -1,41 +1,56 @@
 <script setup lang="ts">
+import { useFeaturesStore } from '../stores/features'
+import { useTabSwipe } from '../composables/useTabSwipe'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import LegacyEncounterPane from '../components/plan/LegacyEncounterPane.vue'
 import { usePageTab } from '../composables/usePageTab'
 import CandyPane from '../components/plan/CandyPane.vue'
-import BabyEfficiencyPane from '../components/plan/BabyEfficiencyPane.vue'
-import CompletionEfficiencyPane from '../components/plan/CompletionEfficiencyPane.vue'
-import CatchPane from '../components/plan/CatchPane.vue'
+import EncounterPane from '../components/plan/EncounterPane.vue'
 import SleepPane from '../components/plan/SleepPane.vue'
 import WhistlePane from '../components/plan/WhistlePane.vue'
 import TrainPane from '../components/plan/TrainPane.vue'
 import SplitSleepPane from '../components/plan/SplitSleepPane.vue'
 import Segmented from '../components/shared/Segmented.vue'
+import SpPane from '../components/plan/SpPane.vue'
 
-const tab = usePageTab(['catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle'] as const, 'sleep')
+const tab = usePageTab(['encounter', 'sleep', 'split', 'candy', 'train', 'whistle', 'sp'] as const, 'sleep')
+const route = useRoute()
+const router = useRouter()
+const legacy = computed(() => route.query.encounterVersion === 'legacy' || ['catch', 'baby', 'completion'].includes(String(route.query.tab)))
+function switchVersion() {
+  const { legacyTab, encounterVersion, ...query } = route.query
+  void router.push({ path: route.path, query: { ...query, tab: 'encounter', ...(!legacy.value ? { encounterVersion: 'legacy', legacyTab: legacyTab ?? 'catch' } : {}) } })
+}
+const features = useFeaturesStore()
+const swipe = useTabSwipe(tab, () => (['encounter', 'sleep', 'split', 'candy', 'train', 'whistle', 'sp'] as const).filter(id => features.enabled('plan', id)))
 </script>
 
 <template>
-  <div class="stack">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
     <Segmented
       v-model="tab"
       class="plan-tabs"
       :options="[
-        { id: 'catch', label: '捕捉\n刷糖' },
+        { id: 'encounter', label: '遇见\n规划' },
         { id: 'sleep', label: '睡眠\n规划' },
         { id: 'split', label: '目标\n拆觉' },
-        { id: 'baby', label: '宝宝\n效率' },
-        { id: 'completion', label: '补齐\n效率' },
         { id: 'candy', label: '糖果\n增强' },
         { id: 'train', label: '培养\n规划' },
         { id: 'whistle', label: '吹哨\n规划' },
+        { id: 'sp', label: 'SP\n计算' },
       ]"
     />
-    <CatchPane v-if="tab === 'catch'" />
+    <section v-if="tab === 'encounter'" class="stack">
+      <button class="btn ghost" type="button" @click="switchVersion">{{ legacy ? '切换至新版' : '切换至旧版' }}</button>
+      <LegacyEncounterPane v-if="legacy" />
+      <EncounterPane v-else />
+    </section>
     <SleepPane v-else-if="tab === 'sleep'" />
     <SplitSleepPane v-else-if="tab === 'split'" />
-    <BabyEfficiencyPane v-else-if="tab === 'baby'" />
-    <CompletionEfficiencyPane v-else-if="tab === 'completion'" />
     <CandyPane v-else-if="tab === 'candy'" />
     <WhistlePane v-else-if="tab === 'whistle'" />
-    <TrainPane v-else />
+    <TrainPane v-else-if="tab === 'train'" />
+    <SpPane v-else-if="tab === 'sp'" />
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import FallbackImage from '../shared/FallbackImage.vue'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
 import { ITEM_CATEGORIES, ITEMS, type ItemEntry } from '../../calc/items'
@@ -21,12 +22,12 @@ const listed = computed(() => ITEMS.filter((item) => item.category === category.
     </div>
     <div class="icon-grid">
       <button v-for="item in listed" :key="item.id" type="button" class="icon-cell" @click="open = item">
-        <img class="item-icon" :src="item.icon" :alt="item.name">
+        <FallbackImage loading="lazy" decoding="async" class="item-icon" :src="item.icon" :alt="item.name" />
         <span>{{ item.name }}</span>
       </button>
     </div>
     <DrawerSheet v-if="open" :title="open.name" @close="open = null">
-      <div class="row"><img class="item-icon large" :src="open.icon" :alt="open.name"><strong>{{ open.category }}</strong></div>
+      <div class="row"><FallbackImage loading="lazy" decoding="async" class="item-icon large" :src="open.icon" :alt="open.name" /><strong>{{ open.category }}</strong></div>
       <p v-if="open.acquisition">{{ open.acquisition }}</p>
       <p v-if="open.additionalAcquisition">{{ open.additionalAcquisition }}</p>
     </DrawerSheet>

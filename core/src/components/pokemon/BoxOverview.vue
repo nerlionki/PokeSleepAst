@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import { useTabSwipe } from '../../composables/useTabSwipe'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, reactive, shallowRef, onMounted, watch } from 'vue'
 import { calculateBoxOverview, defaultOverviewBonuses, formatOverviewAmount, type OverviewBonuses } from '../../calc/boxOverview'
@@ -56,9 +57,10 @@ const emptyBerryCount = computed(() => overview.value.berries.length - rankedBer
 const customized = computed(() => bonuses.island !== 'greengrass' || bonuses.areaBonus > 0 || bonuses.goodCamp || bonuses.helpingBonus > 0 || bonuses.favoredBerries.length > 0)
 function openIngredient(id: number) { ingredientId.value = id; visibleRanks.value = 20 }
 function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
+const swipe = useTabSwipe(tab, () => ['berries', 'ingredients'] as const)
 </script>
 <template>
-  <div class="stack box-overview">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack box-overview">
     <div class="overview-heading">
       <button class="btn ghost" type="button" @click="emit('back')">返回 Box</button>
       <h2>Box 概览</h2>

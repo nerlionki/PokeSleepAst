@@ -1,10 +1,12 @@
+import { withResources, resourceRevision, compatibleCheckpoint } from '../../../core/src/resources/runtime'
 import { requireWorkerSupport } from './compatibility'
+import { workerErrorMessage } from './workerError'
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { validateBabyEfficiency, type BabyEfficiencyCheckpoint, type BabyEfficiencyOptions, type BabyEfficiencyResult, type EfficiencyProgress } from '../../../core/src/calc/babyEfficiency'
 import type { BabyEfficiencyMessage } from '../../../core/src/calc/babyEfficiencyMessages'
-interface SavedTask { options: BabyEfficiencyOptions, checkpoint?: BabyEfficiencyCheckpoint, progress: EfficiencyProgress }
-export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
-  const STORAGE_KEY = options.value.completionTarget != null ? 'completion-efficiency-checkpoint-v1' : 'baby-efficiency-checkpoint-v1'
+interface SavedTask { resourceRevision?: string; options: BabyEfficiencyOptions, checkpoint?: BabyEfficiencyCheckpoint, progress: EfficiencyProgress }
+export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?: string) {
+  const STORAGE_KEY = taskKey ? `encounter-efficiency-${taskKey}-v1` : options.value.completionTarget != null ? 'completion-efficiency-checkpoint-v1' : 'baby-efficiency-checkpoint-v1'
   const busy = shallowRef(false), error = shallowRef(''), notice = shallowRef('')
   const result = shallowRef<BabyEfficiencyResult | null>(null)
   const progress = shallowRef<EfficiencyProgress>({ percent: 0, island: '', evaluatedStates: 0 })
@@ -14,7 +16,7 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
   function persist() {
     if (!task) return
     task.progress = { ...progress.value }
-    try { wx.setStorageSync?.(STORAGE_KEY, task) }
+    try { wx.setStorageSync?.(STORAGE_KEY, { ...task, resourceRevision: resourceRevision() }) }
     catch { notice.value = '存储空间不足，计算继续运行；请保持小程序在前台' }
   }
   function stop(clear = true) {
@@ -32,6 +34,11 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
       if (active !== generation || disposed || !foreground) return
       const current = wx.createWorker('workers/baby.js', { useExperimentalWorker: true })
       worker = current
+      current.onError?.((event) => {
+        if (worker !== current || active !== generation) return
+        error.value = workerErrorMessage(event, '后台计算失败，请重新尝试')
+        stop()
+      })
       current.onMessage((event) => {
         if (worker !== current || active !== generation) return
         const message = event as unknown as BabyEfficiencyMessage
@@ -48,7 +55,7 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
         if (foreground && resumeOnKill) { resumeOnKill = false; void launch() }
         else if (foreground) busy.value = false
       })
-      current.postMessage({ options: snapshot.options, checkpoint: snapshot.checkpoint })
+      current.postMessage(withResources({ options: snapshot.options, checkpoint: snapshot.checkpoint }))
     } catch (cause) {
       if (active === generation) { error.value = cause instanceof Error ? cause.message : '无法启动计算，请在真机或新版微信中重试'; stop(false) }
     }
@@ -69,7 +76,8 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>) {
   wx.onAppHide?.(hide); wx.onAppShow?.(show)
   try {
     const saved = wx.getStorageSync?.(STORAGE_KEY) as SavedTask | undefined
-    if (saved?.options && !validateBabyEfficiency(saved.options)
+    if (saved?.options && compatibleCheckpoint(saved) && !validateBabyEfficiency(saved.options)
+      && saved.options.objective === options.value.objective
       && (options.value.completionTarget == null || saved.options.completionTarget === options.value.completionTarget)) {
       task = saved; progress.value = saved.progress ?? { percent: 0, island: '', evaluatedStates: 0 }; notice.value = '正在恢复上次未完成的计算'; void launch()
     }

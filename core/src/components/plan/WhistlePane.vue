@@ -7,12 +7,16 @@ import { planWhistle } from '../../calc/whistle'
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
+import { activityBerrySettings } from '../../calc/activities'
+import { useActivities } from '../../composables/useActivities'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 
 const box = useBoxStore()
 const { plan } = storeToRefs(usePlanStore())
-const { settings } = storeToRefs(useSettingsStore())
+const { settings: rawSettings } = storeToRefs(useSettingsStore())
+const activity = useActivities(rawSettings, () => rawSettings.value.island)
+const settings = computed(() => activityBerrySettings(rawSettings.value, activity.context.value))
 const calculation = computed(() => {
   try { return { result: planWhistle(settings.value, box.pokemon, plan.value.whistle), error: '' } }
   catch (error) { return { result: null, error: error instanceof Error ? error.message : '计算失败' } }

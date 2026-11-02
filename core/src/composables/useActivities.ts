@@ -1,21 +1,15 @@
-import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, type Ref } from 'vue'
-import { activityValues, createActivityContext, localActivityDate, type ActivitySelection, type ActivityValues } from '../calc/activities'
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, type Ref } from 'vue'
+import { activityValues, createActivityContext, type ActivitySelection, type ActivityValues } from '../calc/activities'
+import { activityNow, retainActivityClock } from './activityClock'
 
 /** Context is serializable: workers receive the same dated catalog and manual overrides. */
 export function useActivities<T extends { activity?: ActivitySelection }>(model: Ref<T>, island: () => string, parent: () => ActivitySelection | undefined = () => undefined, period: () => 'day' | 'week' | 'research' = () => 'research') {
-  const now = ref(Date.now())
-  const dayKey = (date: Date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}/${localActivityDate(date)}`
-  let currentDay = dayKey(new Date(now.value))
-  let timer: ReturnType<typeof setInterval> | undefined
-  const stop = () => { if (timer) clearInterval(timer); timer = undefined }
-  const refresh = () => {
-    const time = Date.now(), next = dayKey(new Date(time))
-    if (next !== currentDay) { currentDay = next; now.value = time }
-  }
-  const start = () => { stop(); refresh(); timer = setInterval(refresh, 60000) }
+  let release: (() => void) | undefined
+  const stop = () => { release?.(); release = undefined }
+  const start = () => { if (!release) release = retainActivityClock() }
   onMounted(start); onActivated(start); onDeactivated(stop); onUnmounted(stop)
   const context = computed(() => createActivityContext(period(), { ...parent(), ...model.value.activity,
-    overrides: { ...parent()?.overrides, ...model.value.activity?.overrides } }, new Date(now.value)))
+    overrides: { ...parent()?.overrides, ...model.value.activity?.overrides } }, new Date(activityNow.value)))
   function field<K extends keyof ActivityValues>(key: K, fallback?: () => ActivityValues[K]) {
     return computed({
       get: () => activityValues(context.value, island(), undefined, 240, fallback ? { [key]: fallback() } : {})[key],

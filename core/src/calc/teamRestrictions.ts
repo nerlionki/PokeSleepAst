@@ -1,4 +1,4 @@
-import extracted0 from '../data/calc-tables.json'
+import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 const teamRestrictions_config_extracted0 = extracted0.modules.teamRestrictions
 

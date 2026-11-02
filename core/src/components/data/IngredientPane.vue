@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import clientDefaults from '../../data/client-defaults.json'
+import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
 import { INGREDIENTS, RECIPES } from '../../calc/data'
-import { topIngredientProducers } from '../../calc/ingredients'
+import { fixedIngredientProducers } from '../../calc/precomputedProduction'
 import { textHit } from '../../calc/text'
 import DataRow from '../shared/DataRow.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
@@ -16,6 +16,8 @@ const props = defineProps<{ q: string }>()
 const openId = shallowRef(components_data_IngredientPane_config_clientDefaults["openIdInitial"])
 
 const list = computed(() => INGREDIENTS.filter((i) => textHit(i.name, props.q)))
+
+const top = fixedIngredientProducers
 
 function usesOf(id: number) {
   return RECIPES.filter((r) => !r.mix && r.ingredients.some((ing) => ing.id === id)).map((r) => ({
@@ -42,18 +44,18 @@ function toggle(id: number) {
           <IngredientIcon :id="i.id" :name="i.name" />
         </template>
         <template #trail>
-          <span class="ing-tops" :title="topIngredientProducers(i.id).map((p) => p.name).join('、')">
-            <PokeSprite v-for="p in topIngredientProducers(i.id)" :key="p.id" :id="p.id" :name="p.name" />
+          <span class="ing-tops" :title="top(i.id).map((p) => p.name).join('、')">
+            <PokeSprite v-for="p in top(i.id)" :key="p.id" :id="p.id" :name="p.name" />
           </span>
         </template>
       </DataRow>
       <div v-if="openId === i.id" class="acc-body">
-        <p class="muted">产量最高</p>
-        <p v-for="(p, index) in topIngredientProducers(i.id)" :key="p.id" class="ing-top-line">
+        <p class="muted">日产量 Top3</p>
+        <p v-for="(p, index) in top(i.id)" :key="p.id" class="ing-top-line">
           <PokeSprite :id="p.id" :name="p.name" />
-          <span>{{ index + 1 }}. {{ p.name }}</span>
+          <span>{{ index + 1 }}. {{ p.name }} · {{ p.total.toFixed(1) }} 个/日</span>
         </p>
-        <p v-if="!topIngredientProducers(i.id).length" class="muted">没有宝可梦能产出这个食材。</p>
+        <p v-if="!top(i.id).length" class="muted">没有宝可梦能产出这个食材。</p>
         <DataRow
           v-for="r in usesOf(i.id)"
           :key="r.name"

@@ -1,6 +1,8 @@
+import './platform/resources'
 import { requireWorkerSupport } from './platform/compatibility'
 import { createApp, watch } from 'vue'
 import { taskNavigationLocked } from '../../core/src/composables/taskNavigationLock'
+import { refreshActivityClock } from '../../core/src/composables/activityClock'
 import { createPinia } from 'pinia'
 import Taro from '@tarojs/taro'
 import './tailwind.css'
@@ -15,7 +17,7 @@ function syncTaskTabBar() {
 }
 watch(taskNavigationLocked, syncTaskTabBar, { flush: 'sync' })
 const app = createApp({
-  onShow() { syncTaskTabBar() },
+  onShow() { refreshActivityClock(); syncTaskTabBar() },
   onLaunch() {
     try { requireWorkerSupport() }
     catch (cause) { void Taro.showModal({ title: '运行版本不符合要求', content: cause instanceof Error ? cause.message : '请更新微信和小程序后重试', showCancel: false }) }

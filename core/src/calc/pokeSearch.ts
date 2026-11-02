@@ -1,4 +1,4 @@
-import names from '../data/pokemon-en.json'
+import names from '../data/pokemon-en.resource'
 import { textHit } from './text'
 
 const EN = names as Record<string, string>

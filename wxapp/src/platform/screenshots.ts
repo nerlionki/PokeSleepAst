@@ -1,3 +1,4 @@
+import { withResources } from '../../../core/src/resources/runtime'
 import Taro from '@tarojs/taro'
 import { runImportWorker, type ImportWorker } from '../../../core/src/calc/ocrWorker'
 import { importAssets } from '../../../core/src/calc/ocrAssets'
@@ -18,9 +19,10 @@ export async function importScreenshotSelection(existing: BoxPokemon[], progress
   await new Promise<void>((resolve, reject) => wx.preDownloadSubpackage({ packageType: 'workers', success: () => resolve(), fail: () => reject(new Error('识别资源下载失败，请重试')) }))
   const native = wx.createWorker('workers/ocr.js', { useExperimentalWorker: true })
   let terminated = false
+  let firstMessage = true
   const worker: ImportWorker = {
     onmessage: null, onerror: null,
-    postMessage: message => native.postMessage(message),
+    postMessage: message => { native.postMessage(firstMessage ? withResources(message) : message); firstMessage = false },
     terminate: () => { if (!terminated) { terminated = true; native.terminate() } },
   }
   native.onMessage(data => worker.onmessage?.({ data: data as unknown as Parameters<NonNullable<ImportWorker['onmessage']>>[0]['data'] }))

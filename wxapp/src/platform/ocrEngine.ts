@@ -4,12 +4,26 @@ export type { PixelImage } from '../../../core/src/calc/ocrVision'
 import { loadModelChunk } from '#image-loader'
 import dictText from './ocr-dict.json'
 import modelInfo from './ocr-models.json'
+import { workerErrorMessage } from './workerError'
 
 let loading: Promise<OcrSessions> | null = null
 // Both original ONNX inputs contain dynamic axes. WeChat needs a concrete
 // conversion shape; run() still supplies each image/crop's actual dimensions.
 const typicalShapes: Record<string, number[]> = { det: [1, 3, 640, 640], rec: [1, 3, 48, 320] }
 const modelLabels: Record<string, string> = { det: '文字检测', rec: '文字识别' }
+function modelLoadError(name: string, error: unknown): Error {
+  const device = typeof wx.getDeviceInfo === 'function' ? wx.getDeviceInfo() : wx.getSystemInfoSync()
+  const app = typeof wx.getAppBaseInfo === 'function' ? wx.getAppBaseInfo() : wx.getSystemInfoSync()
+  const detail = workerErrorMessage(error, '推理引擎初始化失败')
+  const codes = error && typeof error === 'object' ? error as { errno?: number; errCode?: number } : {}
+  const code = codes.errno ?? codes.errCode
+  const environment = `${device.platform} · 微信 ${app.version} · 基础库 ${app.SDKVersion}`
+  console.error('[ocr-model-load]', name, environment, error)
+  const hint = device.platform === 'windows'
+    ? '当前 Windows 微信未能加载本地 OCR 模型，请更新微信后重试，或先在手机微信中导入。'
+    : ''
+  return new Error(`${hint}OCR ${modelLabels[name]}模型无法加载：${detail}${code == null ? '' : `（错误码 ${code}）`}［${environment}］`)
+}
 const modelPath = (name: string) => `${wx.env.USER_DATA_PATH}/ocr-${name}-${(modelInfo as Record<string, {hash:string}>)[name]!.hash}.onnx`
 async function prepareModel(name: string): Promise<string> {
   const fs = wx.getFileSystemManager()
@@ -42,16 +56,17 @@ async function prepareModel(name: string): Promise<string> {
 async function openModel(name: string): Promise<OcrModel> {
   if (!wx.createInferenceSession) throw new Error('当前微信或设备不支持本地 OCR，请升级微信或使用手动录入')
   const info = (modelInfo as Record<string, { input: string; output: string }>)[name]!
+  const model = await prepareModel(name)
   let session: WechatMiniprogram.InferenceSession
   try {
-    session = wx.createInferenceSession({ model: await prepareModel(name), typicalShape: { [info.input]: typicalShapes[name]! }, precisionLevel: 4, allowNPU: false, allowQuantize: false })
+    session = wx.createInferenceSession({ model, typicalShape: { [info.input]: typicalShapes[name]! }, precisionLevel: 4, allowNPU: false, allowQuantize: false })
   } catch (error) {
-    throw new Error(`OCR ${modelLabels[name]}模型无法加载：${error instanceof Error ? error.message : String(error)}`)
+    throw modelLoadError(name, error)
   }
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => { session.destroy(); reject(new Error(`OCR ${modelLabels[name]}模型加载超时，请重试`)) }, 60_000)
     session.onLoad(() => { clearTimeout(timer); resolve() })
-    session.onError(error => { clearTimeout(timer); session.destroy(); reject(new Error(`OCR ${modelLabels[name]}模型无法加载：${error.errMsg ?? String(error)}`)) })
+    session.onError(error => { clearTimeout(timer); session.destroy(); reject(modelLoadError(name, error)) })
   })
   return { dispose: () => session.destroy(), async run(data, dims) {
     const result = await session.run({ [info.input]: { type: 'float32', data: new Float32Array(data).buffer, shape: dims } })
@@ -61,13 +76,17 @@ async function openModel(name: string): Promise<OcrModel> {
   } }
 }
 export function loadOcr(): Promise<OcrSessions> {
-  loading ??= Promise.allSettled([openModel('det'), openModel('rec')]).then(results => {
-    const failed = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-    if (failed.length) {
-      for (const result of results) if (result.status === 'fulfilled') result.value.dispose?.()
-      throw new Error(failed.map(result => result.reason instanceof Error ? result.reason.message : String(result.reason)).join('\n'))
+  // Avoid concurrent model conversion and its peak memory use in desktop WeChat.
+  // A failed detector also prevents an unnecessary recognizer initialization.
+  loading ??= (async () => {
+    const det = await openModel('det')
+    try {
+      const rec = await openModel('rec')
+      return { det, rec, dict: dictText }
+    } catch (error) {
+      det.dispose?.()
+      throw error
     }
-    return { det: (results[0] as PromiseFulfilledResult<OcrModel>).value, rec: (results[1] as PromiseFulfilledResult<OcrModel>).value, dict: dictText }
-  }).catch(error => { loading = null; throw error })
+  })().catch(error => { loading = null; throw error })
   return loading
 }

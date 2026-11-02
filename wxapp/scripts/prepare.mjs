@@ -1,3 +1,4 @@
+import { isBundledImage } from '../../core/src/resources/imagePolicy.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -8,6 +9,9 @@ const core = path.join(root, 'core/src')
 const generated = path.join(wxRoot, 'src/generated')
 const require = createRequire(path.join(wxRoot, 'package.json'))
 const { nativeScopedStyles, stripWebCheckboxStyles } = require('./config/native-scoped-styles.cjs')
+const { nativePokePickerScroll } = require('./config/poke-picker-scroll.cjs')
+const { nativeCandyListScroll } = require('./config/candy-list-scroll.cjs')
+const { withHomeListAd } = require('./config/home-list-ad.cjs')
 const write = (file, value) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, value) }
 const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(f => f.isDirectory() ? walk(path.join(dir, f.name)) : [path.join(dir, f.name)])
 function clean(dir) {
@@ -28,7 +32,7 @@ for (const file of walk(core)) {
   let text = fs.readFileSync(file, 'utf8').replaceAll('\r\n', '\n')
   // SFCs move into generated/: resolve JSON against the shared source so both
   // TS wrappers and components load the same data module without duplicate copies.
-  text = text.replace(/(from\s+['"])(\.[^'"]+\.json)(['"])/g, (_match, before, specifier, after) => {
+  text = text.replace(/(from\s+['"])(\.[^'"]+\.(?:json|resource))(['"])/g, (_match, before, specifier, after) => {
     const source = path.resolve(path.dirname(file), specifier)
     const relative = path.relative(path.dirname(dest), source).replaceAll('\\', '/')
     return before + (relative.startsWith('.') ? relative : './' + relative) + after
@@ -67,22 +71,41 @@ for (const file of walk(core)) {
     text = text.replace(new RegExp(`<${tag}\\b((?:[^"'>]|"[^"]*"|'[^']*')*)>`, 'g'), (_match, attrs) => `<${component}${attrs.replace(/\s*\/$/, '')}${['input', 'img'].includes(tag) ? ' />' : '>'}`)
     text = text.replace(new RegExp(`</${tag}>`, 'g'), `</${component}>`)
   }
+  if (rel === 'components/shared/PokePicker.vue') text = nativePokePickerScroll(text)
+  if (rel === 'components/plan/CandyPane.vue') text = nativeCandyListScroll(text)
+  if (rel === 'components/pokemon/PokedexPane.vue') text = withHomeListAd(text)
+  if (rel === 'components/pokemon/VirtualPokedex.vue') {
+    // Native scroll-view needs a bounded viewport: percentage height on a flex
+    // item can otherwise expand with the virtual spacers and get clipped by
+    // the page. Keep the content out of flex sizing with an absolute scroller.
+    // Bind an actual boolean: Vue otherwise emits scroll-y="", which does not
+    // enable scrolling in the native component as it would for an HTML boolean.
+    text = text.replace('<div :key="revision" class="virtual-dex"', '<view class="virtual-dex-viewport"><scroll-view :scroll-y="true" :scroll-top="0" :key="revision" class="virtual-dex"')
+    const end = text.indexOf('</template>')
+    const close = text.lastIndexOf('</div>', end)
+    text = text.slice(0, close) + '</scroll-view></view>' + text.slice(close + 6)
+    text = text.replace('</style>', `
+.virtual-dex-viewport { flex: 1; height: 0; min-height: 0; position: relative; overflow: hidden; }
+.virtual-dex { position: absolute; top: 0; left: 0; width: 100%; height: 100%; flex: none; box-sizing: border-box; }
+</style>`)
+  }
   if (rel === 'components/profile/BackupPane.vue') {
     imports.push("import { importBackupText } from '#platform/backup'")
     text = text.replace('async function wipe()', `async function importFile() {\n  try { incoming.value = await importBackupText(); msg.value = '文件已读取，请选择合并或覆盖导入' }\n  catch (error) { msg.value = error instanceof Error ? error.message : '文件选择取消或失败' }\n}\n\nasync function wipe()`)
     text = text.replace('<WxTextarea', '<button class="btn ghost" @click="importFile">选择备份 JSON 文件</button><WxTextarea')
   }
   if (rel === 'components/shared/SubskillIcon.vue') {
+    if (!imports.some(line => line.startsWith('import WxImage '))) imports.push("import WxImage from '../../../components/WxImage.vue'")
     text = `<script setup lang="ts">
+import FallbackImage from './FallbackImage.vue'
 import { computed } from 'vue'
 import { SUBSKILLS } from '../../calc/data'
 import { subskillImageUrl } from '../../calc/raeImage'
-import WxImage from '../../../components/WxImage.vue'
 const props = defineProps<{ id: string; locked?: boolean }>()
 const skill = computed(() => SUBSKILLS.find(item => item.id === props.id))
 const src = computed(() => subskillImageUrl(props.id))
 </script>
-<template><WxImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="skill.name" /></template>
+<template><FallbackImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="skill.name" /></template>
 `
   }
   // Use Tailwind layout utilities only in native Box views; App keeps its grid.
@@ -98,6 +121,7 @@ const src = computed(() => subskillImageUrl(props.id))
         .replace('display: grid; grid-template-columns: 20px 48px minmax(0, 1fr) auto;', 'display: flex;')
     }
   }
+  text = text.replace(/<scroll-view\b([^>]*\bscroll-x[^>]*)>/g, '<scroll-view @touchstart.stop @touchend.stop @touchcancel.stop$1>')
   if (imports.length) text = text.replace(/(<script setup[^>]*>)/, '$1\n' + imports.join('\n'))
   write(dest, nativeScopedStyles(text, rel))
 }
@@ -111,10 +135,17 @@ const sharp = require('sharp')
 const skillImageNumbers = Object.fromEntries([...fs.readFileSync(path.join(core, 'calc/raeImage.ts'), 'utf8').split('const SUBSKILL_IMAGE')[1].split('}')[0].matchAll(/(\w+):\s*(\d+)/g)].map(match => [match[1], Number(match[2])]))
 const skillColors = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(core, 'data/subskills.json'))).map(skill => [skillImageNumbers[skill.id], { gold: '#e2a423', blue: '#3c86d6', white: '#f4f7fb' }[skill.rarity]]))
 const assetRoots = [path.join(core, 'assets/imgs'), path.join(root, 'core/public')]
-const assets = assetRoots.flatMap(dir => walk(dir).filter(file => /\.(webp|png|jpe?g)$/i.test(file)).map(file => ({ file, rel: path.relative(dir, file).replaceAll('\\', '/') }))).sort((a, b) => a.rel.localeCompare(b.rel, 'en'))
+const isShinyAsset = rel => rel.includes('/shiny/')
+const assets = assetRoots.flatMap(dir => walk(dir).filter(file => /\.(webp|png|jpe?g)$/i.test(file)).map(file => ({ file, rel: path.relative(dir, file).replaceAll('\\', '/') }))).filter(asset => isBundledImage(asset.rel)).sort((a, b) => Number(isShinyAsset(a.rel)) - Number(isShinyAsset(b.rel)) || a.rel.localeCompare(b.rel, 'en'))
 let payload = {}
+let shinyPack = false
 const flush = () => write(path.join(wxRoot, 'src', `asset-pack${pack}`, 'images.js'), `module.exports=${JSON.stringify(payload)};\n`)
 for (const { file, rel } of assets) {
+  const shiny = isShinyAsset(rel)
+  // Ordinary images never pull a shiny payload into memory. Shiny fallback
+  // packages are small and only required when a displayed shiny needs one.
+  if (size && shiny !== shinyPack) { flush(); pack++; size = 0; payload = {} }
+  shinyPack = shiny
   let image = sharp(file).resize({ width:128, height:128, fit:'inside', withoutEnlargement:true })
   const skillNumber = /^subSkill\/(\d+)\./.exec(rel)?.[1]
   if (skillNumber && skillColors[skillNumber]) {
@@ -125,7 +156,7 @@ for (const { file, rel } of assets) {
   const key = rel.replace(/\.[^.]+$/, '.png')
   const base64 = data.toString('base64')
   const bytes = Buffer.byteLength(JSON.stringify(key)) + base64.length + 4
-  if (size + bytes > 1_600_000) { flush(); pack++; size = 0; payload = {} }
+  if (size + bytes > (shiny ? 320_000 : 1_600_000)) { flush(); pack++; size = 0; payload = {} }
   size += bytes
   payload[key] = base64
   const url = `/asset-pack${pack}/${key}`
@@ -165,6 +196,7 @@ write(path.join(wxRoot, 'src/app.config.ts'), `export default defineAppConfig(${
 const esbuild = require('esbuild')
 fs.mkdirSync(path.join(wxRoot, 'src/workers'), { recursive: true })
 // Share one CommonJS calculation module to keep the worker subpackage below 2 MB.
+const { schedulerSource, calculationWorkerEntry } = require('./config/calculation-worker.cjs')
 await esbuild.build({ stdin: { contents: `import { babyEfficiencySteps } from './core/src/calc/babyEfficiency';
 import { sleepSimulationSteps } from './core/src/calc/sleepSimulation';
 import { scoreSearchSteps } from './core/src/calc/scoreSearch';
@@ -186,15 +218,12 @@ export function runSleep(request) {
 export function runScore(request) {
  run(scoreSearchSteps(request), state => { worker.postMessage({type:'checkpoint',checkpoint:state}); worker.postMessage({type:'progress',completed:state.phase==='search'?state.index:state.policies.length+state.index,total:state.policies.length+5}); });
 }
-function run(steps, checkpoint) {
- const tick = () => { try { const next = steps.next(); if(next.done) worker.postMessage({type:'result',result:next.value}); else { checkpoint(next.value); setTimeout(tick,0); } } catch(error) { worker.postMessage({type:'error',message:error.message||'计算失败'}); } };
- tick();
-}`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/calculation.js'), bundle: true, platform: 'neutral', format: 'cjs', target: 'es2020', minify: true,
-plugins: [{ name: 'calculation-images', setup(build) { build.onResolve({ filter: /^#platform\/images$/ }, () => ({ path: 'images', namespace: 'calculation' })); build.onLoad({ filter: /.*/, namespace: 'calculation' }, () => ({ contents: 'export const localImage = () => ""', loader: 'js' })); } }] })
+${schedulerSource}`, resolveDir: root }, outfile: path.join(wxRoot, 'src/workers/calculation.js'), bundle: true, platform: 'neutral', format: 'cjs', target: 'es2020', minify: true,
+plugins: [{ name: 'calculation-images', setup(build) { build.onResolve({ filter: /^#platform\/images$/ }, () => ({ path: 'images', namespace: 'calculation' })); build.onLoad({ filter: /.*/, namespace: 'calculation' }, () => ({ contents: 'export const localImage = () => ""; export const publicImage = () => ""; export const bundledImage = value => value', loader: 'js' })); } }] })
 for (const [name, handler] of [['baby', 'runBaby'], ['sleep', 'runSleep'], ['score', 'runScore']]) {
-  write(path.join(wxRoot, `src/workers/${name}.js`), `const { ${handler} } = require('./calculation.js'); worker.onMessage(${handler});\n`)
+  write(path.join(wxRoot, `src/workers/${name}.js`), calculationWorkerEntry(handler))
 }
-write(path.join(wxRoot, 'src/workers/ocr.js'), "const { installImportWorker } = require('./calculation.js'); installImportWorker(worker, handler => worker.onMessage(handler));\n")
+write(path.join(wxRoot, 'src/workers/ocr.js'), "let receive; worker.onMessage(message => { if (!receive) { globalThis.__sleepastResources = message.__sleepastResources; require('./calculation.js').installImportWorker(worker, handler => { receive = handler; }); } receive(message); });\n")
 // Read ONNX protobuf metadata directly; preparing WeChat does not require Web inference.
 function fields(data) {
   let offset = 0

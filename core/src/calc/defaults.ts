@@ -1,10 +1,10 @@
-import ruleCatalogs from '../data/rule-catalogs.json'
-import ruleParameters from '../data/rule-parameters.json'
-import clientFactoryDefaults from '../data/client-defaults.json'
-import extracted0 from '../data/calc-tables.json'
+import ruleCatalogs from '../data/rule-catalogs.resource'
+import ruleParameters from '../data/rule-parameters.resource'
+import clientFactoryDefaults from '../data/client-defaults.resource'
+import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 import type { IslandId, Settings } from '../types'
-import berries from '../data/berries.json'
+import berries from '../data/berries.resource'
 const defaults_config_extracted0 = extracted0.modules.defaults
 const factory_defaults_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_defaults
 const defaults_config_ruleCatalogs = ruleCatalogs.modules.defaults
