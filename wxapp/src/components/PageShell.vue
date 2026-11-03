@@ -38,7 +38,7 @@ useDidShow(() => { active(); applyBars() })
   </view>
 </template>
 <style>
-.appearance-root { min-height: 100vh; background: var(--ink); color: var(--text); font-size: var(--font-16); }
+.appearance-root { min-height: 100vh; background: var(--ink); color: var(--text); font-size: var(--font-16); font-family: var(--font-family, sans-serif); }
 .dex-page-shell { height: 100vh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .dex-page-shell > .page { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 12px; overflow: hidden; }
 .candy-page-shell > .page { padding-bottom: 12px; }

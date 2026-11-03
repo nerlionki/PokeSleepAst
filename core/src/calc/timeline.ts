@@ -211,6 +211,8 @@ export function simulateTeam(
       member.perHelp = bases[index]!.perHelp + member.activity.berryCountBonus
       member.skillRate = Math.min(1, bases[index]!.skillRate * ex.skillMultiplier * member.activity.skillRateMultiplier)
       member.skillLv = Math.min(skillMaxFor(member.poke.mainSkill), bases[index]!.skillLv + ex.skillLevels + member.activity.skillLevelBonus)
+      member.carry = carryLimit(member.poke.carry, unlockedSubskills(member.input.level, member.input.subskills), settings.goodCamp,
+        member.input.carryMode, ribbonBonus(member.input.ribbonHours ?? 0, stagesLeft(member.poke.id)).carry, ex.carryExtra)
       member.fill = chargeStrength(member.poke.mainSkill, member.skillLv)
       baseBerryUnits[index] = berryUnitEnergy(member.poke.berry, member.input.level, settings.areaBonus, ex.berryMultiplier)
       member.unitBerry = baseBerryUnits[index]! * member.activity.berryEnergyMultiplier * (member.poke.berryType === '超能' ? 1 + berryZone : 1)

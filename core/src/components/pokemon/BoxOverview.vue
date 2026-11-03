@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { AREA_BONUS_MAX, clampAreaBonus } from '../../calc/areaBonus'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, reactive, shallowRef, onMounted, watch } from 'vue'
@@ -9,9 +10,12 @@ import type { Settings } from '../../types'
 import EnvironmentFields from '../shared/EnvironmentFields.vue'
 import { BERRIES, ISLANDS } from '../../calc/data'
 import { useBoxStore } from '../../stores/box'
+import { useSettingsStore } from '../../stores/settings'
+import { useProductionActivity } from '../../composables/useProductionActivity'
 import BerryIcon from '../shared/BerryIcon.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import Segmented from '../shared/Segmented.vue'
+import ToggleField from '../shared/ToggleField.vue'
 import OverviewRankRow from './OverviewRankRow.vue'
 const components_pokemon_BoxOverview_config_clientDefaults = clientDefaults.modules.components_pokemon_BoxOverview
 
@@ -19,13 +23,16 @@ const emit = defineEmits<{ back: []; complete: [uids: string[]] }>()
 const box = useBoxStore()
 const tab = shallowRef<'berries' | 'ingredients'>((components_pokemon_BoxOverview_config_clientDefaults["tabInitial"] as unknown as 'berries' | 'ingredients'))
 const bonuses = reactive(defaultOverviewBonuses())
+const settingsStore = useSettingsStore()
+const sourceSettings = computed(() => ({ ...settingsStore.settings, island: bonuses.island ?? 'greengrass', period: 'day' as const }))
+const { enabled: activityEnabled, settings: calculationSettings } = useProductionActivity('box', sourceSettings)
 const loaded = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["loadedInitial"])
 onMounted(async () => {
   const saved = await loadJson<Partial<OverviewBonuses>>('boxOverviewBonuses', {})
   Object.assign(bonuses, defaultOverviewBonuses(), saved)
   if (!ISLANDS.some(island => island.id === bonuses.island)) bonuses.island = 'greengrass'
   bonuses.helpingBonus = Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0)))
-  bonuses.areaBonus = Math.min(0.85, Math.max(0, Number(bonuses.areaBonus) || 0))
+  bonuses.areaBonus = clampAreaBonus(bonuses.areaBonus)
   bonuses.favoredBerries = [...new Set(Array.isArray(bonuses.favoredBerries) ? bonuses.favoredBerries.filter(name => BERRIES.some(berry => berry.name === name)) : [])].slice(0, 3)
   if (bonuses.island === 'cyanex') bonuses.favoredBerries = normalizeEx2Berries(bonuses.favoredBerries)
   loaded.value = true
@@ -48,7 +55,7 @@ function setEnvironment(patch: Partial<Pick<Settings, 'island' | 'berries' | 'he
 const adjusting = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["adjustingInitial"])
 const ingredientId = shallowRef<number | null>((components_pokemon_BoxOverview_config_clientDefaults["ingredientIdInitial"] as unknown as number | null))
 const visibleRanks = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["visibleRanksInitial"])
-const overview = computed(() => calculateBoxOverview(box.pokemon, bonuses))
+const overview = computed(() => calculateBoxOverview(box.pokemon, bonuses, calculationSettings.value.activity))
 const excluded = computed(() => tab.value === 'berries' ? overview.value.excludedBerries : overview.value.excludedIngredients)
 const selected = computed(() => overview.value.ingredients.find((ingredient) => ingredient.id === ingredientId.value))
 const rankedBerries = computed(() => overview.value.berries.filter((berry) => berry.rows.length))
@@ -65,16 +72,17 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
       <button class="btn ghost" type="button" :class="{ on: customized }" :disabled="!loaded" :aria-expanded="adjusting" @click="adjusting = !adjusting">调整加成</button>
     </div>
     <p class="muted">当前培养状态 · 全天满活 · {{ box.pokemon.length }} 只宝可梦</p>
+    <ToggleField v-model="activityEnabled" label="计入活动加成" />
     <section v-if="adjusting" class="card stack" aria-label="概览计算加成">
       <div class="bonus-fields">
-        <div class="field"><label for="overview-area">营地加成（%）</label><input id="overview-area" v-model.number="bonuses.areaBonus" type="range" min="0" max="0.85" step="0.01"><span class="muted">{{ Math.round(bonuses.areaBonus * 100) }}%</span></div>
+        <div class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop><label for="overview-area">营地加成（%）</label><input id="overview-area" v-model.number="bonuses.areaBonus" type="range" min="0" :max="AREA_BONUS_MAX" step="0.01"><span class="muted">{{ Math.round(bonuses.areaBonus * 100) }}%</span></div>
       </div>
       <label class="row"><input v-model="bonuses.goodCamp" type="checkbox">优质露营券</label>
       <p class="muted">保留个体自身的帮手奖励和缎带；帮手奖励最多叠加 5 层。加成仅用于本页。</p>
-      <EnvironmentFields :value="environment" @change="setEnvironment" />
+      <EnvironmentFields :value="environment" :activity-selection="calculationSettings.activity" @change="setEnvironment" />
       <button class="btn ghost" type="button" @click="resetBonuses">恢复基础口径</button>
     </section>
-    <p v-if="customized" class="muted">营地加成 {{ Math.round(Math.min(0.85, Math.max(0, bonuses.areaBonus)) * 100) }}% · 其他队员帮手奖励 {{ Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0))) }} 层{{ bonuses.goodCamp ? ' · 优质露营券' : '' }}{{ bonuses.favoredBerries.length ? ' · 已设置喜好树果' : '' }}</p>
+    <p v-if="customized" class="muted">营地加成 {{ Math.round(clampAreaBonus(bonuses.areaBonus) * 100) }}% · 其他队员帮手奖励 {{ Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0))) }} 层{{ bonuses.goodCamp ? ' · 优质露营券' : '' }}{{ bonuses.favoredBerries.length ? ' · 已设置喜好树果' : '' }}</p>
     <Segmented v-model="tab" :options="[{ id: 'berries', label: '树果产量' }, { id: 'ingredients', label: '食材产量' }]" />
     <div v-if="excluded.length" class="overview-warning">
       <p>{{ excluded.length }} 只个体缺少本项计算所需字段，暂未参与排名。</p>

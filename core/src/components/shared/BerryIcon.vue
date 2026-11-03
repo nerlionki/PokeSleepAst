@@ -6,6 +6,7 @@ import { computed } from 'vue'
 import FallbackImage from './FallbackImage.vue'
 import { berryIconUrl } from '../../calc/berry'
 import { berryByName } from '../../calc/data'
+import { localImage } from '#platform/images'
 const components_shared_BerryIcon_config_clientDefaults = clientDefaults.modules.components_shared_BerryIcon
 
 
@@ -13,6 +14,7 @@ const props = defineProps<{
   name: string
   large?: boolean
   small?: boolean
+  random?: boolean
 }>()
 
 const berry = computed(() => berryByName(props.name))
@@ -24,9 +26,9 @@ const hue = computed(() => {
 </script>
 
 <template>
-  <FallbackImage class="berry-icon" :class="{ lg: large, sm: small }" :src="berryIconUrl(name)" :alt="name" :reset-key="name">
+  <FallbackImage class="berry-icon" :class="{ lg: large, sm: small }" :src="random ? localImage('berry/question.webp') : berryIconUrl(name)" :alt="random ? '随机喜好树果' : name" :reset-key="random ? 'random' : name">
     <template #fallback>
-      <span class="berry-fallback" :class="{ lg: large, sm: small }" :style="{ background: `hsl(${hue} 55% 42%)` }" :title="name">{{ name.slice(0, 1) }}</span>
+      <span class="berry-fallback" :class="{ lg: large, sm: small }" :style="{ background: `hsl(${hue} 55% 42%)` }" :title="random ? '随机喜好树果' : name">{{ random ? '?' : name.slice(0, 1) }}</span>
     </template>
   </FallbackImage>
 </template>

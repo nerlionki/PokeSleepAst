@@ -2,8 +2,6 @@
 import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
-import { useActivities } from '../../composables/useActivities'
-import { useSettingsStore } from '../../stores/settings'
 import FormField from '../shared/FormField.vue'
 import { useCandyViewport } from '#platform/candyViewport'
 import { newUid } from '../../calc/uid'
@@ -11,7 +9,7 @@ import { computed, ref, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { boxLabel } from '../../calc/boxFilter'
 import { pokeById } from '../../calc/data'
-import { CANDY_BOOSTS, CANDY_PRESETS, candyBoostPolicy, candyRowFromBox, evolutionLevels, familyOf, planCandy, type CandyBoostId, type CandyRow } from '../../calc/candyPlan'
+import { CANDY_BOOSTS, CANDY_PRESETS, CANDY_PLANNING_ACTIVITY, candyBoostPolicy, candyRowFromBox, evolutionLevels, familyOf, planCandy, type CandyBoostId, type CandyRow } from '../../calc/candyPlan'
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
 import type { BoxPokemon } from '../../types'
@@ -21,8 +19,6 @@ const components_plan_CandyPane_config_clientDefaults = clientDefaults.modules.c
 const candyViewport = useCandyViewport()
 
 
-const { settings } = storeToRefs(useSettingsStore())
-const activity = useActivities(settings, () => settings.value.island)
 const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
 const box = useBoxStore()
@@ -43,11 +39,11 @@ function importFromBox(pokemon: BoxPokemon) {
 }
 
 const plans = computed(() => ({
-  christmas: planCandy(plan.value.candyRows, plan.value.candyStocks, 'christmas', activity.context.value, settings.value.island),
-  mini: planCandy(plan.value.candyRows, plan.value.candyStocks, 'mini', activity.context.value, settings.value.island),
+  christmas: planCandy(plan.value.candyRows, plan.value.candyStocks, 'christmas', CANDY_PLANNING_ACTIVITY),
+  mini: planCandy(plan.value.candyRows, plan.value.candyStocks, 'mini', CANDY_PLANNING_ACTIVITY),
 }))
 const active = computed(() => plans.value[mode.value])
-const boost = computed(() => candyBoostPolicy(mode.value, activity.context.value))
+const boost = computed(() => candyBoostPolicy(mode.value, CANDY_PLANNING_ACTIVITY))
 
 function addRow() {
   const id = newUid()
@@ -116,8 +112,7 @@ const presets = CANDY_PRESETS
 <template>
   <div class="stack candy-pane">
     <div class="stack candy-context">
-    <p class="muted">同一进化家族共用当前糖果，按行顺序扣。大型增强经验 ×{{ CANDY_BOOSTS.christmas.exp }}、梦碎 ×{{ CANDY_BOOSTS.christmas.shards }}、额度 {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}。迷你增强按活动日期开放并计算当日额度，不含睡眠经验。</p>
-    <p v-if="mode === 'mini' && !active.available" class="amber">当前活动日期未开放迷你糖果增强。</p>
+    <p class="muted">同一进化家族共用当前糖果，按行顺序扣。大型增强经验 ×{{ CANDY_BOOSTS.christmas.exp }}、梦碎 ×{{ CANDY_BOOSTS.christmas.shards }}、额度 {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}。迷你增强经验 ×{{ CANDY_BOOSTS.mini.exp }}、梦碎 ×{{ CANDY_BOOSTS.mini.shards }}、额度 {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}。随时可规划，不受活动日期限制，不含睡眠经验。</p>
     <div class="seg">
       <button type="button" :class="{ on: mode === 'christmas' }" @click="mode = 'christmas'">大型增强</button>
         <button type="button" :class="{ on: mode === 'mini' }" @click="mode = 'mini'">迷你增强</button>
@@ -132,7 +127,7 @@ const presets = CANDY_PRESETS
         <p>梦碎 {{ plans.christmas.shards.toLocaleString('zh-CN') }}</p>
       </article>
       <article class="card candy-boost-stat">
-        <p class="muted">迷你增强{{ plans.mini.daily ? '（当天）' : '' }}</p>
+        <p class="muted">迷你增强</p>
         <p>{{ plans.mini.candies.toLocaleString('zh-CN') }} / {{ plans.mini.quota.toLocaleString('zh-CN') }} 颗</p>
         <p>梦碎 {{ plans.mini.shards.toLocaleString('zh-CN') }}</p>
       </article>

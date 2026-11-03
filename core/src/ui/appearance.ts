@@ -2,6 +2,8 @@ import clientFactoryDefaults from '../data/client-defaults.resource'
 
 import clientDefaults from '../data/client-defaults.resource'
 import { cloneData } from '../calc/dataClone'
+import { fontFamilies, fontFamilyOf, type FontFamilyId } from './fonts'
+export { fontFamilies } from './fonts'
 const ui_appearance_config_clientDefaults = clientDefaults.modules.ui_appearance
 const factory_appearance_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_appearance
 
@@ -11,8 +13,8 @@ export type Palette = Record<ColorKey, string>
 export const themes = ((cloneData(ui_appearance_config_clientDefaults["themes"]) as unknown as readonly [{readonly "id":"night";readonly "name":"夜间营地";readonly "colors":{readonly "ink":"#081018";readonly "ink-2":"#101a26";readonly "card":"#152232";readonly "line":"#2a3d52";readonly "text":"#e7eef6";readonly "muted":"#93a4b5";readonly "amber":"#e4b15a";readonly "sage":"#7fcec0";readonly "rose":"#e0897a"}},{readonly "id":"day";readonly "name":"晴日营地";readonly "colors":{readonly "ink":"#f5f3ed";readonly "ink-2":"#eeebe2";readonly "card":"#ffffff";readonly "line":"#c9c8bf";readonly "text":"#25322e";readonly "muted":"#59665f";readonly "amber":"#81551a";readonly "sage":"#236d60";readonly "rose":"#a33d38"}},{readonly "id":"forest";readonly "name":"林间营地";readonly "colors":{readonly "ink":"#101c19";readonly "ink-2":"#172923";readonly "card":"#1d332b";readonly "line":"#3b5b4d";readonly "text":"#edf2df";readonly "muted":"#a9bdad";readonly "amber":"#e7c477";readonly "sage":"#93d4b1";readonly "rose":"#f0a59b"}}]))
 export const fontSizes = ((cloneData(ui_appearance_config_clientDefaults["fontSizes"]) as unknown as readonly [{readonly "id":"small";readonly "name":"小";readonly "scale":0.9},{readonly "id":"standard";readonly "name":"标准";readonly "scale":1},{readonly "id":"large";readonly "name":"大";readonly "scale":1.15},{readonly "id":"extra";readonly "name":"特大";readonly "scale":1.3}]))
 export const fontSteps = ((cloneData(ui_appearance_config_clientDefaults["fontSteps"]) as unknown as readonly [10,11,12,13,14,16,17,18,19,20,22,24,28,32,40]))
-export interface Appearance { theme: typeof themes[number]['id']; fontSize: typeof fontSizes[number]['id']; colors: Partial<Palette> }
-export function defaultAppearance(): Appearance { return (cloneData(factory_appearance_config_clientFactoryDefaults["defaultAppearance"]) as unknown as Appearance) }
+export interface Appearance { theme: typeof themes[number]['id']; fontSize: typeof fontSizes[number]['id']; fontFamily: FontFamilyId; colors: Partial<Palette> }
+export function defaultAppearance(): Appearance { return { ...(cloneData(factory_appearance_config_clientFactoryDefaults["defaultAppearance"]) as unknown as Appearance), fontFamily: 'system' } }
 export function normalizeColor(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const hex = value.trim()
@@ -26,6 +28,7 @@ export function normalizeAppearance(value: unknown): Appearance {
   const raw = value as Record<string, unknown>
   if (themes.some(t => t.id === raw.theme)) next.theme = raw.theme as Appearance['theme']
   if (fontSizes.some(t => t.id === raw.fontSize)) next.fontSize = raw.fontSize as Appearance['fontSize']
+  if (fontFamilies.some(t => t.id === raw.fontFamily)) next.fontFamily = raw.fontFamily as FontFamilyId
   if (raw.colors && typeof raw.colors === 'object') for (const { key } of colorFields) {
     const color = normalizeColor((raw.colors as Record<string, unknown>)[key])
     if (color) next.colors[key] = color
@@ -46,6 +49,7 @@ export function appearanceVariables(value: Appearance): Record<string, string> {
   const vars: Record<string, string> = (cloneData(ui_appearance_config_clientDefaults["vars"]) as unknown as Record<string, string>)
   for (const { key } of colorFields) { vars['--' + key] = palette[key]; vars['--' + key + '-rgb'] = rgb(palette[key]).join(', ') }
   for (const size of fontSteps) vars['--font-' + size] = `${Math.round(size * scale * 100) / 100}px`
+  vars['--font-family'] = fontFamilyOf(value.fontFamily)
   vars['--on-accent'] = luminance(palette.amber) > 0.179 ? '#081018' : '#ffffff'
   vars['--on-sage'] = luminance(palette.sage) > 0.179 ? '#081018' : '#ffffff'
   vars['--color-scheme'] = luminance(palette.ink) > 0.179 ? 'light' : 'dark'

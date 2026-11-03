@@ -181,7 +181,7 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
         <option v-for="i in ISLANDS" :key="i.id" :value="i.id">{{ i.name }}</option>
       </select>
     </div>
-    <div class="field">
+    <div class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop>
       <label>睡眠分数 {{ plan.sleepScore }} · {{ sleepClock(plan.sleepScore) }}</label>
       <input :disabled="busy" v-model.number="plan.sleepScore" type="range" min="1" max="100">
     </div>

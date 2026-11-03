@@ -3,6 +3,7 @@ import { publicImage } from '#platform/images'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import extracted0 from '../data/client-defaults.resource'
 import extracted1 from '../data/calc-tables.resource'
+import bundledTables from '../data/calc-tables.json'
 import { cloneData } from './dataClone'
 const items_config_extracted0 = extracted0.modules.items
 const items_config_extracted1 = extracted1.modules.items
@@ -30,6 +31,7 @@ for (const [index, size] of items_config_ruleCatalogs.moduleList0.values.entries
 
 /** RAE 物品来源页的永久成就；往期活动礼包需在对应活动期间取得。 */
 const evolutionAchievements: Record<number, string> = (cloneData(items_config_extracted1.evolutionAchievements) as unknown as Record<number, string>)
+const evolutionShopAcquisition = items_config_extracted1.evolutionShopAcquisition ?? bundledTables.modules.items.evolutionShopAcquisition
 
 export const ITEM_CATEGORIES = groups.map(([category]) => category)
 export const ITEMS: ItemEntry[] = groups.flatMap(([category, rows]) => rows.map(([id, name]) => ({
@@ -39,7 +41,7 @@ export const ITEMS: ItemEntry[] = groups.flatMap(([category, rows]) => rows.map(
   icon: publicImage(`items/${items_config_ruleCatalogs.moduleList1.values.includes(id) ? (items_module_runtimeParameters.p003 as 115) : id}.webp`),
   sourceUrl: `${BASE}${id}`,
   ...(category === '进化道具' ? {
-    acquisition: '一般兑换处：1,400 睡眠点数（每月限购 5 个）。',
+    acquisition: evolutionShopAcquisition,
     additionalAcquisition: evolutionAchievements[id],
   } : {}),
 })))

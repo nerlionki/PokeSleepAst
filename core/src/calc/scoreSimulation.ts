@@ -3,7 +3,7 @@ import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import extracted0 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
-import { activityValues, snapshotActivity, type ActivityValues } from './activities'
+import { activityBerrySettings, activityValues, snapshotActivity, type ActivityValues } from './activities'
 import type { BoxPokemon, ProduceInput } from '../types'
 import { INGREDIENTS, RECIPES, pokeById } from './data'
 import { berryUnitEnergy } from './berry'
@@ -53,7 +53,8 @@ const foodEnergy = (name: string) => INGREDIENTS.find(i => i.name === name)?.ene
 /** 始终按事件顺序推进，成员状态以 UID 保存。结束边界不领取携带物。 */
 export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: number, rollback = 1, record = true): ScoreTrace {
   const { options: o } = request
-  const settings = snapshotActivity(request.settings, 'week')
+  const sourceSettings = snapshotActivity(request.settings, 'week')
+  let settings = activityBerrySettings(sourceSettings, sourceSettings.activity, scoreBounds(o).start)
   const invalid = validateScoreOptions(o, settings)
   if (invalid) throw new Error(invalid)
   const { start, end } = scoreBounds(o)
@@ -71,7 +72,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       .map((index, slot) => index == null ? null : slotDrop(poke.ingredients, slot, index)).filter((drop): drop is NonNullable<typeof drop> => Boolean(drop))
     actors.set(pokemon.uid, { activity: activityValues(settings.activity, settings.island, poke, start), uid: pokemon.uid, pokemon, input, poke, subs, pokeId: poke.id, berry: poke.berry, skill: selected.name,
       skillLevel: Math.min(skillMaxFor(selected.name), effectiveSkillLevel(pokemon.level, pokemon.skillLevel, pokemon.subskills, selected.name) + ex.skillLevels),
-      rate: Math.min(1, selected.rate * natureStatFactor(pokemon.nature, 'skill') * (1 + (subs.includes('skillS') ? scoreSimulation_simulateScore_ruleParameters.findingS : 0) + (subs.includes('skillM') ? scoreSimulation_simulateScore_ruleParameters.findingM : 0)) * ex.skillMultiplier),
+      rate: selected.rate * natureStatFactor(pokemon.nature, 'skill') * (1 + (subs.includes('skillS') ? scoreSimulation_simulateScore_ruleParameters.findingS : 0) + (subs.includes('skillM') ? scoreSimulation_simulateScore_ruleParameters.findingM : 0)) * ex.skillMultiplier,
       energy: (scoreSimulation_simulateScore_runtimeParameters.p003 as 100), factor: natureStatFactor(pokemon.nature, 'energy'), disguise: o.initialDisguise[pokemon.uid] ?? true, stockpile: 0,
       firstFood: drops[0]?.name ?? '', drops, ingredientRate: Math.min(1, poke.ingredientRate * natureStatFactor(pokemon.nature, 'ingredient') * (1 + (subs.includes('ingS') ? scoreSimulation_simulateScore_ruleParameters.findingS : 0) + (subs.includes('ingM') ? scoreSimulation_simulateScore_ruleParameters.findingM : 0))),
       carry: carryLimit(poke.carry, subs, settings.goodCamp, 'preset', ribbon.carry, ex.carryExtra), berryCount: (scoreSimulation_config_ruleCatalogs.simulateScoreList0.values.includes(poke.specialty) ? ruleParameters.modules.scoreSimulation.berryCount.specialist : ruleParameters.modules.scoreSimulation.berryCount.normal) + Number(subs.includes('berryS')) * ruleParameters.modules.scoreSimulation.berryCount.berryS,
@@ -80,7 +81,11 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       pity: scoreSimulation_config_ruleCatalogs.simulateScoreList1.values.includes(poke.specialty) ? Math.ceil(scoreSimulation_simulateScore_ruleParameters.skillSpecialistPitySeconds / poke.interval) : scoreSimulation_simulateScore_ruleParameters.otherPityHelps,
       hours: 0, dailyHours: Array((scoreSimulation_simulateScore_runtimeParameters.p004 as 7)).fill(0), exp: 0 })
   }
-  const bases = new Map([...actors].map(([uid, m]) => [uid, { rate: m.rate, skillLevel: m.skillLevel, unit: m.unit, berryCount: m.berryCount }]))
+  const bases = new Map([...actors].map(([uid, m]) => [uid, {
+    rate: m.rate / exEffects(settings, m.berry, m.poke.specialty).skillMultiplier,
+    skillLevel: effectiveSkillLevel(m.pokemon.level, m.pokemon.skillLevel, m.pokemon.subskills, m.skill),
+    berryCount: m.berryCount,
+  }]))
   const warnings = new Set<string>()
   const actions: ScoreAction[] = []
   const segments: ScoreSegment[] = []
@@ -108,13 +113,18 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     settings.berries.includes(m.berry), ribbonBonus(m.input.ribbonHours ?? 0, stagesLeft(m.pokeId)).speedCut,
     exEffects(settings, m.berry, m.poke.specialty).speed) / 60 * m.activity.helpIntervalMultiplier
   function refreshActivities(minute: number) {
+    const intervals = new Map([...actors].map(([uid, m]) => [uid, interval(m)]))
+    // Always derive from the user's berries so an expired event does not remain favored.
+    settings = activityBerrySettings(sourceSettings, sourceSettings.activity, minute)
     for (const [uid, m] of actors) {
-      const before = interval(m)
+      const before = intervals.get(uid)!
       const base = bases.get(uid)!
+      const ex = exEffects(settings, m.berry, m.poke.specialty)
       m.activity = activityValues(settings.activity, settings.island, m.poke, minute)
-      m.rate = Math.min(1, base.rate * m.activity.skillRateMultiplier)
-      m.skillLevel = Math.min(skillMaxFor(m.skill), base.skillLevel + m.activity.skillLevelBonus)
-      m.unit = base.unit * m.activity.berryEnergyMultiplier
+      m.rate = Math.min(1, base.rate * ex.skillMultiplier * m.activity.skillRateMultiplier)
+      m.skillLevel = Math.min(skillMaxFor(m.skill), base.skillLevel + ex.skillLevels + m.activity.skillLevelBonus)
+      m.unit = berryUnitEnergy(m.berry, m.pokemon.level, settings.areaBonus, ex.berryMultiplier) * m.activity.berryEnergyMultiplier
+      m.carry = carryLimit(m.poke.carry, m.subs, settings.goodCamp, 'preset', ribbonBonus(m.input.ribbonHours ?? 0, stagesLeft(m.pokeId)).carry, ex.carryExtra)
       m.berryCount = base.berryCount + m.activity.berryCountBonus
       if (Number.isFinite(m.next) && m.next > minute) m.next = minute + (m.next - minute) * interval(m) / before
     }

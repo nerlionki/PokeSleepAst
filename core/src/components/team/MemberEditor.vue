@@ -18,6 +18,7 @@ import PokeSprite from '../shared/PokeSprite.vue'
 import MainSkillIcon from '../shared/MainSkillIcon.vue'
 import SubskillIcon from '../shared/SubskillIcon.vue'
 import type { MemberEditorField } from './memberEditorFields'
+import LevelSelector from '../shared/LevelSelector.vue'
 const components_team_MemberEditor_config_clientDefaults = clientDefaults.modules.components_team_MemberEditor
 
 
@@ -175,11 +176,8 @@ function stepEvolution(delta: number) {
     </label>
 
     <template v-if="visible('level')">
-    <div class="lv-row">
-      <span class="muted">LV</span>
-      <button v-for="lv in LEVELS" :key="lv" type="button" :class="{ on: model.level === lv }" @click="setLevel(lv)">{{ lv }}</button>
-    </div>
-    <label class="level-slider">
+    <LevelSelector :model-value="model.level" :levels="LEVELS" @update:model-value="setLevel" />
+    <label class="level-slider" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop>
       <input :value="model.level" type="range" min="1" :max="POKEMON_LEVEL_MAX" @input="setLevel(Number(($event.target as HTMLInputElement).value))">
       <b>Lv.{{ model.level }}</b>
     </label>

@@ -11,6 +11,8 @@ interface SwipeEvent {
 interface SwipeElement {
   tagName?: string
   nodeName?: string
+  type?: string
+  getAttribute?: (name: string) => string | null
   dataset?: Record<string, string | undefined>
   parentElement?: SwipeElement
   scrollWidth?: number
@@ -31,6 +33,8 @@ export function useTabSwipe<T extends string>(model: Ref<T>, available: () => re
     let element = event.target as SwipeElement | undefined
     while (element) {
       if (/^(input|textarea|select|slider|switch)$/i.test(element.tagName ?? element.nodeName ?? '')
+        || /^(range|slider)$/i.test(element.type ?? '')
+        || element.getAttribute?.('role') === 'slider'
         || element.dataset?.swipeIgnore != null
         || (typeof getComputedStyle === 'function'
           && (element.scrollWidth ?? 0) > (element.clientWidth ?? Infinity) + 2

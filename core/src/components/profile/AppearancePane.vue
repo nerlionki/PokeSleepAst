@@ -3,7 +3,7 @@ import clientDefaults from '../../data/client-defaults.resource'
 
 import { ref, watch } from 'vue'
 import { useAppearanceStore } from '../../stores/appearance'
-import { colorFields, fontSizes, themes } from '../../ui/appearance'
+import { colorFields, fontFamilies, fontSizes, themes } from '../../ui/appearance'
 import type { Appearance, ColorKey, Palette } from '../../ui/appearance'
 import FormField from '../shared/FormField.vue'
 import ColorPicker from '../shared/ColorPicker.vue'
@@ -19,6 +19,7 @@ function theme(id: Appearance['theme']) {
   void appearance.update({ ...appearance.settings, theme: id, colors: {} })
 }
 function fontSize(id: Appearance['fontSize']) { void appearance.update({ ...appearance.settings, fontSize: id }) }
+function fontFamily(id: Appearance['fontFamily']) { void appearance.update({ ...appearance.settings, fontFamily: id }) }
 function applyColors() {
   void appearance.update({ ...appearance.settings, colors: { ...draft.value } })
   message.value = '自定义颜色已应用。'
@@ -36,6 +37,11 @@ function reset() { void appearance.reset(); message.value = '已恢复默认外�
           {{ item.name }}
         </button>
       </div>
+    </section>
+    <section class="card stack">
+      <h3>字体</h3>
+      <div class="appearance-choices" role="group" aria-label="字体"><button v-for="item in fontFamilies" :key="item.id" type="button" class="btn ghost" :class="{ selected: appearance.settings.fontFamily === item.id }" :aria-pressed="appearance.settings.fontFamily === item.id" :style="{ fontFamily: item.family }" @click="fontFamily(item.id)">{{ item.name }}</button></div>
+      <p class="muted appearance-hint">使用设备自带字体，即时应用并记忆选择。设备缺少对应字体时使用系统替代字体。</p>
     </section>
     <section class="card stack">
       <h3>字号</h3>

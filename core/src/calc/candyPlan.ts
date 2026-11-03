@@ -3,7 +3,7 @@ import clientFactoryDefaults from '../data/client-defaults.resource'
 import extracted0 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { newUid } from './uid'
-import { EVENT_PARAMETERS, activityMiniCandyBoost, activityValues, createActivityContext, type ActivitySelection } from './activities'
+import { EVENT_PARAMETERS, activityMiniCandyBoost, activityValues, createActivityContext, type ActivityContext, type ActivitySelection } from './activities'
 import growth from '../data/growth-meta.resource'
 import legacyStockKeys from '../data/legacy-candy-stock-keys.resource'
 import type { BoxPokemon } from '../types'
@@ -38,9 +38,17 @@ export interface CandyResult {
   error?: string
 }
 
+// Maintained in SleepAstCore src/data/event-parameters.json: exp, shards and quota.
 export const CANDY_BOOSTS = EVENT_PARAMETERS.candyBoosts
 
 export type CandyBoostId = keyof typeof CANDY_BOOSTS
+
+/** Candy Boost tab is an anytime planner, independent of the event calendar. */
+export const CANDY_PLANNING_ACTIVITY: ActivityContext = {
+  // A complete empty-calendar context keeps the runtime from substituting today's events.
+  startDate: '1970-01-01',
+  catalog: { schemaVersion: 1, version: 'candy-planning-no-activities-v1', activities: [] },
+}
 
 export function candyBoostPolicy(mode: CandyBoostId, activity?: ActivitySelection) {
   const base = CANDY_BOOSTS[mode]

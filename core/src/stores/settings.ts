@@ -1,3 +1,4 @@
+import { clampAreaBonus } from '../calc/areaBonus'
 
 import clientDefaults from '../data/client-defaults.resource'
 import { defineStore } from 'pinia'
@@ -23,12 +24,12 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   watch(() => settings.value.areaBonus, value => {
-    settings.value.islandBonuses = { ...settings.value.islandBonuses, [settings.value.island]: Math.min(0.85, Math.max(0, Number(value) || 0)) }
+    settings.value.islandBonuses = { ...settings.value.islandBonuses, [settings.value.island]: clampAreaBonus(value) }
   }, { flush: 'sync' })
 
-  function islandBonus(id: Settings['island']) { return settings.value.islandBonuses?.[id] ?? (id === settings.value.island ? settings.value.areaBonus : 0) }
+  function islandBonus(id: Settings['island']) { return clampAreaBonus(settings.value.islandBonuses?.[id] ?? (id === settings.value.island ? settings.value.areaBonus : 0)) }
   function setIslandBonus(id: Settings['island'], value: number) {
-    const bonus = Math.min(0.85, Math.max(0, Number(value) || 0))
+    const bonus = clampAreaBonus(value)
     settings.value.islandBonuses = { ...settings.value.islandBonuses, [id]: bonus }
     if (id === settings.value.island) settings.value.areaBonus = bonus
   }

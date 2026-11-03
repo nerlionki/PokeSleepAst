@@ -1,3 +1,4 @@
+import { AREA_BONUS_MAX } from './areaBonus'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
@@ -66,6 +67,8 @@ export interface WhistleResult {
  * Original measurements: https://namakemono289.hatenablog.com/entry/2025/12/23/011054
  * EX berry multiplier and excluded speed/ingredient bonuses:
  * https://wikiwiki.jp/poke_sleep/どうぐ/おてつだいホイッスル
+ * User-confirmed actual-game convention: event favorites apply; event help
+ * speed/count bonuses and manual production overrides do not apply to whistles.
  */
 export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBonus: number): WhistleMember {
   settings = activityBerrySettings(settings, createActivityContext('research', settings.activity))
@@ -122,10 +125,12 @@ function addIngredients(target: Record<string, number>, source: Record<string, n
 /** 固定帮手奖励人数后，收益独立可加；按人数、奖励人数和特殊宝可梦状态
  * 动态规划选择合法队伍，保留取整收益，无需穷举所有五人组合。 */
 export function planWhistle(settings: Settings, box: BoxPokemon[], options: WhistleOptions): WhistleResult {
+  // Freeze today's catalog once for all teams compared in this planning run.
+  settings = { ...settings, activity: createActivityContext('research', settings.activity) }
   if ([options.currentEnergy, options.targetEnergy].some(value => !Number.isSafeInteger(value) || value < 0)) {
     throw new Error('当前能量和目标能量必须为非负整数')
   }
-  if (!Number.isFinite(settings.areaBonus) || settings.areaBonus < 0 || settings.areaBonus > whistle_planWhistle_ruleParameters.areaBonusCap) throw new Error('岛屿加成须在 0%–85% 之间')
+  if (!Number.isFinite(settings.areaBonus) || settings.areaBonus < 0 || settings.areaBonus > AREA_BONUS_MAX) throw new Error(`岛屿加成须在 0%–${Math.round(AREA_BONUS_MAX * 100)}% 之间`)
   const excluded: WhistleResult['excluded'] = []
   const seen = new Set<string>()
   const candidates = box.filter(pokemon => {

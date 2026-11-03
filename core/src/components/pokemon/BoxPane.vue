@@ -14,6 +14,7 @@ import { FILTER_CATALOG, boxLabel, boxMatches, EMPTY_BOX_QUERY, filterCount, typ
 import { selectionList, toggleChoice } from '../../calc/multiChoice'
 import { POKEDEX } from '../../calc/data'
 import { defaultTune } from '../../calc/member'
+import { cloneMemberDraft } from '../../calc/memberDraft'
 import { importScreenshotSelection } from '#platform/screenshots'
 import { hasShiny } from '../../calc/raeImage'
 import { useBoxStore } from '../../stores/box'
@@ -132,12 +133,10 @@ function confirmEditingField(field: OcrMissingField) {
 
 function openEdit(pokemon: BoxPokemon) {
   completionQueue.value = []
-  editing.value = {
+  editing.value = cloneMemberDraft({
     ...pokemon,
-    subskills: [...pokemon.subskills],
-    ingredientSlots: [pokemon.ingredientSlots[0], pokemon.ingredientSlots[1], pokemon.ingredientSlots[2]],
     tune: { ...defaultTune(), ...pokemon.tune },
-  }
+  })
 }
 
 function save() {

@@ -1,5 +1,26 @@
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
+import { readBackupSelection, type BackupSelection } from '../../../core/src/calc/backupFile'
+export const backupFileHint = '选择 UTF-8 编码的 .json 备份文件。'
+
+export function importBackupText(): Promise<BackupSelection | null> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input')
+    input.type = 'file'; input.accept = '.json,application/json'; input.multiple = false
+    input.style.display = 'none'
+    input.oncancel = () => { input.remove(); resolve(null) }
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) { input.remove(); resolve(null); return }
+      try { resolve(readBackupSelection(file.name, await file.text())) }
+      catch (cause) { reject(cause instanceof Error ? cause : new Error('文件读取失败，请重新选择')) }
+      finally { input.remove() }
+    }
+    document.body.appendChild(input)
+    try { input.click() }
+    catch { input.remove(); reject(new Error('无法打开文件选择器，请使用复制粘贴导入')) }
+  })
+}
 
 export async function exportText(text: string, name: string): Promise<string> {
   try {

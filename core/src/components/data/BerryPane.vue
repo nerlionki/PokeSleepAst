@@ -5,6 +5,7 @@ import { computed, shallowRef } from 'vue'
 import { berryEnergySnaps, berryEnergyTable } from '../../calc/berry'
 import { fixedBerryProducers } from '../../calc/precomputedProduction'
 import { BERRIES } from '../../calc/data'
+import { POKEMON_LEVEL_MAX } from '../../calc/xp'
 import { textHit } from '../../calc/text'
 import BerryIcon from '../shared/BerryIcon.vue'
 import DrawerSheet from '../shared/DrawerSheet.vue'
@@ -45,7 +46,7 @@ const conditions: Record<string, string> = { full: '全时满包', normal: '一�
         <BerryIcon :name="current.name" large />
         <div>
           <strong>{{ current.type }}</strong>
-          <p class="muted">{{ tab === 'energy' ? '1–100 级树果能量' : '每日树果总产量' }}</p>
+          <p class="muted">{{ tab === 'energy' ? `1–${POKEMON_LEVEL_MAX} 级树果能量` : '每日树果总产量' }}</p>
         </div>
       </div>
       <div class="berry-detail-tabs" role="tablist" aria-label="树果详情">

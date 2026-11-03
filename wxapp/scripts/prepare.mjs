@@ -89,11 +89,6 @@ for (const file of walk(core)) {
 .virtual-dex { position: absolute; top: 0; left: 0; width: 100%; height: 100%; flex: none; box-sizing: border-box; }
 </style>`)
   }
-  if (rel === 'components/profile/BackupPane.vue') {
-    imports.push("import { importBackupText } from '#platform/backup'")
-    text = text.replace('async function wipe()', `async function importFile() {\n  try { incoming.value = await importBackupText(); msg.value = '文件已读取，请选择合并或覆盖导入' }\n  catch (error) { msg.value = error instanceof Error ? error.message : '文件选择取消或失败' }\n}\n\nasync function wipe()`)
-    text = text.replace('<WxTextarea', '<button class="btn ghost" @click="importFile">选择备份 JSON 文件</button><WxTextarea')
-  }
   if (rel === 'components/shared/SubskillIcon.vue') {
     if (!imports.some(line => line.startsWith('import WxImage '))) imports.push("import WxImage from '../../../components/WxImage.vue'")
     text = `<script setup lang="ts">

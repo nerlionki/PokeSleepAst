@@ -1,5 +1,5 @@
+import { clampAreaBonus } from './areaBonus'
 import ruleCatalogs from '../data/rule-catalogs.resource'
-import ruleParameters from '../data/rule-parameters.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
 import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
@@ -8,7 +8,6 @@ import berries from '../data/berries.resource'
 const defaults_config_extracted0 = extracted0.modules.defaults
 const factory_defaults_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_defaults
 const defaults_config_ruleCatalogs = ruleCatalogs.modules.defaults
-const defaults_mergeSettings_ruleParameters = ruleParameters.modules.defaults.mergeSettings
 
 
 export const BERRY_PREF_ISLANDS: IslandId[] = (cloneData(defaults_config_extracted0.BERRY_PREF_ISLANDS) as unknown as IslandId[])
@@ -63,8 +62,8 @@ export function mergeSettings(saved: (Partial<Settings> & { recipeLevel?: number
   }
   merged.exWeeklyBonus = defaults_config_ruleCatalogs.mergeSettingsList0.values.includes(saved.exWeeklyBonus ?? '') ? saved.exWeeklyBonus : 'none'
   merged.islandBonuses = { ...saved.islandBonuses }
-  if (merged.islandBonuses[merged.island] == null) merged.islandBonuses[merged.island] = Math.min(defaults_mergeSettings_ruleParameters.areaBonusCap, Math.max(0, merged.areaBonus || 0))
-  merged.areaBonus = Math.min(defaults_mergeSettings_ruleParameters.areaBonusCap, Math.max(0, merged.islandBonuses[merged.island] ?? 0))
+  if (merged.islandBonuses[merged.island] == null) merged.islandBonuses[merged.island] = clampAreaBonus(merged.areaBonus)
+  merged.areaBonus = clampAreaBonus(merged.islandBonuses[merged.island])
   if (merged.island === 'cyanex') merged.berries = normalizeEx2Berries(merged.berries)
   return merged
 }

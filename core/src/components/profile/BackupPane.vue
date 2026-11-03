@@ -2,7 +2,7 @@
 import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
-import { exportText } from '#platform/backup'
+import { backupFileHint, exportText, importBackupText } from '#platform/backup'
 import { shallowRef } from 'vue'
 import { exportNative, exportSdrice, parseBoxText } from '../../calc/boxio'
 import { useBoxStore } from '../../stores/box'
@@ -14,6 +14,7 @@ const box = useBoxStore()
 const settings = useSettingsStore()
 const msg = shallowRef(components_profile_BackupPane_config_clientDefaults["msgInitial"])
 const incoming = shallowRef(components_profile_BackupPane_config_clientDefaults["incomingInitial"])
+const readingFile = shallowRef(false)
 const mode = shallowRef<'native' | 'sdrice'>((components_profile_BackupPane_config_clientDefaults["modeInitial"] as unknown as 'native' | 'sdrice'))
 
 async function exportBox() {
@@ -25,6 +26,18 @@ async function exportBox() {
   catch (cause) {
     msg.value = cause instanceof Error ? cause.message : '导出失败，请重试'
   }
+}
+
+async function chooseBackupFile() {
+  if (readingFile.value) return
+  readingFile.value = true
+  try {
+    const selected = await importBackupText()
+    if (!selected) return
+    incoming.value = selected.text
+    msg.value = `已读取 ${selected.name}，请选择合并导入或覆盖导入；盒子尚未修改`
+  } catch (cause) { msg.value = cause instanceof Error ? cause.message : '文件读取失败，请重试' }
+  finally { readingFile.value = false }
 }
 
 async function applyImport(replace: boolean) {
@@ -64,10 +77,12 @@ async function wipe() {
         </select>
       </div>
       <button class="btn" type="button" @click="exportBox">导出 Box JSON</button>
-      <textarea v-model="incoming" rows="6" placeholder="粘贴本机、sdrice 或 iqdooh Box JSON"></textarea>
+      <button class="btn ghost" type="button" :disabled="readingFile" @click="chooseBackupFile">{{ readingFile ? '正在读取文件…' : '选择 JSON 文件' }}</button>
+      <p class="muted">{{ backupFileHint }}</p>
+      <textarea v-model="incoming" :disabled="readingFile" rows="6" placeholder="粘贴本机、sdrice 或 iqdooh Box JSON" aria-label="待导入的 Box JSON"></textarea>
       <div class="row">
-        <button class="btn sage" type="button" @click="applyImport(false)">合并导入</button>
-        <button class="btn ghost" type="button" @click="applyImport(true)">覆盖导入</button>
+        <button class="btn sage" type="button" :disabled="readingFile" @click="applyImport(false)">合并导入</button>
+        <button class="btn ghost" type="button" :disabled="readingFile" @click="applyImport(true)">覆盖导入</button>
       </div>
       <button class="btn ghost" type="button" @click="wipe">清空本机缓存 / 重置设置</button>
       <p v-if="msg" class="amber">{{ msg }}</p>

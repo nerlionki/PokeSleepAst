@@ -4,15 +4,16 @@ import { BERRIES, ISLANDS } from '../../calc/data'
 import { EX_MAIN, canPickBerries, normalizeEx2Berries } from '../../calc/defaults'
 import { isExIsland } from '../../calc/exEffects'
 import { activityBerrySettings, activeActivities } from '../../calc/activities'
+import type { ActivitySelection } from '../../calc/activities'
 import { useActivities } from '../../composables/useActivities'
 import { useSettingsStore } from '../../stores/settings'
 import type { Settings } from '../../types'
 import BerryIcon from './BerryIcon.vue'
 type Environment = Pick<Settings, 'island' | 'berries' | 'helpingBonus' | 'exBuff' | 'exDebuff' | 'exWeeklyBonus'>
-const props = defineProps<{ value: Environment }>()
+const props = defineProps<{ value: Environment, activitySelection?: ActivitySelection }>()
 const emit = defineEmits<{ change: [patch: Partial<Environment>] }>()
 const store = useSettingsStore()
-const activity = useActivities(computed(() => ({ activity: store.settings.activity })), () => props.value.island)
+const activity = useActivities(computed(() => ({ activity: props.activitySelection ?? store.settings.activity })), () => props.value.island)
 const environment = computed(() => activityBerrySettings(props.value, activity.context.value))
 const forcedBerry = computed(() => activeActivities(activity.context.value).map(event => event.favoriteBerries?.[props.value.island]).filter(Boolean).at(-1))
 const ex = computed(() => isExIsland(props.value.island))

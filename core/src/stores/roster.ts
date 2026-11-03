@@ -8,6 +8,7 @@ import { useBoxStore } from './box'
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { defaultTune, type MemberTune } from '../calc/member'
+import { cloneMemberDraft } from '../calc/memberDraft'
 import type { ProduceInput } from '../types'
 import { loadJson, saveJson } from '../storage'
 const stores_roster_config_clientDefaults = clientDefaults.modules.stores_roster
@@ -158,10 +159,7 @@ export const useRosterStore = defineStore('roster', () => {
     if (!source || empty < 0) return null
     if (!canPlace(empty, source.pokeId)) return null
     const copy: TeamCustom = {
-      ...source,
-      subskills: [...source.subskills],
-      ingredientSlots: [source.ingredientSlots[0], source.ingredientSlots[1], source.ingredientSlots[2]],
-      tune: { ...source.tune },
+      ...cloneMemberDraft(source),
       uid: `custom-${newUid()}`,
     }
     customs.value = [...customs.value, copy]

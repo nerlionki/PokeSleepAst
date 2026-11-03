@@ -5,7 +5,7 @@ import { cloneData } from './dataClone'
 import { ISLANDS, POKEDEX, SLEEP_STYLES, pokeById } from './data'
 import { familyOf } from './candyPlan'
 import { styleKey } from './sleep'
-import { activitySleepStyles, createActivityContext, type ActivitySelection } from './activities'
+import { activitySleepStyles, activityValues, createActivityContext, type ActivitySelection } from './activities'
 import type { IslandId } from '../types'
 const catch_config_extracted0 = extracted0.modules.catch
 const catch_config_extracted1 = extracted1.modules.catch
@@ -78,7 +78,8 @@ export function recommendIslands(
   discovered: readonly string[] = [],
   activity?: ActivitySelection,
 ): CatchIslandPick[] {
-  const styles = activitySleepStyles(SLEEP_STYLES, createActivityContext('research', activity))
+  const context = createActivityContext('research', activity)
+  const styles = activitySleepStyles(SLEEP_STYLES, context)
   const starsOnIsland = new Map<string, Map<number, number[]>>()
   for (const style of styles) {
     if (style.stars < 1 || style.stars > (catch_module_runtimeParameters.p001 as 4)) continue
@@ -91,6 +92,7 @@ export function recommendIslands(
   const picks: CatchIslandPick[] = []
 
   for (const island of ISLANDS) {
+    const mixed = activityValues(context, island.id).eventMix !== 'off'
     const styleMap = starsOnIsland.get(island.id)
     const species = new Set(styleMap?.keys())
     const sleepGroups: CatchSleepGroup[] = []
@@ -109,14 +111,23 @@ export function recommendIslands(
           : (weights[target.purpose] ?? 1)
         if (factor <= 0) continue
         const members = target.purpose === 'candy'
-          ? POKEDEX.filter((p) => familyOf(p.id) === familyOf(target.pokeId) && species.has(p.id) && p.sleepType === sleepType)
-          : ((species.has(target.pokeId) || stars.some((star) => star >= (catch_recommendIslands_runtimeParameters.p002 as 5))) && poke.sleepType === sleepType ? [poke] : [])
+          ? POKEDEX.filter((p) => familyOf(p.id) === familyOf(target.pokeId) && species.has(p.id) && (mixed || p.sleepType === sleepType))
+          : ((species.has(target.pokeId) || stars.some((star) => star >= (catch_recommendIslands_runtimeParameters.p002 as 5))) && (mixed || poke.sleepType === sleepType) ? [poke] : [])
         if (!members.length) continue
+        // This remains a relative coverage score, not an encounter probability.
+        // Family goals use the mean applicable multiplier, avoiding an invented
+        // reward for adding evolution stages to an already covered family.
+        const eventMembers = target.purpose === 'candy'
+          ? POKEDEX.filter(p => familyOf(p.id) === familyOf(target.pokeId) && species.has(p.id)) : members
+        const eventWeight = eventMembers.reduce((sum, member) => {
+          const effects = activityValues(context, island.id, member)
+          return sum + effects.encounterWeightMultiplier * (target.purpose === 'candy' ? effects.researchCandyMultiplier : 1)
+        }, 0) / eventMembers.length
         matches.push({
           pokeId: target.pokeId,
           name: poke.name,
           purpose: target.purpose,
-          weight: Math.round(target.baseWeight * factor * 100) / 100,
+          weight: Math.round(target.baseWeight * factor * eventWeight * 100) / 100,
           stars,
         })
       }

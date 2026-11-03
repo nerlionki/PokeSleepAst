@@ -1,3 +1,4 @@
+import { AREA_BONUS_MAX } from './areaBonus'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
@@ -121,7 +122,7 @@ export function validateScoreOptions(o: ScoreOptions, settings: Settings): strin
   }
   const sleeps = scoreSleeps(o, settings)
   if (sleeps.some((s, i) => i > 0 && s.start < sleeps[i - 1]!.end)) return '两段睡眠不能重叠'
-  if (!Number.isFinite(settings.areaBonus) || settings.areaBonus < 0 || settings.areaBonus > (scorePlan_validateScoreOptions_runtimeParameters.p016 as 0.85) || !integer(settings.potSize, 1, (scorePlan_validateScoreOptions_runtimeParameters.p017 as 1000))) return '请先检查岛屿加成和锅容量设置'
+  if (!Number.isFinite(settings.areaBonus) || settings.areaBonus < 0 || settings.areaBonus > AREA_BONUS_MAX || !integer(settings.potSize, 1, (scorePlan_validateScoreOptions_runtimeParameters.p017 as 1000))) return '请先检查岛屿加成和锅容量设置'
   return null
 }
 export function scoreCandidates(box: BoxPokemon[]) {

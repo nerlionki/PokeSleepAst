@@ -12,9 +12,13 @@ import { useRoute } from 'vue-router'
 import { boxLabel, speciesName } from '../../calc/boxFilter'
 import { ingredientByName } from '../../calc/data'
 import { compareHelpingBonus, defaultTune, type MemberDraft } from '../../calc/member'
+import { cloneMemberDraft, memberDraftFromBox, memberDraftToBox } from '../../calc/memberDraft'
+import LevelSelector from '../shared/LevelSelector.vue'
+import ToggleField from '../shared/ToggleField.vue'
 import { produce } from '../../calc/produce'
 import { useBoxStore } from '../../stores/box'
 import { useSettingsStore } from '../../stores/settings'
+import { useProductionActivity } from '../../composables/useProductionActivity'
 import type { ProduceResult } from '../../types'
 import MemberCard from './MemberCard.vue'
 import MemberEditor from './MemberEditor.vue'
@@ -48,6 +52,7 @@ const LEVELS = cloneData(components_team_ComparePane_config_clientDefaults["LEVE
 
 const box = useBoxStore()
 const { settings } = storeToRefs(useSettingsStore())
+const { enabled: activityEnabled, settings: calculationSettings } = useProductionActivity('compare', settings)
 const route = useRoute()
 const selected = ref<string[]>((cloneData(components_team_ComparePane_config_clientDefaults["selectedInitial"]) as unknown as string[]))
 const customs = ref<CustomPanel[]>((cloneData(components_team_ComparePane_config_clientDefaults["customsInitial"]) as unknown as CustomPanel[]))
@@ -82,26 +87,14 @@ function draftOf(uid: string): MemberDraft | null {
   if (custom) return custom
   const owned = box.pokemon.find((item) => item.uid === uid)
   if (!owned) return null
-  return {
-    pokeId: owned.pokeId,
-    level: owned.level,
-    nature: owned.nature,
-    subskills: [...owned.subskills],
-    ingredientSlots: [owned.ingredientSlots[0], owned.ingredientSlots[1], owned.ingredientSlots[2]],
-    skillLevel: owned.skillLevel,
-    mewSkill: owned.mewSkill,
-    tune: { ...defaultTune(), ...owned.tune },
-  }
+  return memberDraftFromBox(owned)
 }
 
 function copyRow(uid: string) {
   const source = draftOf(uid)
   if (!source) return
   const row: CustomPanel = {
-    ...source,
-    subskills: [...source.subskills],
-    ingredientSlots: [source.ingredientSlots[0], source.ingredientSlots[1], source.ingredientSlots[2]],
-    tune: { ...source.tune },
+    ...cloneMemberDraft(source),
     uid: `c-${newUid()}`,
   }
   customs.value = [...customs.value, row]
@@ -178,7 +171,7 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
     carryMode: tune?.carryMode,
     ribbonHours: tune?.ribbonHours,
     bonus,
-    r: produce(settings.value, input, bonus),
+    r: produce(calculationSettings.value, input, bonus),
   }
 }).filter((row): row is CompareRow => row !== null))
 
@@ -202,18 +195,7 @@ function saveCustomToBox() {
   const uid = editing.value
   const draft = editingPanel.value
   if (!uid || !draft || !customs.value.some((item) => item.uid === uid)) return
-  const created = box.create({
-    pokeId: draft.pokeId,
-    level: draft.level,
-    nature: draft.nature,
-    subskills: [...draft.subskills],
-    ingredientSlots: [draft.ingredientSlots[0], draft.ingredientSlots[1], draft.ingredientSlots[2]],
-    skillLevel: draft.skillLevel,
-    mewSkill: draft.mewSkill,
-    name: '',
-    napping: false,
-    tune: { ...draft.tune },
-  })
+  const created = box.create(memberDraftToBox(draft))
   selected.value = selected.value.map((id) => (id === uid ? created.uid : id))
   customs.value = customs.value.filter((item) => item.uid !== uid)
   editing.value = null
@@ -222,11 +204,8 @@ function saveCustomToBox() {
 
 <template>
   <div class="stack">
-    <div class="lv-row">
-      <span class="muted">LV</span>
-      <button type="button" :class="{ on: level === null }" @click="level = null">原级</button>
-      <button v-for="lv in LEVELS" :key="lv" type="button" :class="{ on: level === lv }" @click="level = lv">{{ lv }}</button>
-    </div>
+    <ToggleField v-model="activityEnabled" label="计入活动加成" />
+    <LevelSelector v-model="level" :levels="LEVELS" allow-original />
     <div class="seg">
       <button type="button" :class="{ on: settings.period === 'day' }" @click="settings.period = 'day'">每日</button>
       <button type="button" :class="{ on: settings.period === 'week' }" @click="settings.period = 'week'">每周</button>
@@ -235,6 +214,7 @@ function saveCustomToBox() {
     <div class="cmp-board">
       <article v-for="row in rows" :key="row.uid" class="card cmp-col">
         <MemberCard
+          :environment="calculationSettings"
           :poke-id="row.pokeId"
           :level="row.level"
           :nature="row.nature"

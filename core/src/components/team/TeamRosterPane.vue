@@ -7,12 +7,16 @@ import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { boxLabel } from '../../calc/boxFilter'
 import { defaultTune, type MemberDraft } from '../../calc/member'
+import { memberDraftToBox } from '../../calc/memberDraft'
+import LevelSelector from '../shared/LevelSelector.vue'
+import ToggleField from '../shared/ToggleField.vue'
 import { teamProduce } from '../../calc/team'
 import { clockOf } from '../../calc/timeline'
 import { teamRestrictionError } from '../../calc/teamRestrictions'
 import { useBoxStore } from '../../stores/box'
 import { useRosterStore, type TeamCustom } from '../../stores/roster'
 import { useSettingsStore } from '../../stores/settings'
+import { useProductionActivity } from '../../composables/useProductionActivity'
 import type { ProduceInput } from '../../types'
 import PokeSprite from '../shared/PokeSprite.vue'
 import SpeciesSheet from '../shared/SpeciesSheet.vue'
@@ -28,6 +32,7 @@ const LEVELS = cloneData(components_team_TeamRosterPane_config_clientDefaults["L
 const box = useBoxStore()
 const roster = useRosterStore()
 const { settings } = storeToRefs(useSettingsStore())
+const { enabled: activityEnabled, settings: calculationSettings } = useProductionActivity('team', settings)
 const view = shallowRef<'overview' | 'detail' | 'time'>((components_team_TeamRosterPane_config_clientDefaults["viewInitial"] as unknown as 'overview' | 'detail' | 'time'))
 const level = shallowRef<number | null>((components_team_TeamRosterPane_config_clientDefaults["levelInitial"] as unknown as number | null))
 const picking = shallowRef<number | null>((components_team_TeamRosterPane_config_clientDefaults["pickingInitial"] as unknown as number | null))
@@ -70,7 +75,7 @@ function toInput(member: SlotMember): ProduceInput & { uid: string, name: string
 
 const analyzed = computed(() => members.value.flatMap((member) => (member && !member.napping ? [toInput(member)] : [])))
 const teamError = computed(() => teamRestrictionError(members.value.flatMap(member => member ? [member] : [])))
-const result = computed(() => props.editorOnly ? null : teamProduce(settings.value, teamError.value ? [] : analyzed.value))
+const result = computed(() => props.editorOnly ? null : teamProduce(calculationSettings.value, teamError.value ? [] : analyzed.value))
 
 const slotResult = computed(() => {
   let cursor = components_team_TeamRosterPane_config_clientDefaults["cursor"]
@@ -156,18 +161,7 @@ function saveCustomToBox() {
   const draft = editingDraft.value
   if (!uid?.startsWith('custom-') || !draft) return
   const index = roster.slots.indexOf(uid)
-  const created = box.create({
-    pokeId: draft.pokeId,
-    level: draft.level,
-    nature: draft.nature,
-    subskills: [...draft.subskills],
-    ingredientSlots: [draft.ingredientSlots[0], draft.ingredientSlots[1], draft.ingredientSlots[2]],
-    skillLevel: draft.skillLevel,
-    mewSkill: draft.mewSkill,
-    name: '',
-    napping: false,
-    tune: { ...draft.tune },
-  })
+  const created = box.create(memberDraftToBox(draft))
   if (index >= 0) roster.setSlot(index, created.uid)
   editing.value = null
 }
@@ -175,13 +169,10 @@ function saveCustomToBox() {
 
 <template>
   <div class="stack">
+    <ToggleField v-if="!props.editorOnly" v-model="activityEnabled" label="计入活动加成" />
     <p v-if="teamError || roster.error" class="amber" role="alert">{{ teamError || roster.error }}请调整队伍后计算。</p>
     <template v-if="!props.editorOnly && result">
-    <div class="lv-row">
-      <span class="muted">LV</span>
-      <button type="button" :class="{ on: level === null }" @click="level = null">原级</button>
-      <button v-for="lv in LEVELS" :key="lv" type="button" :class="{ on: level === lv }" @click="level = lv">{{ lv }}</button>
-    </div>
+    <LevelSelector v-model="level" :levels="LEVELS" allow-original />
     <div class="seg seg-2">
       <button type="button" :class="{ on: settings.period === 'day' }" @click="settings.period = 'day'">每日</button>
       <button type="button" :class="{ on: settings.period === 'week' }" @click="settings.period = 'week'">每周</button>
@@ -205,6 +196,7 @@ function saveCustomToBox() {
       <article v-for="(member, idx) in members" v-show="!props.productionOnly || member" :key="idx" class="slot-card roster-slot" :class="{ rich: member }">
         <template v-if="member">
           <MemberCard
+            :environment="calculationSettings"
             v-if="!props.editorOnly && slotResult[idx] && result"
             :poke-id="member.pokeId"
             :level="level ?? member.level"

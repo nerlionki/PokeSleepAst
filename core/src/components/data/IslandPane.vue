@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { AREA_BONUS_MAX } from '../../calc/areaBonus'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { computed, ref, shallowRef } from 'vue'
 import { ISLANDS, type PokeRow } from '../../calc/data'
-import { formatDp, islandBands, islandPokemon, islandUnlock } from '../../calc/islandMeta'
+import { formatDp, islandBands, islandPokemon, islandUnlock, islandBerrySelection, RANDOM_BERRY_DESCRIPTION, RANDOM_BERRY_COUNT } from '../../calc/islandMeta'
 import { useSettingsStore } from '../../stores/settings'
 import { useActivities } from '../../composables/useActivities'
 import { textHit } from '../../calc/text'
@@ -57,8 +58,8 @@ function groups(id: string) {
       >
         <template #lead>
           <span class="row" style="gap: 2px">
-            <BerryIcon v-for="b in i.berries.slice(0, 3)" :key="b" :name="b" />
-            <span v-if="!i.berries.length" class="ing-mark sm">岛</span>
+            <BerryIcon v-for="b in i.berries" :key="b" :name="b" />
+            <template v-if="!i.berries.length"><BerryIcon v-for="n in RANDOM_BERRY_COUNT" :key="`random-${n}`" name="随机喜好树果" random /></template>
           </span>
         </template>
         <template #trail>
@@ -66,18 +67,18 @@ function groups(id: string) {
         </template>
       </DataRow>
       <div v-if="openId === i.id" class="acc-body plain">
-        <label class="field">
+        <label class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop>
           <span>营地加成 {{ Math.round(store.islandBonus(i.id as IslandId) * 100) }}%{{ store.settings.island === i.id ? ' · 当前营地' : '' }}</span>
-          <input type="range" min="0" max="0.85" step="0.01" :value="store.islandBonus(i.id as IslandId)" @change="store.setIslandBonus(i.id as IslandId, Number(($event.target as HTMLInputElement).value))">
+          <input type="range" min="0" :max="AREA_BONUS_MAX" step="0.01" :value="store.islandBonus(i.id as IslandId)" @change="store.setIslandBonus(i.id as IslandId, Number(($event.target as HTMLInputElement).value))">
         </label>
         <p class="muted berry-inline">
-          {{ islandUnlock(i.id as IslandId) }} · {{ i.id === 'cyanex' ? '主树果三选一' : '喜好' }}
+          {{ islandUnlock(i.id as IslandId) }} · {{ islandBerrySelection(i.id)?.label ?? '喜好' }}
           <template v-if="i.berries.length">
             <span v-for="b in i.berries" :key="b" class="berry-name"><BerryIcon :name="b" small />{{ b }}</span>
           </template>
-          <template v-else>每周随机三颗</template>
+          <template v-else><BerryIcon v-for="n in RANDOM_BERRY_COUNT" :key="`random-${n}`" name="随机喜好树果" random small />{{ RANDOM_BERRY_DESCRIPTION }}</template>
         </p>
-        <p v-if="i.id === 'cyanex'" class="muted">副树果从排除已选主树果后的其余 17 种中任选两种，不可重复。</p>
+        <p v-if="islandBerrySelection(i.id)?.detail" class="muted">{{ islandBerrySelection(i.id)?.detail }}</p>
         <div class="seg">
           <button type="button" :class="{ on: view === 'band' }" @click="view = 'band'">只数</button>
           <button type="button" :class="{ on: view === 'spread' }" @click="view = 'spread'">分布</button>

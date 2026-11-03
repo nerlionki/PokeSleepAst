@@ -1,6 +1,6 @@
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
-import { snapshotActivity } from './activities'
+import { activityBerrySettings, activityValues, snapshotActivity } from './activities'
 import { RECIPES, pokeById } from './data'
 import { produce } from './produce'
 import { resolveMemberSkill } from './mew'
@@ -8,7 +8,7 @@ import { recipeLevelMult, recipeLevelOf } from './cook'
 import { nextSpecialTeamState, type SpecialTeamState } from './teamRestrictions'
 import { unlockedSubskills } from './member'
 import { SCORE_ASSUMPTIONS, simulateScore } from './scoreSimulation'
-import { SCORE_RULE_VERSION, scoreCandidates, seededRandom, validateScoreOptions,
+import { SCORE_RULE_VERSION, scoreBounds, scoreCandidates, seededRandom, validateScoreOptions,
   type ScoreCheckpoint, type ScorePolicy, type ScoreRequest, type ScoreResult, type ScoreSolution } from './scorePlan'
 const scoreSearch_policyPool_runtimeParameters = runtimeParameters.modules.scoreSearch.policyPool.values
 const scoreSearch_config_ruleCatalogs = ruleCatalogs.modules.scoreSearch
@@ -16,17 +16,44 @@ const scoreSearch_scoreSearchSteps_runtimeParameters = runtimeParameters.modules
 
 
 export function scoreFingerprint(request: ScoreRequest): string {
-  return JSON.stringify({ version: SCORE_RULE_VERSION, settings: snapshotActivity(request.settings, 'week'), box: request.box, options: request.options })
+  return JSON.stringify({ version: SCORE_RULE_VERSION, activityRuleVersion: 1, settings: snapshotActivity(request.settings, 'week'), box: request.box, options: request.options })
+}
+/** Rank candidates using the actual planning interval, including midweek event phases. */
+export function scoreCandidateProduction(request: ScoreRequest, pokemon: ScoreRequest['box'][number]) {
+  const settings = snapshotActivity(request.settings, 'week')
+  const poke = pokeById(pokemon.pokeId)!
+  const { start, end } = scoreBounds(request.options)
+  const total = { berryEnergy: 0, skillEnergy: 0, ingredients: {} as Record<string, number> }
+  const cache = new Map<string, ReturnType<typeof produce>>()
+  for (let minute = start; minute < end;) {
+    const next = Math.min(end, (Math.floor((minute - 240) / 1440) + 1) * 1440 + 240)
+    const activity = activityValues(settings.activity, settings.island, poke, minute)
+    const environment = { ...activityBerrySettings(settings, settings.activity, minute), period: 'day' as const,
+      meals: false, whistleHelps: 0, dailySkillHeal: 0,
+      activity: { ...settings.activity, catalog: { schemaVersion: 1 as const, version: settings.activity.catalog.version, activities: [] }, overrides: activity } }
+    // Freeze this day's resolved effects for a comparable 24-hour production estimate.
+    const key = JSON.stringify([environment.berries, activity])
+    let result = cache.get(key)
+    if (!result) {
+      result = produce(environment, { ...pokemon, ribbonHours: pokemon.tune?.ribbonHours ?? 0, wakeEnergy: (scoreSearch_policyPool_runtimeParameters.p001 as 100) }, 0)
+      cache.set(key, result)
+    }
+    const weight = (next - minute) / (end - start)
+    total.berryEnergy += result.berryEnergy * weight
+    total.skillEnergy += result.skillEnergy * weight
+    for (const [name, amount] of Object.entries(result.ingredients)) total.ingredients[name] = (total.ingredients[name] ?? 0) + amount * weight
+    minute = next
+  }
+  return total
 }
 function policyPool(request: ScoreRequest): ScorePolicy[] {
   const { settings, options: o } = request
   const { candidates } = scoreCandidates(request.box)
   if (!candidates.length) throw new Error('Box 中没有可参与规划的个体，请先添加并确认生产资料')
   const random = seededRandom(o.seed)
-  const environment = { ...settings, period: 'day' as const, meals: false, whistleHelps: 0, dailySkillHeal: 0 }
   const ranked = candidates.map(p => {
     const poke = pokeById(p.pokeId)!
-    const result = produce(environment, { ...p, ribbonHours: p.tune?.ribbonHours ?? 0, wakeEnergy: (scoreSearch_policyPool_runtimeParameters.p001 as 100) }, 0)
+    const result = scoreCandidateProduction(request, p)
     return { pokemon: p, poke, result, skill: resolveMemberSkill(poke, p).name }
   })
   const recipes = RECIPES.filter(r => r.category === o.category && !r.mix)

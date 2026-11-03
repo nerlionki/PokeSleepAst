@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { AREA_BONUS_MAX } from '../../calc/areaBonus'
 import ActivitySettings from '../shared/ActivitySettings.vue'
 import { useActivities } from '../../composables/useActivities'
 import { EVENT_BONUSES } from '../../calc/sleep'
@@ -23,6 +24,7 @@ const eventMult = activity.field('drowsyPowerMultiplier', () => settings.value.e
 const shinyUp = activity.field('shinyUp', () => settings.value.shinyUp)
 const mixMode = activity.field('eventMix', () => settings.value.sleepEventMix)
 const maxPotSize = Math.max(...POT_TIERS.map(tier => tier.pot))
+const minPotSize = Math.min(...POT_TIERS.map(tier => tier.pot))
 
 const recipeGroups = computed(() => (['curry', 'salad', 'dessert'] as MealCategory[]).map((c) => ({
   id: c,
@@ -56,7 +58,7 @@ function setRecipeLevel(name: string, level: number) {
         <button class="btn ghost" type="button" @click="store.applyPreset('helpMax')">帮手 MAX</button>
       </div>
       <EnvironmentFields :value="settings" @change="store.setEnvironment" />
-      <FormField v-slot="{ id }" :label="`营地加成 ${Math.round(settings.areaBonus * 100)}%`"><input :id="id" v-model.number="settings.areaBonus" type="range" min="0" max="0.85" step="0.01"></FormField>
+      <FormField v-slot="{ id }" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop :label="`营地加成 ${Math.round(settings.areaBonus * 100)}%`"><input :id="id" v-model.number="settings.areaBonus" type="range" min="0" :max="AREA_BONUS_MAX" step="0.01"></FormField>
       <div class="row">
         <FormField v-slot="{ id }" label="就寝"><input :id="id" v-model="settings.sleepStart" type="time"></FormField>
         <FormField v-slot="{ id }" label="起床"><input :id="id" v-model="settings.sleepEnd" type="time"></FormField>
@@ -92,7 +94,7 @@ function setRecipeLevel(name: string, level: number) {
           </div>
         </details>
       </div>
-      <FormField v-slot="{ id }" label="锅容量"><input :id="id" v-model.number="settings.potSize" type="number" min="21" :max="maxPotSize"></FormField>
+      <FormField v-slot="{ id }" label="锅容量"><input :id="id" v-model.number="settings.potSize" type="number" :min="minPotSize" :max="maxPotSize"></FormField>
       <FormField v-slot="{ id }" label="活动倍率"><select :id="id" v-model.number="eventMult">
           <option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}倍（活动）</option>
           <option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option>

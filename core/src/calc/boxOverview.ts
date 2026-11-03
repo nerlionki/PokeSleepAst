@@ -1,3 +1,4 @@
+import { AREA_BONUS_MAX } from './areaBonus'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
@@ -8,6 +9,7 @@ import { defaultSettings } from './defaults'
 import { SUBSKILL_GATES, unlockedSubskills } from './member'
 import { normalizeOcrMissing } from './ocrCompletion'
 import { produce } from './produce'
+import type { ActivitySelection } from './activities'
 const factory_boxOverview_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_boxOverview
 const boxOverview_config_ruleCatalogs = ruleCatalogs.modules.boxOverview
 const boxOverview_calculateBoxOverview_ruleParameters = ruleParameters.modules.boxOverview.calculateBoxOverview
@@ -41,8 +43,8 @@ export function criticalOverviewFields(pokemon: BoxPokemon, mode: 'berries' | 'i
 }
 function finiteClamp(value: number, min: number, max: number) { return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : min }
 /** Independent 24-hour production, retaining only the individual's own unlocked bonuses. */
-export function calculateBoxOverview(pokemon: readonly BoxPokemon[], bonuses: OverviewBonuses = defaultOverviewBonuses()) {
-  const settings = { ...defaultSettings(), island: bonuses.island ?? 'greengrass', exBuff: bonuses.exBuff ?? true, exDebuff: bonuses.exDebuff ?? true, exWeeklyBonus: bonuses.exWeeklyBonus ?? 'none', berries: bonuses.favoredBerries, areaBonus: finiteClamp(bonuses.areaBonus, 0, boxOverview_calculateBoxOverview_ruleParameters.areaBonusCap), goodCamp: bonuses.goodCamp }
+export function calculateBoxOverview(pokemon: readonly BoxPokemon[], bonuses: OverviewBonuses = defaultOverviewBonuses(), activity?: ActivitySelection) {
+  const settings = { ...defaultSettings(), activity, island: bonuses.island ?? 'greengrass', exBuff: bonuses.exBuff ?? true, exDebuff: bonuses.exDebuff ?? true, exWeeklyBonus: bonuses.exWeeklyBonus ?? 'none', berries: bonuses.favoredBerries, areaBonus: finiteClamp(bonuses.areaBonus, 0, AREA_BONUS_MAX), goodCamp: bonuses.goodCamp }
   const externalBonus = Math.floor(finiteClamp(bonuses.helpingBonus, 0, boxOverview_calculateBoxOverview_ruleParameters.helpingBonusCap))
   const berryRanks = new Map<string, OverviewRank[]>(), ingredientRanks = new Map<string, OverviewRank[]>()
   const excludedBerries: BoxPokemon[] = [], excludedIngredients: BoxPokemon[] = []
