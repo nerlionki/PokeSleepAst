@@ -4,6 +4,13 @@ export type { PixelImage } from './ocrVision'
 export interface OcrTensor { data: Float32Array; dims: readonly number[] }
 export interface OcrModel { run(data: Float32Array, dims: number[]): Promise<OcrTensor>; dispose?(): void }
 export interface OcrSessions { det: OcrModel; rec: OcrModel; dict: string[] }
+export class OcrInferenceError extends Error {
+  constructor(message: string) { super(message); this.name = 'OcrInferenceError' }
+}
+async function infer(model: OcrModel, data: Float32Array, dims: number[]) {
+  try { return await model.run(data, dims) }
+  catch (error) { throw new OcrInferenceError(error instanceof Error ? error.message : 'OCR 推理失败，请重试') }
+}
 
 function fitDet(width: number, height: number) {
   const limit = 1280
@@ -172,23 +179,26 @@ function decodeCtc(probs: Float32Array, time: number, classes: number, dict: str
   return text.trim()
 }
 
-export async function recognize(sessions: OcrSessions, image: PixelImage): Promise<OcrWord[]> {
+export async function recognize(sessions: OcrSessions, image: PixelImage, progress: (stage: string, fraction: number) => void = () => {}): Promise<OcrWord[]> {
   const fitted = fitDet(image.width, image.height)
   const detInput = sampleTensor(image, fitted.width, fitted.height)
-  const detTensor = await sessions.det.run(detInput, [1, 3, fitted.height, fitted.width])
+  progress('检测文字位置', 0)
+  const detTensor = await infer(sessions.det, detInput, [1, 3, fitted.height, fitted.width])
   const dims = detTensor.dims
   const mapH = Number(dims.at(-2))
   const mapW = Number(dims.at(-1))
   const boxes = boxesFromMap(detTensor.data as Float32Array, mapW, mapH, image.width, image.height)
   const words: OcrWord[] = []
-  for (const box of boxes) {
+  progress(`识别文字 0/${boxes.length}`, 0.15)
+  for (const [index, box] of boxes.entries()) {
     const rec = recTensor(image, box)
-    const recTensorOut = await sessions.rec.run(rec.data, [1, 3, 48, rec.width])
+    const recTensorOut = await infer(sessions.rec, rec.data, [1, 3, 48, rec.width])
     const recDims = recTensorOut.dims
     const time = Number(recDims.length === 3 ? recDims[1] : recDims[0])
     const classes = Number(recDims.at(-1))
     const text = decodeCtc(recTensorOut.data as Float32Array, time, classes, sessions.dict)
     if (text) words.push({ text, x: box.x, y: box.y, width: box.width, height: box.height })
+    progress(`识别文字 ${index + 1}/${boxes.length}`, 0.15 + 0.85 * (index + 1) / boxes.length)
   }
   return words
 }

@@ -2,6 +2,7 @@
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
+import ToggleField from '../shared/ToggleField.vue'
 import { computed, shallowRef, watch } from 'vue'
 import { NATURES, SUBSKILLS, pokeById } from '../../calc/data'
 import { clearIngredientSlot, ingredientColumns, setIngredientChoice } from '../../calc/ingredients'
@@ -22,6 +23,7 @@ import LevelSelector from '../shared/LevelSelector.vue'
 const components_team_MemberEditor_config_clientDefaults = clientDefaults.modules.components_team_MemberEditor
 
 
+const natureMinted = computed({ get: () => model.value.natureMinted === true, set: (natureMinted: boolean) => patch({ natureMinted }) })
 const model = defineModel<MemberDraft>({ required: true })
 const props = withDefaults(defineProps<{ actions?: boolean, shiny?: boolean, ignore?: readonly MemberEditorField[] }>(), { actions: true, shiny: false, ignore: () => [] })
 const visible = (field: MemberEditorField) => !props.ignore.includes(field)
@@ -253,10 +255,11 @@ function stepEvolution(delta: number) {
     </section>
 
     <template v-if="visible('nature')">
+    <ToggleField v-model="natureMinted" label="已使用净白薄荷（性格无加减成）" />
     <button class="btn ghost" type="button" @click="natureOpen = !natureOpen">性格 · {{ model.nature }}</button>
     <div v-if="natureOpen" class="picker-opts">
       <button v-for="nature in NATURES" :key="nature.name" type="button" :class="{ on: model.nature === nature.name }" @click="patch({ nature: nature.name }); natureOpen = false">
-        {{ nature.name }} {{ natureMark(nature.up, '↑') }} {{ natureMark(nature.down, '↓') }}
+        {{ nature.name }} {{ model.natureMinted ? '' : natureMark(nature.up, '↑') }} {{ model.natureMinted ? '' : natureMark(nature.down, '↓') }}
       </button>
     </div>
 

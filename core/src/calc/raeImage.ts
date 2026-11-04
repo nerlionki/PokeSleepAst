@@ -1,6 +1,7 @@
+import { INGREDIENT_CATALOG } from './ingredientCatalog'
 import extracted0 from '../data/compatibility-maps.resource'
 import { cloneData } from './dataClone'
-import { BERRIES, berryByName } from './data'
+import { BERRIES, RECIPES, berryByName } from './data'
 
 import { localImage } from '#platform/images'
 const raeImage_config_extracted0 = extracted0.modules.raeImage
@@ -12,8 +13,9 @@ export function berryImageUrl(name: string): string {
   return index >= 0 ? localImage(`berry/${index + 1}.webp`) : ''
 }
 
-export function ingredientImageUrl(id: number): string {
-  return localImage(`ingredient/${id}.webp`)
+export function ingredientImageUrl(id: number, name?: string, imageFile?: string): string {
+  const declared = imageFile ?? INGREDIENT_CATALOG.find(row => row.name === name)?.imageFile
+  return localImage(declared ?? `ingredient/${id}.webp`) || localImage('ingredient/0.webp')
 }
 
 /** RAE 副技能图编号，见 https://pks.raenonx.cc/zh/stats/subskill */
@@ -64,7 +66,9 @@ export function mealId(name: string): number | undefined {
   return MEAL_ID[name]
 }
 
-export function mealImageUrl(name: string): string {
+export function mealImageUrl(name: string, imageFile?: string): string {
+  const declared = imageFile ?? (RECIPES.find(row => row.name === name) as { imageFile?: string } | undefined)?.imageFile
+  if (declared) return localImage(declared)
   const id = MEAL_ID[name]
   if (!id) return ''
   return localImage(`meal/${id}.webp`)

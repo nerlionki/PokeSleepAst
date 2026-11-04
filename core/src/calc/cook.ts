@@ -1,9 +1,11 @@
+import { assertKnownIngredientEnergy, ingredientEnergyValue } from './activityIngredients'
+import type { RecipeEnergyModifier } from './activities'
 import ruleParameters from '../data/rule-parameters.resource'
 import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 import type { CookMeal, MealCategory, Settings } from '../types'
-import { INGREDIENTS, RECIPES } from './data'
-import { activityValues, createActivityContext } from './activities'
+import { RECIPES } from './data'
+import { activityValues, createActivityContext, activityRecipeCategories, assertActivitySupported } from './activities'
 const cook_config_extracted0 = extracted0.modules.cook
 const cook_cookEnergy_ruleParameters = ruleParameters.modules.cook.cookEnergy
 const cook_cookingContext_ruleParameters = ruleParameters.modules.cook.cookingContext
@@ -35,46 +37,56 @@ export function cookEnergy(recipeName: string, extra: number, sunday: boolean, r
 
 export type CookSettings = Readonly<Pick<Settings, 'goodCamp' | 'sundayPot' | 'potSize' | 'mealCategory' | 'areaBonus' | 'recipeLevels'> & Partial<Pick<Settings, 'activity' | 'island'>>>
 export type IngredientBag = Readonly<Record<string, number>>
-export interface CookOptions { pot?: number, multiplier?: number }
+export interface CookOptions { minute?: number, pot?: number, multiplier?: number }
 export interface CookResult { meals: CookMeal[], remain: Record<string, number> }
 export interface IngredientAllocation { remain: Record<string, number>, used: number, energy: number }
 
-const ingredientEnergy = new Map(INGREDIENTS.map(ingredient => [ingredient.name, ingredient.energy]))
 
 /** Allocate filler ingredients by energy without changing the caller's inventory.
  * Unknown ingredients retain the existing branch-specific energy fallback. */
-export function allocateIngredients(bag: IngredientBag, capacity: number, unknownEnergy = 0): IngredientAllocation {
-  const names = Object.keys(bag).sort((a, b) => (ingredientEnergy.get(b) ?? 0) - (ingredientEnergy.get(a) ?? 0))
+export function allocateIngredients(bag: IngredientBag, capacity: number, unknownEnergy = 0, energyMultipliers: Readonly<Record<string, number>> = {}): IngredientAllocation {
+  assertKnownIngredientEnergy(bag, capacity)
+  const energyOf = (name: string) => (ingredientEnergyValue(name) ?? unknownEnergy) * (energyMultipliers[name] ?? 1)
+  const names = Object.keys(bag).sort((a, b) => energyOf(b) - energyOf(a))
   return names.reduce<IngredientAllocation>((state, name) => {
     const take = Math.min(Math.floor(state.remain[name] ?? 0), capacity - state.used)
     if (take <= 0) return state
     return {
       remain: { ...state.remain, [name]: (state.remain[name] ?? 0) - take },
       used: state.used + take,
-      energy: state.energy + take * (ingredientEnergy.get(name) ?? unknownEnergy),
+      energy: state.energy + take * energyOf(name),
     }
   }, { remain: { ...bag }, used: 0, energy: 0 })
 }
 
+export function recipeEnergy(recipe: typeof RECIPES[number], settings: CookSettings, modifiers: readonly RecipeEnergyModifier[] = []): number {
+  const matches = modifiers.filter(rule => (!rule.ingredientNames || rule.ingredientNames.every(name => recipe.ingredients.some(i => i.name === name)))
+    && (!rule.recipeNames || rule.recipeNames.includes(recipe.name)) && (!rule.categories || rule.categories.includes(recipe.category)))
+  const multiplier = matches.length ? Math.max(...matches.map(rule => rule.multiplier)) : 1
+  return recipe.baseEnergy * recipeLevelMult(recipeLevelOf(settings, recipe.name)) * multiplier
+}
+
 function cookingContext(settings: CookSettings, sunday: boolean, options: CookOptions) {
-  const activity = activityValues(createActivityContext('research', settings.activity), settings.island ?? '')
+  const context = createActivityContext('research', settings.activity)
+  assertActivitySupported(context, 'cooking', options.minute ?? 240, settings.island)
+  const activity = activityValues(context, settings.island ?? '', undefined, options.minute ?? 240)
   const potMul = (settings.goodCamp ? cook_cookingContext_ruleParameters.campPotMultiplier : 1) * (sunday || settings.sundayPot ? cook_cookingContext_ruleParameters.sundayPotMultiplier : 1)
-  const pot = options.pot ?? Math.ceil(settings.potSize * potMul * activity.potSizeMultiplier)
-  const pool = RECIPES.filter(recipe => recipe.category === settings.mealCategory && !recipe.mix)
-    .sort((a, b) => b.baseEnergy * recipeLevelMult(recipeLevelOf(settings, b.name)) - a.baseEnergy * recipeLevelMult(recipeLevelOf(settings, a.name)))
+  const pot = options.pot ?? Math.ceil((settings.potSize + activity.potCapacityBonus) * potMul * activity.potSizeMultiplier)
+  const pool = RECIPES.filter(recipe => activityRecipeCategories(activity, settings.mealCategory).includes(recipe.category) && !recipe.mix)
+    .sort((a, b) => recipeEnergy(b, settings, activity.recipeEnergyModifiers) - recipeEnergy(a, settings, activity.recipeEnergyModifiers))
   const mix = RECIPES.find(recipe => recipe.category === settings.mealCategory && recipe.mix)
   const chance = Math.min(1, (sunday ? cook_cookingContext_ruleParameters.sundayCritChance : cook_cookingContext_ruleParameters.normalCritChance) + activity.cookingCritBonus)
-  return { pot, pool, mix, settings, multiplier: options.multiplier ?? (1 + chance * ((sunday ? cook_cookingContext_ruleParameters.sundayCritMultiplier : cook_cookingContext_ruleParameters.normalCritMultiplier) * activity.cookingCritMultiplier - 1)) * activity.cookingEnergyMultiplier }
+  return { pot, pool, mix, settings, activity, multiplier: options.multiplier ?? (1 + chance * ((sunday ? cook_cookingContext_ruleParameters.sundayCritMultiplier : cook_cookingContext_ruleParameters.normalCritMultiplier) * activity.cookingCritMultiplier - 1)) * activity.cookingEnergyMultiplier }
 }
 
 function cookMealWithContext(bag: IngredientBag, context: ReturnType<typeof cookingContext>): { meal: CookMeal, remain: Record<string, number> } {
-  const { pot, pool, mix, settings, multiplier } = context
+  const { pot, pool, mix, settings, multiplier, activity } = context
   const hit = pool.find(recipe => recipe.pot <= pot && recipe.ingredients.every(ingredient => (bag[ingredient.name] ?? 0) >= ingredient.count))
   const baseBag = hit ? hit.ingredients.reduce<Record<string, number>>((remain, ingredient) => ({
     ...remain, [ingredient.name]: (remain[ingredient.name] ?? 0) - ingredient.count,
   }), { ...bag }) : bag
-  const allocation = allocateIngredients(baseBag, hit ? Math.max(0, pot - hit.pot) : pot, hit ? 0 : cook_cookMealWithContext_ruleParameters.unknownIngredientEnergy)
-  const baseEnergy = hit ? hit.baseEnergy * recipeLevelMult(recipeLevelOf(settings, hit.name)) : 0
+  const allocation = allocateIngredients(baseBag, hit ? Math.max(0, pot - hit.pot) : pot, hit ? 0 : cook_cookMealWithContext_ruleParameters.unknownIngredientEnergy, activity.extraIngredientEnergyMultipliers)
+  const baseEnergy = hit ? recipeEnergy(hit, settings, activity.recipeEnergyModifiers) : 0
   return {
     meal: {
       name: hit?.name ?? mix?.name ?? '拌拌',

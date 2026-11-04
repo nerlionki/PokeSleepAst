@@ -61,6 +61,7 @@ function toInput(member: SlotMember): ProduceInput & { uid: string, name: string
     pokeId: member.pokeId,
     level: level.value ?? member.level,
     nature: member.nature,
+    natureMinted: member.natureMinted,
     subskills: member.subskills,
     ingredientSlots: member.ingredientSlots,
     skillLevel: member.skillLevel,
@@ -103,6 +104,7 @@ const editingDraft = computed({
         pokeId: next.pokeId,
         level: next.level,
         nature: next.nature,
+    natureMinted: next.natureMinted === true,
         subskills: next.subskills,
         ingredientSlots: next.ingredientSlots,
         skillLevel: next.skillLevel,
@@ -201,6 +203,7 @@ function saveCustomToBox() {
             :poke-id="member.pokeId"
             :level="level ?? member.level"
             :nature="member.nature"
+            :nature-minted="member.natureMinted"
             :subskills="member.subskills"
             :ingredient-slots="member.ingredientSlots"
             :skill-level="member.skillLevel"

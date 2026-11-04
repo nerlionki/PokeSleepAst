@@ -72,6 +72,13 @@ export default defineAppConfig({
       ]
     },
     {
+      "name": "asset-pack3",
+      "root": "asset-pack3",
+      "pages": [
+        "index"
+      ]
+    },
+    {
       "name": "ocr-pack0",
       "root": "ocr-pack0",
       "pages": [

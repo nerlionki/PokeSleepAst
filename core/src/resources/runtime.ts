@@ -5,7 +5,8 @@ export function setResourceContext(value: ResourceContext) { context = value }
 export function resourceContext() { return context }
 export interface ResourceFile { path: string; bytes: number; sha256: string }
 export interface ResourceManifest {
-  schemaVersion: 1; contract: 'sleepast-data-v1'; clientMajor: 2; version: string
+  schemaVersion: 1; contract: 'sleepast-data-v2'; clientMajor: 2; version: string
+  activityModelVersion: 2; requiredCapabilities: string[]
   data: ResourceFile; files: string[]; assets: Record<string, ResourceFile>
 }
 export interface ResourceSnapshot { manifest: ResourceManifest; data: Record<string, unknown> }

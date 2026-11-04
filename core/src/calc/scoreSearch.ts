@@ -1,6 +1,6 @@
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
-import { activityBerrySettings, activityValues, snapshotActivity } from './activities'
+import { activityBerrySettings, activityValues, snapshotActivity, activityRecipeCategories } from './activities'
 import { RECIPES, pokeById } from './data'
 import { produce } from './produce'
 import { resolveMemberSkill } from './mew'
@@ -16,7 +16,7 @@ const scoreSearch_scoreSearchSteps_runtimeParameters = runtimeParameters.modules
 
 
 export function scoreFingerprint(request: ScoreRequest): string {
-  return JSON.stringify({ version: SCORE_RULE_VERSION, activityRuleVersion: 1, settings: snapshotActivity(request.settings, 'week'), box: request.box, options: request.options })
+  return JSON.stringify({ version: SCORE_RULE_VERSION, activityRuleVersion: 3, settings: snapshotActivity(request.settings, 'week'), box: request.box, options: request.options })
 }
 /** Rank candidates using the actual planning interval, including midweek event phases. */
 export function scoreCandidateProduction(request: ScoreRequest, pokemon: ScoreRequest['box'][number]) {
@@ -56,7 +56,13 @@ function policyPool(request: ScoreRequest): ScorePolicy[] {
     const result = scoreCandidateProduction(request, p)
     return { pokemon: p, poke, result, skill: resolveMemberSkill(poke, p).name }
   })
-  const recipes = RECIPES.filter(r => r.category === o.category && !r.mix)
+  const snapshot = snapshotActivity(settings, 'week')
+  const bounds = scoreBounds(o)
+  let allCategories = false
+  for (let minute = bounds.start; minute < bounds.end; minute = Math.min(bounds.end, (Math.floor((minute - 240) / 1440) + 1) * 1440 + 240)) {
+    if (activityRecipeCategories(activityValues(snapshot.activity, settings.island, undefined, minute), o.category).some(category => category !== o.category)) allCategories = true
+  }
+  const recipes = RECIPES.filter(r => (allCategories || r.category === o.category) && !r.mix)
     .sort((a, b) => b.baseEnergy * recipeLevelMult(recipeLevelOf(settings, b.name)) - a.baseEnergy * recipeLevelMult(recipeLevelOf(settings, a.name)))
   const team = (scores: { uid: string, pokeId: number, score: number }[]) => {
     let special: SpecialTeamState = 'none'

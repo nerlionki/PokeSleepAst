@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ANNOUNCED } from '../../calc/announcedContent'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, ref, shallowRef } from 'vue'
@@ -39,7 +40,7 @@ const activity = useActivities(settings, () => settings.value.island)
 const sleepTypes = computed(() => ['全部', ...new Set(POKEDEX.map((p) => p.sleepType))])
 const skills = computed(() => ['全部', ...new Set(POKEDEX.map((p) => p.mainSkill))])
 
-const list = computed(() => POKEDEX.filter((p) => {
+const knownList = computed(() => POKEDEX.filter((p) => {
   if (!pokeHit(p, q.value)) return false
   if (spec.value.length && !spec.value.some(value => specialtyHit(p.specialty, value))) return false
   if (!matchesChoice(sleep.value, p.sleepType)) return false
@@ -48,6 +49,11 @@ const list = computed(() => POKEDEX.filter((p) => {
   return true
 }).sort(compareDex))
 
+const announced = computed(() => ANNOUNCED.pokemon.flatMap(p => (p.nationalDex ?? p.imageId) != null ? [{ ...p, id: (p.nationalDex ?? p.imageId)! }] : []).filter(p => !POKEDEX.some(known => known.name === p.name || known.id === p.id)
+  && pokeHit(p, q.value) && !spec.value.length && matchesChoice(sleep.value, p.sleepType) && !berry.value.length && !skill.value.length))
+// Display-only rows stay out of POKEDEX and all production/member selectors.
+const list = computed(() => [...knownList.value, ...announced.value].sort(compareDex))
+const announcedDetail = computed(() => ANNOUNCED.pokemon.find(p => (p.nationalDex ?? p.imageId) === selected.value && !POKEDEX.some(known => known.id === selected.value || known.name === p.name)) ?? null)
 const detail = computed(() => POKEDEX.find((p) => p.id === selected.value) ?? null)
 const board = computed(() => detail.value ? ingredientColumns(detail.value.ingredients) : [])
 const medals = computed(() => friendTiers(detail.value?.medalGroup))
@@ -86,6 +92,10 @@ function resetFilters() { q.value = ''; spec.value = []; sleep.value = []; berry
     </div>
     <p class="muted dex-fixed">{{ list.length }} 只</p>
     <VirtualPokedex :items="list" @pick="selected = $event" />
+    <DrawerSheet v-if="announcedDetail" :title="announcedDetail.name" @close="selected = null">
+      <PokeSprite v-if="announcedDetail.imageId" :id="announcedDetail.imageId" :name="announcedDetail.name" large />
+      <p>还未公布</p>
+    </DrawerSheet>
     <DrawerSheet v-if="detail" :title="detail.name" @close="selected = null">
       <div class="row">
         <PokeSprite :id="detail.id" :name="detail.name" large />

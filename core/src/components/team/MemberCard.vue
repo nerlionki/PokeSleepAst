@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ingredientEnergyValue } from '../../calc/activityIngredients'
+import { INGREDIENT_CATALOG } from '../../calc/ingredientCatalog'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -10,11 +12,11 @@ import { storeToRefs } from 'pinia'
 import { ingredientByName, natureByName, pokeById } from '../../calc/data'
 import { energyMultiplier, instantInterval } from '../../calc/helpSpeed'
 import { effectiveSkillLevel, unlockedSubskills, SUBSKILL_GATES } from '../../calc/member'
-import { natureStatFactor } from '../../calc/natureLabels'
+import { effectiveNature, natureStatFactor } from '../../calc/natureLabels'
 import { ribbonBonus, stagesLeft } from '../../calc/ribbon'
 import { carryLimit } from '../../calc/timeline'
 import { useSettingsStore } from '../../stores/settings'
-import { activityBerrySettings } from '../../calc/activities'
+import { activityBerrySettings, activityValues } from '../../calc/activities'
 import { useActivities } from '../../composables/useActivities'
 import type { CarryMode, ProduceResult, Settings } from '../../types'
 import BerryIcon from '../shared/BerryIcon.vue'
@@ -30,6 +32,7 @@ const props = defineProps<{
   pokeId: number
   level: number
   nature: string
+  natureMinted?: boolean
   subskills: string[]
   ingredientSlots: [number | null, number | null, number | null]
   skillLevel: number
@@ -55,7 +58,7 @@ const poke = computed(() => {
   const selected = resolveMemberSkill(species, props)
   return { ...species, mainSkill: selected.name, skillRate: selected.rate }
 })
-const nature = computed(() => natureByName(props.nature))
+const nature = computed(() => natureByName(effectiveNature(props)))
 const subs = computed(() => unlockedSubskills(props.level, props.subskills))
 const lines = computed(() => {
   const list = poke.value?.ingredients ?? []
@@ -65,11 +68,12 @@ const lines = computed(() => {
     return line ? [line] : []
   })
 })
+const unknownFoodEnergy = computed(() => Object.entries(props.result.ingredients).some(([name, count]) => count > 0 && ingredientEnergyValue(name) == null))
 const ingRows = computed(() => Object.entries(props.result.ingredients).map(([name, count]) => {
   const item = ingredientByName(name)
-  return { name, id: item?.id ?? 0, count, energy: count * (item?.energy ?? 0) }
+  return { name, id: item?.id ?? INGREDIENT_CATALOG.find(row => row.name === name)?.imageId ?? 0, count, energy: ingredientEnergyValue(name) == null ? null : count * ingredientEnergyValue(name)! }
 }))
-const ingEnergy = computed(() => ingRows.value.reduce((sum, row) => sum + row.energy, 0))
+const ingEnergy = computed(() => ingRows.value.reduce((sum, row) => sum + (row.energy ?? 0), 0))
 const skillFoodEnergy = computed(() => Object.entries(props.result.skillIngredients ?? {}).reduce((sum, [name, count]) => sum + count * (ingredientByName(name)?.energy ?? 0), 0))
 const foodScore = computed(() => props.result.cooking?.energy ?? ingEnergy.value)
 const totalEnergy = computed(() => props.result.berryEnergy + foodScore.value + props.result.skillEnergy)
@@ -89,7 +93,7 @@ const seconds = computed(() => {
   return instantInterval(
     mon.interval,
     props.level,
-    props.nature,
+    effectiveNature(props),
     subs.value,
     props.helpingBonus ?? settings.value.helpingBonus,
     props.wakeEnergy ?? settings.value.sleepScore,
@@ -105,7 +109,7 @@ const carry = computed(() => {
   const mon = poke.value
   if (!mon) return 0
   const ribbon = ribbonBonus(props.ribbonHours ?? 0, stagesLeft(mon.id))
-  return carryLimit(mon.carry, subs.value, settings.value.goodCamp, props.carryMode, ribbon.carry, exEffects(settings.value, mon.berry).carryExtra)
+  return carryLimit(mon.carry, subs.value, settings.value.goodCamp, props.carryMode, ribbon.carry, exEffects(settings.value, mon.berry).carryExtra + activityValues(activity.context.value, settings.value.island, mon).carryCapacityBonus, activityValues(activity.context.value, settings.value.island, mon).carryCapacityMultiplier)
 })
 
 const skillLv = computed(() => Math.min(skillMaxFor(poke.value?.mainSkill ?? ''), effectiveSkillLevel(props.level, props.skillLevel, props.subskills, poke.value?.mainSkill ?? '') + exEffects(settings.value, poke.value?.berry ?? '').skillLevels))
@@ -128,7 +132,7 @@ function helpClock(value: number) {
 
 function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium: string) {
   const bonus = 1 + (subs.value.includes(small) ? 0.18 : 0) + (subs.value.includes(medium) ? 0.36 : 0)
-  return base * natureStatFactor(props.nature, stat) * bonus
+  return base * natureStatFactor(effectiveNature(props), stat) * bonus
 }
 
 </script>
@@ -182,17 +186,17 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       />
     </div>
     <p class="member-nature">
-      {{ nature.name }}
+      {{ props.nature }} <span v-if="natureMinted">净白薄荷 · 无加减成</span>
       <span v-if="nature.up">{{ STAT[nature.up] }}↑</span>
       <span v-if="nature.down">{{ STAT[nature.down] }}↓</span>
     </p>
-    <p class="member-total">{{ Math.round(totalEnergy).toLocaleString('zh-CN') }}</p>
-    <div class="mix-bar" :title="`树果 ${berryShare}% · ${result.cooking ? '料理' : '食材'} ${ingShare}% · 技能 ${skillShare}%`">
+    <p class="member-total">{{ unknownFoodEnergy ? '还未公布' : Math.round(totalEnergy).toLocaleString('zh-CN') }}</p>
+    <div v-if="!unknownFoodEnergy" class="mix-bar" :title="`树果 ${berryShare}% · ${result.cooking ? '料理' : '食材'} ${ingShare}% · 技能 ${skillShare}%`">
       <i class="berry" :style="{ width: `${berryShare}%` }" />
       <i class="ing" :style="{ width: `${ingShare}%` }" />
       <i class="skill" :style="{ width: `${skillShare}%` }" />
     </div>
-    <p class="mix-legend">
+    <p v-if="!unknownFoodEnergy" class="mix-legend">
       <span>{{ berryShare }}%</span>
       <span>{{ ingShare }}%</span>
       <span>{{ skillShare }}%</span>
@@ -209,12 +213,12 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
     </p>
     <p class="member-line ing">
       <span>食材 {{ (rate(poke.ingredientRate, 'ingredient', 'ingS', 'ingM') * 100).toFixed(1) }}%</span>
-      <b>{{ Math.round(ingEnergy).toLocaleString('zh-CN') }}</b>
+      <b>{{ unknownFoodEnergy ? '还未公布' : Math.round(ingEnergy).toLocaleString('zh-CN') }}</b>
     </p>
     <p v-if="result.cooking" class="member-line ing"><span>实际料理期望</span><b>{{ Math.round(result.cooking.energy).toLocaleString('zh-CN') }}</b></p>
     <p v-for="row in ingRows" :key="row.name" class="member-line quiet">
       <span><IngredientIcon :id="row.id" :name="row.name" small /> {{ row.count.toFixed(2) }}</span>
-      <b>{{ Math.round(row.energy).toLocaleString('zh-CN') }}</b>
+      <b>{{ row.energy == null ? '还未公布' : Math.round(row.energy).toLocaleString('zh-CN') }}</b>
     </p>
     <p class="member-line skill">
       <span><MainSkillIcon :name="poke.mainSkill" /> 技能 LV{{ skillLv }} {{ poke.mainSkill }} {{ (Math.min(1, rate(poke.skillRate, 'skill', 'skillS', 'skillM') * exEffects(settings, poke.berry).skillMultiplier) * 100).toFixed(1) }}%</span>

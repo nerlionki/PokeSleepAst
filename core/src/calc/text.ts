@@ -12,7 +12,7 @@ export function foldText(s: string): string {
 
 /** 截图文字：先把游戏里的「機率」收成资料用的「概率」，再繁简折叠。 */
 export function ocrFold(s: string): string {
-  return foldText(String(s ?? '').replaceAll('機率', '概率').replaceAll('机率', '概率'))
+  return foldText(String(s ?? '').replaceAll('機率', '概率').replaceAll('机率', '概率').replaceAll('沒', '没').replaceAll('帶', '带').replaceAll('來', '来').replaceAll('禱', '祷'))
 }
 
 export function textHit(hay: string, needle: string): boolean {

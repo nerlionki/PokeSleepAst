@@ -22,7 +22,7 @@ export function startResources() {
 async function loadResources() {
 const context = await selectedDataSource()
 setResourceContext(context)
-const path = `${wx.env.USER_DATA_PATH}/sleepast-resources-v1-${context}.json`
+const path = `${wx.env.USER_DATA_PATH}/sleepast-resources-v2-${context}.json`
 return initializeResources({
   async readCache() { return wx.getFileSystemManager().readFileSync(path, 'utf8') as string },
   async writeCache(value) {

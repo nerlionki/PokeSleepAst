@@ -53,6 +53,8 @@ export interface BoxPokemon {
   pokeId: number
   level: number
   nature: string
+  /** 已使用净白薄荷：保留原性格文字，计算时取消全部性格加减成。 */
+  natureMinted?: boolean
   subskills: string[]
   ingredientSlots: IngredientSlots
   skillLevel: number
@@ -97,6 +99,7 @@ export interface ProduceInput {
   pokeId: number
   level: number
   nature: string
+  natureMinted?: boolean
   subskills: string[]
   ingredientSlots: IngredientSlots
   skillLevel: number

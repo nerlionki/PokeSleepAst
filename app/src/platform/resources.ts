@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { initializeResources } from '../../../core/src/resources/loader'
 import { updateLoadingProgress } from '../../../core/src/resources/loadingProgress'
-const cacheName = () => 'sleepast-resources-v1-' + resourceContext()
+const cacheName = () => 'sleepast-resources-v2-' + resourceContext()
 async function database(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(cacheName(), 1)

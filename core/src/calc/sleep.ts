@@ -3,7 +3,7 @@ import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
-import { ACTIVITY_CATALOG, EVENT_PARAMETERS, activitySleepStyles, activityValues, createActivityContext, type ActivitySelection } from './activities'
+import { ACTIVITY_CATALOG, EVENT_PARAMETERS, activitySleepStyles, activityValues, createActivityContext, assertActivitySupported, type ActivitySelection } from './activities'
 import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix, type PokemonUps } from './sleepRules'
 import { selectSleepStyle } from './sleepSelection'
 import { isLastRollExcluded } from './sleepLastRoll'
@@ -161,6 +161,9 @@ export interface DrawOpts extends ResearchBonuses {
   campTicket?: boolean
   activity?: ActivitySelection
   activityResolved?: boolean
+  teamPokemonIds?: number[]
+  tutorial?: boolean
+  measurementStartedAt?: string
   researchedBefore?: number
   /** First/second research is separate from the number of preceding Pokémon. */
   researchSession?: 0 | 1
@@ -303,8 +306,9 @@ export function sleepDraw(
   opts: DrawOpts = {},
 ): DrawnStyle[] {
   if (!opts.activityResolved) {
-    const activity = createActivityContext('research', opts.activity)
-    const effects = activityValues(activity, island, undefined, (sleep_sleepDraw_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix), shinyUp: opts.shinyUp ?? false })
+    const activity = createActivityContext('research', { ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt })
+    assertActivitySupported(activity, 'research', 240, island, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
+    const effects = activityValues(activity, island, undefined, (sleep_sleepDraw_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix), shinyUp: opts.shinyUp ?? false }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
     if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier
     opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix, shinyUp: effects.shinyUp }
   }
@@ -348,7 +352,7 @@ export function sleepDraw(
     let picked: DrawnStyle | undefined
     const item = selectSleepStyle(usable, remaining, i === n - 1, rng, (s) => {
       const missing = boost && !discovered.has(styleKey(s.pokeId, s.stars, s.styleId))
-      return (missing ? UNDISCOVERED_WEIGHT : 1) * pokemonSleepWeight(s.pokeId, opts.eventMult, opts.pokemonUps) * (!opts.activity?.catalog?.activities.length && opts.activity?.overrides?.encounterWeightMultiplier == null ? 1 : activityValues(createActivityContext('research', opts.activity), island, pokeById(s.pokeId)).encounterWeightMultiplier)
+      return (missing ? UNDISCOVERED_WEIGHT : 1) * pokemonSleepWeight(s.pokeId, opts.eventMult, opts.pokemonUps) * (!opts.activity?.catalog?.activities.length && opts.activity?.overrides?.encounterWeightMultiplier == null ? 1 : activityValues(createActivityContext('research', { ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt }), island, pokeById(s.pokeId)).encounterWeightMultiplier)
     })
     if (item) {
       const missing = boost && !discovered.has(styleKey(item.pokeId, item.stars, item.styleId))
@@ -383,8 +387,9 @@ export function* sleepExpectSteps(
   onProgress?: (completed: number) => void,
   checkpoint?: SleepExpectCheckpoint,
 ) {
-  const activity = createActivityContext('research', opts.activity)
-  const effects = activityValues(activity, island, undefined, (sleep_sleepExpectSteps_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix), shinyUp: opts.shinyUp ?? false })
+  const activity = createActivityContext('research', { ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt })
+  assertActivitySupported(activity, 'research', 240, island, opts.researchSession ?? 0)
+  const effects = activityValues(activity, island, undefined, (sleep_sleepExpectSteps_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix), shinyUp: opts.shinyUp ?? false }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
   if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier
   opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix, shinyUp: effects.shinyUp }
   const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()

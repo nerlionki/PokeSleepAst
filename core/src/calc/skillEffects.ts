@@ -43,6 +43,7 @@ export interface EffectActor {
   stockpile?: number[]
 }
 export interface EffectContext {
+  modifiers?(actor: EffectActor, skillName: string): { ingredient: number; berry: number; shards: number; healing: number }
   ingredient(actor: EffectActor, name: string, amount: number): void
   help(target: EffectActor, amount: number): void
   pot(amount: number): void
@@ -74,11 +75,14 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
   for (const choice of choices) {
     const name = MAIN_SKILLS.find(skill => skill.id === choice.id)!.name
     const level = clampSkillLevel(name, actor.skillLv)
+    const modifiers = context.modifiers?.(actor, name) ?? { ingredient: 1, berry: 1, shards: 1, healing: 1 }
+    const grant = (key: 'dreamShards' | 'candies' | 'berryJuice', amount: number) => reward(actor, key, amount * (key === 'dreamShards' ? modifiers.shards : 1))
     const w = weight * choice.probability
     const value = (column: string) => mainSkillValue(name, level, column)
-    const heal = (target: EffectActor, amount: number) => { target.energy = Math.min(skillEffects_applyMainSkill_ruleParameters.energyCap, target.energy + amount * w * target.factor) }
-    const food = (amount: number, pool = INGREDIENTS) => { for (const ingredient of pool) context.ingredient(actor, ingredient.name, amount * w / pool.length) }
+    const heal = (target: EffectActor, amount: number) => { target.energy = Math.min(skillEffects_applyMainSkill_ruleParameters.energyCap, target.energy + amount * w * target.factor * modifiers.healing) }
+    const food = (amount: number, pool = INGREDIENTS) => { for (const ingredient of pool) context.ingredient(actor, ingredient.name, amount * w * modifiers.ingredient / pool.length) }
     const berry = (target: EffectActor, amount: number) => {
+      amount *= modifiers.berry
       target.result.berries += amount * w
       target.result.skillBerries = (target.result.skillBerries ?? 0) + amount * w
       target.result.berryEnergy += amount * w * target.unitBerry
@@ -88,7 +92,7 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
     switch (choice.id) {
       case 1: case 2: case 5: case 39:
         context.charge(actor, chargeStrength(name, level) * w)
-        if (choice.id === 39) reward(actor, 'dreamShards', value('梦碎') * w)
+        if (choice.id === 39) grant('dreamShards', value('梦碎') * w)
         break
       case 15: {
         const table = MAIN_SKILLS.find(skill => skill.id === 15)!.extra![0]!.levels[level - 1]!
@@ -114,15 +118,15 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
         context.charge(actor, value('能量') * w)
         context.zone?.(Number(MAIN_SKILLS.find(skill => skill.id === 40)!.levels[level - 1]![1]!.replace('%', '')) / 100 * w)
         break
-      case 3: reward(actor, 'dreamShards', value('梦碎') * w); break
-      case 6: reward(actor, 'dreamShards', (value('最低') + value('最高')) / 2 * w); break
+      case 3: grant('dreamShards', value('梦碎') * w); break
+      case 6: grant('dreamShards', (value('最低') + value('最高')) / 2 * w); break
       case 7: heal(actor, value('活力')); break
       case 4:
         for (const target of team) heal(target, value('活力') / team.length)
         break
       case 8: case 32:
         for (const target of team) heal(target, value('活力'))
-        if (choice.id === 32) reward(actor, 'berryJuice', skillEffects_applyMainSkill_ruleParameters.berryJuiceChance * w)
+        if (choice.id === 32) grant('berryJuice', skillEffects_applyMainSkill_ruleParameters.berryJuiceChance * w)
         break
       case 17: {
         heal(actor, value('自己'))
@@ -140,12 +144,12 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
         break
       case 10: case 29: case 31:
         food(value('食材'))
-        if (choice.id === 29) reward(actor, 'candies', value('糖果') / 3 * w)
+        if (choice.id === 29) grant('candies', value('糖果') / 3 * w)
         if (choice.id === 31) crit.push({ amount: Number(MAIN_SKILLS.find(skill => skill.id === 31)!.levels[level-1]![1]!.replace('%','')) / 100, probability: w })
         break
       case 23:
         food(value('食材') * skillEffects_applyMainSkill_ruleParameters.plusSuccessChance, INGREDIENTS.filter(item => skillEffects_config_ruleCatalogs.applyMainSkillList1.values.includes(item.id)))
-        reward(actor, 'dreamShards', (value('梦碎') * skillEffects_applyMainSkill_ruleParameters.plusRareOneChance + value('大成功') * skillEffects_applyMainSkill_ruleParameters.plusRareTwoChance) * w)
+        grant('dreamShards', (value('梦碎') * skillEffects_applyMainSkill_ruleParameters.plusRareOneChance + value('大成功') * skillEffects_applyMainSkill_ruleParameters.plusRareTwoChance) * w)
         break
       case 24:
         food(value('食材') * (1 + 1/(skillEffects_applyMainSkill_runtimeParameters.p005 as 6)), INGREDIENTS.filter(item => skillEffects_config_ruleCatalogs.applyMainSkillList2.values.includes(item.id)))
@@ -159,7 +163,7 @@ export function applyMainSkill(actor: EffectActor, team: EffectActor[], context:
           const index = actor.input.ingredientSlots[0]
           // 正电追加发动者第一个食材；未选择食材则无追加。
           const ingredient = index == null ? undefined : pokeById(actor.input.pokeId)?.ingredients[index]
-          if (ingredient) context.ingredient(actor, ingredient.name, value('一致追加') * w)
+          if (ingredient) context.ingredient(actor, ingredient.name, value('一致追加') * w * modifiers.ingredient)
         }
         break
       case 11: case 25: case 41:

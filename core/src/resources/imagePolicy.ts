@@ -1,5 +1,5 @@
-/** Only these game images ship with either client. Shiny art is always remote. */
+/** Ordinary Pokémon, berries, ingredients and recipes have local image fallbacks. Shiny art is always remote. */
 export function isBundledImage(file: string): boolean {
-  return /^(?:images\/)?(?:berry\/|ingredient\/|pokemon\/(?:icons|portrait)\/)/.test(file)
+  return /^(?:images\/)?(?:berry\/|ingredient\/|meal\/|pokemon\/(?:icons|portrait)\/)/.test(file)
     && !file.includes('/shiny/')
 }

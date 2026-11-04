@@ -5,7 +5,8 @@ exports.loadImageModule = function (name) {
   const loaders = {
     "asset-pack0": () => require.async("./asset-pack0/images.js"),
     "asset-pack1": () => require.async("./asset-pack1/images.js"),
-    "asset-pack2": () => require.async("./asset-pack2/images.js")
+    "asset-pack2": () => require.async("./asset-pack2/images.js"),
+    "asset-pack3": () => require.async("./asset-pack3/images.js")
   };
   if (!loaders[name]) return Promise.reject(new Error('Invalid image package'));
   return loaders[name]();

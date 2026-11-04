@@ -4,6 +4,15 @@ ocrTest/*
 !ocrTest/ab97618f084672c22e4c145fe03d08bc.jpg
 !ocrTest/dedenne-20261026.jpg
 !ocrTest/ribombee-20261026.jpg
+!ocrTest/flygon-ios-20261103.png
+!ocrTest/magnezone-ios-20261104-1.png
+!ocrTest/magnezone-ios-20261104-2.png
+!ocrTest/ninetales-ios-20261104.png
+!ocrTest/skeledirge-shiny-ios-20261104.png
+!ocrTest/context/
+!ocrTest/context/wrong-flaaffy-result-20261104.jpg
+!ocrTest/context/ocr-progress-stuck-ios-20261104.png
+!ocrTest/context/iphone15-ios26-1-20261104.png
 docs/
 *.md
 !AGENTS.md
@@ -62,3 +71,6 @@ wxapp/scripts/test-*.mjs
 *.[lL][oO][gG]
 *.[lL][oO][gG].*
 *.[lL][oO][gG]-*
+
+!ocrTest/cresselia-minted-ios-20261104.png
+!ocrTest/cresselia-level70-ios-20261104.png

@@ -12,7 +12,7 @@ import { activityBerrySettings, createActivityContext } from './activities'
 import { energyMultiplier, levelInterval } from './helpSpeed'
 import { berryCount, slotDrop } from './ingredients'
 import { unlockedSubskills } from './member'
-import { natureStatFactor } from './natureLabels'
+import { natureStatFactor, effectiveNature } from './natureLabels'
 import { normalizeOcrMissing } from './ocrCompletion'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { POKEMON_LEVEL_MAX } from './xp'
@@ -77,7 +77,7 @@ export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBo
   const subs = unlockedSubskills(pokemon.level, pokemon.subskills)
   const ribbon = ribbonBonus(pokemon.tune?.ribbonHours ?? 0, stagesLeft(poke.id))
   // Use the displayed team interval, then maximum-energy efficiency. No camp or EX speed modifier.
-  const interval = levelInterval(poke.interval, pokemon.level, pokemon.nature, subs, helpingBonus, ribbon.speedCut)
+  const interval = levelInterval(poke.interval, pokemon.level, effectiveNature(pokemon), subs, helpingBonus, ribbon.speedCut)
   const helps = whistle_whistleMember_ruleParameters.rewardSeconds / (interval * energyMultiplier((whistle_whistleMember_runtimeParameters.p001 as 100)))
   const unlocked = pokemon.level >= (whistle_whistleMember_runtimeParameters.p002 as 60) ? 3 : pokemon.level >= (whistle_whistleMember_runtimeParameters.p003 as 30) ? 2 : 1
   const slots = pokemon.ingredientSlots.slice(0, unlocked).flatMap((index, slot) => {
@@ -85,7 +85,7 @@ export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBo
     const drop = slotDrop(poke.ingredients, slot, index)
     return drop ? [drop] : []
   })
-  const ingredientRate = slots.length ? Math.min(1, poke.ingredientRate * natureStatFactor(pokemon.nature, 'ingredient')
+  const ingredientRate = slots.length ? Math.min(1, poke.ingredientRate * natureStatFactor(effectiveNature(pokemon), 'ingredient')
     * (1 + (subs.includes('ingS') ? whistle_whistleMember_ruleParameters.findingS : 0) + (subs.includes('ingM') ? whistle_whistleMember_ruleParameters.findingM : 0))) : 0
   const berries = Math.round(helps * (1 - ingredientRate) * (berryCount(poke.specialty) + (subs.includes('berryS') ? ruleParameters.modules.whistle.berryCount.berryS : 0)))
   const ingredients: Record<string, number> = {}

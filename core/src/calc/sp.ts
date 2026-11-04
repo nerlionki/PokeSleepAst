@@ -6,6 +6,7 @@ import { ingredientColumns, slotDrop } from './ingredients'
 import { skillByPokedexName } from './mainSkills'
 import { subskillLevelBonus, unlockedSubskills } from './member'
 import { natureHelpFactor } from './helpSpeed'
+import { withEffectiveNature } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { GAME_LEVEL_MAX, POKEMON_LEVEL_MAX } from './xp'
 import type { BoxPokemon, IngredientSlots } from '../types'
@@ -18,6 +19,7 @@ export interface SpInput {
   pokeId: number
   level: number
   nature: string
+  natureMinted?: boolean
   subskills: string[]
   ingredientSlots: IngredientSlots
   skillLevel: number
@@ -53,10 +55,11 @@ export function defaultSpInput(pokeId = model.defaults.pokeId): SpInput {
 }
 
 /** Editor/Box skillLevel is the base level; add unlocked subskills exactly once. */
-export function spInputFromMember(pokemon: Pick<BoxPokemon, 'pokeId' | 'level' | 'nature' | 'subskills' | 'ingredientSlots' | 'skillLevel' | 'tune'>): SpInput {
+export function spInputFromMember(pokemon: Pick<BoxPokemon, 'pokeId' | 'level' | 'nature' | 'natureMinted' | 'subskills' | 'ingredientSlots' | 'skillLevel' | 'tune'>): SpInput {
   const poke = pokeById(pokemon.pokeId)
   const skill = poke && skillByPokedexName(poke.mainSkill, poke.id)
   return { pokeId: pokemon.pokeId, level: pokemon.level, nature: pokemon.nature,
+    ...(pokemon.natureMinted === true ? { natureMinted: true } : {}),
     subskills: [...pokemon.subskills], ingredientSlots: [...pokemon.ingredientSlots],
     skillLevel: Math.min(skill?.maxLevel ?? 1, pokemon.skillLevel + subskillLevelBonus(pokemon.level, pokemon.subskills)),
     ribbonHours: pokemon.tune?.ribbonHours ?? 0 }
@@ -65,6 +68,7 @@ export function spInputFromMember(pokemon: Pick<BoxPokemon, 'pokeId' | 'level' |
 export const spInputFromBox = spInputFromMember
 
 export function calculateSp(input: SpInput): SpResult {
+  input = withEffectiveNature(input)
   const poke = pokeById(input.pokeId)
   if (!poke || poke.interval <= 0) throw Error('该宝可梦暂无可计算的帮忙资料')
   if (!Number.isInteger(input.level) || input.level < 1 || input.level > POKEMON_LEVEL_MAX) throw Error('请选择有效的宝可梦等级')

@@ -6,7 +6,7 @@ import { createImageResolver, type ImageFiles } from './imageCache'
 import { activeSnapshot, remoteImage, RESOURCE_ORIGIN } from '../../../core/src/resources/runtime'
 import { sha256 } from '../../../core/src/resources/sha256'
 function localOnly(file: string): string { return (images as Record<string, string>)[file] ?? '' }
-export function localImage(file: string): string { return isBundledImage(file) ? localOnly(file) || remoteImage(`images/${file}`) : remoteImage(`images/${file}`) }
+export function localImage(file: string): string { return remoteImage(`images/${file}`) || (isBundledImage(file) ? localOnly(file) : '') }
 export function publicImage(file: string): string { return remoteImage(file) }
 export function bundledImage(src: string): string {
   const match = Object.entries(activeSnapshot()?.manifest.assets ?? {}).find(([,item]) => RESOURCE_ORIGIN + item.path === src)

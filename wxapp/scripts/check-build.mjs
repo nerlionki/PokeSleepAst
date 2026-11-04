@@ -62,7 +62,7 @@ for (const url of Object.values(images)) {
   const data = Buffer.from(modules.get(item.pack)[item.key] ?? '', 'base64')
   if (data.length !== item.size || data.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || `${createHash('sha256').update(data).digest('hex')}.png` !== item.file) throw Error(`Invalid image payload: ${url}`)
 }
-for (const folder of ['berry/', 'ingredient/', 'pokemon/icons/', 'pokemon/portrait/']) {
+for (const folder of ['berry/', 'ingredient/', 'meal/', 'pokemon/icons/', 'pokemon/portrait/']) {
   if (!Object.keys(images).some(key => key.startsWith(folder))) throw Error(`Missing image category ${folder}`)
 }
 if (Object.keys(images).some(file => !isBundledImage(file))) throw Error('Unexpected bundled image category')

@@ -1,7 +1,7 @@
 import { INGREDIENTS, POKEDEX, pokeById } from './data'
-import { recognize, type OcrSessions, type PixelImage } from './ocrPipeline'
-import { avatarBox, chooseSimilar, headerTextInfo, ingredientQuantityMarks, ingredientRowMarks, matchIngredientSlot, parseCard, planImports, readCarry, readMainSkill, splitCards, type OcrWord, type SpeciesEvidence } from './ocrBox'
-import { bestPortraitVariant, crop, diskCrop, ingredientIconCrop, ingredientSpriteScores, matchIngredientSprite, portraitScores, resizeRgba, speciesScores, trimOpaque } from './ocrVision'
+import { recognize, OcrInferenceError, type OcrSessions, type PixelImage } from './ocrPipeline'
+import { avatarBox, chooseSimilar, headerTextInfo, ingredientQuantityMarks, ingredientRowMarks, matchIngredientSlot, parseCard, planImports, readCarry, readMainSkill, speciesCandidates, splitCards, type OcrWord, type SpeciesEvidence } from './ocrBox'
+import { bestPortraitVariant, crop, diskCrop, ingredientIconCrop, ingredientIconOccluded, ingredientSpriteScores, matchIngredientSprite, portraitScores, resizeRgba, speciesScores, trimOpaque } from './ocrVision'
 import { ocrFold } from './text'
 import { slotDrop } from './ingredients'
 import { isAllRounder } from './specialty'
@@ -53,6 +53,7 @@ async function portraitTemplates(): Promise<{ id: number, shiny: boolean, image:
 }
 
 async function readSpeciesEvidence(image: PixelImage, words: OcrWord[]): Promise<SpeciesEvidence> {
+  const skill = readMainSkill(words)
   const marks = ingredientRowMarks(words)
   const urls = INGREDIENTS.flatMap((item) => {
     const url = ingredientImageUrl(item.id)
@@ -75,13 +76,27 @@ async function readSpeciesEvidence(image: PixelImage, words: OcrWord[]): Promise
       continue
     }
     const shot = ingredientIconCrop(image, mark.word, gap)
-    const ranked = ingredientSpriteScores(shot, refs)
+    if (index === 0 && ingredientIconOccluded(shot)) {
+      lines.push(null)
+      continue
+    }
+    let ranked = ingredientSpriteScores(shot, refs)
+    // 数量框只剩单个数字时，小裁片可能切掉图标边缘。仅在原轮廓有歧义时
+    // 复核较大的裁片；新结果必须更强且明确领先，不能合并一批弱候选。
+    if (ranked[0] && ranked[1] && ranked[0].score - ranked[1].score <= 15) {
+      const wider = ingredientIconCrop(image, mark.word, gap, 0.8)
+      if (!ingredientIconOccluded(wider)) {
+        const retry = ingredientSpriteScores(wider, refs)
+        if (retry[0] && retry[1] && retry[0].score > ranked[0].score
+          && retry[0].score - retry[1].score > 15) ranked = retry
+      }
+    }
     const top = ranked[0]
     // 灰色未解锁图标常有相近轮廓。低分不作为证据；相差 15 分内的候选交给组合/数量核对。
     lines.push(top && top.score >= 20 ? ranked.filter(row => top.score - row.score <= 15).map(row => row.id) : null)
   }
   return {
-    skill: readMainSkill(words), carry: readCarry(words),
+    skill, carry: readCarry(words),
     ingredients: [null, null],
     ingredientCandidates: [lines[0] ?? null, lines[1] ?? null, lines[2] ?? null],
     quantities: marks.map(mark => mark?.quantity ?? null) as [number | null, number | null, number | null],
@@ -89,18 +104,35 @@ async function readSpeciesEvidence(image: PixelImage, words: OcrWord[]): Promise
 }
 
 async function matchPortrait(image: PixelImage, words: OcrWord[]): Promise<{ id: number, shiny: boolean } | null> {
+  const evidence = await readSpeciesEvidence(image, words)
+  const allowed = new Set(speciesCandidates(evidence))
+  if (!allowed.size) return null
   const box = avatarBox(words)
   if (!box) return null
-  const shot = diskCrop(crop(image, box.x, box.y, box.size, box.size))
-  const variants = portraitScores(shot, await portraitTemplates())
+  const region = crop(image, box.x, box.y, box.size, box.size)
+  const shot = diskCrop(region)
+  const templates = (await portraitTemplates()).filter(template => allowed.has(template.id))
+  const variants = portraitScores(shot, templates)
   const scores = speciesScores(variants)
   const best = scores[0]
   if (!best || best.score > 76) return null
-  // 图片只提出合理候选，不能绕过主技能和食材校验；证据不能救回明显不相似的头像。
+  // 先按资料筛选，再在剩余物种内应用视觉门槛；不放宽明显不相似头像的分数上限。
   const candidates = scores.filter(row => row.score <= 76 && row.score - best.score < 18)
-  const evidence = await readSpeciesEvidence(image, words)
   const id = chooseSimilar(candidates, evidence)
-  if (!id) return null
+  if (!id) {
+    // 浅色角色可能与圆盘背景混在一起。保留原边缘复核，不放宽分数门槛，
+    // 不引入原图候选以外的物种，且普通/异色判断必须与圆盘裁片一致。
+    const retryVariants = portraitScores(region, templates)
+    const retryScores = speciesScores(retryVariants)
+    const retryBest = retryScores[0]
+    if (!retryBest || retryBest.score > 76) return null
+    const retryId = chooseSimilar(retryScores.filter(row => row.score <= 76
+      && row.score - retryBest.score < 18 && candidates.some(candidate => candidate.id === row.id)), evidence)
+    if (!retryId) return null
+    const retry = bestPortraitVariant(retryVariants, retryId)
+    const original = bestPortraitVariant(variants, retryId)
+    return retry && original && retry.shiny === original.shiny ? { id: retryId, shiny: retry.shiny } : null
+  }
   const variant = bestPortraitVariant(variants, id)
   return variant ? { id, shiny: variant.shiny } : null
 }
@@ -188,7 +220,7 @@ async function importScreenshotFiles(files: Array<File | string>, existing: BoxP
       report('读取截图')
       const image = await fileToImage(file)
       report('识别文字', 0.15)
-      const words = await recognize(sessions, image)
+      const words = await recognize(sessions, image, (stage, fraction) => report(stage, 0.15 + 0.5 * fraction))
       report('匹配头像与食材', 0.65)
       const groups = splitCards(words)
       if (!groups.length) {
@@ -203,10 +235,12 @@ async function importScreenshotFiles(files: Array<File | string>, existing: BoxP
           continue
         }
         const slotLines = await matchSlotLines(image, group, portrait.id)
-        cards.push(parseCard(group, { portraitId: portrait.id, shiny: portrait.shiny, slotLines }))
+        cards.push(parseCard(group, { portraitId: portrait.id, shiny: portrait.shiny, slotLines, characters: new Set(sessions.dict) }))
       }
     }
-    catch {
+    catch (error) {
+      // 推理引擎故障应结束任务并释放界面，不能伪装成图片未识别后继续复用坏会话。
+      if (error instanceof OcrInferenceError) throw error
       cards.push(null)
     }
     finally { completed++; report('截图处理完成') }

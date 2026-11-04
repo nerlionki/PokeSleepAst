@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { INGREDIENT_CATALOG } from '../../calc/ingredientCatalog'
+import { RECIPE_CATALOG, type RecipeDisplayRow } from '../../calc/recipeCatalog'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, ref, shallowRef } from 'vue'
-import { INGREDIENTS, RECIPES } from '../../calc/data'
-import { MEAL_CATEGORIES, type RecipeRow } from '../../calc/recipes'
+import { MEAL_CATEGORIES } from '../../calc/recipes'
 import { toggleChoice } from '../../calc/multiChoice'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import RecipeCard from './RecipeCard.vue'
@@ -11,22 +12,26 @@ import RecipeSheet from './RecipeSheet.vue'
 const components_data_RecipePane_config_clientDefaults = clientDefaults.modules.components_data_RecipePane
 
 
-const ingredients = ref<number[]>([])
+const ingredientOptions = INGREDIENT_CATALOG
+const ingredients = ref<string[]>([])
 const showIngredients = shallowRef(true)
 const category = shallowRef<(typeof MEAL_CATEGORIES)[number]['id']>((components_data_RecipePane_config_clientDefaults["categoryInitial"] as unknown as (typeof MEAL_CATEGORIES)[number]['id']))
 const sort = shallowRef<'energy' | 'pot'>('energy')
 const ascending = shallowRef(false)
-const opened = shallowRef<RecipeRow | null>((components_data_RecipePane_config_clientDefaults["openedInitial"] as unknown as RecipeRow | null))
+const opened = shallowRef<RecipeDisplayRow | null>((components_data_RecipePane_config_clientDefaults["openedInitial"] as unknown as RecipeDisplayRow | null))
 
 const list = computed(() => {
-  const rows = RECIPES.filter((r) => {
+  const rows = RECIPE_CATALOG.filter((r) => {
     return r.category === category.value
-      && (!ingredients.value.length || r.ingredients.some(ingredient => ingredients.value.includes(ingredient.id)))
+      && (!ingredients.value.length || r.ingredients.some(ingredient => ingredients.value.includes(ingredient.name)))
   })
   return rows.sort((a, b) => {
-    const difference = sort.value === 'pot' ? a.pot - b.pot : a.baseEnergy - b.baseEnergy
+    const left = sort.value === 'pot' ? a.pot : a.baseEnergy
+    const right = sort.value === 'pot' ? b.pot : b.baseEnergy
+    if (left == null || right == null) return left == null ? (right == null ? a.name.localeCompare(b.name, 'zh-CN') : 1) : -1
+    const difference = left - right
     return difference * (ascending.value ? 1 : -1)
-      || (sort.value === 'pot' ? b.baseEnergy - a.baseEnergy : a.pot - b.pot)
+      || (sort.value === 'pot' ? (b.baseEnergy ?? -1) - (a.baseEnergy ?? -1) : a.pot - b.pot)
       || a.name.localeCompare(b.name, 'zh-CN')
   })
 })
@@ -52,7 +57,7 @@ function resetFilters() { ingredients.value = [] }
       <p class="muted">包含任一所选食材</p>
       <div class="picker-opts">
         <button type="button" :class="{ on: !ingredients.length }" @click="ingredients = []">全部</button>
-        <button v-for="ingredient in INGREDIENTS" :key="ingredient.id" type="button" :class="{ on: ingredients.includes(ingredient.id) }" :aria-pressed="ingredients.includes(ingredient.id)" @click="toggleChoice(ingredients, ingredient.id, INGREDIENTS.map(item => item.id))"><IngredientIcon :id="ingredient.id" :name="ingredient.name" small />{{ ingredient.name }}</button>
+        <button v-for="ingredient in ingredientOptions" :key="ingredient.name" type="button" :class="{ on: ingredients.includes(ingredient.name) }" :aria-pressed="ingredients.includes(ingredient.name)" @click="toggleChoice(ingredients, ingredient.name, ingredientOptions.map(item => item.name))"><IngredientIcon :id="ingredient.imageId" :name="ingredient.name" small />{{ ingredient.name }}</button>
       </div>
     </section>
     <div class="recipe-tools">

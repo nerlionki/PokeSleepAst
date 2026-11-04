@@ -1,6 +1,6 @@
 import { activeSnapshot, remoteImage, RESOURCE_ORIGIN } from '../../../core/src/resources/runtime'
 import { isBundledImage } from '../../../core/src/resources/imagePolicy'
-const localImages = import.meta.glob(['../../../core/src/assets/imgs/berry/*.webp', '../../../core/src/assets/imgs/ingredient/*.webp', '../../../core/src/assets/imgs/pokemon/{icons,portrait}/*.webp'], {
+const localImages = import.meta.glob(['../../../core/src/assets/imgs/berry/*.webp', '../../../core/src/assets/imgs/ingredient/*.webp', '../../../core/src/assets/imgs/meal/*.webp', '../../../core/src/assets/imgs/pokemon/{icons,portrait}/*.webp'], {
   eager: true,
   query: '?url',
   import: 'default',
@@ -15,7 +15,7 @@ for (const [key, url] of Object.entries(localImages)) {
 
 export function localImage(file: string): string {
   const local = imageByFile.get(file) ?? ''
-  return isBundledImage(file) ? local || remoteImage(`images/${file}`) : remoteImage(`images/${file}`)
+  return remoteImage(`images/${file}`) || (isBundledImage(file) ? local : '')
 }
 
 export function publicImage(file: string): string { return remoteImage(file) }
@@ -26,7 +26,7 @@ export function bundledImage(src: string): string {
   return match[0].startsWith('images/') ? imageByFile.get(match[0].slice(7)) ?? '' : '/' + match[0]
 }
 
-/** Only ordinary Pokémon, berries and ingredients may use bundled fallbacks. */
+/** Recipe pictures also remain usable when their versioned remote assets are unavailable. */
 export function installImageFallbacks() {
   const onError = (event: Event) => {
     if (!(event.target instanceof HTMLImageElement)) return

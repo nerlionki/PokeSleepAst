@@ -249,7 +249,7 @@ const advancedCount = computed(() => Number(query.ingredients.length > 0) + Numb
         <PokeSprite :id="pokemon.pokeId" :name="boxLabel(pokemon)" :shiny="pokemon.shiny" />
         <div>
           <strong>{{ boxLabel(pokemon) }}<ShinyMark v-if="pokemon.shiny" /></strong>
-          <div class="muted">Lv.{{ pokemon.level }} · {{ pokemon.nature }}{{ pokemon.napping ? ' · 午睡岛' : '' }}</div>
+          <div class="muted">Lv.{{ pokemon.level }} · {{ pokemon.nature }}{{ pokemon.natureMinted ? " · 净白薄荷" : "" }}{{ pokemon.napping ? ' · 午睡岛' : '' }}</div>
           <span v-if="pokemon.ocrMissing?.length" class="amber">{{ pokemon.ocrMissing.length }} 项待补全</span>
         </div>
         <div class="stack">

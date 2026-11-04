@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FormField from './FormField.vue'
+import ToggleField from './ToggleField.vue'
 import { computed } from 'vue'
 import { NATURES, POKEDEX, SUBSKILLS, pokeById } from '../../calc/data'
 import { POKEMON_LEVEL_MAX } from '../../calc/xp'
@@ -8,6 +9,7 @@ import type { ProduceInput } from '../../types'
 import IngredientIcon from './IngredientIcon.vue'
 import PokePicker from './PokePicker.vue'
 
+const natureMinted = computed({ get: () => model.value.natureMinted === true, set: (natureMinted: boolean) => patch({ natureMinted }) })
 const model = defineModel<ProduceInput>({ required: true })
 
 const poke = computed(() => pokeById(model.value.pokeId) ?? POKEDEX[0]!)
@@ -44,6 +46,7 @@ function setSub(index: number, value: string) {
     <FormField v-slot="{ id }" label="性格"><select :id="id" v-model="nature">
         <option v-for="n in NATURES" :key="n.name" :value="n.name">{{ n.name }}</option>
       </select></FormField>
+    <ToggleField v-model="natureMinted" label="已使用净白薄荷（性格无加减成）" />
     <div v-for="i in 5" :key="i" class="field">
       <label>副技能 {{ i }}</label>
       <select :value="model.subskills[i - 1] ?? ''" @change="setSub(i - 1, ($event.target as HTMLSelectElement).value)">

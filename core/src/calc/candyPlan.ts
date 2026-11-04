@@ -3,11 +3,12 @@ import clientFactoryDefaults from '../data/client-defaults.resource'
 import extracted0 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { newUid } from './uid'
-import { EVENT_PARAMETERS, activityMiniCandyBoost, activityValues, createActivityContext, type ActivityContext, type ActivitySelection } from './activities'
+import { EVENT_PARAMETERS, activityMiniCandyBoost, activityValues, createActivityContext, assertActivitySupported, type ActivityContext, type ActivitySelection } from './activities'
 import growth from '../data/growth-meta.resource'
 import legacyStockKeys from '../data/legacy-candy-stock-keys.resource'
 import type { BoxPokemon } from '../types'
 import { natureByName, pokeById } from './data'
+import { effectiveNature } from './natureLabels'
 import { candyExpAtLevel, shardsTo } from './xp'
 const candyPlan_config_extracted0 = extracted0.modules.candyPlan
 const factory_candyPlan_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_candyPlan
@@ -89,7 +90,7 @@ export const CANDY_PRESETS = cloneData(candyPlan_config_extracted0.CANDY_PRESETS
 
 /** Pure Box-to-planning conversion; identity is supplied by the caller. */
 export function createCandyRowFromBox(pokemon: BoxPokemon, id: string): CandyRow {
-  const nature = natureByName(pokemon.nature)
+  const nature = natureByName(effectiveNature(pokemon))
   const start = Math.min(MAX_LEVEL, Math.max(1, pokemon.level))
   return {
     id,
@@ -123,6 +124,7 @@ export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: 
   if (!boost.available) return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: '当前活动日期未开放迷你糖果增强' }
   const poke = pokeById(row.pokeId)
   if (!poke) return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: '请选择宝可梦' }
+  assertActivitySupported(createActivityContext('research', activity), 'candy', 240, island)
   const effects = activityValues(createActivityContext('research', activity), island, poke)
   if (!Number.isInteger(row.start) || row.start < 1 || row.start > MAX_LEVEL) {
     return { candies: 0, shards: 0, level: row.start, missing: 0, unused: 0, error: '当前等级需在 1–70' }

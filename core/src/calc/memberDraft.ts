@@ -9,6 +9,7 @@ export function cloneMemberDraft<T extends MemberDraft>(draft: T): T {
 /** A saved individual becomes an isolated editor draft; missing tuning uses editor defaults. */
 export function memberDraftFromBox(pokemon: BoxPokemon): MemberDraft {
   return cloneMemberDraft({ pokeId: pokemon.pokeId, level: pokemon.level, nature: pokemon.nature,
+    ...(pokemon.natureMinted === true ? { natureMinted: true } : {}),
     subskills: pokemon.subskills, ingredientSlots: pokemon.ingredientSlots, skillLevel: pokemon.skillLevel,
     mewSkill: pokemon.mewSkill, tune: { ...defaultTune(), ...pokemon.tune } })
 }
@@ -17,6 +18,7 @@ export function memberDraftFromBox(pokemon: BoxPokemon): MemberDraft {
 export function memberDraftToBox(draft: MemberDraft): Omit<BoxPokemon, 'uid'> {
   const copy = cloneMemberDraft(draft)
   return { pokeId: copy.pokeId, level: copy.level, nature: copy.nature, subskills: copy.subskills,
+    ...(copy.natureMinted === true ? { natureMinted: true } : {}),
     ingredientSlots: copy.ingredientSlots, skillLevel: copy.skillLevel, mewSkill: copy.mewSkill,
     name: '', napping: false, tune: copy.tune }
 }

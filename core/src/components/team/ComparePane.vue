@@ -2,6 +2,7 @@
 import { defaultSkillLevel } from '../../calc/member'
 
 import { confirmRemoval } from '#platform/confirm'
+import { ingredientEnergyValue } from '../../calc/activityIngredients'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -38,6 +39,7 @@ interface CompareRow {
   name: string
   level: number
   nature: string
+  natureMinted?: boolean
   subskills: string[]
   ingredientSlots: [number | null, number | null, number | null]
   skillLevel: number
@@ -131,6 +133,7 @@ function updateEditing(next: MemberDraft) {
     pokeId: next.pokeId,
     level: next.level,
     nature: next.nature,
+    natureMinted: next.natureMinted === true,
     subskills: next.subskills,
     ingredientSlots: next.ingredientSlots,
     skillLevel: next.skillLevel,
@@ -164,6 +167,7 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
     name: custom ? nameOf(source.pokeId) : boxLabel(boxP!),
     level: input.level,
     nature: source.nature,
+    natureMinted: source.natureMinted,
     subskills: source.subskills,
     ingredientSlots: source.ingredientSlots,
     skillLevel: source.skillLevel,
@@ -176,11 +180,12 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
 }).filter((row): row is CompareRow => row !== null))
 
 function strength(row: CompareRow) {
+  if (Object.entries(row.r.ingredients).some(([name, count]) => count > 0 && ingredientEnergyValue(name) == null)) return Number.NaN
   const ingredients = Object.entries(row.r.ingredients).reduce((sum, [name, count]) => sum + count * (ingredientByName(name)?.energy ?? 0), 0)
   return row.r.berryEnergy + (row.r.cooking?.energy ?? ingredients) + row.r.skillEnergy
 }
 
-const peak = computed(() => Math.max(0, ...rows.value.map(strength)))
+const peak = computed(() => Math.max(0, ...rows.value.map(strength).filter(Number.isFinite)))
 
 function best(value: number) {
   return rows.value.length > 1 && value > 0 && value === peak.value
@@ -218,6 +223,7 @@ function saveCustomToBox() {
           :poke-id="row.pokeId"
           :level="row.level"
           :nature="row.nature"
+          :nature-minted="row.natureMinted"
           :subskills="row.subskills"
           :ingredient-slots="row.ingredientSlots"
           :skill-level="row.skillLevel"

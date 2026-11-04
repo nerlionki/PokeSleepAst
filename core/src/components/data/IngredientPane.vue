@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ANNOUNCED } from '../../calc/announcedContent'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
@@ -18,6 +19,7 @@ const openId = shallowRef(components_data_IngredientPane_config_clientDefaults["
 
 const list = computed(() => INGREDIENTS.filter((i) => textHit(i.name, props.q)))
 
+const announced = computed(() => ANNOUNCED.ingredients.filter(i => !INGREDIENTS.some(known => known.name === i.name) && textHit(i.name, props.q)))
 const top = fixedIngredientProducers
 
 function usesOf(id: number) {
@@ -35,6 +37,12 @@ function toggle(id: number) {
 
 <template>
   <div>
+    <article v-for="i in announced" :key="i.key" class="acc">
+      <DataRow :title="i.name" subtitle="能量与详情还未公布">
+        <template #lead><IngredientIcon v-if="i.imageId != null" :id="i.imageId" :name="i.name" /></template>
+        <template #trail><span /></template>
+      </DataRow>
+    </article>
     <article v-for="i in list" :key="i.id" class="acc">
       <DataRow
         :title="i.name"

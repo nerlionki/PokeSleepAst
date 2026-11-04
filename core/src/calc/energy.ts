@@ -1,9 +1,10 @@
+import { activityValues, createActivityContext } from './activities'
 import ruleParameters from '../data/rule-parameters.resource'
 import type { EnergyPoint, Settings, ProduceInput } from '../types'
 import { MEAL_RECOVERY } from './data'
 import { energyMultiplier } from './helpSpeed'
 import { unlockedSubskills } from './member'
-import { natureStatFactor } from './natureLabels'
+import { natureStatFactor, effectiveNature } from './natureLabels'
 const energy_recoveryFactor_ruleParameters = ruleParameters.modules.energy.recoveryFactor
 const energy_sleepRecoveredEnergy_ruleParameters = ruleParameters.modules.energy.sleepRecoveredEnergy
 const energy_energyCurve_ruleParameters = ruleParameters.modules.energy.energyCurve
@@ -20,14 +21,14 @@ function inSleep(minute: number, start: number, end: number): boolean {
   return minute >= start || minute < end
 }
 
-export function mealRecover(energy: number): number {
+export function mealRecover(energy: number, bonus = 0, multiplier = 1): number {
   const row = MEAL_RECOVERY.find((r) => energy >= r.min && energy < r.max)
-  return row?.recover ?? 0
+  return ((row?.recover ?? 0) + bonus) * multiplier
 }
 
 /** 仅睡眠回活：全队回复奖励按层数相加，回复熏香不影响料理或技能。 */
 export function recoveryFactor(input: ProduceInput, incense: boolean, teamBonuses = Number(unlockedSubskills(input.level, input.subskills).includes('energyRecover'))): number {
-  let f = natureStatFactor(input.nature, 'energy')
+  let f = natureStatFactor(effectiveNature(input), 'energy')
   f *= 1 + energy_recoveryFactor_ruleParameters.energyRecoveryBonus * Math.min(energy_recoveryFactor_ruleParameters.maxRecoveryBonuses, Math.max(0, teamBonuses))
   if (incense) f *= energy_recoveryFactor_ruleParameters.incenseMultiplier
   return f
@@ -39,9 +40,10 @@ export function sleepRecoveredEnergy(energy: number, score: number, input: Produ
 }
 
 export function energyCurve(settings: Settings, input: ProduceInput, days = 1): EnergyPoint[] {
+  const activity = createActivityContext(settings.period, settings.activity)
   const start = parseHm(settings.sleepStart)
   const end = parseHm(settings.sleepEnd)
-  const skillFactor = natureStatFactor(input.nature, 'energy')
+  const skillFactor = natureStatFactor(effectiveNature(input), 'energy')
   const skillPerTick = settings.dailySkillHeal / energy_energyCurve_ruleParameters.ticksPerDay
   const points: EnergyPoint[] = []
   let energy = Math.min(energy_energyCurve_ruleParameters.energyCap, Math.max(0, settings.sleepScore))
@@ -57,7 +59,7 @@ export function energyCurve(settings: Settings, input: ProduceInput, days = 1): 
       energy = Math.min(energy_energyCurve_ruleParameters.energyCap, energy + skillPerTick * skillFactor)
     }
     if (settings.meals && !asleep && (minute === energy_energyCurve_ruleParameters.breakfastHour * 60 || minute === energy_energyCurve_ruleParameters.lunchHour * 60 || minute === energy_energyCurve_ruleParameters.dinnerHour * 60)) {
-      energy = Math.min(energy_energyCurve_ruleParameters.energyCap, energy + mealRecover(energy))
+      energy = Math.min(energy_energyCurve_ruleParameters.energyCap, energy + mealRecover(energy, activityValues(activity, settings.island, undefined, i * energy_energyCurve_ruleParameters.minutesPerTick).mealRecoveryBonus, activityValues(activity, settings.island, undefined, i * energy_energyCurve_ruleParameters.minutesPerTick).mealRecoveryMultiplier))
     }
     points.push({
       minute: i * energy_energyCurve_ruleParameters.minutesPerTick,

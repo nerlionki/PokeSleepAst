@@ -230,8 +230,9 @@ export function ingredientIconCrop(
   image: PixelImage,
   mark: { x: number, y: number, width: number, height: number },
   gap: number,
+  scale = 0.62,
 ): PixelImage {
-  const size = Math.max(mark.height * 2.6, gap * 0.62)
+  const size = Math.max(mark.height * 2.6, gap * scale)
   const cx = mark.x + mark.width / 2 - size * 0.38
   return crop(image, cx - size / 2, mark.y - size, size, size * 0.92)
 }
@@ -281,6 +282,22 @@ function largestForegroundAspect(image: PixelImage): number | null {
     }
   }
   return bestCount >= 8 ? bestAspect : null
+}
+
+/** 头部信息卡的橙色横边贯穿图标裁片时，卡片已挡住食材，不能拿残片作物种证据。 */
+export function ingredientIconOccluded(image: PixelImage): boolean {
+  for (let y = 2; y < image.height * 0.75; y++) {
+    let run = 0
+    for (let x = 0; x < image.width; x++) {
+      const i = (y * image.width + x) * 4
+      const r = image.data[i] ?? 0, g = image.data[i + 1] ?? 0, b = image.data[i + 2] ?? 0
+      const above = ((y - 2) * image.width + x) * 4
+      const whiteAbove = (image.data[above] ?? 0) > 225 && (image.data[above + 1] ?? 0) > 225 && (image.data[above + 2] ?? 0) > 210
+      run = r > 220 && g > 75 && g < 180 && b > 40 && b < 150 && r - g > 65 && g - b > 10 && whiteAbove ? run + 1 : 0
+      if (run >= image.width * 0.75) return true
+    }
+  }
+  return false
 }
 
 function ingredientShapeScore(shot: PixelImage, template: PixelImage): number {

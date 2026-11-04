@@ -1,12 +1,13 @@
 <script setup lang="ts">
+import type { RecipeDisplayRow } from '../../calc/recipeCatalog'
 import { RECIPE_LEVEL_MAX } from '../../calc/cook'
-import { MEAL_CATEGORIES, RECIPE_LEVELS, bonusLabel, dishEnergy, type RecipeRow } from '../../calc/recipes'
+import { MEAL_CATEGORIES, RECIPE_LEVELS, bonusLabel, dishEnergy } from '../../calc/recipes'
 import DrawerSheet from '../shared/DrawerSheet.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import MealIcon from '../shared/MealIcon.vue'
 
 defineProps<{
-  recipe: RecipeRow
+  recipe: RecipeDisplayRow
   level?: number
   editableLevel?: boolean
 }>()
@@ -26,16 +27,17 @@ function categoryLabel(id: string) {
 <template>
   <DrawerSheet :title="recipe.name" @close="$emit('close')">
     <div class="row">
-      <MealIcon :name="recipe.name" />
+      <MealIcon :name="recipe.name" :image-file="recipe.imageFile" />
       <div>
         <p>{{ categoryLabel(recipe.category) }} · 锅 {{ recipe.pot || '不限' }}</p>
-        <p class="muted">{{ bonusLabel(recipe.bonus) }}</p>
+        <p class="muted">{{ recipe.bonus == null ? '还未公布' : bonusLabel(recipe.bonus) }}</p>
       </div>
     </div>
+    <p v-if="recipe.nameUnannounced" class="muted">食谱名称还未公布</p>
     <div v-if="recipe.ingredients.length" class="stack">
-      <div v-for="ing in recipe.ingredients" :key="ing.id" class="row">
+      <div v-for="ing in recipe.ingredients" :key="ing.name" class="row">
         <IngredientIcon :id="ing.id" :name="ing.name" />
-        <span>{{ ing.name }} × {{ ing.count }}</span>
+        <span>{{ ing.name }} × {{ ing.count ?? '还未公布' }}</span>
       </div>
     </div>
     <p v-else class="muted">拌拌食谱，用当餐剩下的食材。</p>
@@ -46,7 +48,7 @@ function categoryLabel(id: string) {
     <div class="energy-table">
       <div v-for="lv in RECIPE_LEVELS" :key="lv" class="energy-row" :class="{ on: lv === level }">
         <span>Lv.{{ lv }}</span>
-        <strong>{{ dishEnergy(recipe.baseEnergy, lv).toLocaleString('zh-CN') }}</strong>
+        <strong>{{ recipe.baseEnergy == null ? '还未公布' : dishEnergy(recipe.baseEnergy, lv).toLocaleString('zh-CN') }}</strong>
       </div>
     </div>
   </DrawerSheet>

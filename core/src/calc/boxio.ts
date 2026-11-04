@@ -4,6 +4,7 @@ import extracted0 from '../data/compatibility-maps.resource'
 import { cloneData } from './dataClone'
 import { normalizeMewSkill } from './mew'
 import type { BoxPokemon } from '../types'
+import { effectiveNature } from './natureLabels'
 import { INGREDIENTS, NATURES, POKEDEX, SUBSKILLS, pokeById } from './data'
 import { foldText } from './text'
 import { normalizeOcrMissing } from './ocrCompletion'
@@ -162,6 +163,7 @@ function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
       pokeId: o.pokeId,
       level: Number(o.level) || 1,
       nature: natureOf(o.nature),
+      ...(o.natureMinted === true ? { natureMinted: true } : {}),
       subskills: Array.isArray(o.subskills) ? o.subskills.map(String) : boxio_config_ruleCatalogs.fromAnyList0.values,
       ingredientSlots: nativeSlots(o.ingredientSlots),
       skillLevel: Number(o.skillLevel) || 1,
@@ -183,7 +185,8 @@ function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
     uid,
     pokeId,
     level: Number(o.level ?? o.lv ?? 1) || 1,
-    nature: natureOf(o.nature ?? o.character ?? o.natureId),
+    nature: natureOf(o.natureMinted === true ? o.originalNature ?? o.nature ?? o.character ?? o.natureId : o.nature ?? o.character ?? o.natureId),
+    ...(o.natureMinted === true ? { natureMinted: true } : {}),
     subskills: subsOf(o.subskills ?? o.subSkill ?? o.subSkills ?? o.skill),
     ingredientSlots: slotsOf(pokeId, o.ingredientSlots ?? o.ingredients ?? o.useFoods ?? o.ingredient),
     skillLevel: Number(o.skillLevel ?? o.skilllevel ?? o.mainSkillLevel ?? 1) || 1,
@@ -223,7 +226,8 @@ export function exportSdrice(pokemon: BoxPokemon[]) {
     skilllevel: p.skillLevel,
     level: p.level,
     skill: p.subskills.filter(Boolean),
-    character: p.nature,
+    character: effectiveNature(p),
+    ...(p.natureMinted === true ? { natureMinted: true, originalNature: p.nature } : {}),
     useFoods: p.ingredientSlots.map((slot) => slot ?? 0),
     nickname: p.name,
   }))

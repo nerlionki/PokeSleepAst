@@ -15,6 +15,7 @@ export interface ScoreActor {
   energy: number, factor: number, disguise: boolean, stockpile: number, firstFood: string
 }
 export interface ScoreSkillContext {
+  modifiers?(skillName: string): { ingredient: number; berry: number; healing: number }
   random(): number
   heal(target: ScoreActor, amount: number): void
   charge(amount: number): void
@@ -32,13 +33,16 @@ export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkil
   if (depth > (scoreSkills_scoreSkill_runtimeParameters.p001 as 8)) { ctx.warning('技能连锁超过模拟深度，结果存在截断'); return }
   const selected = selectedId == null ? skillByPokedexName(actor.skill, actor.pokeId) : MAIN_SKILLS.find(s => s.id === selectedId)
   if (!selected) { ctx.warning(`未支持主技能：${actor.skill}`); return }
+  const modifiers = ctx.modifiers?.(selected.name) ?? { ingredient: 1, berry: 1, healing: 1 }
+  const giveBerries = (target: ScoreActor, amount: number) => ctx.berries(target, Math.floor(amount * modifiers.berry))
   const pick = <T>(items: readonly T[]) => items[Math.floor(ctx.random() * items.length)]!
   const level = clampSkillLevel(selected.name, actor.skillLevel)
   const value = (name: string) => mainSkillValue(selected.name, level, name)
   const percent = (name: string) => Number(selected.levels[level - 1]?.[selected.columns.indexOf(name)]?.replace('%', '')) / 100 || 0
   const randomTarget = () => pick(team)
-  const heal = (target: ScoreActor, amount: number) => ctx.heal(target, amount * target.factor)
-  const food = (amount: number, ids?: readonly number[]) => {
+  const heal = (target: ScoreActor, amount: number) => ctx.heal(target, amount * target.factor * modifiers.healing)
+  const food = (amount: number, ids?: readonly number[], scaled = false) => {
+    amount = scaled ? amount : Math.floor(amount * modifiers.ingredient)
     const pool = ids ? INGREDIENTS.filter(i => ids.includes(i.id)) : INGREDIENTS
     // 食材获取抽选三种不同食材；精选池按整份随机抽选，保证整数库存。
     if (ids) { ctx.ingredient(pick(pool).name, amount); return }
@@ -95,8 +99,13 @@ export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkil
       break
     case 24: food(value('食材') * (ctx.random() < 1 / (scoreSkills_scoreSkill_runtimeParameters.p005 as 6) ? ruleParameters.modules.scoreSkills.scoreSkill.minusIngredientMultiplier : 1), scoreSkills_config_ruleCatalogs.scoreSkillList1.values); break
     case 28: case 33: case 36: case 38: food(value('食材'), SELECT_POOLS[selected.id]); break
-    case 26: case 27:
-      food(value('携带')); if (pair && actor.firstFood) ctx.ingredient(actor.firstFood, value('一致追加')); break
+    case 26: case 27: {
+      const bonus = pair && actor.firstFood ? value('一致追加') : 0
+      const extra = Math.floor(bonus * modifiers.ingredient)
+      food(Math.floor((value('携带') + bonus) * modifiers.ingredient) - extra, undefined, true)
+      if (extra) ctx.ingredient(actor.firstFood, extra)
+      break
+    }
     case 11: case 25: case 41:
       ctx.pot(value('锅容量'))
       if (selected.id === 41) ctx.crit(percent('暴击'))
@@ -106,14 +115,14 @@ export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkil
     case 16: {
       const hit = actor.disguise && ctx.random() < DISGUISE_CRIT_CHANCE
       if (hit) actor.disguise = false
-      for (const target of team) ctx.berries(target, (target === actor ? value('基础') : value('追加')) * (hit ? ruleParameters.modules.scoreSkills.scoreSkill.disguiseCritMultiplier : 1))
+      for (const target of team) giveBerries(target, (target === actor ? value('基础') : value('追加')) * (hit ? ruleParameters.modules.scoreSkills.scoreSkill.disguiseCritMultiplier : 1))
       break
     }
     case 20:
-      for (const target of team) ctx.berries(target, target === actor ? value('基础') : value('追加'))
+      for (const target of team) giveBerries(target, target === actor ? value('基础') : value('追加'))
       break
     case 21:
-      for (const target of team) { heal(target, value('活力')); ctx.berries(target, (target === actor ? CRESCENT_SELF : CRESCENT_TEAM)[level - 1]![same]!) }
+      for (const target of team) { heal(target, value('活力')); giveBerries(target, (target === actor ? CRESCENT_SELF : CRESCENT_TEAM)[level - 1]![same]!) }
       break
     case 35: {
       const available = [...team]
@@ -126,7 +135,7 @@ export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkil
       break
     }
     case 37:
-      for (const target of team) ctx.berries(target, (target === actor ? DRACO_SELF : DRACO_TEAM)[level - 1]![same]!
+      for (const target of team) giveBerries(target, (target === actor ? DRACO_SELF : DRACO_TEAM)[level - 1]![same]!
         + (target === actor && team.some(m => m.pokeId === 380) ? value('拉帝亚斯') : 0))
       break
     case 30: {

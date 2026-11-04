@@ -1,10 +1,12 @@
 import type { BoxPokemon, IngredientSlots, OcrMissingField } from '../types'
-import { NATURES, SUBSKILLS, pokeById } from './data'
+import { NATURES, SUBSKILLS, POKEDEX, pokeById } from './data'
+import { evolutionStages } from './evolution'
 import { slotDrop } from './ingredients'
 import { MAIN_SKILLS, skillMaxFor } from './mainSkills'
 import { defaultTune } from './member'
 import { defaultFirstSlot, isAllRounder } from './specialty'
 import { ocrFold } from './text'
+import compatibilityMaps from '../data/compatibility-maps.resource'
 import { pickClosest } from './ocrVision'
 
 export interface OcrWord {
@@ -18,6 +20,8 @@ export interface OcrWord {
 export interface ParseOptions {
   portraitId: number | null
   shiny?: boolean
+  /** 模型字库：物种已经独立确认后，仅补全物种原名中字库缺失的汉字。 */
+  characters?: ReadonlySet<string>
   /** 第 2、第 3 食材格对上的食材行。没对上是 null。 */
   slotLines: [number | null, number | null]
 }
@@ -103,6 +107,7 @@ function subskillId(text: string): string {
   let key = ocrFold(text)
   key = key.replace(/^[冀翼]忙速度([sm])$/, '帮忙速度$1')
   key = key.replace(/^持有上限提开([sml])$/, '持有上限提升$1')
+  key = key.replace(/^技能等提升([sm])$/, '技能等级提升$1')
   if (/^忙速度[sm]$/.test(key)) key = `帮${key}`
   const recurring: Record<string, string> = {
     手: 'helpingBonus',
@@ -123,6 +128,28 @@ function subskillId(text: string): string {
 function natureName(text: string): string {
   const key = ocrFold(text)
   return NATURES.find((nature) => ocrFold(nature.name) === key)?.name ?? ''
+}
+
+export function completeUnsupportedSpeciesName(name: string, pokeId: number, characters?: ReadonlySet<string>): string {
+  if (!characters) return name
+  // 新资源包由 SleepAstCore 图鉴生成；旧快照尚无目录时仍使用当前快照图鉴，
+  // 不绕过资源入口读取另一版本的本地 JSON。模型原始字符索引不作改动。
+  const catalog = compatibilityMaps.modules.ocrNameCompletion as { schemaVersion?: number, pokemonNames?: Record<string, string> } | undefined
+  const speciesName = (catalog?.schemaVersion === 1 ? catalog.pokemonNames?.[String(pokeId)] : undefined) ?? pokeById(pokeId)?.name
+  if (!speciesName) return name
+  const missing = [...speciesName].filter(char => !characters.has(char))
+  if (!missing.length || missing.length > 2 || missing.some(char => !/^[\u3400-\u9fff]$/.test(char))) return name
+  const supported = [...speciesName].filter(char => characters.has(char)).join('')
+  return supported.length >= 2 && ocrFold(name) === ocrFold(supported) ? speciesName : name
+}
+
+export function readNatureMinted(words: OcrWord[]): boolean {
+  const label = words.find(word => ocrFold(word.text) === '性格')
+  if (!label) return false
+  const nearby = words.filter(word => word.y >= label.y - label.height && word.y <= label.y + label.height * 8)
+  const original = nearby.map(word => NATURES.find(nature => ocrFold(nature.name) === ocrFold(word.text))).find(Boolean)
+  if (!original?.up && !original?.down) return false
+  return ocrFold(nearby.map(word => word.text).join('')).includes(ocrFold('没有性格带来的特色'))
 }
 
 function cardMidX(words: OcrWord[]): number {
@@ -324,7 +351,14 @@ export function ingredientRowMarks(words: OcrWord[]): [IngredientQuantityMark | 
   // 宝可梦信息浮层会遮住“食材”标题，但 30/60 级锁定标签和数量仍可见。
   // 必须同时找到两档标签，避免把技能等级或其它数字当成食材行。
   const locked = [30, 60].map((level) => words.find((word) => new RegExp(`^lv[.．·]?\\s*${level}$`, 'i').test(word.text.trim())))
+  const header = headerCluster(words)
+  const headerBottom = header.length ? Math.max(...header.map(word => word.y + word.height)) : null
+  const interval = headerBottom == null ? null : words.find(word => word.y > headerBottom && /[間间]隔/.test(word.text))
+  // 高等级截图可没有锁定标签。标题被遮挡时，仅在头像信息与帮忙间隔之间
+  // 查找右侧两格对齐且至少带一个乘号的数量徽标，不能借用主副技能数字。
+  const fromBadges = !food && !(locked[0] && locked[1])
   const anchor = food ?? (locked[0] && locked[1] ? locked[0] : null)
+    ?? (headerBottom != null && interval ? { y: headerBottom, height: 0 } : null)
   if (!anchor) return [null, null, null]
   const end = [...words]
     .filter((word) => word.y > anchor.y && /[間间]隔/.test(word.text))
@@ -348,6 +382,19 @@ export function ingredientRowMarks(words: OcrWord[]): [IngredientQuantityMark | 
     const current = columns[slot]
     if (!current || Math.abs(ratio - targets[slot]!) < Math.abs((center(current.word).x - left) / width - targets[slot]!)) {
       columns[slot] = candidate
+    }
+  }
+  if (fromBadges) {
+    if (!columns[1] || !columns[2]
+      || !columns.some(mark => mark && /^[×xX✕＊*]/.test(mark.word.text.trim()))) return [null, null, null]
+    const second = center(columns[1].word), third = center(columns[2].word)
+    const gap = third.x - second.x
+    const points = columns.flatMap(mark => mark ? [center(mark.word)] : [])
+    if (gap < width * 0.1 || gap > width * 0.3
+      || Math.max(...points.map(point => point.y)) - Math.min(...points.map(point => point.y)) > width * 0.04) return [null, null, null]
+    if (columns[0]) {
+      const firstGap = second.x - center(columns[0].word).x
+      if (firstGap < gap * 0.65 || firstGap > gap * 1.5) return [null, null, null]
     }
   }
   if (!columns[1] && columns[0] && columns[2]) {
@@ -418,7 +465,7 @@ export function readMainSkill(words: OcrWord[]): string | null {
     .sort((a, b) => b.folded.length - a.folded.length)
   let found: string | null = null
   for (const word of words) {
-    const folded = ocrFold(word.text).replace(/^手支援([sS])$/, '帮手支援$1')
+    const folded = ocrFold(word.text).replace(/^手支援([sS])$/, '帮手支援$1').replace(/^新月祈[（(]/, '新月祈祷(')
     const hit = names.find((item) => folded.includes(item.folded))
     if (hit && (!found || ocrFold(hit.name).length > ocrFold(found).length)) found = hit.name
   }
@@ -436,39 +483,53 @@ export interface SpeciesEvidence {
   carry?: number | null
 }
 
-/** 识别到的主技能与食材必须同时匹配；持有仅辅助，仍有近似候选时不猜物种。 */
-export function chooseSimilar(candidates: { id: number, score: number }[], evidence: SpeciesEvidence): number | null {
-  let fitting = [...candidates].sort((a, b) => a.score - b.score)
+/** 从当前快照的完整图鉴开始：主技能 → 多家族时的食材组合 → 持有下界。
+ * 家族按实际进化链区分，不用共享糖果把地区形态或活动形态合并。
+ * 主技能唯一确定家族时，按用户确认的顺序跳过食材筛选；头像仍须确认具体物种。
+ */
+export function speciesCandidates(evidence: SpeciesEvidence): number[] {
+  let fitting = POKEDEX
   if (evidence.skill) {
-    const skillFitting = fitting.filter((row) => {
-      const poke = pokeById(row.id)
-      return poke && skillBase(poke.mainSkill) === skillBase(evidence.skill!)
-    })
-    if (!skillFitting.length) return null
-    fitting = skillFitting
+    const skillFitting = fitting.filter(poke => skillBase(poke.mainSkill) === skillBase(evidence.skill!))
+    // 未读到主技能或没有匹配家族时，继续用食材、持有和头像。
+    if (skillFitting.length) fitting = skillFitting
   }
-  fitting = fitting.filter((row) => {
-    const poke = pokeById(row.id)
-    if (!poke) return false
-    for (const slot of [0, 1, 2] as const) {
-      const ingredient = slot === 0 ? evidence.firstIngredient : evidence.ingredients[slot - 1]
-      const possible = evidence.ingredientCandidates?.[slot] ?? (ingredient == null ? null : [ingredient])
-      const quantity = evidence.quantities?.[slot] ?? null
-      if ((possible != null || quantity != null) && !poke.ingredients.some((_, index) => {
-        if (!isAllRounder(poke) && index > slot) return false
-        const drop = slotDrop(poke.ingredients, slot, index)
-        return drop != null && (quantity == null || drop.amount === quantity)
-          && (possible == null || possible.includes(drop.id))
-      })) return false
-    }
-    return true
-  })
+  const families = new Set(fitting.map(poke => evolutionStages(poke.id)[0]?.[0]?.id ?? poke.id))
+  if (families.size > 1) {
+    const ingredientFitting = fitting.filter(poke => matchesSpeciesIngredients(poke.id, evidence))
+    // 食材 OCR 与全部候选冲突时，用户确认保留主技能候选，继续持有与头像判定。
+    if (ingredientFitting.length) fitting = ingredientFitting
+  }
   // 未知的进化、缎带、已解锁副技能等加成不能当成 0。只用基础持有作下界，
-  // 且不能用这一项挽救主技能/食材冲突；全部不符时忽略可能的 OCR 持有误读。
+  // 全部不符时忽略可能的 OCR 持有误读。
   if (fitting.length > 1 && evidence.carry != null) {
-    const compatible = fitting.filter(row => (pokeById(row.id)?.carry ?? Infinity) <= evidence.carry!)
+    const compatible = fitting.filter(poke => poke.carry <= evidence.carry!)
     if (compatible.length) fitting = compatible
   }
+  return fitting.map(poke => poke.id)
+}
+
+function matchesSpeciesIngredients(pokeId: number, evidence: SpeciesEvidence): boolean {
+  const poke = pokeById(pokeId)
+  if (!poke) return false
+  for (const slot of [0, 1, 2] as const) {
+    const ingredient = slot === 0 ? evidence.firstIngredient : evidence.ingredients[slot - 1]
+    const possible = evidence.ingredientCandidates?.[slot] ?? (ingredient == null ? null : [ingredient])
+    const quantity = evidence.quantities?.[slot] ?? null
+    if ((possible != null || quantity != null) && !poke.ingredients.some((_, index) => {
+      if (!isAllRounder(poke) && index > slot) return false
+      const drop = slotDrop(poke.ingredients, slot, index)
+      return drop != null && (quantity == null || drop.amount === quantity)
+        && (possible == null || possible.includes(drop.id))
+    })) return false
+  }
+  return true
+}
+
+/** 资料筛选先于头像排名；只在留下的物种内比较头像，不让其它家族抢占视觉候选。 */
+export function chooseSimilar(candidates: { id: number, score: number }[], evidence: SpeciesEvidence): number | null {
+  const allowed = new Set(speciesCandidates(evidence))
+  const fitting = candidates.filter(row => allowed.has(row.id)).sort((a, b) => a.score - b.score)
   const hasEvidence = evidence.skill != null || evidence.firstIngredient != null
     || evidence.ingredients.some(id => id != null) || evidence.ingredientCandidates?.some(ids => ids != null)
   if (fitting.length === 1 && hasEvidence) return fitting[0]!.id
@@ -480,7 +541,9 @@ export function chooseSimilar(candidates: { id: number, score: number }[], evide
     return (ids != null && ids.length > 0 || ingredient != null) && evidence.quantities?.[slot] != null
   }).length
   const corroborated = evidence.skill != null && supportedSlots >= 2
-  return pickClosest(fitting, corroborated ? 76 : 46, corroborated ? 6 : 3.2)
+    && fitting.every(row => matchesSpeciesIngredients(row.id, evidence))
+  // 已满足原有明确头像门槛的候选，无需再套用弱头像的更大领先幅度。
+  return pickClosest(fitting, 46, 3.2) ?? (corroborated ? pickClosest(fitting, 76, 6) : null)
 }
 
 /** 只读取“持有上限”右侧同一行带“个”的数值，不借用其它行数字。 */
@@ -515,10 +578,11 @@ export function parseCard(words: OcrWord[], options: ParseOptions): Omit<BoxPoke
     pokeId,
     level: header?.level ?? 30,
     nature: nature ?? '勤奋',
+    ...(readNatureMinted(words) ? { natureMinted: true } : {}),
     subskills,
     ingredientSlots: ingredientSlotsFor(pokeId, options.slotLines),
     skillLevel: skillLevel ?? 1,
-    name: labeled ? stripLevelPrefix(labeled.text) : '',
+    name: completeUnsupportedSpeciesName(labeled ? stripLevelPrefix(labeled.text) : '', pokeId, options.characters),
     napping: false,
     ...(options.shiny ? { shiny: true } : {}),
     tune: { ...defaultTune(), ribbonHours: ribbonHours(words) },
@@ -526,10 +590,10 @@ export function parseCard(words: OcrWord[], options: ParseOptions): Omit<BoxPoke
   }
 }
 
-export function fingerprint(pokemon: Pick<BoxPokemon, 'pokeId' | 'level' | 'nature' | 'subskills' | 'ingredientSlots' | 'skillLevel' | 'shiny' | 'ocrMissing'>): string {
+export function fingerprint(pokemon: Pick<BoxPokemon, 'pokeId' | 'level' | 'nature' | 'natureMinted' | 'subskills' | 'ingredientSlots' | 'skillLevel' | 'shiny' | 'ocrMissing'>): string {
   const subs = [0, 1, 2, 3, 4].map((index) => pokemon.subskills[index] ?? '')
   const slots = [0, 1, 2].map((index) => pokemon.ingredientSlots[index] == null ? 'null' : String(pokemon.ingredientSlots[index]))
-  const key = [pokemon.pokeId, pokemon.level, pokemon.nature, subs.join(','), slots.join(','), pokemon.skillLevel, pokemon.shiny ? 'shiny' : 'normal'].join('|')
+  const key = [pokemon.pokeId, pokemon.level, pokemon.nature, subs.join(','), slots.join(','), pokemon.skillLevel, pokemon.shiny ? 'shiny' : 'normal'].join('|') + (pokemon.natureMinted ? '|minted' : '')
   return pokemon.ocrMissing?.length ? `${key}|missing:${[...pokemon.ocrMissing].sort().join(',')}` : key
 }
 

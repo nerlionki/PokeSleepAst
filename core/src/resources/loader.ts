@@ -1,3 +1,4 @@
+import { ACTIVITY_CAPABILITIES } from './activityModel'
 import { RESOURCE_ORIGIN, installSnapshot, type ResourceContext, type ResourceManifest, type ResourceSnapshot, type ResourceFile } from './runtime'
 import { sha256, utf8 } from './sha256'
 import { RESOURCE_FILES } from './files'
@@ -12,9 +13,10 @@ const MAX_DATA_BYTES = 8_000_000
 export function validManifest(value: unknown, context?: ResourceContext): value is ResourceManifest {
   if (!value || typeof value !== 'object') return false
   const m = value as ResourceManifest
-  if (m.schemaVersion !== 1 || m.contract !== 'sleepast-data-v1' || m.clientMajor !== 2 || !/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(m.version)) return false
+  if (m.schemaVersion !== 1 || m.contract !== 'sleepast-data-v2' || m.clientMajor !== 2 || !/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(m.version)) return false
+  if (m.activityModelVersion !== 2 || !Array.isArray(m.requiredCapabilities) || !m.requiredCapabilities.every(capability => (ACTIVITY_CAPABILITIES as readonly string[]).includes(capability))) return false
   if (!Array.isArray(m.files) || m.files.slice().sort().join('\n') !== RESOURCE_FILES.join('\n')) return false
-  const prefixes = (context ? [`/${context}`] : ['', '/prod', '/test']).map(base => `${base}/resources/v1/releases/${m.version}/`)
+  const prefixes = (context ? [`/${context}`] : ['', '/prod', '/test']).map(base => `${base}/resources/v2/releases/${m.version}/`)
   const prefix = prefixes.find(prefix => m.data?.path?.startsWith(prefix)) ?? '!invalid!'
   const validFile = (f: ResourceFile) => f && typeof f.path === 'string' && f.path.startsWith(prefix) && !/[\\?#%]/.test(f.path) && !f.path.split('/').includes('..') && Number.isSafeInteger(f.bytes) && f.bytes > 0 && f.bytes <= MAX_DATA_BYTES && /^[a-f0-9]{64}$/.test(f.sha256)
   return Boolean(validFile(m.data) && m.assets && typeof m.assets === 'object' && !Array.isArray(m.assets) && Object.entries(m.assets).every(([key,file]) => /^(images|items|sprites)\/[\w/.-]+$/.test(key) && !key.split('/').includes('..') && validFile(file)))
@@ -49,7 +51,7 @@ export async function initializeResources(transport: ResourceTransport, budget =
   try {
     const result = await Promise.race([
       (async () => {
-        const manifest = JSON.parse(await transport.fetchText(`${RESOURCE_ORIGIN}${context ? '/' + context : ''}/resources/v1/manifest.json`, budget))
+        const manifest = JSON.parse(await transport.fetchText(`${RESOURCE_ORIGIN}${context ? '/' + context : ''}/resources/v2/manifest.json`, budget))
         if (!validManifest(manifest, context)) throw new Error('资料版本不兼容')
         if (cache && manifest.data.sha256 === cache.manifest.data.sha256 && manifest.version === cache.manifest.version) return { snapshot: cache, payload: cachedPayload! }
         const remaining = deadline - Date.now()

@@ -1,7 +1,7 @@
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import { applyMainSkill, type EffectActor } from './skillEffects'
-import { activityBerrySettings, activityValues, snapshotActivity, type ActivityValues } from './activities'
+import { activityBerrySettings, activityValues, snapshotActivity, assertActivitySupported, type ActivityValues } from './activities'
 import { CookingSkillState } from './cookingSkillState'
 import { teamRestrictionError } from './teamRestrictions'
 import { resolveMemberSkill } from './mew'
@@ -15,7 +15,7 @@ import { mealRecover, sleepRecoveredEnergy } from './energy'
 import { energyMultiplier, instantInterval } from './helpSpeed'
 import { slotDrop } from './ingredients'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
-import { natureStatFactor } from './natureLabels'
+import { natureStatFactor, withEffectiveNature } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { FULL_INVENTORY_SKILL_HELPS, skillStorageLimit } from './specialty'
 import { ACCEL_FACTOR, ACCEL_MINUTES, chargeStrength, skillKind, skillValue } from './skills'
@@ -57,7 +57,7 @@ function inSleep(minute: number, start: number, end: number): boolean {
   return minute >= start || minute < end
 }
 
-export function carryLimit(base: number, subskills: string[], goodCamp: boolean, mode?: string, ribbonCarry = 0, exCarry = 0): number {
+export function carryLimit(base: number, subskills: string[], goodCamp: boolean, mode?: string, ribbonCarry = 0, exCarry = 0, activityMultiplier = 1): number {
   if (mode === 'unlimited') return timeline_carryLimit_ruleParameters.unlimitedCarry
   if (mode === 'full') return 0
   let extra = ribbonCarry + exCarry
@@ -65,7 +65,7 @@ export function carryLimit(base: number, subskills: string[], goodCamp: boolean,
   if (subskills.includes('invM')) extra += timeline_carryLimit_ruleParameters.inventoryM
   if (subskills.includes('invL')) extra += timeline_carryLimit_ruleParameters.inventoryL
   const camp = mode === 'normal' ? false : goodCamp
-  return Math.ceil((base + extra) * (camp ? timeline_carryLimit_ruleParameters.campCarryMultiplier : 1))
+  return Math.ceil((base + extra) * activityMultiplier * (camp ? timeline_carryLimit_ruleParameters.campCarryMultiplier : 1))
 }
 
 function berryCount(specialty: string, subskills: string[]): number {
@@ -132,6 +132,7 @@ export function simulateTeam(
   opts: SimOpts = {},
 ): { members: ProduceResult[], events: SkillEvent[], meals: ReturnType<typeof cookMeals>['meals'], bag: Record<string, number>, remain: Record<string, number> } {
   const snapshot = snapshotActivity(settings)
+  snapshot.activity = { ...snapshot.activity, teamPokemonIds: roster.map(input => input.pokeId) }
   settings = activityBerrySettings(snapshot, snapshot.activity, 0)
   const restriction = teamRestrictionError(roster)
   if (restriction) throw new Error(restriction)
@@ -157,7 +158,8 @@ export function simulateTeam(
   function creditSkillFood(actor: EffectActor, name: string, amount: number) { creditFood(actor, name, amount, true) }
 
   const members: Member[] = []
-  for (const input of roster) {
+  for (const original of roster) {
+    const input = withEffectiveNature(original)
     const species = pokeById(input.pokeId)
     const selected = species ? resolveMemberSkill(species, input) : null
     const poke = species && selected ? { ...species, mainSkill: selected.name, skillRate: selected.rate } : undefined
@@ -182,7 +184,7 @@ export function simulateTeam(
       typeAccelUntil: -1,
       factor: natureStatFactor(input.nature, 'energy'),
       favored,
-      carry: carryLimit(poke.carry, subs, settings.goodCamp, input.carryMode, ribbon.carry, ex.carryExtra),
+      carry: carryLimit(poke.carry, subs, settings.goodCamp, input.carryMode, ribbon.carry, ex.carryExtra + activityValues(snapshot.activity, settings.island, poke, 0).carryCapacityBonus, activityValues(snapshot.activity, settings.island, poke, 0).carryCapacityMultiplier),
       perHelp: berryCount(poke.specialty, subs),
       ingRate: poke.ingredientRate * natureStatFactor(input.nature, 'ingredient')
         * (1 + (subs.includes('ingS') ? timeline_simulateTeam_ruleParameters.findingS : 0) + (subs.includes('ingM') ? timeline_simulateTeam_ruleParameters.findingM : 0)),
@@ -202,6 +204,7 @@ export function simulateTeam(
   const baseBerryUnits = members.map(member => member.unitBerry)
   const bases = members.map(member => ({ perHelp: member.perHelp, skillRate: member.skillRate / exEffects(settings, member.poke.berry, member.poke.specialty).skillMultiplier, skillLv: effectiveSkillLevel(member.input.level, member.input.skillLevel, member.input.subskills, member.poke.mainSkill) }))
   function refreshActivities(minute: number) {
+    assertActivitySupported(snapshot.activity, 'production', minute, settings.island)
     const before = members.map(member => intervalOf(member, minute))
     settings = activityBerrySettings(snapshot, snapshot.activity, minute)
     members.forEach((member, index) => {
@@ -212,7 +215,7 @@ export function simulateTeam(
       member.skillRate = Math.min(1, bases[index]!.skillRate * ex.skillMultiplier * member.activity.skillRateMultiplier)
       member.skillLv = Math.min(skillMaxFor(member.poke.mainSkill), bases[index]!.skillLv + ex.skillLevels + member.activity.skillLevelBonus)
       member.carry = carryLimit(member.poke.carry, unlockedSubskills(member.input.level, member.input.subskills), settings.goodCamp,
-        member.input.carryMode, ribbonBonus(member.input.ribbonHours ?? 0, stagesLeft(member.poke.id)).carry, ex.carryExtra)
+        member.input.carryMode, ribbonBonus(member.input.ribbonHours ?? 0, stagesLeft(member.poke.id)).carry, ex.carryExtra + member.activity.carryCapacityBonus, member.activity.carryCapacityMultiplier)
       member.fill = chargeStrength(member.poke.mainSkill, member.skillLv)
       baseBerryUnits[index] = berryUnitEnergy(member.poke.berry, member.input.level, settings.areaBonus, ex.berryMultiplier)
       member.unitBerry = baseBerryUnits[index]! * member.activity.berryEnergyMultiplier * (member.poke.berryType === '超能' ? 1 + berryZone : 1)
@@ -280,6 +283,10 @@ export function simulateTeam(
     const kind = skillKind(m.poke.mainSkill)
     const value = skillValue(m.poke.mainSkill, m.skillLv)
     const applied = applyMainSkill(m, members, {
+      modifiers: (actor, skillName) => {
+        const effects = activityValues(snapshot.activity, settings.island, { ...(actor as Member).poke, mainSkill: skillName }, minute)
+        return { ingredient: effects.skillIngredientMultiplier, berry: effects.skillBerryMultiplier, shards: effects.skillDreamShardsMultiplier, healing: effects.skillHealingMultiplier }
+      },
       ingredient: creditSkillFood,
       help: expectedHelp,
       pot: amount => cooking.addPot(amount),
@@ -361,6 +368,16 @@ export function simulateTeam(
           heldFood.set(m, held)
         } else creditFood(m, drop.name, amount)
         m.held += amount
+        for (const [name, bonus] of Object.entries(fromSupport ? {} : m.activity.fixedIngredientDrops)) {
+          const amount = Math.min(bonus, Math.max(0, m.carry - m.held))
+          if (amount <= 0) continue
+          if (asleepAt(minute)) {
+            const held = heldFood.get(m) ?? {}
+            held[name] = (held[name] ?? 0) + amount
+            heldFood.set(m, held)
+          } else creditFood(m, name, amount)
+          m.held += amount
+        }
       }
       else {
         m.result.berries += m.perHelp
@@ -452,14 +469,14 @@ export function simulateTeam(
     if (!opts.skipCooking && settings.meals && !asleep && [timeline_simulateTeam_ruleParameters.breakfastMinute,timeline_simulateTeam_ruleParameters.lunchMinute,timeline_simulateTeam_ruleParameters.dinnerMinute].includes(clock) && meals.length < timeline_simulateTeam_ruleParameters.weeklyMealLimit) {
       const sunday = settings.period === 'week' && Math.floor(t / 1440) === timeline_simulateTeam_ruleParameters.sundayIndex
       const activity = activityValues(snapshot.activity, settings.island, undefined, t)
-      const pot = Math.ceil(cooking.potSize(settings.potSize, sunday || settings.sundayPot, settings.goodCamp) * activity.potSizeMultiplier)
+      const pot = Math.ceil(cooking.potSize(settings.potSize + activity.potCapacityBonus, sunday || settings.sundayPot, settings.goodCamp) * activity.potSizeMultiplier)
       if (Object.values(bag).some(amount => amount >= 1)) {
         const crit = cooking.cook(sunday, activity.cookingCritBonus, activity.cookingCritMultiplier)
-        const cooked = cookMeals(bag, settings, 1, sunday, { pot, multiplier: crit.multiplier * activity.cookingEnergyMultiplier })
+        const cooked = cookMeals(bag, settings, 1, sunday, { minute: t, pot, multiplier: crit.multiplier * activity.cookingEnergyMultiplier })
         meals.push({ ...cooked.meals[0]!, minute: t, critChance: crit.chance, potSize: pot })
         for (const name of Object.keys(bag)) bag[name] = cooked.remain[name] ?? 0
         for (const m of members) {
-          const recovered = Math.min(timeline_simulateTeam_ruleParameters.energyCap, m.energy + mealRecover(m.energy))
+          const recovered = Math.min(timeline_simulateTeam_ruleParameters.energyCap, m.energy + mealRecover(m.energy, activity.mealRecoveryBonus, activity.mealRecoveryMultiplier))
           if (recovered > m.energy) m.lastDecay = t
           m.energy = recovered
         }

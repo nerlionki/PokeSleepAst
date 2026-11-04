@@ -7,8 +7,7 @@ import modelInfo from './ocr-models.json'
 import { workerErrorMessage } from './workerError'
 
 let loading: Promise<OcrSessions> | null = null
-// Both original ONNX inputs contain dynamic axes. WeChat needs a concrete
-// conversion shape; run() still supplies each image/crop's actual dimensions.
+let generation = 0
 const typicalShapes: Record<string, number[]> = { det: [1, 3, 640, 640], rec: [1, 3, 48, 320] }
 const modelLabels: Record<string, string> = { det: '文字检测', rec: '文字识别' }
 function modelLoadError(name: string, error: unknown): Error {
@@ -53,40 +52,113 @@ async function prepareModel(name: string): Promise<string> {
     throw error
   }
 }
-async function openModel(name: string): Promise<OcrModel> {
+async function openSession(name: string, model: string, dims: number[], runTimeout: number, invalidate: () => void): Promise<OcrModel> {
   if (!wx.createInferenceSession) throw new Error('当前微信或设备不支持本地 OCR，请升级微信或使用手动录入')
   const info = (modelInfo as Record<string, { input: string; output: string }>)[name]!
-  const model = await prepareModel(name)
   let session: WechatMiniprogram.InferenceSession
   try {
-    session = wx.createInferenceSession({ model, typicalShape: { [info.input]: typicalShapes[name]! }, precisionLevel: 4, allowNPU: false, allowQuantize: false })
+    session = wx.createInferenceSession({ model, typicalShape: { [info.input]: [...dims] }, precisionLevel: 4, allowNPU: false, allowQuantize: false })
   } catch (error) {
     throw modelLoadError(name, error)
   }
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => { session.destroy(); reject(new Error(`OCR ${modelLabels[name]}模型加载超时，请重试`)) }, 60_000)
-    session.onLoad(() => { clearTimeout(timer); resolve() })
-    session.onError(error => { clearTimeout(timer); session.destroy(); reject(modelLoadError(name, error)) })
-  })
-  return { dispose: () => session.destroy(), async run(data, dims) {
-    const result = await session.run({ [info.input]: { type: 'float32', data: new Float32Array(data).buffer, shape: dims } })
-    const tensor = result[info.output]
-    if (!tensor) throw new Error('OCR 模型输出不兼容')
-    return { data: new Float32Array(tensor.data), dims: tensor.shape }
+  let disposed = false
+  let rejectPending: ((error: Error) => void) | null = null
+  const dispose = () => {
+    if (disposed) return
+    disposed = true
+    try { session.destroy() } catch { /* Native engines may already have released a failed session. */ }
+    rejectPending?.(new Error(`OCR ${modelLabels[name]}会话已关闭，请重试`))
+  }
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => fail(new Error(`OCR ${modelLabels[name]}模型加载超时，请重试`)), 60_000)
+      const fail = (error: Error) => { clearTimeout(timer); rejectPending = null; dispose(); reject(error) }
+      rejectPending = fail
+      session.onError(error => {
+        if (disposed) return
+        const failure = modelLoadError(name, error)
+        rejectPending?.(failure)
+        dispose()
+        invalidate()
+      })
+      session.onLoad(() => { if (!disposed) { clearTimeout(timer); rejectPending = null; resolve() } })
+    })
+  } catch (error) { dispose(); throw error }
+  return { dispose, run(data, inputDims) {
+    if (disposed) return Promise.reject(new Error(`OCR ${modelLabels[name]}会话已关闭，请重试`))
+    return new Promise((resolve, reject) => {
+      let settled = false
+      const timer = setTimeout(() => finish(new Error(`OCR ${modelLabels[name]}推理超时，请重试`)), runTimeout)
+      const finish = (error?: Error, value?: Awaited<ReturnType<OcrModel['run']>>) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        rejectPending = null
+        if (error) { dispose(); reject(error) } else resolve(value!)
+      }
+      rejectPending = error => finish(error)
+      // 同步异常、Promise 拒绝、仅触发 onError 或完全没有回调均须结束这次推理。
+      void Promise.resolve().then(() => session.run({ [info.input]: {
+        type: 'float32', data: new Float32Array(data).buffer, shape: inputDims,
+      } })).then(result => {
+        const tensor = result[info.output]
+        if (!tensor || !tensor.shape?.length || tensor.shape.some(n => !Number.isInteger(n) || n <= 0)) throw new Error('OCR 模型输出不兼容')
+        const values = new Float32Array(tensor.data)
+        if (values.length !== tensor.shape.reduce((a, b) => a * b, 1)) throw new Error('OCR 模型输出数据不完整')
+        finish(undefined, { data: values, dims: tensor.shape })
+      }).catch(error => finish(new Error(`OCR ${modelLabels[name]}推理失败：${workerErrorMessage(error, '请重试')}`)))
+    })
   } }
 }
 export function loadOcr(): Promise<OcrSessions> {
-  // Avoid concurrent model conversion and its peak memory use in desktop WeChat.
-  // A failed detector also prevents an unnecessary recognizer initialization.
-  loading ??= (async () => {
-    const det = await openModel('det')
-    try {
-      const rec = await openModel('rec')
-      return { det, rec, dict: dictText }
-    } catch (error) {
-      det.dispose?.()
-      throw error
+  if (loading) return loading
+  const version = ++generation
+  loading = (async () => {
+    const detector = await prepareModel('det')
+    const recognizer = await prepareModel('rec')
+    const device = typeof wx.getDeviceInfo === 'function' ? wx.getDeviceInfo() : wx.getSystemInfoSync()
+    let det: OcrModel, rec: OcrModel
+    const reset = () => { if (version === generation) loading = null; det.dispose?.(); rec.dispose?.() }
+    const runner = (name: string, model: string) => {
+      let bound: OcrModel | null = null, shape = '', disposed = false, running = false
+      const initialize = async (dims: number[]) => {
+        const key = device.platform === 'ios' ? dims.join(',') : 'dynamic'
+        // 仅 iOS 按实际尺寸建会话；其它平台保留原来的典型尺寸和动态输入路径。
+        if (!bound || shape !== key) {
+          bound?.dispose?.(); bound = null
+          const opened = await openSession(name, model, device.platform === 'ios' ? dims : typicalShapes[name]!,
+            device.platform === 'ios' ? 30_000 : 120_000, reset)
+          if (disposed) { opened.dispose?.(); throw new Error('OCR 会话已失效，请重新导入') }
+          bound = opened
+          shape = key
+        }
+      }
+      return { initialize, dispose() { disposed = true; bound?.dispose?.(); bound = null }, async run(data: Float32Array, dims: number[]) {
+        if (disposed) throw new Error('OCR 会话已失效，请重新导入')
+        if (running) throw new Error('OCR 推理尚未完成')
+        running = true
+        try {
+          if (dims.length !== 4 || dims.some(n => !Number.isInteger(n) || n <= 0)
+            || data.length !== dims.reduce((a, b) => a * b, 1)) throw new Error('OCR 推理输入尺寸不兼容')
+          const input = { data, dims }
+          await initialize(input.dims)
+          const result = await bound!.run(input.data, input.dims)
+          return result
+        } catch (error) { reset(); throw error }
+        finally { running = false }
+      } }
     }
-  })().catch(error => { loading = null; throw error })
+    const detectorRunner = runner('det', detector)
+    const recognizerRunner = runner('rec', recognizer)
+    det = detectorRunner
+    rec = recognizerRunner
+    if (device.platform !== 'ios') {
+      try {
+        await detectorRunner.initialize(typicalShapes.det!)
+        await recognizerRunner.initialize(typicalShapes.rec!)
+      } catch (error) { reset(); throw error }
+    }
+    return { det, rec, dict: dictText }
+  })().catch(error => { if (version === generation) loading = null; throw error })
   return loading
 }
