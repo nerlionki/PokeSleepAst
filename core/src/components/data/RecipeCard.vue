@@ -1,33 +1,44 @@
 <script setup lang="ts">
-import { bonusLabel, dishEnergy } from '../../calc/recipes'
-import type { RecipeDisplayRow } from '../../calc/recipeCatalog'
-import { RECIPE_LEVEL_MAX } from '../../calc/cook'
-import IngredientIcon from '../shared/IngredientIcon.vue'
-import MealIcon from '../shared/MealIcon.vue'
+  import { bonusLabel, dishEnergy } from '../../calc/recipes';
+  import type { RecipeDisplayRow } from '../../calc/recipeCatalog';
+  import { RECIPE_LEVEL_MAX } from '../../calc/cook';
+  import IngredientIcon from '../shared/IngredientIcon.vue';
+  import MealIcon from '../shared/MealIcon.vue';
 
-defineProps<{
-  recipe: RecipeDisplayRow
-  level?: number
-}>()
+  defineProps<{
+    recipe: RecipeDisplayRow;
+    level?: number;
+  }>();
 
-defineEmits<{ open: [] }>()
+  defineEmits<{ open: [] }>();
 </script>
 
 <template>
   <button type="button" class="meal-card" @click="$emit('open')">
     <span class="meal-card-head">
       <strong>{{ recipe.name }}</strong>
-      <MealIcon :name="recipe.name" :image-file="recipe.imageFile" />
+      <MealIcon :name="recipe.name" :id="recipe.id" />
     </span>
-    <span class="meal-card-meta">{{ recipe.bonus == null ? '还未公布' : bonusLabel(recipe.bonus) }}</span>
+    <span class="meal-card-meta">{{
+      recipe.bonus == null ? '还未公布' : bonusLabel(recipe.bonus)
+    }}</span>
     <span class="meal-card-energy">
       <template v-if="recipe.baseEnergy == null">还未公布</template>
       <template v-else-if="level == null">
-        满级（Lv.{{ RECIPE_LEVEL_MAX }}）{{ dishEnergy(recipe.baseEnergy, RECIPE_LEVEL_MAX).toLocaleString('zh-CN') }}
+        满级（Lv.{{ RECIPE_LEVEL_MAX }}）{{
+          dishEnergy(recipe.baseEnergy, RECIPE_LEVEL_MAX).toLocaleString(
+            'zh-CN'
+          )
+        }}
       </template>
       <template v-else>
         {{ recipe.baseEnergy.toLocaleString('zh-CN') }}
-        <template v-if="level > 1"> → {{ dishEnergy(recipe.baseEnergy, level).toLocaleString('zh-CN') }}</template>
+        <template v-if="level > 1">
+          →
+          {{
+            dishEnergy(recipe.baseEnergy, level).toLocaleString('zh-CN')
+          }}</template
+        >
         @ Lv.{{ level }}
       </template>
     </span>
