@@ -1,47 +1,11 @@
-import runtimeParameters from '../data/runtime-parameters.resource'
 import { publicImage } from '#platform/images'
-import ruleCatalogs from '../data/rule-catalogs.resource'
-import extracted0 from '../data/client-defaults.resource'
-import extracted1 from '../data/calc-tables.resource'
-import bundledTables from '../data/calc-tables.json'
-import { cloneData } from './dataClone'
-const items_config_extracted0 = extracted0.modules.items
-const items_config_extracted1 = extracted1.modules.items
-const items_config_ruleCatalogs = ruleCatalogs.modules.items
-const items_module_runtimeParameters = runtimeParameters.modules.items.module.values
+import defaults from '../data/client-defaults.resource'
+import { ITEM_CATALOG, type GameItem } from './itemCatalog'
+export { ITEM_ROLES, itemById } from './itemCatalog'
 
-export interface ItemEntry {
-  id: number
-  name: string
-  category: string
+export interface ItemEntry extends GameItem {
   icon: string
   sourceUrl: string
-  acquisition?: string
-  additionalAcquisition?: string
 }
-
-const BASE = (items_config_extracted0.BASE as "https://pks.raenonx.cc/zh/item/source/")
-const groups: [string, [number, string][]][] = (cloneData(items_config_extracted1.groups) as unknown as [string, [number, string][]][])
-
-const types = cloneData(items_config_extracted1.types)
-const candyGroup = groups.find(([category]) => category === '糖果')![1]
-for (const [index, size] of items_config_ruleCatalogs.moduleList0.values.entries()) {
-  types.forEach((type, offset) => candyGroup.push([(items_module_runtimeParameters.p001 as 38) + index * (items_module_runtimeParameters.p002 as 18) + offset, `${type}屬性的糖果${size}`]))
-}
-
-/** RAE 物品来源页的永久成就；往期活动礼包需在对应活动期间取得。 */
-const evolutionAchievements: Record<number, string> = (cloneData(items_config_extracted1.evolutionAchievements) as unknown as Record<number, string>)
-const evolutionShopAcquisition = items_config_extracted1.evolutionShopAcquisition ?? bundledTables.modules.items.evolutionShopAcquisition
-
-export const ITEM_CATEGORIES = groups.map(([category]) => category)
-export const ITEMS: ItemEntry[] = groups.flatMap(([category, rows]) => rows.map(([id, name]) => ({
-  id,
-  name,
-  category,
-  icon: publicImage(`items/${items_config_ruleCatalogs.moduleList1.values.includes(id) ? (items_module_runtimeParameters.p003 as 115) : id}.webp`),
-  sourceUrl: `${BASE}${id}`,
-  ...(category === '进化道具' ? {
-    acquisition: evolutionShopAcquisition,
-    additionalAcquisition: evolutionAchievements[id],
-  } : {}),
-})))
+export const ITEM_CATEGORIES = [...new Set(ITEM_CATALOG.map(item => item.category))]
+export const ITEMS: ItemEntry[] = ITEM_CATALOG.map(item => ({ ...item, icon: publicImage(item.imageFile), sourceUrl: defaults.modules.items.BASE + item.id }))

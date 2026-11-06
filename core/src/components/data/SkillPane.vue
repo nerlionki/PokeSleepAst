@@ -63,7 +63,7 @@ function toggle(id: number) {
         <article v-for="skill in group.skills" :key="skill.id" class="acc">
           <DataRow :title="skill.name" :subtitle="`最高 Lv.${skill.maxLevel}`" @click="toggle(skill.id)">
             <template #lead>
-              <MainSkillIcon :id="skill.id" :name="skill.name" />
+              <MainSkillIcon :id="skill.id" :name="skill.name" decorative />
             </template>
             <template #trail>
               <span class="data-row-chev">{{ open === skill.id ? '⌃' : '›' }}</span>
@@ -82,7 +82,7 @@ function toggle(id: number) {
     <div v-else class="sub-list">
       <article v-for="item in subs" :key="item.id" class="sub-line">
         <header>
-          <div class="sub-name"><SubskillIcon :id="item.id" /><strong>{{ item.name }}</strong></div>
+          <div class="sub-name"><SubskillIcon :id="item.id" decorative /><strong>{{ item.name }}</strong></div>
           <span class="chip" :class="`rarity-${item.rarity}`">{{ RARITY_LABEL[item.rarity as keyof typeof RARITY_LABEL] }}</span>
         </header>
         <p>{{ SUBSKILL_NOTES[item.id] ?? '' }}</p>

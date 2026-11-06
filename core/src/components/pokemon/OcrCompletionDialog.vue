@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.OcrCompletionDialog
+
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -40,7 +43,7 @@ function pause() { emit('pause', completed.value) }
         <div v-for="field in fields" :key="field" class="field">
           <label :for="`ocr-${field}`">{{ OCR_FIELD_LABELS[field] }}</label>
           <template v-if="field === 'level' || field === 'skillLevel'">
-            <input :id="`ocr-${field}`" v-model="selections[field]" type="number" min="1" :max="field === 'level' ? POKEMON_LEVEL_MAX : skillMax" placeholder="请输入等级">
+            <input :id="`ocr-${field}`" v-model="selections[field]" type="number" :min="INPUT_LIMITS.selections_field.min" :max="field === 'level' ? POKEMON_LEVEL_MAX : skillMax" placeholder="请输入等级">
             <button class="btn ghost" type="button" @click="selections[field] = String(pokemon[field])">确认使用当前值 {{ pokemon[field] }}</button>
           </template>
           <select v-else :id="`ocr-${field}`" v-model="selections[field]">

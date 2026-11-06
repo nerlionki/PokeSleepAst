@@ -22,7 +22,7 @@ const groups = computed(() => {
 })
 const mainValue = computed(() => {
   const metric = props.metricIndex == null ? null : props.result.metrics[props.metricIndex]
-  return metric ? `${format(props.optimum.value * (metric.kind === 'probability' ? 100 : 1))} ${metric.kind === 'probability' ? '% / 天' : metric.kind === 'count' ? '只 / 天' : '颗 / 天'}` : `${format(props.optimum.value * 100)}% 综合达成率`
+  return metric ? `${metric.kind === 'probability' ? '' : '期望 '}${format(props.optimum.value * (metric.kind === 'probability' ? 100 : 1))} ${metric.kind === 'probability' ? '% / 天' : metric.kind === 'count' ? '只 / 天' : '颗 / 天'}` : `${format(props.optimum.value * 100)} 分 · 综合评分`
 })
 </script>
 
@@ -46,8 +46,8 @@ const mainValue = computed(() => {
         <div class="benefits">
           <div v-for="(metric, index) in result.metrics" :key="index" class="benefit">
             <span>{{ metric.label }}</span>
-            <strong>{{ format(group.first.values[index]! * (metric.kind === 'probability' ? 100 : 1)) }} {{ metric.kind === 'probability' ? '%' : metric.kind === 'count' ? '只' : '颗' }}</strong>
-            <small class="muted">{{ result.maxima[index]! > 0 ? `达成率 ${format(group.first.values[index]! / result.maxima[index]! * 100)}%` : '未解锁或本次模拟收益为 0' }} · 权重 {{ metric.weight }}</small>
+            <strong>{{ metric.kind === 'probability' ? '概率' : '期望' }} {{ format(group.first.values[index]! * (metric.kind === 'probability' ? 100 : 1)) }} {{ metric.kind === 'probability' ? '%' : metric.kind === 'count' ? '只' : '颗' }}</strong>
+            <small class="muted">{{ result.maxima[index]! > 0 ? `相对最优 ${format(group.first.values[index]! / result.maxima[index]! * 100)}%` : '未解锁或本次模拟收益为 0' }} · 权重 {{ metric.weight }}</small>
           </div>
         </div>
       </article>

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.SplitSleepPane
+
 import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
@@ -69,7 +72,7 @@ async function removeTarget(index: number) {
     <article class="card stack">
       <div class="split-fields">
         <div class="field"><label for="split-island">岛屿</label><select id="split-island" v-model="island" :disabled="busy"><option v-for="row in ISLANDS" :key="row.id" :value="row.id">{{ row.name }}</option></select></div>
-        <div class="field"><label for="split-strength">卡比兽能量</label><input id="split-strength" v-model.number="plan.snorlaxStrength" type="number" min="0" step="1" inputmode="numeric" :disabled="busy"></div>
+        <div class="field"><label for="split-strength">卡比兽能量</label><input id="split-strength" v-model.number="plan.snorlaxStrength" type="number" :min="INPUT_LIMITS.split_strength.min" :step="INPUT_LIMITS.split_strength.step" inputmode="numeric" :disabled="busy"></div>
       </div>
       <label class="row"><input v-model="config.campTicket" :disabled="busy" type="checkbox" role="switch"> 露营券 +1（只加第一觉）</label>
       <h3>目标</h3>
@@ -91,16 +94,16 @@ async function removeTarget(index: number) {
           <div class="field"><label for="split-event">活动睡意之力倍率</label><select id="split-event" v-model.number="eventMult" :disabled="busy"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}倍（活动）</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select></div>
         </div>
         <label class="row"><input v-model="otherTypes" type="checkbox" role="switch" :disabled="busy">活动期间遇到其他睡眠类型宝可梦</label>
-        <div class="field"><label for="split-iterations">每个研究状态的模拟次数</label><input id="split-iterations" v-model.number="config.iterations" type="number" min="100" max="100000" step="100" :disabled="busy"></div>
-        <p class="muted">按各指标相对单独最优值的达成率加权，默认权重都为 1。权重 0 只退出综合评分，仍计算单目标最优。宝宝糖果统计同家族普通研究收益。</p>
+        <div class="field"><label for="split-iterations">每个研究状态的模拟次数</label><input id="split-iterations" v-model.number="config.iterations" type="number" :min="INPUT_LIMITS.split_iterations.min" :max="INPUT_LIMITS.split_iterations.max" :step="INPUT_LIMITS.split_iterations.step" :disabled="busy"></div>
+        <p class="muted">按各指标相对单独最优值的比例加权，得到综合评分；默认权重都为 1。权重 0 只退出综合评分，仍计算单目标最优。宝宝糖果统计同家族普通研究收益。</p>
         <div v-for="(target, index) in config.targets" :key="splitTargetKey(target)" class="stack weight-row">
           <strong>{{ statuses[index]?.label }}</strong>
           <div v-if="target.kind === 'baby'" class="split-fields">
-            <div class="field"><label :for="`split-count-${index}`">只数权重</label><input :id="`split-count-${index}`" v-model.number="target.countWeight" type="number" min="0" step="0.1" :disabled="busy"></div>
-            <div class="field"><label :for="`split-candy-${index}`">糖果权重</label><input :id="`split-candy-${index}`" v-model.number="target.candyWeight" type="number" min="0" step="0.1" :disabled="busy"></div>
+            <div class="field"><label :for="`split-count-${index}`">只数权重</label><input :id="`split-count-${index}`" v-model.number="target.countWeight" type="number" :min="INPUT_LIMITS.target_countWeight.min" :step="INPUT_LIMITS.target_countWeight.step" :disabled="busy"></div>
+            <div class="field"><label :for="`split-candy-${index}`">糖果权重</label><input :id="`split-candy-${index}`" v-model.number="target.candyWeight" type="number" :min="INPUT_LIMITS.target_candyWeight.min" :step="INPUT_LIMITS.target_candyWeight.step" :disabled="busy"></div>
           </div>
           <template v-else>
-            <div class="field"><label :for="`split-probability-${index}`">睡姿概率权重</label><input :id="`split-probability-${index}`" v-model.number="target.probabilityWeight" type="number" min="0" step="0.1" :disabled="busy"></div>
+            <div class="field"><label :for="`split-probability-${index}`">睡姿概率权重</label><input :id="`split-probability-${index}`" v-model.number="target.probabilityWeight" type="number" :min="INPUT_LIMITS.target_probabilityWeight.min" :step="INPUT_LIMITS.target_probabilityWeight.step" :disabled="busy"></div>
             <p v-if="!statuses[index]?.unlocked" class="amber">{{ statuses[index]?.reason }}。设置值保留，解锁后恢复生效。</p>
           </template>
         </div>
@@ -115,6 +118,8 @@ async function removeTarget(index: number) {
       <p class="muted">{{ resultIsland }} · 能量 {{ result.options.strength.toLocaleString('zh-CN') }} · {{ result.options.iterations.toLocaleString('zh-CN') }} 次模拟／状态 · 倍率 ×{{ result.options.eventMult }} · 露营券：{{ result.options.campTicket ? '开启' : '关闭' }} · 跨类型：{{ eventMixLabel(result.options.eventMix) }}。结果为本次候选搜索的模拟估计。</p>
       <p v-for="status in resultNotices" :key="status.label" class="amber">{{ status.label }}：{{ status.reason }}</p>
       <p v-for="metric in zeroMetrics" :key="`zero-${metric.targetIndex}-${metric.kind}`" class="muted">{{ metric.label }}：未解锁或本次模拟收益为 0，不参与综合评分。</p>
+      <p class="muted">只数、糖果是该方案所有睡眠合计的期望值（模拟平均）。例如两觉合计期望 1.084 只，表示长期重复相同条件时，平均每天约 1.084 只，不代表大概率至少遇到 1 只；单日可能为 0 只、1 只或更多。</p>
+      <p class="muted">“相对最优”是该指标收益占本次候选方案中最优值的比例，综合评分是这些比例的加权平均，均不是遇见概率。标注“概率”的目标睡姿指标才表示该方案至少遇见一次目标的模拟概率。</p>
       <SplitRecommendation :key="`${JSON.stringify(result.options)}-combined`" title="综合推荐" :result="result" :optimum="result.combined" />
       <SplitRecommendation :key="`${JSON.stringify(result.options)}-whole`" title="整觉对照 · 综合最优" :result="result" :optimum="result.whole" />
       <section v-for="group in resultGroups" :key="group.kind" class="stack">

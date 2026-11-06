@@ -12,6 +12,7 @@ import AppearancePane from '../components/profile/AppearancePane.vue'
 import CreditsPane from '../components/profile/CreditsPane.vue'
 import SettingsPanel from '../components/layout/SettingsPanel.vue'
 import UpdateSettings from '../components/update/UpdateSettings.vue'
+import GuideEntry from '../components/shared/GuideEntry.vue'
 const views_ProfileView_config_clientDefaults = clientDefaults.modules.views_ProfileView
 
 const tab = usePageTab(['home', 'backup', 'settings', 'appearance', 'credits', 'update', 'features'] as const, 'home')
@@ -21,6 +22,7 @@ const titles = { ...cloneData(views_ProfileView_config_clientDefaults["titles"])
 <template>
   <div class="stack">
     <template v-if="tab === 'home'">
+      <GuideEntry page="profile" />
       <section v-if="userInfo" class="card"><h3>{{ userInfo.name }}</h3></section>
       <button class="card profile-entry" type="button" @click="tab = 'backup'"><span>导入 / 导出</span><span aria-hidden="true">›</span></button>
       <button class="card profile-entry" type="button" @click="tab = 'settings'"><span>全局设置</span><span aria-hidden="true">›</span></button>

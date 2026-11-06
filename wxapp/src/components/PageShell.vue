@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GuideTour from '../generated/components/shared/GuideTour.vue'
 import { onMounted, shallowRef, watch } from 'vue'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { taskNavigationLocked } from '../../../core/src/composables/taskNavigationLock'
@@ -35,6 +36,7 @@ useDidShow(() => { active(); applyBars() })
     <view v-if="error" class="card stack"><text>{{ error }}</text><button class="btn" @tap="load">重试</button></view>
     <view v-else-if="!ready" class="muted">正在加载本机数据…</view>
     <view v-else class="page"><slot /></view>
+    <GuideTour v-if="ready" :host-page="page" />
   </view>
 </template>
 <style>

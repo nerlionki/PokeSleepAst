@@ -3,7 +3,7 @@ import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
 import { berryEnergySnaps, berryEnergyTable } from '../../calc/berry'
-import { fixedBerryProducers } from '../../calc/precomputedProduction'
+import { fixedBerryProducers, productionRibbonHours } from '../../calc/precomputedProduction'
 import { BERRIES } from '../../calc/data'
 import { POKEMON_LEVEL_MAX } from '../../calc/xp'
 import { textHit } from '../../calc/text'
@@ -67,7 +67,7 @@ const conditions: Record<string, string> = { full: '全时满包', normal: '一�
       <div v-else class="berry-production">
         <div v-for="(p, index) in producers" :key="`${p.id}-${p.mode}`" class="berry-producer">
           <span class="berry-producer-rank">{{ index + 1 }}</span>
-          <PokeSprite :id="p.id" :name="p.name" />
+          <PokeSprite :id="p.id" :name="p.name" :ribbon-hours="productionRibbonHours(p.id, p.mode)" />
           <div class="berry-producer-info">
             <strong>{{ p.name }}（{{ p.condition ?? conditions[p.mode ?? ''] ?? '一般' }}）</strong>
           </div>

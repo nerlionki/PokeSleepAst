@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.ScorePlanPane
+
 import clientDefaults from '../../data/client-defaults.resource'
 
 import ProgressDialog from '../shared/ProgressDialog.vue'
@@ -59,15 +62,15 @@ function start() { if (!inputError.value && ready.value) void calculate() }
       <p>{{ boundLabel }}</p>
       <div class="row score-basics">
         <div class="field"><label for="score-category">本周料理类型</label><select id="score-category" v-model="options.category"><option value="curry">咖哩／浓汤</option><option value="salad">沙拉</option><option value="dessert">点心／饮料</option></select></div>
-        <div class="field"><label for="score-initial">卡比兽初始能量</label><input id="score-initial" v-model.number="options.initialStrength" type="number" min="0" step="1" inputmode="numeric"></div>
+        <div class="field"><label for="score-initial">卡比兽初始能量</label><input id="score-initial" v-model.number="options.initialStrength" type="number" :min="INPUT_LIMITS.score_initial.min" :step="INPUT_LIMITS.score_initial.step" inputmode="numeric"></div>
       </div>
-      <button class="btn ghost" type="button" :aria-expanded="inventory" @click="inventory = !inventory">初始食材 · {{ foodCount }}/800 个</button>
+      <button class="btn ghost" type="button" :aria-expanded="inventory" @click="inventory = !inventory">初始食材 · {{ foodCount }}/{{ INPUT_LIMITS.options_bag_ingredient_name.max }} 个</button>
       <div v-if="inventory" class="stack">
         <p class="muted">填写规划开始时已经持有的数量。未填写按 0 处理，规划不会扣除保存的库存。</p>
         <div class="score-foods">
           <div v-for="ingredient in INGREDIENTS" :key="ingredient.id" class="field">
             <label :for="`score-food-${ingredient.id}`"><IngredientIcon :id="ingredient.id" :name="ingredient.name" small /> {{ ingredient.name }}</label>
-            <input :id="`score-food-${ingredient.id}`" v-model.number="options.bag[ingredient.name]" type="number" min="0" max="800" step="1" inputmode="numeric">
+            <input :id="`score-food-${ingredient.id}`" v-model.number="options.bag[ingredient.name]" type="number" :min="INPUT_LIMITS.options_bag_ingredient_name.min" :max="INPUT_LIMITS.options_bag_ingredient_name.max" :step="INPUT_LIMITS.options_bag_ingredient_name.step" inputmode="numeric">
           </div>
         </div>
       </div>
@@ -76,12 +79,12 @@ function start() { if (!inputError.value && ready.value) void calculate() }
       <div v-if="advanced" class="stack score-details">
         <h4>规划周期与操作</h4>
         <div class="row">
-          <div class="field"><label for="score-day">开始星期</label><select id="score-day" v-model.number="options.startDay" @change="options.days = Math.min(options.days, 7 - options.startDay)"><option v-for="(day, i) in ['周一','周二','周三','周四','周五','周六','周日']" :key="day" :value="i">{{ day }}</option></select></div>
+          <div class="field"><label for="score-day">开始星期</label><select id="score-day" v-model.number="options.startDay" @change="options.days = Math.min(options.days, INPUT_LIMITS.score_days.max - options.startDay)"><option v-for="(day, i) in ['周一','周二','周三','周四','周五','周六','周日']" :key="day" :value="i">{{ day }}</option></select></div>
           <div class="field"><label for="score-time">开始时刻</label><input id="score-time" v-model="options.startTime" type="time"></div>
-          <div class="field"><label for="score-days">覆盖天数</label><input id="score-days" v-model.number="options.days" type="number" min="1" :max="7 - options.startDay"></div>
+          <div class="field"><label for="score-days">覆盖天数</label><input id="score-days" v-model.number="options.days" type="number" :min="INPUT_LIMITS.score_days.min" :max="7 - options.startDay"></div>
         </div>
         <div class="row">
-          <div class="field"><label for="score-interval">白天收菜间隔（分钟）</label><input id="score-interval" v-model.number="options.collectMinutes" type="number" min="5" max="240"></div>
+          <div class="field"><label for="score-interval">白天收菜间隔（分钟）</label><input id="score-interval" v-model.number="options.collectMinutes" type="number" :min="INPUT_LIMITS.score_interval.min" :max="INPUT_LIMITS.score_interval.max"></div>
           <div class="field"><label for="score-precision">搜索精度</label><select id="score-precision" v-model="options.precision"><option value="medium">中 · 耗时目标 30 秒</option><option value="high">高 · 耗时目标 60 秒</option></select></div>
         </div>
         <div class="row"><div v-for="(label, i) in ['早餐','午餐','晚餐']" :key="label" class="field"><label :for="`score-meal-${i}`">{{ label }}</label><input :id="`score-meal-${i}`" v-model="options.meals[i]" type="time"></div></div>
@@ -96,16 +99,16 @@ function start() { if (!inputError.value && ready.value) void calculate() }
               <div class="field"><label :for="`score-class-${i}`">睡眠分类</label><select :id="`score-class-${i}`" v-model="sleep.classification"><option value="auto">按入睡时间自动判断</option><option value="day">白天</option><option value="night">夜间</option></select></div>
               <div class="field"><label :for="`score-extreme-${i}`">睡眠期间操作</label><select :id="`score-extreme-${i}`" v-model="sleep.extreme"><option value="auto">默认：白天允许，夜间关闭</option><option value="on">开启极限模式</option><option value="off">不收菜</option></select></div>
             </div>
-            <div class="row"><div class="field"><label :for="`score-sleep-collect-${i}`">睡眠收菜间隔（0 为不收菜）</label><input :id="`score-sleep-collect-${i}`" v-model.number="sleep.collectMinutes" type="number" min="0" max="240"></div><div class="field"><label :for="`score-settle-${i}`">醒来后多久结算（分钟）</label><input :id="`score-settle-${i}`" v-model.number="sleep.settleDelay" type="number" min="0" max="1440"></div></div>
+            <div class="row"><div class="field"><label :for="`score-sleep-collect-${i}`">睡眠收菜间隔（0 为不收菜）</label><input :id="`score-sleep-collect-${i}`" v-model.number="sleep.collectMinutes" type="number" :min="INPUT_LIMITS.sleep_collectMinutes.min" :max="INPUT_LIMITS.sleep_collectMinutes.max"></div><div class="field"><label :for="`score-settle-${i}`">醒来后多久结算（分钟）</label><input :id="`score-settle-${i}`" v-model.number="sleep.settleDelay" type="number" :min="INPUT_LIMITS.sleep_settleDelay.min" :max="INPUT_LIMITS.sleep_settleDelay.max"></div></div>
           </template>
         </div>
         <h4>已有技能加成与道具</h4>
         <div class="row">
-          <div class="field"><label for="score-crit">技能暴击加成（%）</label><input id="score-crit" v-model.number="options.initialCrit" type="number" min="0" max="70"></div>
-          <div class="field"><label for="score-pot">技能额外锅容量</label><input id="score-pot" v-model.number="options.initialPot" type="number" min="0" max="200"></div>
-          <div class="field"><label for="score-zone">已有树果领域（%）</label><input id="score-zone" v-model.number="options.initialZone" type="number" min="0" max="24" step="0.1"></div>
+          <div class="field"><label for="score-crit">技能暴击加成（%）</label><input id="score-crit" v-model.number="options.initialCrit" type="number" :min="INPUT_LIMITS.score_crit.min" :max="INPUT_LIMITS.score_crit.max"></div>
+          <div class="field"><label for="score-pot">技能额外锅容量</label><input id="score-pot" v-model.number="options.initialPot" type="number" :min="INPUT_LIMITS.score_pot.min" :max="INPUT_LIMITS.score_pot.max"></div>
+          <div class="field"><label for="score-zone">已有树果领域（%）</label><input id="score-zone" v-model.number="options.initialZone" type="number" :min="INPUT_LIMITS.score_zone.min" :max="INPUT_LIMITS.score_zone.max" :step="INPUT_LIMITS.score_zone.step"></div>
         </div>
-        <div class="row"><div class="field"><label for="score-juice">已有树果汁（个）</label><input id="score-juice" v-model.number="options.initialJuice" type="number" min="0" max="5"></div><label class="score-check"><input v-model="options.useJuice" type="checkbox"><span class="score-check-label">允许规划使用树果汁</span></label></div>
+        <div class="row"><div class="field"><label for="score-juice">已有树果汁（个）</label><input id="score-juice" v-model.number="options.initialJuice" type="number" :min="INPUT_LIMITS.score_juice.min" :max="INPUT_LIMITS.score_juice.max"></div><label class="score-check"><input v-model="options.useJuice" type="checkbox"><span class="score-check-label">允许规划使用树果汁</span></label></div>
         <template v-if="box.pokemon.some(p => !p.napping && p.pokeId === 778)">
           <h4>画皮初始状态</h4>
           <label v-for="p in box.pokemon.filter(p => !p.napping && p.pokeId === 778)" :key="p.uid" class="score-check"><input :model-value="options.initialDisguise[p.uid] ?? true" :checked="options.initialDisguise[p.uid] ?? true" type="checkbox" @change="options.initialDisguise[p.uid] = ($event.target as HTMLInputElement).checked"><span class="score-check-label">{{ boxLabel(p) }} · 画皮仍可大成功</span></label>

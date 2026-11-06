@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GuideEntry from '../components/shared/GuideEntry.vue'
 import { useFeaturesStore } from '../stores/features'
 import { useTabSwipe } from '../composables/useTabSwipe'
 import clientDefaults from '../data/client-defaults.resource'
@@ -23,9 +24,10 @@ const swipe = useTabSwipe(tab, () => (['team', 'cmp', 'score'] as const).filter(
 
 <template>
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
+    <GuideEntry page="team" :show-trigger="false" />
     <button class="btn ghost" type="button" :aria-expanded="adjusting" @click="adjusting = !adjusting">配队加成设置</button>
     <section v-if="adjusting" class="card stack"><p class="muted">修改立即同步全局设置。</p><EnvironmentFields :value="settingsStore.settings" @change="settingsStore.setEnvironment" /></section>
-    <Segmented v-model="tab" :options="[{ id: 'team', label: '我的队伍' }, { id: 'cmp', label: '个体对比' }, { id: 'score', label: '冲分规划' }]" />
+    <Segmented guide-id="guide-team-tabs" v-model="tab" :options="[{ id: 'team', label: '我的队伍' }, { id: 'cmp', label: '个体对比' }, { id: 'score', label: '冲分规划' }]" />
     <TeamsPane v-if="tab === 'team'" />
     <ComparePane v-else-if="tab === 'cmp'" />
     <ScorePlanPane v-else-if="tab === 'score'" />

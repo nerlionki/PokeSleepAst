@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GuideEntry from '../components/shared/GuideEntry.vue'
 import { useFeaturesStore } from '../stores/features'
 import { useTabSwipe } from '../composables/useTabSwipe'
 import { computed } from 'vue'
@@ -28,7 +29,9 @@ const swipe = useTabSwipe(tab, () => (['encounter', 'sleep', 'split', 'candy', '
 
 <template>
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
+    <GuideEntry page="plan" :show-trigger="false" />
     <Segmented
+      guide-id="guide-plan-tabs"
       v-model="tab"
       class="plan-tabs"
       :options="[

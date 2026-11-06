@@ -62,7 +62,7 @@ for (const url of Object.values(images)) {
   const data = Buffer.from(modules.get(item.pack)[item.key] ?? '', 'base64')
   if (data.length !== item.size || data.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || `${createHash('sha256').update(data).digest('hex')}.png` !== item.file) throw Error(`Invalid image payload: ${url}`)
 }
-for (const folder of ['berry/', 'ingredient/', 'meal/', 'pokemon/icons/', 'pokemon/portrait/']) {
+for (const folder of ['berry/', 'ingredient/', 'meal/', 'mainSkill/', 'subSkill/', 'ribbon/', 'pokemon/icons/', 'pokemon/portrait/']) {
   if (!Object.keys(images).some(key => key.startsWith(folder))) throw Error(`Missing image category ${folder}`)
 }
 if (Object.keys(images).some(file => !isBundledImage(file))) throw Error('Unexpected bundled image category')
@@ -159,6 +159,11 @@ if (/\[data-v-[^\]]+\]/.test(nativeCss)) throw Error('Native CSS contains unsupp
 if (!nativeCss.includes('wx-s-')) throw Error('Missing native class scopes')
 const nativeJs = files.filter(file => file.endsWith('.js') && !/asset-pack|ocr-pack/.test(file)).map(file => fs.readFileSync(file, 'utf8')).join('\n')
 const pokemonJs = fs.readFileSync(path.join(dist, 'pages/pokemon/index.js'), 'utf8')
+// Reject the reviewed ad dismissal regression in the actual uploadable output.
+const adDismissal = /收起广告|关闭广告|隐藏广告|homeListAdDismissed|home-list-ad-dismiss/
+if (adDismissal.test(nativeJs) || adDismissal.test(nativeCss)) throw Error('WeChat output contains custom ad dismissal logic')
+if (!pokemonJs.includes('adunit-d01f9b27695a13a4') || !pokemonJs.includes('ad-custom')) throw Error('Home list official ad or its original unit ID is missing')
+console.log('Verified official home list ad and absence of the rejected dismissal controls in output.')
 if (!/"scroll-y"\s*:\s*(?:true|!0)/.test(pokemonJs) || /"scroll-y"\s*:\s*""/.test(pokemonJs)) {
   throw Error('Pokemon virtual list must enable native vertical scrolling with a boolean true')
 }

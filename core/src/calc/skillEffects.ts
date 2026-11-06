@@ -1,18 +1,12 @@
-import runtimeParameters from '../data/runtime-parameters.resource'
-import ruleCatalogs from '../data/rule-catalogs.resource'
-import ruleParameters from '../data/rule-parameters.resource'
 import extracted0 from '../data/skill-tables.resource'
 import { cloneData } from './dataClone'
-import { INGREDIENTS, berryByName, pokeById } from './data'
-import { MAIN_SKILLS, clampSkillLevel, mainSkillValue, skillByPokedexName } from './mainSkills'
-import { SPECIAL_TEAM_POKEMON } from './teamRestrictions'
-import { chargeStrength } from './skills'
+import { INGREDIENTS } from './data'
+import { MAIN_SKILLS, clampSkillLevel, skillByPokedexName, type MainSkill } from './mainSkills'
+import { itemById } from './itemCatalog'
+import { SKILL_EXECUTION, modelAmount, modelCondition, conditionNeedsTarget, modelTargets, modelFirstIngredient, type ModelActor, type ModelContext } from './skillModel'
+import type { SkillEffect } from './skillModelTypes'
 import type { ProduceInput, ProduceResult } from '../types'
 const skillEffects_config_extracted0 = extracted0.modules.skillEffects
-const skillEffects_applyMainSkill_runtimeParameters = runtimeParameters.modules.skillEffects.applyMainSkill.values
-const skillEffects_config_ruleCatalogs = ruleCatalogs.modules.skillEffects
-const skillEffects_applyMainSkill_ruleParameters = ruleParameters.modules.skillEffects.applyMainSkill
-
 
 /** 用户确认：验证 Wiki 的 26 个候选等概率，未确认的技能不进入池。 */
 export const METRONOME_POOL = (cloneData(skillEffects_config_extracted0.METRONOME_POOL) as unknown as readonly [1,5,2,15,20,39,9,10,31,23,24,29,26,4,30,7,8,17,32,11,13,25,3,6,14,21])
@@ -53,189 +47,123 @@ export interface EffectContext {
   zone?(amount: number): void
 }
 
-function reward(actor: EffectActor, key: 'dreamShards' | 'candies' | 'berryJuice', amount: number) {
+
+function reward(actor: EffectActor, key: 'dreamShards' | 'candies', amount: number) {
   actor.result.rewards ??= { dreamShards: 0, candies: 0, berryJuice: 0 }
   actor.result.rewards[key] += amount
 }
+function giveItem(actor: EffectActor, id: number, amount: number) {
+  actor.result.rewards ??= { dreamShards: 0, candies: 0, berryJuice: 0 }
+  const rewards = actor.result.rewards
+  rewards.items ??= {}
+  rewards.items[id] = (rewards.items[id] ?? 0) + amount
+  const legacy = itemById(id)?.legacyRewardKey
+  if (legacy) rewards[legacy] += amount
+}
 
-/** 技能效果采用期望状态近似，料理暴击另保留概率分支。 */
+/** Execute validated, data-defined effects with expected-state semantics. */
+export function applySkillModelEffects(actor: EffectActor, team: EffectActor[], context: EffectContext, skill: MainSkill, level: number, weight = 1,
+  sharedCrit?: { amount: number, probability: number }[]) {
+  const crit = sharedCrit ?? []
+  const models = team.map(member => ({ pokeId: member.poke.id, skill: member.poke.mainSkill, berry: member.poke.berry, get energy() { return member.energy } }))
+  const self = models[team.indexOf(actor)] ?? { pokeId: actor.poke.id, skill: actor.poke.mainSkill, berry: actor.poke.berry, get energy() { return actor.energy } }
+  const original = (model: ModelActor) => model === self ? actor : team[models.indexOf(model)]!
+  const modifiers = context.modifiers?.(actor, skill.name) ?? { ingredient: 1, berry: 1, shards: 1, healing: 1 }
+  const base: ModelContext = { profile: 'expected', skill, level, actor: self, team: models, random: () => 0,
+    firstIngredient: modelFirstIngredient(actor.input.pokeId, actor.input.ingredientSlots[0]), supportTeamSize: actor.input.supportTeamSize }
+  const execute = (effects: SkillEffect[], w: number, bound?: ModelActor, multiplier = 1) => {
+    for (const effect of effects) {
+      if (effect.profiles && !effect.profiles.includes('expected')) continue
+      if (effect.condition && !conditionNeedsTarget(effect.condition) && !modelCondition(effect.condition, base)) continue
+      let mass = w
+      if (effect.chance) mass *= effect.chance.expectedProbability ?? (effect.chance.test === 'gte' ? 1 - effect.chance.probability : effect.chance.probability)
+      if (mass <= 0) continue
+      for (const { target, probability } of modelTargets(effect.target, base, bound)) {
+        const ctx = { ...base, target }
+        if (!modelCondition(effect.condition, ctx)) continue
+        const targetActor = original(target), p = mass * probability
+        const value = (amount = effect.amount) => modelAmount(amount, ctx) * multiplier
+        switch (effect.op) {
+          case 'sequence': execute(effect.effects!, p, target, multiplier); break
+          case 'charge': context.charge(actor, value() * p); break
+          case 'currency': reward(actor, effect.currency!, value() * p * (effect.currency === 'dreamShards' ? modifiers.shards : 1)); break
+          case 'giveItem': giveItem(actor, effect.itemId!, value() * p); break
+          case 'heal': targetActor.energy = Math.min(SKILL_EXECUTION.energyCap, targetActor.energy + value() * p * targetActor.factor * modifiers.healing); break
+          case 'help': context.help(targetActor, value() * p); break
+          case 'skillOnlyHelp': context.skillOnly(targetActor, value(), p); break
+          case 'pot': context.pot(value() * p); break
+          case 'crit': crit.push({ amount: value(), probability: p }); break
+          case 'zone': context.zone?.(value() * p); break
+          case 'drainEnergy': targetActor.energy = Math.max(0, targetActor.energy - value() * p); break
+          case 'ingredients': {
+            const pool = effect.pool ? INGREDIENTS.filter(item => effect.pool!.includes(item.id)) : INGREDIENTS
+            for (const item of pool) context.ingredient(actor, item.name, value() * p * modifiers.ingredient / pool.length)
+            break
+          }
+          case 'firstIngredient': if (base.firstIngredient) context.ingredient(actor, base.firstIngredient, value() * p * modifiers.ingredient); break
+          case 'berries': {
+            const amount = value(target === self ? effect.selfAmount : effect.otherAmount) * modifiers.berry * p
+            targetActor.result.berries += amount
+            targetActor.result.skillBerries = (targetActor.result.skillBerries ?? 0) + amount
+            targetActor.result.berryEnergy += amount * targetActor.unitBerry
+            break
+          }
+          case 'onceBonus': {
+            const ready = actor.disguiseReady ?? SKILL_EXECUTION.stateResets.onceBonus.expected
+            const success = ready * (1 - (1 - effect.releaseChance!) ** p)
+            actor.disguiseReady = ready - success
+            execute(effect.effects!, p, bound, multiplier * (1 + effect.bonus! * success / p))
+            break
+          }
+          case 'accumulateRelease': {
+            const row = skill.extra![effect.extraTable!]!.levels[level - 1]!
+            let state = actor.stockpile ?? [1, ...Array<number>(effect.maxStacks!).fill(0)]
+            let strength = 0
+            for (let remaining = p; remaining > 1e-10; remaining -= 1) {
+              const chance = Math.min(1, remaining), next = state.map(mass => mass * (1 - chance))
+              state.forEach((mass, stack) => {
+                const release = stack === effect.maxStacks ? 1 : effect.releaseChance!
+                strength += mass * chance * release * Number(row[stack])
+                next[0]! += mass * chance * release
+                if (stack < effect.maxStacks!) next[stack + 1]! += mass * chance * (1 - release)
+              })
+              state = next
+            }
+            actor.stockpile = state
+            context.charge(actor, strength * multiplier)
+            break
+          }
+        }
+      }
+    }
+  }
+  execute(skill.model.effects, weight)
+  if (!sharedCrit && crit.length) context.crit(crit)
+}
+
 export function applyMainSkill(actor: EffectActor, team: EffectActor[], context: EffectContext, weight = 1) {
   const selected = skillByPokedexName(actor.poke.mainSkill, actor.poke.id)
   if (!selected || weight <= 0) return false
-  const expand = (id: number, probability: number) => id === (skillEffects_applyMainSkill_runtimeParameters.p001 as 12)
-    ? METRONOME_POOL.map(id => ({ id, probability: probability / METRONOME_POOL.length })) : [{ id, probability }]
-  const copying = selected.id === 18 || selected.id === 19
-  const candidates = copying ? team.filter(target => target !== actor) : []
-  const choices = copying ? (candidates.length ? candidates.flatMap(target => {
-    const skill = skillByPokedexName(target.poke.mainSkill, target.poke.id)
-    const failed = SPECIAL_TEAM_POKEMON.has(target.poke.id) || !skill || skillEffects_config_ruleCatalogs.applyMainSkillList0.values.includes(skill.id)
-    return expand(failed ? 1 : skill!.id, 1 / candidates.length)
-  }) : [{ id: 1, probability: 1 }]) : expand(selected.id, 1)
-  const crit: { amount: number, probability: number }[] = []
-  for (const choice of choices) {
-    const name = MAIN_SKILLS.find(skill => skill.id === choice.id)!.name
-    const level = clampSkillLevel(name, actor.skillLv)
-    const modifiers = context.modifiers?.(actor, name) ?? { ingredient: 1, berry: 1, shards: 1, healing: 1 }
-    const grant = (key: 'dreamShards' | 'candies' | 'berryJuice', amount: number) => reward(actor, key, amount * (key === 'dreamShards' ? modifiers.shards : 1))
-    const w = weight * choice.probability
-    const value = (column: string) => mainSkillValue(name, level, column)
-    const heal = (target: EffectActor, amount: number) => { target.energy = Math.min(skillEffects_applyMainSkill_ruleParameters.energyCap, target.energy + amount * w * target.factor * modifiers.healing) }
-    const food = (amount: number, pool = INGREDIENTS) => { for (const ingredient of pool) context.ingredient(actor, ingredient.name, amount * w * modifiers.ingredient / pool.length) }
-    const berry = (target: EffectActor, amount: number) => {
-      amount *= modifiers.berry
-      target.result.berries += amount * w
-      target.result.skillBerries = (target.result.skillBerries ?? 0) + amount * w
-      target.result.berryEnergy += amount * w * target.unitBerry
+  const expand = (skill: MainSkill, probability: number, depth = 0): { skill: MainSkill; probability: number }[] => {
+    if (depth > SKILL_EXECUTION.recursionLimit) return []
+    const selection = skill.model.selection
+    const own = skill.model.effects.length ? [{ skill, probability }] : []
+    const next = (id: number, p: number) => { const child = MAIN_SKILLS.find(skill => skill.id === id); return child ? expand(child, p, depth + 1) : [] }
+    if (selection?.kind === 'random') return [...own, ...selection.pool!.flatMap(id => next(id, probability / selection.pool!.length))]
+    if (selection?.kind === 'choose') return [...own, ...next(selection.pool!.includes(actor.input.mewSkill ?? NaN) ? actor.input.mewSkill! : selection.fallbackSkillId!, probability)]
+    if (selection?.kind === 'copy') {
+      const targets = team.filter(target => target !== actor)
+      if (!targets.length) return [...own, ...next(selection.fallbackSkillId!, probability)]
+      return [...own, ...targets.flatMap(target => {
+        const skill = skillByPokedexName(target.poke.mainSkill, target.poke.id)
+        const failed = selection.blockedPokemon!.includes(target.poke.id) || !skill?.model.copyable
+        return next(failed ? selection.fallbackSkillId! : skill!.id, probability / targets.length)
+      })]
     }
-    const matchingSpecies = Math.min((skillEffects_applyMainSkill_runtimeParameters.p002 as 5), Math.max(1, new Set(team.filter(member => member.poke.berry === actor.poke.berry).map(member => member.poke.id)).size)) - 1
-    const pair = team.some(member => member !== actor && /正电|正電|负电|負電/.test(member.poke.mainSkill))
-    switch (choice.id) {
-      case 1: case 2: case 5: case 39:
-        context.charge(actor, chargeStrength(name, level) * w)
-        if (choice.id === 39) grant('dreamShards', value('梦碎') * w)
-        break
-      case 15: {
-        const table = MAIN_SKILLS.find(skill => skill.id === 15)!.extra![0]!.levels[level - 1]!
-        let state = actor.stockpile ?? [1,0,0,0,0,0,0,0,0,0,0]
-        let strength = 0
-        // 概率状态保留到下次发动；小数权重表示该分支发动的概率。
-        for (let remaining = w; remaining > 1e-10; remaining -= 1) {
-          const probability = Math.min(1, remaining)
-          const next = state.map(mass => mass * (1 - probability))
-          state.forEach((mass, stack) => {
-            const spit = stack === (skillEffects_applyMainSkill_runtimeParameters.p003 as 10) ? 1 : SPIT_UP_CHANCE
-            strength += mass * probability * spit * Number(table[stack])
-            next[0]! += mass * probability * spit
-            if (stack < (skillEffects_applyMainSkill_runtimeParameters.p004 as 10)) next[stack + 1]! += mass * probability * (1 - spit)
-          })
-          state = next
-        }
-        actor.stockpile = state
-        context.charge(actor, strength)
-        break
-      }
-      case 40:
-        context.charge(actor, value('能量') * w)
-        context.zone?.(Number(MAIN_SKILLS.find(skill => skill.id === 40)!.levels[level - 1]![1]!.replace('%', '')) / 100 * w)
-        break
-      case 3: grant('dreamShards', value('梦碎') * w); break
-      case 6: grant('dreamShards', (value('最低') + value('最高')) / 2 * w); break
-      case 7: heal(actor, value('活力')); break
-      case 4:
-        for (const target of team) heal(target, value('活力') / team.length)
-        break
-      case 8: case 32:
-        for (const target of team) heal(target, value('活力'))
-        if (choice.id === 32) grant('berryJuice', skillEffects_applyMainSkill_ruleParameters.berryJuiceChance * w)
-        break
-      case 17: {
-        heal(actor, value('自己'))
-        const ranked = [...team].sort((a,b) => a.energy - b.energy)
-        const weights = ranked.map((_, index) => index === 0 ? skillEffects_applyMainSkill_ruleParameters.lowestEnergyTargetWeight : skillEffects_applyMainSkill_ruleParameters.otherEnergyTargetWeight)
-        const total = weights.reduce((a,b) => a+b, 0)
-        ranked.forEach((target,index) => heal(target, value('同伴') * skillEffects_applyMainSkill_ruleParameters.crescentRecoveryChance * weights[index]! / total))
-        break
-      }
-      case 9:
-        for (const target of team) context.help(target, value('帮忙') * w / Math.max(team.length, actor.input.supportTeamSize ?? team.length))
-        break
-      case 14:
-        for (const target of team) context.help(target, BOOST[level-1]![matchingSpecies]! * w)
-        break
-      case 10: case 29: case 31:
-        food(value('食材'))
-        if (choice.id === 29) grant('candies', value('糖果') / 3 * w)
-        if (choice.id === 31) crit.push({ amount: Number(MAIN_SKILLS.find(skill => skill.id === 31)!.levels[level-1]![1]!.replace('%','')) / 100, probability: w })
-        break
-      case 23:
-        food(value('食材') * skillEffects_applyMainSkill_ruleParameters.plusSuccessChance, INGREDIENTS.filter(item => skillEffects_config_ruleCatalogs.applyMainSkillList1.values.includes(item.id)))
-        grant('dreamShards', (value('梦碎') * skillEffects_applyMainSkill_ruleParameters.plusRareOneChance + value('大成功') * skillEffects_applyMainSkill_ruleParameters.plusRareTwoChance) * w)
-        break
-      case 24:
-        food(value('食材') * (1 + 1/(skillEffects_applyMainSkill_runtimeParameters.p005 as 6)), INGREDIENTS.filter(item => skillEffects_config_ruleCatalogs.applyMainSkillList2.values.includes(item.id)))
-        break
-      case 28: case 33: case 36: case 38:
-        food(value('食材'), INGREDIENTS.filter(item => SELECT_POOLS[choice.id]!.includes(item.id)))
-        break
-      case 26: case 27:
-        food(value('携带'))
-        if (pair) {
-          const index = actor.input.ingredientSlots[0]
-          // 正电追加发动者第一个食材；未选择食材则无追加。
-          const ingredient = index == null ? undefined : pokeById(actor.input.pokeId)?.ingredients[index]
-          if (ingredient) context.ingredient(actor, ingredient.name, value('一致追加') * w * modifiers.ingredient)
-        }
-        break
-      case 11: case 25: case 41:
-        context.pot(value('锅容量') * w)
-        if (choice.id === 41) crit.push({ amount: Number(MAIN_SKILLS.find(skill => skill.id === 41)!.levels[level - 1]![1]!.replace('%', '')) / 100, probability: w })
-        if (choice.id === 25 && pair) for (const target of team) heal(target, value('活力') / team.length)
-        break
-      case 13:
-        crit.push({ amount: Number(MAIN_SKILLS.find(skill => skill.id === 13)!.levels[level-1]![0]!.replace('%','')) / 100, probability: w })
-        break
-      case 20:
-        for (const target of team) berry(target, target === actor ? value('基础') : value('追加'))
-        break
-      case 16: {
-        // 官方：一次大成功后直到睡眠研究/手动登记前不能再次大成功。
-        // https://www.pokemonsleep.net/news/313931363231383538363537383238383635/
-        // 期望状态保留未成功概率，避免每次发动都独立追加大成功收益。
-        const ready = actor.disguiseReady ?? 1
-        const success = ready * (1 - (1 - DISGUISE_CRIT_CHANCE) ** w)
-        actor.disguiseReady = ready - success
-        for (const target of team) berry(target, (target === actor ? value('基础') : value('追加')) * (1 + ruleParameters.modules.skillEffects.applyMainSkill.disguiseCritBonus * success / w))
-        break
-      }
-      case 22:
-        context.charge(actor, value('能量') * w)
-        // 固定扣除 12，与性格回复倍率无关，恶属性豁免，最低为 0。
-        // https://pks.raenonx.cc/en/mainskill/info/22 （Energy Recovery: Static）
-        for (const target of team) {
-          if (berryByName(target.poke.berry)?.type !== '恶') target.energy = Math.max(0, target.energy - (skillEffects_applyMainSkill_runtimeParameters.p006 as 12) * w)
-        }
-        break
-      case 21:
-        for (const target of team) {
-          heal(target, value('活力'))
-          berry(target, (target === actor ? CRESCENT_SELF : CRESCENT_TEAM)[level-1]![matchingSpecies]!)
-        }
-        break
-      case 35: {
-        const count = Math.min(2, team.length)
-        const helps = value('帮忙') + (team.some(member => member.poke.id === 381) ? value('组合追加') : 0)
-        // 满队使用 RAE 验证权重：https://pks.raenonx.cc/en/mainskill/info/35
-        // 不足五人的分布未核实，按随机两名期望；组合默认已解锁。
-        const ranked = [...team].sort((a, b) => a.energy - b.energy)
-        const weights = team.length === (skillEffects_applyMainSkill_runtimeParameters.p007 as 5) ? [skillEffects_applyMainSkill_ruleParameters.latiasTargetWeight, skillEffects_applyMainSkill_ruleParameters.latiosFirstTargetWeight, skillEffects_applyMainSkill_ruleParameters.latiosOtherTargetWeight, skillEffects_applyMainSkill_ruleParameters.latiosOtherTargetWeight, skillEffects_applyMainSkill_ruleParameters.latiosOtherTargetWeight] : ranked.map(() => count / team.length)
-        const total = weights.reduce((sum, value) => sum + value, 0)
-        const chances = team.map(target => {
-          const ties = ranked.flatMap((member, index) => member.energy === target.energy ? [index] : [])
-          return ties.reduce((sum, index) => sum + weights[index]!, 0) / ties.length * count / total
-        })
-        team.forEach((target, index) => {
-          const chance = chances[index]!
-          heal(target, value('活力') * chance)
-          context.help(target, helps * w * chance)
-        })
-        break
-      }
-      case 37:
-        for (const target of team) {
-          const amount = (target === actor ? DRACO_SELF : DRACO_TEAM)[level - 1]![matchingSpecies]!
-            + (target === actor && team.some(member => member.poke.id === 380) ? value('拉帝亚斯') : 0)
-          berry(target, amount)
-        }
-        break
-      case 30:
-        for (const target of team) {
-          heal(target, value('活力') / team.length)
-          context.skillOnly(target, value('技能帮忙'), w / team.length)
-        }
-        break
-      default: return false
-    }
+    return [{ skill, probability }]
   }
+  const crit: { amount: number, probability: number }[] = []
+  for (const { skill, probability } of expand(selected, 1)) applySkillModelEffects(actor, team, context, skill, clampSkillLevel(skill.name, actor.skillLv), weight * probability, crit)
   if (crit.length) context.crit(crit)
   return true
 }

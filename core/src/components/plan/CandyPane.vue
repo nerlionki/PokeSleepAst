@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.CandyPane
+
 import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
@@ -22,7 +25,7 @@ const candyViewport = useCandyViewport()
 const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
 const box = useBoxStore()
-const mode = shallowRef<CandyBoostId>((components_plan_CandyPane_config_clientDefaults["modeInitial"] as unknown as CandyBoostId))
+const mode = shallowRef<Exclude<CandyBoostId, 'normal'>>(components_plan_CandyPane_config_clientDefaults.modeInitial === 'mini' ? 'mini' : 'christmas')
 const importing = shallowRef(components_plan_CandyPane_config_clientDefaults["importingInitial"])
 const imported = ref(new Set<string>())
 const expandedRows = ref(new Set<string>())
@@ -39,6 +42,7 @@ function importFromBox(pokemon: BoxPokemon) {
 }
 
 const plans = computed(() => ({
+  normal: planCandy(plan.value.candyRows, plan.value.candyStocks, 'normal', CANDY_PLANNING_ACTIVITY),
   christmas: planCandy(plan.value.candyRows, plan.value.candyStocks, 'christmas', CANDY_PLANNING_ACTIVITY),
   mini: planCandy(plan.value.candyRows, plan.value.candyStocks, 'mini', CANDY_PLANNING_ACTIVITY),
 }))
@@ -112,7 +116,7 @@ const presets = CANDY_PRESETS
 <template>
   <div class="stack candy-pane">
     <div class="stack candy-context">
-    <p class="muted">同一进化家族共用当前糖果，按行顺序扣。大型增强经验 ×{{ CANDY_BOOSTS.christmas.exp }}、梦碎 ×{{ CANDY_BOOSTS.christmas.shards }}、额度 {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}。迷你增强经验 ×{{ CANDY_BOOSTS.mini.exp }}、梦碎 ×{{ CANDY_BOOSTS.mini.shards }}、额度 {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}。随时可规划，不受活动日期限制，不含睡眠经验。</p>
+    <p class="muted">同一进化家族共用当前糖果，按行顺序扣。普通培养经验 ×{{ CANDY_BOOSTS.normal.exp }}、梦碎 ×{{ CANDY_BOOSTS.normal.shards }}，无增强额度限制。大型增强经验 ×{{ CANDY_BOOSTS.christmas.exp }}、梦碎 ×{{ CANDY_BOOSTS.christmas.shards }}、额度 {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}。迷你增强经验 ×{{ CANDY_BOOSTS.mini.exp }}、梦碎 ×{{ CANDY_BOOSTS.mini.shards }}、额度 {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}。随时可规划，不受活动日期限制，不含睡眠经验。</p>
     <div class="seg">
       <button type="button" :class="{ on: mode === 'christmas' }" @click="mode = 'christmas'">大型增强</button>
         <button type="button" :class="{ on: mode === 'mini' }" @click="mode = 'mini'">迷你增强</button>
@@ -121,6 +125,11 @@ const presets = CANDY_PRESETS
     <div class="stack candy-workspace" :style="candyViewport">
     <div class="stack candy-toolbar">
     <div class="candy-boost-stats">
+      <article class="card candy-boost-stat">
+        <p class="muted">普通培养</p>
+        <p>{{ plans.normal.candies.toLocaleString('zh-CN') }} 颗</p>
+        <p>梦碎 {{ plans.normal.shards.toLocaleString('zh-CN') }}</p>
+      </article>
       <article class="card candy-boost-stat">
         <p class="muted">大型增强</p>
         <p>{{ plans.christmas.candies.toLocaleString('zh-CN') }} / {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }} 颗</p>
@@ -162,21 +171,21 @@ const presets = CANDY_PRESETS
       </div>
       <template v-if="expandedRows.has(row.id)">
       <div class="row">
-        <FormField v-slot="{ id }" label="当前糖果"><input :id="id" :value="stockOf(row.pokeId)" type="number" min="0" @change="setStock(row.pokeId, Number(($event.target as HTMLInputElement).value))"></FormField>
+        <FormField v-slot="{ id }" label="当前糖果"><input :id="id" :value="stockOf(row.pokeId)" type="number" :min="INPUT_LIMITS.stockOf_row_pokeId.min" @change="setStock(row.pokeId, Number(($event.target as HTMLInputElement).value))"></FormField>
         <FormField v-slot="{ id }" label="输入方式"><select :id="id" v-model="row.method">
             <option value="target">目标等级</option>
             <option value="manual">指定糖果</option>
           </select></FormField>
       </div>
       <div class="row">
-        <FormField v-slot="{ id }" label="当前等级"><input :id="id" v-model.number="row.start" type="number" min="1" max="70"></FormField>
+        <FormField v-slot="{ id }" label="当前等级"><input :id="id" v-model.number="row.start" type="number" :min="INPUT_LIMITS.row_start.min" :max="INPUT_LIMITS.row_start.max"></FormField>
         <div v-if="row.method === 'target'" class="field">
           <label>目标等级</label>
-          <input v-model.number="row.target" type="number" min="1" max="70">
+          <input v-model.number="row.target" type="number" :min="INPUT_LIMITS.row_target.min" :max="INPUT_LIMITS.row_target.max">
         </div>
         <div v-else class="field">
           <label>使用糖果</label>
-          <input v-model.number="row.use" type="number" min="0" :disabled="row.useAll">
+          <input v-model.number="row.use" type="number" :min="INPUT_LIMITS.row_use.min" :disabled="row.useAll">
         </div>
       </div>
       <div v-if="row.method === 'target'" class="picker-opts">
@@ -199,7 +208,7 @@ const presets = CANDY_PRESETS
         <FormField v-slot="{ id }" label="升级还需 EXP"><input :id="id"
             :value="row.remaining ?? ''"
             type="number"
-            min="0"
+            :min="INPUT_LIMITS.row_remaining.min"
             placeholder="留空＝刚到本级"
             @change="setRemaining(row, ($event.target as HTMLInputElement).value)"
           ></FormField>

@@ -1,14 +1,7 @@
-import runtimeParameters from '../data/runtime-parameters.resource'
-import ruleCatalogs from '../data/rule-catalogs.resource'
-import ruleParameters from '../data/rule-parameters.resource'
-import { INGREDIENTS, berryByName } from './data'
-import { MAIN_SKILLS, clampSkillLevel, mainSkillValue, skillByPokedexName } from './mainSkills'
-import { BOOST, CRESCENT_SELF, CRESCENT_TEAM, DISGUISE_CRIT_CHANCE, DRACO_SELF, DRACO_TEAM, METRONOME_POOL, SELECT_POOLS, SPIT_UP_CHANCE } from './skillEffects'
-import { SPECIAL_TEAM_POKEMON } from './teamRestrictions'
-const scoreSkills_scoreSkill_runtimeParameters = runtimeParameters.modules.scoreSkills.scoreSkill.values
-const scoreSkills_scoreSkill_ruleParameters = ruleParameters.modules.scoreSkills.scoreSkill
-const scoreSkills_config_ruleCatalogs = ruleCatalogs.modules.scoreSkills
-
+import { INGREDIENTS } from './data'
+import { MAIN_SKILLS, clampSkillLevel, skillByPokedexName } from './mainSkills'
+import { SKILL_EXECUTION, modelAmount, modelCondition, conditionNeedsTarget, modelTargets, type ModelContext } from './skillModel'
+import type { SkillEffect } from './skillModelTypes'
 
 export interface ScoreActor {
   uid: string, pokeId: number, berry: string, skill: string, skillLevel: number, rate: number
@@ -25,131 +18,85 @@ export interface ScoreSkillContext {
   pot(amount: number): void
   crit(amount: number): void
   zone(amount: number): void
-  juice(): void
+  giveItem(id: number, amount: number): void
   warning(text: string): void
 }
-/** 规划使用整数事件；共用技能表与候选池，不改变现有期望值对比模型。 */
+
+/** Execute the same validated effects with seeded integer-event semantics. */
 export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkillContext, selectedId?: number, depth = 0): void {
-  if (depth > (scoreSkills_scoreSkill_runtimeParameters.p001 as 8)) { ctx.warning('技能连锁超过模拟深度，结果存在截断'); return }
-  const selected = selectedId == null ? skillByPokedexName(actor.skill, actor.pokeId) : MAIN_SKILLS.find(s => s.id === selectedId)
-  if (!selected) { ctx.warning(`未支持主技能：${actor.skill}`); return }
-  const modifiers = ctx.modifiers?.(selected.name) ?? { ingredient: 1, berry: 1, healing: 1 }
-  const giveBerries = (target: ScoreActor, amount: number) => ctx.berries(target, Math.floor(amount * modifiers.berry))
-  const pick = <T>(items: readonly T[]) => items[Math.floor(ctx.random() * items.length)]!
+  if (depth > SKILL_EXECUTION.recursionLimit) { ctx.warning('技能连锁超过模拟深度，结果存在截断'); return }
+  const selected = selectedId == null ? skillByPokedexName(actor.skill, actor.pokeId) : MAIN_SKILLS.find(skill => skill.id === selectedId)
+  if (!selected) { ctx.warning('未支持主技能：' + actor.skill); return }
+  const pick = <T>(rows: readonly T[]) => rows[Math.floor(ctx.random() * rows.length)]!
+  const modifiers = (selected.model.effects.some(effect => !effect.profiles || effect.profiles.includes('sampled')) ? ctx.modifiers?.(selected.name) : undefined) ?? { ingredient: 1, berry: 1, healing: 1 }
   const level = clampSkillLevel(selected.name, actor.skillLevel)
-  const value = (name: string) => mainSkillValue(selected.name, level, name)
-  const percent = (name: string) => Number(selected.levels[level - 1]?.[selected.columns.indexOf(name)]?.replace('%', '')) / 100 || 0
-  const randomTarget = () => pick(team)
-  const heal = (target: ScoreActor, amount: number) => ctx.heal(target, amount * target.factor * modifiers.healing)
-  const food = (amount: number, ids?: readonly number[], scaled = false) => {
-    amount = scaled ? amount : Math.floor(amount * modifiers.ingredient)
-    const pool = ids ? INGREDIENTS.filter(i => ids.includes(i.id)) : INGREDIENTS
-    // 食材获取抽选三种不同食材；精选池按整份随机抽选，保证整数库存。
-    if (ids) { ctx.ingredient(pick(pool).name, amount); return }
-    const available = [...pool]
-    for (let i = 0; i < Math.min(3, pool.length); i++) {
-      const index = Math.floor(ctx.random() * available.length)
-      const ingredient = available.splice(index, 1)[0]!
-      ctx.ingredient(ingredient.name, Math.floor(amount / 3) + Number(i < amount % 3))
+  const base: ModelContext = { profile: 'sampled', skill: selected, level, actor, team, random: ctx.random, firstIngredient: actor.firstFood }
+  const execute = (effects: SkillEffect[], bound?: ScoreActor, multiplier = 1) => {
+    for (const effect of effects) {
+      if (effect.profiles && !effect.profiles.includes('sampled')) continue
+      if (effect.condition && !conditionNeedsTarget(effect.condition) && !modelCondition(effect.condition, base)) continue
+      if (effect.chance) {
+        const roll = ctx.random(), pass = effect.chance.test === 'gte' ? roll >= effect.chance.probability : roll < effect.chance.probability
+        if (!pass) continue
+      }
+      for (const { target } of modelTargets(effect.target, base, bound)) {
+        const targetActor = target as ScoreActor, model = { ...base, target }
+        if (!modelCondition(effect.condition, model)) continue
+        const value = (amount = effect.amount) => modelAmount(amount, model) * multiplier
+        switch (effect.op) {
+          case 'sequence': execute(effect.effects!, targetActor, multiplier); break
+          case 'charge': ctx.charge(value()); break
+          case 'currency': break // Currency rewards do not contribute to the score planner.
+          case 'giveItem': ctx.giveItem(effect.itemId!, value()); break
+          case 'heal': ctx.heal(targetActor, value() * targetActor.factor * modifiers.healing); break
+          case 'help': ctx.helps(targetActor, value()); break
+          case 'skillOnlyHelp': ctx.helps(targetActor, value(), true); break
+          case 'pot': ctx.pot(value()); break
+          case 'crit': ctx.crit(value()); break
+          case 'zone': ctx.zone(value()); break
+          case 'drainEnergy': targetActor.energy = Math.max(0, targetActor.energy - value()); break
+          case 'firstIngredient': {
+            const amount = Math.floor(value() * modifiers.ingredient)
+            if (actor.firstFood && amount) ctx.ingredient(actor.firstFood, amount)
+            break
+          }
+          case 'ingredients': {
+            const bonus = modelAmount(effect.roundingBonus, model)
+            const amount = effect.roundingBonus ? Math.floor((value() + bonus) * modifiers.ingredient) - Math.floor(bonus * modifiers.ingredient) : Math.floor(value() * modifiers.ingredient)
+            const pool = effect.pool ? INGREDIENTS.filter(item => effect.pool!.includes(item.id)) : INGREDIENTS
+            if (effect.pool) { ctx.ingredient(pick(pool).name, amount); break }
+            const available = [...pool], draws = effect.draws!
+            for (let i = 0; i < Math.min(draws, pool.length); i++) {
+              const index = Math.floor(ctx.random() * available.length), item = available.splice(index, 1)[0]!
+              ctx.ingredient(item.name, Math.floor(amount / draws) + Number(i < amount % draws))
+            }
+            break
+          }
+          case 'berries': ctx.berries(targetActor, Math.floor(value(target === actor ? effect.selfAmount : effect.otherAmount) * modifiers.berry)); break
+          case 'onceBonus': {
+            const hit = actor.disguise && ctx.random() < effect.releaseChance!
+            if (hit) actor.disguise = false
+            execute(effect.effects!, bound, multiplier * (hit ? 1 + effect.bonus! : 1))
+            break
+          }
+          case 'accumulateRelease':
+            if (actor.stockpile >= effect.maxStacks! || ctx.random() < effect.releaseChance!) {
+              ctx.charge(Number(selected.extra![effect.extraTable!]!.levels[level - 1]![actor.stockpile])); actor.stockpile = 0
+            } else actor.stockpile++
+            break
+        }
+      }
     }
   }
-  const same = Math.min((scoreSkills_scoreSkill_runtimeParameters.p002 as 5), Math.max(1, new Set(team.filter(m => m.berry === actor.berry).map(m => m.pokeId)).size)) - 1
-  // 按技能识别同伴：同号组合及正电拍拍＋低调颤弦蝾螈均生效，不按物种限制。
-  const pair = team.some(m => m !== actor && /正电|正電|负电|負電/.test(m.skill))
-  switch (selected.id) {
-    case 1: case 2: case 39:
-      ctx.charge(value('能量')); break
-    case 5:
-      ctx.charge(Math.floor(value('最低') + ctx.random() * (value('最高') - value('最低') + 1))); break
-    case 15:
-      if (actor.stockpile >= (scoreSkills_scoreSkill_runtimeParameters.p003 as 10) || ctx.random() < SPIT_UP_CHANCE) {
-        ctx.charge(Number(selected.extra![0]!.levels[level - 1]![actor.stockpile])); actor.stockpile = 0
-      } else actor.stockpile++
-      break
-    case 22:
-      ctx.charge(value('能量'))
-      for (const target of team) if (berryByName(target.berry)?.type !== '恶') target.energy = Math.max(0, target.energy - (scoreSkills_scoreSkill_runtimeParameters.p004 as 12))
-      break
-    case 40:
-      ctx.charge(value('能量')); ctx.zone(percent('树果领域')); break
-    case 3: case 6: break // 梦碎不计卡比兽能量。
-    case 7: heal(actor, value('活力')); break
-    case 4: heal(randomTarget(), value('活力')); break
-    case 8: case 32:
-      for (const target of team) heal(target, value('活力'))
-      if (selected.id === 32 && ctx.random() < scoreSkills_scoreSkill_ruleParameters.berryJuiceChance) ctx.juice()
-      break
-    case 17: {
-      heal(actor, value('自己'))
-      if (ctx.random() < scoreSkills_scoreSkill_ruleParameters.crescentRecoveryChance) {
-        const ranked = [...team].sort((a, b) => a.energy - b.energy)
-        const low = ranked.filter(m => m.energy === ranked[0]!.energy)
-        heal(ctx.random() < scoreSkills_scoreSkill_ruleParameters.lowestEnergyTargetChance ? pick(low) : randomTarget(), value('同伴'))
-      }
-      break
-    }
-    case 9: ctx.helps(randomTarget(), value('帮忙')); break
-    case 14: for (const target of team) ctx.helps(target, BOOST[level - 1]![same]!); break
-    case 10: case 29: case 31:
-      food(value('食材'))
-      if (selected.id === 31) ctx.crit(percent('暴击'))
-      break
-    case 23:
-      if (ctx.random() >= scoreSkills_scoreSkill_ruleParameters.plusRareChance) food(value('食材'), scoreSkills_config_ruleCatalogs.scoreSkillList0.values)
-      break
-    case 24: food(value('食材') * (ctx.random() < 1 / (scoreSkills_scoreSkill_runtimeParameters.p005 as 6) ? ruleParameters.modules.scoreSkills.scoreSkill.minusIngredientMultiplier : 1), scoreSkills_config_ruleCatalogs.scoreSkillList1.values); break
-    case 28: case 33: case 36: case 38: food(value('食材'), SELECT_POOLS[selected.id]); break
-    case 26: case 27: {
-      const bonus = pair && actor.firstFood ? value('一致追加') : 0
-      const extra = Math.floor(bonus * modifiers.ingredient)
-      food(Math.floor((value('携带') + bonus) * modifiers.ingredient) - extra, undefined, true)
-      if (extra) ctx.ingredient(actor.firstFood, extra)
-      break
-    }
-    case 11: case 25: case 41:
-      ctx.pot(value('锅容量'))
-      if (selected.id === 41) ctx.crit(percent('暴击'))
-      if (selected.id === 25 && pair) heal(randomTarget(), value('活力'))
-      break
-    case 13: ctx.crit(percent('暴击')); break
-    case 16: {
-      const hit = actor.disguise && ctx.random() < DISGUISE_CRIT_CHANCE
-      if (hit) actor.disguise = false
-      for (const target of team) giveBerries(target, (target === actor ? value('基础') : value('追加')) * (hit ? ruleParameters.modules.scoreSkills.scoreSkill.disguiseCritMultiplier : 1))
-      break
-    }
-    case 20:
-      for (const target of team) giveBerries(target, target === actor ? value('基础') : value('追加'))
-      break
-    case 21:
-      for (const target of team) { heal(target, value('活力')); giveBerries(target, (target === actor ? CRESCENT_SELF : CRESCENT_TEAM)[level - 1]![same]!) }
-      break
-    case 35: {
-      const available = [...team]
-      for (let i = 0; i < Math.min(2, team.length); i++) {
-        const ranked = [...available].sort((a, b) => a.energy - b.energy)
-        const target = ctx.random() < scoreSkills_scoreSkill_ruleParameters.lowestEnergyTargetChance ? ranked[0]! : pick(available)
-        available.splice(available.indexOf(target), 1)
-        heal(target, value('活力')); ctx.helps(target, value('帮忙') + (team.some(m => m.pokeId === 381) ? value('组合追加') : 0))
-      }
-      break
-    }
-    case 37:
-      for (const target of team) giveBerries(target, (target === actor ? DRACO_SELF : DRACO_TEAM)[level - 1]![same]!
-        + (target === actor && team.some(m => m.pokeId === 380) ? value('拉帝亚斯') : 0))
-      break
-    case 30: {
-      const target = randomTarget(); heal(target, value('活力')); ctx.helps(target, value('技能帮忙'), true); break
-    }
-    case 12: scoreSkill(actor, team, ctx, pick(METRONOME_POOL), depth + 1); break
-    case 18: case 19: {
-      const targets = team.filter(m => m !== actor)
-      const target = targets.length ? pick(targets) : undefined
-      const id = target ? skillByPokedexName(target.skill, target.pokeId)?.id : undefined
-      const failed = !target || !id || SPECIAL_TEAM_POKEMON.has(target.pokeId) || scoreSkills_config_ruleCatalogs.scoreSkillList2.values.includes(id)
-      scoreSkill(actor, team, ctx, failed ? 1 : id, depth + 1)
-      break
-    }
-    default: ctx.warning(`未支持主技能：${selected.name}`)
+  execute(selected.model.effects)
+  const selection = selected.model.selection
+  if (selection?.kind === 'random') { scoreSkill(actor, team, ctx, pick(selection.pool!), depth + 1); return }
+  if (selection?.kind === 'choose') { scoreSkill(actor, team, ctx, selection.fallbackSkillId, depth + 1); return }
+  if (selection?.kind === 'copy') {
+    const targets = team.filter(target => target !== actor), target = targets.length ? pick(targets) : undefined
+    const copied = target ? skillByPokedexName(target.skill, target.pokeId) : undefined
+    const failed = !target || !copied?.model.copyable || selection.blockedPokemon!.includes(target.pokeId)
+    scoreSkill(actor, team, ctx, failed ? selection.fallbackSkillId : copied!.id, depth + 1)
+    return
   }
 }

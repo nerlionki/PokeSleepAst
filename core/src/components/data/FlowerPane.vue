@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import FallbackImage from '../shared/FallbackImage.vue'
 import { EVENT_PARAMETERS } from '../../calc/activities'
-import { publicImage } from '#platform/images'
+import { localImage } from '#platform/images'
 const flower = EVENT_PARAMETERS.flower
-const flowerIcon = publicImage(flower.icon.replace(/^\/+/, ''))
+const flowerIcon = localImage(flower.imageFile)
 const seeds = flower.seeds
 </script>
 

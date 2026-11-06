@@ -19,6 +19,6 @@ export function stagesLeft(pokeId: number): number {
 export function ribbonBonus(hours: number, remainingEvolutions: number): { carry: number, speedCut: number } {
   const stage = STAGES.find((item) => hours >= item.hours)
   if (!stage) return { carry: 0, speedCut: 0 }
-  const index = Math.min(2, Math.max(0, remainingEvolutions))
+  const index = Math.min(stage.speed.length - 1, Math.max(0, Math.floor(remainingEvolutions)))
   return { carry: stage.carry, speedCut: stage.speed[index] ?? 0 }
 }

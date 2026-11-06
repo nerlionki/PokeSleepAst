@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { editorMemberFields, MEMBER_PRESETS } from '../../calc/memberPresets'
+
+
 import { defaultSkillLevel } from '../../calc/member'
 
 import { confirmRemoval } from '#platform/confirm'
@@ -11,7 +14,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { boxLabel, speciesName } from '../../calc/boxFilter'
-import { ingredientByName } from '../../calc/data'
+import { NEUTRAL_NATURE, ingredientByName } from '../../calc/data'
 import { compareHelpingBonus, defaultTune, type MemberDraft } from '../../calc/member'
 import { cloneMemberDraft, memberDraftFromBox, memberDraftToBox } from '../../calc/memberDraft'
 import LevelSelector from '../shared/LevelSelector.vue'
@@ -71,10 +74,8 @@ function blank(pokeId: number, uid = `c-${newUid()}`): CustomPanel {
   return {
     uid,
     pokeId,
-    level: 30,
-    nature: '勤奋',
-    subskills: ['', '', '', '', ''],
-    ingredientSlots: [0, 1, 2],
+    ...editorMemberFields(),
+    nature: NEUTRAL_NATURE,
     skillLevel: defaultSkillLevel(pokeId),
     tune: defaultTune(pokeId),
   }
@@ -157,7 +158,7 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
     ...(level.value == null ? source : { ...source, level: level.value }),
     carryMode: tune?.carryMode,
     ribbonHours: tune?.ribbonHours,
-    wakeEnergy: 100,
+    wakeEnergy: MEMBER_PRESETS.comparisonWakeEnergy,
   }
   const bonus = compareHelpingBonus(input.level, source.subskills, settings.value.helpingBonus)
   return {

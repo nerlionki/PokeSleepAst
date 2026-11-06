@@ -7,6 +7,7 @@ import { mainSkillImageUrl } from '../../calc/raeImage'
 const props = defineProps<{
   id?: number
   name?: string
+  decorative?: boolean
 }>()
 
 const skillId = computed(() => {
@@ -20,5 +21,7 @@ const src = computed(() => (skillId.value ? mainSkillImageUrl(skillId.value) : '
 </script>
 
 <template>
-  <FallbackImage loading="lazy" decoding="async" class="skill-icon" :src="src" :alt="name || MAIN_SKILLS.find(skill => skill.id === skillId)?.name || '主技能'" />
+  <FallbackImage loading="lazy" decoding="async" class="skill-icon" :src="src" :alt="decorative ? '' : name || MAIN_SKILLS.find(skill => skill.id === skillId)?.name || '主技能'" :aria-hidden="decorative || undefined">
+    <template #fallback><span v-if="!decorative">{{ name || MAIN_SKILLS.find(skill => skill.id === skillId)?.name || '主技能' }}</span></template>
+  </FallbackImage>
 </template>

@@ -1,4 +1,4 @@
-import { NATURES, pokeById } from './data'
+import { NEUTRAL_NATURE, NATURES, pokeById } from './data'
 import type { CarryMode, IngredientSlots, ProduceInput, Settings } from '../types'
 import { slotDrop } from './ingredients'
 import { natureHelpFactor, subskillSpeedCut } from './helpSpeed'
@@ -11,6 +11,7 @@ import { compareHelpingBonus } from './member'
 import { createActivityContext } from './activities'
 import { skillStorageLimit } from './specialty'
 import { exEffects } from './exEffects'
+import { extremeMemberFields } from './memberPresets'
 
 /** Production reference data is a permanent baseline, independent of dated events. */
 export function productionRankingSettings(settings: Settings): Settings {
@@ -50,9 +51,7 @@ export interface ExtremeYield {
 export function extremeInput(pokeId: number, carryMode: CarryMode = 'unlimited'): ProduceInput {
   const poke = pokeById(pokeId)
   if (!poke) throw Error('未知宝可梦')
-  return { pokeId, level: 70, nature: '勤奋', subskills: ['helpingBonus', 'berryS', 'helpM', 'skillM', ''],
-    ingredientSlots: [0, 1, 2], skillLevel: skillMaxFor(poke.mainSkill), carryMode,
-    wakeEnergy: 100, ribbonHours: 2000, supportTeamSize: 5 }
+  return { ...extremeMemberFields(), pokeId, nature: NEUTRAL_NATURE, skillLevel: skillMaxFor(poke.mainSkill), carryMode }
 }
 
 /** Enumerate legal panels, collapsing food choices with identical yield vectors.

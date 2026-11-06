@@ -21,7 +21,7 @@ const names = computed(() => activeActivities(activity.context.value).map(event 
 function edit(key: NumericActivityField, value: string) {
   if (value === '') { activity.reset(key); return }
   const n = Number(value)
-  if (Number.isFinite(n) && n >= ACTIVITY_FIELDS[key].min && n <= (key === 'cookingCritBonus' ? 1 : 10000) && (key !== 'skillLevelBonus' || Number.isInteger(n))) controls[key]!.value = n
+  if (Number.isFinite(n) && n >= ACTIVITY_FIELDS[key].min && n <= ACTIVITY_FIELDS[key].max && (key !== 'skillLevelBonus' || Number.isInteger(n))) controls[key]!.value = n
 }
 </script>
 
@@ -36,7 +36,7 @@ function edit(key: NumericActivityField, value: string) {
       <div v-for="key in fields" :key="key" class="field">
         <label :for="`activity-${key}`">{{ ACTIVITY_FIELDS[key].label }}{{ settings.activity?.overrides?.[key] != null ? '（手动）' : '（自动）' }}</label>
         <div class="row">
-          <input :id="`activity-${key}`" type="number" :min="ACTIVITY_FIELDS[key].min" :max="key === 'cookingCritBonus' ? 1 : 10000" :step="key === 'skillLevelBonus' ? 1 : 'any'" :value="controls[key]?.value" @change="edit(key, ($event.target as HTMLInputElement).value)">
+          <input :id="`activity-${key}`" type="number" :min="ACTIVITY_FIELDS[key].min" :max="ACTIVITY_FIELDS[key].max" :step="ACTIVITY_FIELDS[key].step" :value="controls[key]?.value" @change="edit(key, ($event.target as HTMLInputElement).value)">
           <button class="btn ghost" type="button" @click="activity.reset(key)">自动</button>
         </div>
       </div>

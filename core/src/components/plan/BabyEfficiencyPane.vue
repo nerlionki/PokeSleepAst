@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.BabyEfficiencyPane
+
 import { useActivities } from '../../composables/useActivities'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
@@ -57,7 +60,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
       <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox" role="switch"> 活动期间遇到一些其他类型宝可梦</label>
       <p v-if="!otherTypes && options.sleepType === 'all'" class="muted">活动关闭时，只比较目标宝可梦自身的睡眠类型和没有特征；其他睡眠类型不参与方案搜索。</p>
       <div class="efficiency-fields">
-        <div class="field"><label for="baby-iterations">计算次数</label><input id="baby-iterations" v-model.number="options.iterations" type="number" min="100" max="100000" step="100" inputmode="numeric"></div>
+        <div class="field"><label for="baby-iterations">计算次数</label><input id="baby-iterations" v-model.number="options.iterations" type="number" :min="INPUT_LIMITS.baby_iterations.min" :max="INPUT_LIMITS.baby_iterations.max" :step="INPUT_LIMITS.baby_iterations.step" inputmode="numeric"></div>
         <div class="field"><label for="baby-precision">计算精度</label><select id="baby-precision" v-model="options.precision"><option value="low">低 · 快速搜索</option><option value="medium">中 · 细化搜索</option><option value="high">高 · 密集搜索</option></select></div>
       </div>
       <p class="muted">计算次数用于每个候选抽取状态的模拟；精度控制能量候选点和拆分比例的搜索细度。每一觉最多搜索50亿睡意之力。高精度耗时较长，可随时取消。</p>

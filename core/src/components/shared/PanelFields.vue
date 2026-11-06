@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.PanelFields
+
 import FormField from './FormField.vue'
 import ToggleField from './ToggleField.vue'
 import { computed } from 'vue'
 import { NATURES, POKEDEX, SUBSKILLS, pokeById } from '../../calc/data'
 import { POKEMON_LEVEL_MAX } from '../../calc/xp'
 import { skillMaxFor } from '../../calc/mainSkills'
+import { SUBSKILL_GATES } from '../../calc/member'
 import type { ProduceInput } from '../../types'
 import IngredientIcon from './IngredientIcon.vue'
 import PokePicker from './PokePicker.vue'
@@ -42,12 +46,12 @@ function setSub(index: number, value: string) {
       <label>宝可梦</label>
       <PokePicker v-model="pokeId" />
     </div>
-    <FormField v-slot="{ id }" label="等级"><input :id="id" v-model.number="level" type="number" min="1" :max="POKEMON_LEVEL_MAX"></FormField>
+    <FormField v-slot="{ id }" label="等级"><input :id="id" v-model.number="level" type="number" :min="INPUT_LIMITS.level.min" :max="POKEMON_LEVEL_MAX"></FormField>
     <FormField v-slot="{ id }" label="性格"><select :id="id" v-model="nature">
         <option v-for="n in NATURES" :key="n.name" :value="n.name">{{ n.name }}</option>
       </select></FormField>
     <ToggleField v-model="natureMinted" label="已使用净白薄荷（性格无加减成）" />
-    <div v-for="i in 5" :key="i" class="field">
+    <div v-for="i in SUBSKILL_GATES.length" :key="i" class="field">
       <label>副技能 {{ i }}</label>
       <select :value="model.subskills[i - 1] ?? ''" @change="setSub(i - 1, ($event.target as HTMLSelectElement).value)">
         <option value="">（空）</option>
@@ -60,6 +64,6 @@ function setSub(index: number, value: string) {
         <option v-for="(amt, ai) in ing.amounts" :key="ai" :value="ai">{{ amt }}</option>
       </select>
     </div>
-    <FormField v-slot="{ id }" label="技能等级"><input :id="id" v-model.number="skillLevel" type="number" min="1" :max="skillMax"></FormField>
+    <FormField v-slot="{ id }" label="技能等级"><input :id="id" v-model.number="skillLevel" type="number" :min="INPUT_LIMITS.skillLevel.min" :max="skillMax"></FormField>
   </div>
 </template>

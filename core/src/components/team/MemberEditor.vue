@@ -1,15 +1,19 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.MemberEditor
+
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import ToggleField from '../shared/ToggleField.vue'
 import { computed, shallowRef, watch } from 'vue'
 import { NATURES, SUBSKILLS, pokeById } from '../../calc/data'
-import { clearIngredientSlot, ingredientColumns, setIngredientChoice } from '../../calc/ingredients'
+import { INGREDIENT_GATES, clearIngredientSlot, ingredientColumns, setIngredientChoice } from '../../calc/ingredients'
 import { applySilverSeed, silverSeedCandidates, stepGoldSeed, stepMemberEvolutions, stepSkillLevel, subskillLevelBonus, switchMemberEvolution, undoSilverSeed, SUBSKILL_GATES, type MemberDraft, type MemberTune } from '../../calc/member'
 import { evolutionDepth, evolutionStages } from '../../calc/evolution'
 import { MEW_SKILLS, normalizeMewSkill } from '../../calc/mew'
-import { skillMaxFor } from '../../calc/mainSkills'
+import { ownedSelectionSkill } from '../../calc/skillModel'
+import { skillByPokedexName, skillMaxFor } from '../../calc/mainSkills'
 import { RIBBON_HOURS, ribbonBonus, stagesLeft } from '../../calc/ribbon'
 import { isAllRounder } from '../../calc/specialty'
 import { POKEMON_LEVEL_MAX } from '../../calc/xp'
@@ -43,10 +47,12 @@ const silverOpen = shallowRef(components_team_MemberEditor_config_clientDefaults
 const silverChoices = computed(() => silverSeedCandidates(model.value.level, model.value.subskills))
 const skillBonus = computed(() => subskillLevelBonus(model.value.level, model.value.subskills))
 const poke = computed(() => pokeById(model.value.pokeId))
+const mainSkill = computed(() => poke.value ? skillByPokedexName(poke.value.mainSkill, poke.value.id) : undefined)
+const mainSkillName = computed(() => mainSkill.value?.name ?? poke.value?.mainSkill ?? '')
 const stages = computed(() => evolutionStages(model.value.pokeId))
 const maxEvolutions = computed(() => evolutionDepth(model.value.pokeId))
 const board = computed(() => poke.value ? ingredientColumns(poke.value.ingredients) : [])
-const skillMax = computed(() => skillMaxFor(poke.value?.mainSkill ?? ''))
+const skillMax = computed(() => mainSkill.value?.maxLevel ?? skillMaxFor(poke.value?.mainSkill ?? ''))
 const ribbon = computed(() => ribbonBonus(model.value.tune.ribbonHours, stagesLeft(model.value.pokeId)))
 const subChoices = computed(() => model.value.subskills.filter(Boolean).length < 5 ? SUBSKILLS : model.value.subskills.flatMap(id => {
   const item = SUBSKILLS.find(skill => skill.id === id)
@@ -148,7 +154,7 @@ function stepEvolution(delta: number) {
       <PokeSprite :id="poke.id" :name="poke.name" :shiny="props.shiny" />
       <div>
         <strong>{{ poke.name }}</strong>
-        <p class="muted"><MainSkillIcon :name="poke.mainSkill" /> {{ poke.mainSkill }}</p>
+        <p class="muted"><MainSkillIcon :id="mainSkill?.id" :name="mainSkillName" decorative /> {{ mainSkillName }}</p>
       </div>
     </div>
 
@@ -169,30 +175,30 @@ function stepEvolution(delta: number) {
       </div>
     </section>
 
-    <label v-if="poke?.id === 151 && visible('mewSkill')" class="field">
-      <span>十项全能 · 当前习得技能</span>
+    <label v-if="poke && ownedSelectionSkill(poke.id) && visible('mewSkill')" class="field">
+      <span>{{ ownedSelectionSkill(poke.id)?.name }} · 当前习得技能</span>
       <select :value="normalizeMewSkill(model.mewSkill)" @change="patch({ mewSkill: Number(($event.target as HTMLSelectElement).value) })">
         <option v-for="skill in MEW_SKILLS" :key="skill.id" :value="skill.id">{{ skill.name }} · {{ (skill.rate * 100).toFixed(2) }}%</option>
       </select>
-      <small class="muted">保留十项全能等级，效果按所选技能等级上限计算。</small>
+      <small class="muted">保留原主技能等级，效果按所选技能等级上限计算。</small>
     </label>
 
     <template v-if="visible('level')">
     <LevelSelector :model-value="model.level" :levels="LEVELS" @update:model-value="setLevel" />
     <label class="level-slider" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop>
-      <input :value="model.level" type="range" min="1" :max="POKEMON_LEVEL_MAX" @input="setLevel(Number(($event.target as HTMLInputElement).value))">
+      <input :value="model.level" type="range" :min="INPUT_LIMITS.model_level.min" :max="POKEMON_LEVEL_MAX" @input="setLevel(Number(($event.target as HTMLInputElement).value))">
       <b>Lv.{{ model.level }}</b>
     </label>
     </template>
     <label v-if="visible('exp')" class="field">
       <span>LV↑ EXP</span>
-      <input :value="model.tune.exp" type="number" min="0" @input="patchTune({ exp: Math.max(0, Number(($event.target as HTMLInputElement).value) || 0) })">
+      <input :value="model.tune.exp" type="number" :min="INPUT_LIMITS.model_tune_exp.min" @input="patchTune({ exp: Math.max(0, Number(($event.target as HTMLInputElement).value) || 0) })">
     </label>
 
     <template v-if="visible('ingredients')">
     <div class="ing-board">
       <section v-for="(col, colIndex) in board" :key="colIndex" class="ing-col">
-        <h3>Lv {{ [1, 30, 60][colIndex] }}</h3>
+        <h3>Lv {{ INGREDIENT_GATES[colIndex] }}</h3>
         <button v-if="isAllRounder(poke) && colIndex > 0" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">空</button>
         <p v-if="isAllRounder(poke) && colIndex === 0 && model.ingredientSlots[0] == null" class="amber" role="alert">Lv.1 食材不能为空，请选择实际食材。</p>
         <div class="ing-col-items">
@@ -247,7 +253,7 @@ function stepEvolution(delta: number) {
       <div class="picker-opts subskill-tags">
         <button v-for="item in subChoices" :key="item.id" type="button" class="chip" :class="{ on: model.subskills.includes(item.id) }" :aria-pressed="model.subskills.includes(item.id)" @click="chooseSub(item.id)">
           <b v-if="model.subskills.includes(item.id)" class="subskill-level">Lv.{{ SUBSKILL_GATES[model.subskills.indexOf(item.id)] }}</b>
-          <SubskillIcon :id="item.id" />
+          <SubskillIcon :id="item.id" decorative />
           <span>{{ item.name }}</span>
           <span v-if="model.subskills.includes(item.id)" aria-hidden="true">×</span>
         </button>

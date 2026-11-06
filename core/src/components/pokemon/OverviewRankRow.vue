@@ -4,7 +4,7 @@ import type { OverviewRank } from '../../calc/boxOverview'
 import { formatOverviewAmount } from '../../calc/boxOverview'
 import { boxLabel } from '../../calc/boxFilter'
 import { pokeById, SUBSKILLS } from '../../calc/data'
-import { slotDrop } from '../../calc/ingredients'
+import { slotDrop, unlockedIngredientSlots } from '../../calc/ingredients'
 import { SUBSKILL_GATES } from '../../calc/member'
 import PokeSprite from '../shared/PokeSprite.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
@@ -12,7 +12,7 @@ const props = defineProps<{ row: OverviewRank; rank: number; unit: string; ingre
 const mon = computed(() => props.row.pokemon)
 const species = computed(() => pokeById(mon.value.pokeId))
 const skills = computed(() => mon.value.subskills.flatMap((id, index) => mon.value.level >= (SUBSKILL_GATES[index] ?? Infinity) ? [SUBSKILLS.find((s) => s.id === id)?.name].filter(Boolean) : []).join(' / '))
-const slots = computed(() => mon.value.ingredientSlots.slice(0, mon.value.level >= 60 ? 3 : mon.value.level >= 30 ? 2 : 1).flatMap((index, slot) => {
+const slots = computed(() => mon.value.ingredientSlots.slice(0, unlockedIngredientSlots(mon.value.level)).flatMap((index, slot) => {
   const drop = index == null || !species.value ? null : slotDrop(species.value.ingredients, slot, index)
   return drop ? [{ ...drop, slot }] : []
 }))

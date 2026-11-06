@@ -1,3 +1,5 @@
+import { resetSkillModelState } from './skillModel'
+import { itemById, ITEM_ROLES } from './itemCatalog'
 import { assertKnownIngredientEnergy, ingredientEnergyValue } from './activityIngredients'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
@@ -11,7 +13,7 @@ import { berryUnitEnergy } from './berry'
 import { mealRecover, sleepRecoveredEnergy } from './energy'
 import { instantInterval } from './helpSpeed'
 import { exEffects } from './exEffects'
-import { slotDrop } from './ingredients'
+import { slotDrop, unlockedIngredientSlots } from './ingredients'
 import { resolveMemberSkill } from './mew'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
 import { skillMaxFor } from './mainSkills'
@@ -70,7 +72,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     const ex = exEffects(settings, poke.berry, poke.specialty)
     const ribbon = ribbonBonus(pokemon.tune?.ribbonHours ?? 0, stagesLeft(poke.id))
     const input: ProduceInput = { ...pokemon, ribbonHours: pokemon.tune?.ribbonHours ?? 0 }
-    const drops = pokemon.ingredientSlots.slice(0, pokemon.level >= (scoreSimulation_simulateScore_runtimeParameters.p001 as 60) ? 3 : pokemon.level >= (scoreSimulation_simulateScore_runtimeParameters.p002 as 30) ? 2 : 1)
+    const drops = pokemon.ingredientSlots.slice(0, unlockedIngredientSlots(pokemon.level))
       .map((index, slot) => index == null ? null : slotDrop(poke.ingredients, slot, index)).filter((drop): drop is NonNullable<typeof drop> => Boolean(drop))
     actors.set(pokemon.uid, { activity: activityValues(settings.activity, settings.island, poke, start), uid: pokemon.uid, pokemon, input, poke, subs, pokeId: poke.id, berry: poke.berry, skill: selected.name,
       skillLevel: Math.min(skillMaxFor(selected.name), effectiveSkillLevel(pokemon.level, pokemon.skillLevel, pokemon.subskills, selected.name) + ex.skillLevels),
@@ -92,7 +94,9 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
   const actions: ScoreAction[] = []
   const segments: ScoreSegment[] = []
   const bag = { ...o.bag }, received: Record<string, number> = {}, consumed: Record<string, number> = {}, sold: Record<string, number> = {}
-  const juice = { initial: o.initialJuice, received: 0, used: 0, lost: 0, remain: o.initialJuice }
+  const items: Record<number, ScoreTrace['juice']> = {}
+  const stock = (id: number) => items[id] ??= { initial: 0, received: 0, used: 0, lost: 0, remain: 0 }
+  const juice = items[ITEM_ROLES.berryJuice] = { initial: o.initialJuice, received: 0, used: 0, lost: 0, remain: o.initialJuice }
   let berry = 0, zoneEnergy = 0, skill = 0, cooking = 0, zone = o.initialZone / 100, extraPot = o.initialPot, crit = o.initialCrit / 100
   let active: Actor[] = [], currentKey = '', lastRotation = start, currentMinute = start, depth = 0
   const sessions = scoreSleeps(o, settings)
@@ -204,7 +208,11 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       },
       pot: amount => { extraPot = Math.min(scoreSimulation_release_ruleParameters.extraPotCap, extraPot + amount) }, crit: amount => { crit = Math.min(scoreSimulation_release_ruleParameters.skillCritCap, crit + amount) },
       zone: amount => { zone = Math.min(scoreSimulation_release_ruleParameters.berryZoneCap, zone + amount) },
-      juice: () => { if (juice.remain < (scoreSimulation_release_runtimeParameters.p002 as 5)) { juice.remain++; juice.received++ } else juice.lost++ },
+      giveItem: (id, amount) => {
+        const item = itemById(id), held = stock(id)
+        const accepted = Math.max(0, Math.min(amount, (item?.maxHeld ?? Infinity) - held.remain))
+        held.remain += accepted; held.received += accepted; held.lost += amount - accepted
+      },
       warning: text => warnings.add(text),
     })
     const changed = active.filter(a => Math.abs(a.energy - previous.get(a.uid)!) > (scoreSimulation_release_runtimeParameters.p003 as 0.01))
@@ -259,7 +267,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       m.exp += score * expBonus * natureStatFactor(m.pokemon.nature, 'exp') * activityValues(settings.activity, settings.island, m.poke, session.start).sleepExpMultiplier
     }
     const sleepTeam = select(policy.sleep[session.slot]!)
-    for (const m of sleepTeam) m.disguise = true
+    for (const m of sleepTeam) resetSkillModelState(m, 'sleepStart')
     for (const m of actors.values()) if (!team.includes(m) && !sleepTeam.includes(m) && !active.includes(m)) {
       m.energy = sleepRecoveredEnergy(m.energy, Math.ceil(score * scoreSimulation_settle_ruleParameters.inactiveRecoveryShare), m.input, settings.incense, 0)
     }
@@ -331,8 +339,9 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     if (o.useJuice && (collection || t === start && !sleep) && juice.remain > 0) {
       const target = [...active].filter(m => m.energy < Math.min((scoreSimulation_simulateScore_runtimeParameters.p010 as 100), policy.juiceAt)).sort((a, b) => a.energy - b.energy)[0]
       if (target) {
-        const recovered = (scoreSimulation_simulateScore_runtimeParameters.p011 as 20) * Math.max(1, target.factor)
-        target.energy = Math.min((scoreSimulation_simulateScore_runtimeParameters.p012 as 123), target.energy + recovered); target.decay = t; juice.remain--; juice.used++
+        const use = itemById(ITEM_ROLES.berryJuice)!.useEffect!
+        const recovered = use.amount * (use.ignoreNegativeNature ? Math.max(1, target.factor) : target.factor)
+        target.energy = Math.min(use.energyCap, target.energy + recovered); target.decay = t; juice.remain--; juice.used++
         note({ minute: t, kind: 'juice', text: `树果汁：${target.pokemon.name || target.poke.name}恢复 ${recovered} 活力`, members: [target.uid] })
       }
     }
@@ -346,5 +355,5 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
   const members = [...actors.values()].filter(m => m.hours || m.exp).map(m => ({ uid: m.uid, hours: m.hours, dailyHours: m.dailyHours,
     energy: m.energy, exp: m.exp, heldBerries: m.heldBerries, heldFood: m.heldFood, stock: m.stock }))
   const total = berry + zoneEnergy + skill + cooking
-  return { berry, zone: zoneEnergy, skill, cooking, total, bag, received, consumed, sold, juice, members, actions, segments, warnings: [...warnings] }
+  return { berry, zone: zoneEnergy, skill, cooking, total, bag, received, consumed, sold, items, juice, members, actions, segments, warnings: [...warnings] }
 }

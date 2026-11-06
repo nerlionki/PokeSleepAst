@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { editorMemberFields } from '../../calc/memberPresets'
+
+
 import { defaultSkillLevel } from '../../calc/member'
 
 import { confirmRemoval } from '#platform/confirm'
@@ -12,7 +15,7 @@ import { useRoute, useRouter } from 'vue-router'
 import BoxOverview from './BoxOverview.vue'
 import { FILTER_CATALOG, boxLabel, boxMatches, EMPTY_BOX_QUERY, filterCount, type BoxQuery } from '../../calc/boxFilter'
 import { selectionList, toggleChoice } from '../../calc/multiChoice'
-import { POKEDEX } from '../../calc/data'
+import { NEUTRAL_NATURE, POKEDEX } from '../../calc/data'
 import { defaultTune } from '../../calc/member'
 import { cloneMemberDraft } from '../../calc/memberDraft'
 import { importScreenshotSelection } from '#platform/screenshots'
@@ -91,10 +94,8 @@ function blank(pokeId: number): BoxDraft {
   return {
     uid: '',
     pokeId,
-    level: 30,
-    nature: '勤奋',
-    subskills: ['', '', '', '', ''],
-    ingredientSlots: [0, 1, 2],
+    ...editorMemberFields(),
+    nature: NEUTRAL_NATURE,
     skillLevel: defaultSkillLevel(pokeId),
     name: '',
     napping: false,
@@ -198,7 +199,7 @@ const advancedCount = computed(() => Number(query.ingredients.length > 0) + Numb
     </div>
     <div v-else-if="filterPanel === 'skill'" class="picker-opts">
       <button type="button" :class="{ on: !query.mainSkill.length }" @click="query.mainSkill = []">全部</button>
-      <button v-for="item in FILTER_CATALOG.skills" :key="item" type="button" :class="{ on: query.mainSkill.includes(item) }" @click="toggleChoice(query.mainSkill, item, FILTER_CATALOG.skills)"><MainSkillIcon :name="item" />{{ item }}</button>
+      <button v-for="item in FILTER_CATALOG.skills" :key="item" type="button" :class="{ on: query.mainSkill.includes(item) }" @click="toggleChoice(query.mainSkill, item, FILTER_CATALOG.skills)"><MainSkillIcon :name="item" decorative />{{ item }}</button>
     </div>
     <section v-else-if="filterPanel === 'advanced'" class="stack" aria-label="Box 专有筛选">
       <div class="row">
@@ -228,7 +229,7 @@ const advancedCount = computed(() => Number(query.ingredients.length > 0) + Numb
       <div class="picker-opts">
         <button type="button" :class="{ on: !query.subskills.length }" @click="query.subskills = []">全部</button>
         <button v-for="item in FILTER_CATALOG.subskills" :key="item.id" type="button" :class="{ on: query.subskills.includes(item.id) }" @click="toggleChoice(query.subskills, item.id, FILTER_CATALOG.subskills.map(item => item.id))">
-          <SubskillIcon :id="item.id" />{{ item.name }}
+          <SubskillIcon :id="item.id" decorative />{{ item.name }}
         </button>
       </div>
     </section>

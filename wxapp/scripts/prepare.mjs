@@ -96,11 +96,11 @@ import FallbackImage from './FallbackImage.vue'
 import { computed } from 'vue'
 import { SUBSKILLS } from '../../calc/data'
 import { subskillImageUrl } from '../../calc/raeImage'
-const props = defineProps<{ id: string; locked?: boolean }>()
+const props = defineProps<{ id: string; locked?: boolean; decorative?: boolean }>()
 const skill = computed(() => SUBSKILLS.find(item => item.id === props.id))
 const src = computed(() => subskillImageUrl(props.id))
 </script>
-<template><FallbackImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="skill.name" /></template>
+<template><FallbackImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="decorative ? '' : skill.name" :aria-hidden="decorative || undefined"><template #fallback><span v-if="!decorative">{{ skill.name }}</span></template></FallbackImage></template>
 `
   }
   // Use Tailwind layout utilities only in native Box views; App keeps its grid.
@@ -127,8 +127,7 @@ const map = {}
 const manifest = {}
 let pack = 0, size = 0
 const sharp = require('sharp')
-const skillImageNumbers = Object.fromEntries([...fs.readFileSync(path.join(core, 'calc/raeImage.ts'), 'utf8').split('const SUBSKILL_IMAGE')[1].split('}')[0].matchAll(/(\w+):\s*(\d+)/g)].map(match => [match[1], Number(match[2])]))
-const skillColors = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(core, 'data/subskills.json'))).map(skill => [skillImageNumbers[skill.id], { gold: '#e2a423', blue: '#3c86d6', white: '#f4f7fb' }[skill.rarity]]))
+const skillColors = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(core, 'data/subskills.json'))).map(skill => [skill.id, { gold: '#e2a423', blue: '#3c86d6', white: '#f4f7fb' }[skill.rarity]]))
 const assetRoots = [path.join(core, 'assets/imgs'), path.join(root, 'core/public')]
 const isShinyAsset = rel => rel.includes('/shiny/')
 const assets = assetRoots.flatMap(dir => walk(dir).filter(file => /\.(webp|png|jpe?g)$/i.test(file)).map(file => ({ file, rel: path.relative(dir, file).replaceAll('\\', '/') }))).filter(asset => isBundledImage(asset.rel)).sort((a, b) => Number(isShinyAsset(a.rel)) - Number(isShinyAsset(b.rel)) || a.rel.localeCompare(b.rel, 'en'))
@@ -142,10 +141,10 @@ for (const { file, rel } of assets) {
   if (size && shiny !== shinyPack) { flush(); pack++; size = 0; payload = {} }
   shinyPack = shiny
   let image = sharp(file).resize({ width:128, height:128, fit:'inside', withoutEnlargement:true })
-  const skillNumber = /^subSkill\/(\d+)\./.exec(rel)?.[1]
-  if (skillNumber && skillColors[skillNumber]) {
+  const skillId = /^subSkill\/([^/.]+)\./.exec(rel)?.[1]
+  if (skillId && skillColors[skillId]) {
     const { data: alpha, info } = await image.ensureAlpha().extractChannel(3).raw().toBuffer({ resolveWithObject: true })
-    image = sharp({ create: { width: info.width, height: info.height, channels: 3, background: skillColors[skillNumber] } }).joinChannel(alpha, { raw: { width: info.width, height: info.height, channels: 1 } })
+    image = sharp({ create: { width: info.width, height: info.height, channels: 3, background: skillColors[skillId] } }).joinChannel(alpha, { raw: { width: info.width, height: info.height, channels: 1 } })
   }
   const data = await image.png({ palette:true, quality:100, compressionLevel:9 }).toBuffer()
   const key = rel.replace(/\.[^.]+$/, '.png')

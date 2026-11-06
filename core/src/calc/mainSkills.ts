@@ -2,6 +2,7 @@ import skillRouting from '../data/compatibility-maps.resource'
 import extracted0 from '../data/skill-tables.resource'
 import { cloneData } from './dataClone'
 import { foldText } from './text'
+import type { MainSkillModel } from './skillModelTypes'
 const mainSkills_config_extracted0 = extracted0.modules.mainSkills
 
 
@@ -22,6 +23,9 @@ export interface MainSkill {
   columns: string[]
   levels: string[][]
   extra?: SkillTable[]
+  model: MainSkillModel
+  imageFile: string
+  imageAvailable: boolean
 }
 
 export const SKILL_GROUPS = (cloneData(mainSkills_config_extracted0.SKILL_GROUPS) as unknown as readonly ["能量","梦之碎片","活力","额外帮忙","额外掉落","额外技能","料理","特殊"])

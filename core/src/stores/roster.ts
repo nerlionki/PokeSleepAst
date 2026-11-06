@@ -1,3 +1,5 @@
+import { editorMemberFields } from '../calc/memberPresets'
+import { NEUTRAL_NATURE } from '../calc/data'
 import { defaultSkillLevel } from '../calc/member'
 
 import clientDefaults from '../data/client-defaults.resource'
@@ -133,10 +135,8 @@ export const useRosterStore = defineStore('roster', () => {
     const member: TeamCustom = {
       uid,
       pokeId,
-      level: 30,
-      nature: '勤奋',
-      subskills: ['', '', '', '', ''],
-      ingredientSlots: [0, 1, 2],
+      ...editorMemberFields(),
+      nature: NEUTRAL_NATURE,
       skillLevel: defaultSkillLevel(pokeId),
       tune: defaultTune(pokeId),
     }

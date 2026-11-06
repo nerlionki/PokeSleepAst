@@ -1,4 +1,5 @@
 import berries from '../data/berries.resource'
+import clientDefaults from '../data/client-defaults.resource'
 import candyDrops from '../data/candy-drops.resource'
 import encounterBands from '../data/encounter-bands.resource'
 import fallbacks from '../data/fallbacks.resource'
@@ -72,6 +73,7 @@ export interface SleepStyleRow {
 
 export const SLEEP_STYLES = sleepStyles as SleepStyleRow[]
 export const NATURES = natures
+export const NEUTRAL_NATURE = clientDefaults.modules.natureLabels.neutralNature
 export const SUBSKILLS = subskills
 /** 抽选设定：概率为研究推定；先选颜色，再在同色未选技能中等概率选取。
  * 完整候选池时每种金/蓝/白分别为 2%/5.5%/13.25%，后续槽位不能直接沿用。
@@ -94,7 +96,7 @@ export function berryByName(name: string) {
 }
 
 export function natureByName(name: string) {
-  return NATURES.find((n) => n.name === name) ?? NATURES[20]
+  return NATURES.find((n) => n.name === name) ?? NATURES.find(n => n.name === NEUTRAL_NATURE)!
 }
 
 export function ingredientById(id: number) {

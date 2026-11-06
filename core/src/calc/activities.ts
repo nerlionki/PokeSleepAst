@@ -15,16 +15,7 @@ const activities_activityDate_runtimeParameters = runtimeParameters.modules.acti
 const activities_activeActivities_runtimeParameters = runtimeParameters.modules.activities.activeActivities.values
 const activities_activityValues_runtimeParameters = runtimeParameters.modules.activities.activityValues.values
 export const EVENT_PARAMETERS = parameters
-const extras = {
-  carryCapacityBonus: ['持有上限加成', 'add'], carryCapacityMultiplier: ['持有上限倍率', 'multiply'], potCapacityBonus: ['基础锅容量加成', 'add'],
-  mealRecoveryBonus: ['料理回复活力加成', 'add'], mealRecoveryMultiplier: ['料理回复活力倍率', 'multiply'],
-  skillIngredientMultiplier: ['技能获取食材倍率', 'multiply'], skillBerryMultiplier: ['技能获取树果倍率', 'multiply'],
-  skillDreamShardsMultiplier: ['技能获取梦之碎片倍率', 'multiply'], skillHealingMultiplier: ['技能回复活力倍率', 'multiply'],
-} as const
-export const ACTIVITY_FIELDS = Object.fromEntries(Object.entries(NUMERIC_ACTIVITY_EFFECTS).map(([key, kind]) => {
-  const existing = (extracted0.modules.activities.ACTIVITY_FIELDS as Record<string, { label: string; min: number }>)[key]
-  return [key, { label: existing?.label ?? extras[key as keyof typeof extras]?.[0] ?? key, kind, min: existing?.min ?? (['helpIntervalMultiplier', 'potSizeMultiplier', 'carryCapacityMultiplier', 'cookingCritMultiplier', 'drowsyPowerMultiplier', 'candyExpMultiplier'].includes(key) ? 0.01 : 0) }]
-})) as Record<NumericActivityField, { label: string; kind: 'add' | 'multiply'; min: number }>
+export const ACTIVITY_FIELDS = extracted0.modules.activities.ACTIVITY_FIELDS as Record<NumericActivityField, { label: string; kind: 'add' | 'multiply'; min: number; max: number; step: number | 'any' }>
 export interface ActivitySpawn extends SleepStyleRow { unlockRank: number }
 export interface MiniCandyBoost { exp: number, shards: number, dailyLimit: number }
 export interface ActivityPhase { startsOn: string, endsOn: string, weekdays?: number[], rules: ActivityRule[], spawns?: ActivitySpawn[] }

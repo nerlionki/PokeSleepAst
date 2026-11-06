@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.CompletionEfficiencyPane
+
 import { useActivities } from '../../composables/useActivities'
 import { activitySleepStyles, createActivityContext } from '../../calc/activities'
 import { computed, watch } from 'vue'
@@ -80,7 +83,7 @@ watch(() => options.value.selectionMode, () => {
       <div class="field"><label for="completion-event">活动睡意之力倍率</label><select id="completion-event" v-model.number="eventMult" :disabled="busy"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}倍（活动）</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ bonus.label }}</option></select></div>
       <label class="row"><input v-model="otherTypes" :disabled="busy" type="checkbox" role="switch"> 活动期间遇到一些其他类型宝可梦</label>
       <div class="efficiency-fields">
-        <div class="field"><label for="completion-iterations">计算次数</label><input id="completion-iterations" v-model.number="options.iterations" :disabled="busy" type="number" min="100" max="100000" step="100" inputmode="numeric"></div>
+        <div class="field"><label for="completion-iterations">计算次数</label><input id="completion-iterations" v-model.number="options.iterations" :disabled="busy" type="number" :min="INPUT_LIMITS.completion_iterations.min" :max="INPUT_LIMITS.completion_iterations.max" :step="INPUT_LIMITS.completion_iterations.step" inputmode="numeric"></div>
         <div class="field"><label for="completion-precision">计算精度</label><select id="completion-precision" v-model="options.precision" :disabled="busy"><option value="low">低 · 快速搜索</option><option value="medium">中 · 细化搜索</option><option value="high">高 · 密集搜索</option></select></div>
       </div>
       <p class="muted">每觉最多搜索 50 亿睡意之力。计算次数用于每个候选抽取状态；精度控制能量候选点与拆分比例的搜索细度。</p>

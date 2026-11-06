@@ -129,7 +129,7 @@ export interface ProduceResult {
   skillIngredients?: Record<string, number>
   /** 梦幻／挥指单只模拟：总分计实际料理，技能食材与剩余食材单列。 */
   cooking?: { energy: number, remain: Record<string, number> }
-  rewards?: { dreamShards: number, candies: number, berryJuice: number }
+  rewards?: { dreamShards: number, candies: number, berryJuice: number, items?: Record<number, number> }
   helps: number
   berries: number
   berryEnergy: number

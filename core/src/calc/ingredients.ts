@@ -6,6 +6,11 @@ import { isAllRounderId } from './specialty'
 import type { IngredientSlots } from '../types'
 const ingredients_config_extracted0 = extracted0.modules.ingredients
 const ingredients_config_extracted1 = extracted1.modules.ingredients
+export const INGREDIENT_GATES: readonly number[] = ingredients_config_extracted0.SLOT_LEVELS
+export const INGREDIENT_CHOICES: readonly (readonly number[])[] = ingredients_config_extracted0.SLOT_CHOICES
+export function unlockedIngredientSlots(level: number): number {
+  return INGREDIENT_GATES.filter(gate => level >= gate).length
+}
 
 
 export interface IngredientLine {
@@ -52,7 +57,7 @@ export function ingredientColumns(lines: IngredientLine[]): IngredientCell[][] {
     cols[2].push(cell('B', b, b.amounts[1] ?? b.amounts[0] ?? 0, lines))
   }
   if (c) cols[2].push(cell('C', c, c.amounts.at(-1) ?? 0, lines))
-  return cols
+  return cols.map((column, slot) => column.filter(item => INGREDIENT_CHOICES[slot]?.includes(item.index)))
 }
 
 /** 这一槽这一次帮忙掉落的食材。10 级用第 1 槽数量，30 级用第 2 槽，60 级用第 3 槽。 */
@@ -63,6 +68,7 @@ export function slotDrop(lines: IngredientLine[], slot: number, lineIndex: numbe
     const amount = tierAmount(line, slot)
     return amount > 0 ? cell(String(slot + 1), line, amount, lines) : null
   }
+  if (!INGREDIENT_CHOICES[slot]?.includes(lineIndex)) return null
   if (lineIndex <= 0) {
     const amount = line.amounts[slot] ?? 0
     return amount > 0 ? cell('A', line, amount, lines) : null
@@ -114,7 +120,7 @@ export function setIngredientChoice(
   if (column < 0 || column > 2 || lineIndex < 0 || lineIndex >= lineCount) return null
   if (lineCount <= 3) {
     if (column === 0) return null
-    if (lineIndex > column) return null
+    if (!INGREDIENT_CHOICES[column]?.includes(lineIndex)) return null
   }
   if (slots[column] === lineIndex) return null
   const next: IngredientSlots = [slots[0], slots[1], slots[2]]
@@ -135,7 +141,7 @@ export function clearIngredientSlot(pokeId: number, slots: IngredientSlots, colu
 export function nextIngredientSlot(lineCount: number, slot: number, current: number): number {
   const allowed = lineCount > 3
     ? Array.from({ length: lineCount }, (_, index) => index)
-    : (slot === 0 ? [0] : slot === 1 ? [0, 1] : [0, 1, 2]).filter((index) => index < lineCount)
+    : (INGREDIENT_CHOICES[slot] ?? []).filter((index) => index < lineCount)
   if (!allowed.length) return 0
   const at = allowed.indexOf(current)
   return allowed[(at + 1) % allowed.length] ?? allowed[0]!

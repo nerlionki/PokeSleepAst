@@ -37,8 +37,8 @@ export function berryProducerModes(pokeId: number): CarryMode[] {
   const poke = pokeById(pokeId)
   if (!poke) return []
   const skill = skillByPokedexName(poke.mainSkill, poke.id)
-  if (poke.specialty === '树果型') return skill?.id === 9 ? ['full', 'normal', 'unlimited'] : ['full', 'normal']
-  if (skill?.name.includes('树果骤增')) return ['unlimited']
+  if (poke.specialty === '树果型') return skill?.model.berryRanking === 'support' ? ['full', 'normal', 'unlimited'] : ['full', 'normal']
+  if (skill?.model.berryRanking === 'unlimited') return ['unlimited']
   return ['normal']
 }
 
@@ -56,7 +56,7 @@ function teammateSkillBerries(input: ProduceInput, procs: number): number {
   const selected = resolveMemberSkill(poke, input)
   const skill = skillByPokedexName(selected.name, poke.id)
   // Copying requires real teammates; the default solo panel has no copy target.
-  if (!skill || skill.id === 18 || skill.id === 19) return 0
+  if (!skill || skill.model.selection?.kind === 'copy') return 0
   const actors: EffectActor[] = Array.from({ length: 4 }, () => ({
     poke: { ...poke, mainSkill: selected.name }, input, energy: 100, factor: 1,
     skillLv: effectiveSkillLevel(input.level, input.skillLevel, input.subskills, selected.name),

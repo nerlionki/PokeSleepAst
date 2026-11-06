@@ -6,6 +6,7 @@ import { subskillImageUrl } from '../../calc/raeImage'
 const props = defineProps<{
   id: string
   locked?: boolean
+  decorative?: boolean
 }>()
 
 const skill = computed(() => SUBSKILLS.find((item) => item.id === props.id))
@@ -26,12 +27,13 @@ const mask = computed(() => {
     :class="[`rarity-${skill.rarity}`, { locked }]"
     :style="mask"
     role="img"
-    :aria-label="skill.name"
+    :aria-hidden="decorative || undefined"
+    :aria-label="decorative ? undefined : skill.name"
     :title="skill.name"
   >
     <img class="sub-mask-loader" :src="src" alt="" aria-hidden="true" @error="failed = true" @load="loadedMask = ($event.target as HTMLImageElement).src">
   </span>
-  <span v-else-if="skill">{{ skill.name }}</span>
+  <span v-else-if="skill && !decorative">{{ skill.name }}</span>
 </template>
 <style scoped>
 .sub-mask-loader { display: none; }

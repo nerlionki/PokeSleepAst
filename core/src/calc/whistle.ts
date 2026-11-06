@@ -1,3 +1,4 @@
+import { unlockedIngredientSlots } from './ingredients'
 import { AREA_BONUS_MAX } from './areaBonus'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
@@ -20,7 +21,6 @@ import { nextSpecialTeamState, type SpecialTeamState } from './teamRestrictions'
 const whistle_config_extracted0 = extracted0.modules.whistle
 const whistle_whistleMember_ruleParameters = ruleParameters.modules.whistle.whistleMember
 const whistle_whistleMember_runtimeParameters = runtimeParameters.modules.whistle.whistleMember.values
-const whistle_invalidMember_runtimeParameters = runtimeParameters.modules.whistle.invalidMember.values
 const whistle_config_ruleCatalogs = ruleCatalogs.modules.whistle
 const whistle_planWhistle_ruleParameters = ruleParameters.modules.whistle.planWhistle
 
@@ -79,7 +79,7 @@ export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBo
   // Use the displayed team interval, then maximum-energy efficiency. No camp or EX speed modifier.
   const interval = levelInterval(poke.interval, pokemon.level, effectiveNature(pokemon), subs, helpingBonus, ribbon.speedCut)
   const helps = whistle_whistleMember_ruleParameters.rewardSeconds / (interval * energyMultiplier((whistle_whistleMember_runtimeParameters.p001 as 100)))
-  const unlocked = pokemon.level >= (whistle_whistleMember_runtimeParameters.p002 as 60) ? 3 : pokemon.level >= (whistle_whistleMember_runtimeParameters.p003 as 30) ? 2 : 1
+  const unlocked = unlockedIngredientSlots(pokemon.level)
   const slots = pokemon.ingredientSlots.slice(0, unlocked).flatMap((index, slot) => {
     if (index == null) return []
     const drop = slotDrop(poke.ingredients, slot, index)
@@ -105,7 +105,7 @@ function invalidMember(pokemon: BoxPokemon): string | null {
   if (!poke || !berryByName(poke.berry) || poke.interval <= 0) return '缺少宝可梦生产资料'
   if (!Number.isInteger(pokemon.level) || pokemon.level < 1 || pokemon.level > POKEMON_LEVEL_MAX) return '等级无效'
   if (!NATURES.some(nature => nature.name === pokemon.nature)) return '性格无效'
-  const unlocked = pokemon.level >= (whistle_invalidMember_runtimeParameters.p001 as 60) ? 3 : pokemon.level >= (whistle_invalidMember_runtimeParameters.p002 as 30) ? 2 : 1
+  const unlocked = unlockedIngredientSlots(pokemon.level)
   const missing = normalizeOcrMissing(pokemon.ocrMissing).some(field => field === 'level' || field === 'nature'
     || field.startsWith('subskill') && pokemon.level >= whistle_config_ruleCatalogs.invalidMemberList0.values[Number(field.at(-1))]!
     || field.startsWith('ingredient') && Number(field.at(-1)) < unlocked)

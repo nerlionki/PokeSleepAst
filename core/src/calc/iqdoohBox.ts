@@ -3,7 +3,7 @@ import ruleCatalogs from '../data/rule-catalogs.resource'
 import extracted0 from '../data/compatibility-maps.resource'
 import { cloneData } from './dataClone'
 import { newUid } from './uid'
-import { NATURES, SUBSKILLS, pokeById } from './data'
+import { NEUTRAL_NATURE, NATURES, SUBSKILLS, pokeById } from './data'
 import { ingredientColumns } from './ingredients'
 import type { BoxPokemon, NatureStat, OcrMissingField } from '../types'
 import { POKEMON_LEVEL_MAX } from './xp'
@@ -28,7 +28,7 @@ export function parseIqdoohEntry(raw: Record<string, unknown>): BoxPokemon | nul
   const level = Number.isInteger(realLevel) && realLevel >= 1 && realLevel <= POKEMON_LEVEL_MAX ? realLevel : 1
   if (level !== realLevel) missing.push('level')
   const neutral = raw.incAttr == null && raw.decAttr == null
-  const nature = neutral ? '勤奋' : NATURES.find(n =>
+  const nature = neutral ? NEUTRAL_NATURE : NATURES.find(n =>
     n.up === ATTRS[String(raw.incAttr)] && n.down === ATTRS[String(raw.decAttr)] && n.up !== undefined)?.name
   if (!nature) missing.push('nature')
   const selected = Array.isArray(raw.selected) ? raw.selected : []
@@ -47,7 +47,7 @@ export function parseIqdoohEntry(raw: Record<string, unknown>): BoxPokemon | nul
   const id = raw.id == null ? '' : String(raw.id)
   return {
     uid: id ? `iqdooh-${id}` : `iqdooh-${newUid()}`, pokeId: poke.id, level,
-    nature: nature ?? '勤奋', subskills, ingredientSlots, skillLevel: 1,
+    nature: nature ?? NEUTRAL_NATURE, subskills, ingredientSlots, skillLevel: 1,
     name: String(raw.nickname ?? raw.name ?? ''), napping: false,
     ...(raw.shiny === true ? { shiny: true } : {}), ocrMissing: missing,
   }

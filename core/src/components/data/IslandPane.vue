@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.IslandPane
+
 import { AREA_BONUS_MAX } from '../../calc/areaBonus'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
@@ -69,7 +72,7 @@ function groups(id: string) {
       <div v-if="openId === i.id" class="acc-body plain">
         <label class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop>
           <span>营地加成 {{ Math.round(store.islandBonus(i.id as IslandId) * 100) }}%{{ store.settings.island === i.id ? ' · 当前营地' : '' }}</span>
-          <input type="range" min="0" :max="AREA_BONUS_MAX" step="0.01" :value="store.islandBonus(i.id as IslandId)" @change="store.setIslandBonus(i.id as IslandId, Number(($event.target as HTMLInputElement).value))">
+          <input type="range" :min="INPUT_LIMITS.store_islandBonus_i_id_as_IslandId.min" :max="AREA_BONUS_MAX" :step="INPUT_LIMITS.store_islandBonus_i_id_as_IslandId.step" :value="store.islandBonus(i.id as IslandId)" @change="store.setIslandBonus(i.id as IslandId, Number(($event.target as HTMLInputElement).value))">
         </label>
         <p class="muted berry-inline">
           {{ islandUnlock(i.id as IslandId) }} · {{ islandBerrySelection(i.id)?.label ?? '喜好' }}

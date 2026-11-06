@@ -13,7 +13,7 @@ import { compareDex } from '../../calc/pokedexOrder'
 import { evolutionStages } from '../../calc/evolution'
 import { homeText } from '../../calc/islandMeta'
 import { useActivities } from '../../composables/useActivities'
-import { berryCount, friendTiers, ingredientColumns } from '../../calc/ingredients'
+import { INGREDIENT_GATES, berryCount, friendTiers, ingredientColumns } from '../../calc/ingredients'
 import { mythicalSeed, SPECIALTY_FILTERS, specialtyHit, specialtyLabel } from '../../calc/specialty'
 import { useSettingsStore } from '../../stores/settings'
 import BerryIcon from '../shared/BerryIcon.vue'
@@ -88,7 +88,7 @@ function resetFilters() { q.value = ''; spec.value = []; sleep.value = []; berry
       <button v-for="b in BERRIES" :key="b.name" type="button" :class="{ on: (b.name === '全部' ? !berry.length : berry.includes(b.name)) }" @click="toggleChoice(berry, b.name, BERRIES.map(item => item.name))"><BerryIcon :name="b.name" />{{ b.name }}</button>
     </div>
     <div v-else-if="panel === 'skill'" class="picker-opts dex-fixed">
-      <button v-for="s in skills" :key="s" type="button" :class="{ on: (s === '全部' ? !skill.length : skill.includes(s)) }" @click="toggleChoice(skill, s, skills)"><MainSkillIcon v-if="s !== '全部'" :name="s" />{{ s }}</button>
+      <button v-for="s in skills" :key="s" type="button" :class="{ on: (s === '全部' ? !skill.length : skill.includes(s)) }" @click="toggleChoice(skill, s, skills)"><MainSkillIcon v-if="s !== '全部'" :name="s" decorative />{{ s }}</button>
     </div>
     <p class="muted dex-fixed">{{ list.length }} 只</p>
     <VirtualPokedex :items="list" @pick="selected = $event" />
@@ -106,14 +106,14 @@ function resetFilters() { q.value = ''; spec.value = []; sleep.value = []; berry
         </div>
       </div>
       <p>间隔 {{ detail.interval }}s · 持有 {{ detail.carry }} · 食材 {{ (detail.ingredientRate * 100).toFixed(1) }}% · 技能 {{ (detail.skillRate * 100).toFixed(1) }}%</p>
-      <button type="button" class="btn ghost" @click="showSkill(detail.mainSkill)"><MainSkillIcon :name="detail.mainSkill" /> {{ detail.mainSkill }} ›</button>
+      <button type="button" class="btn ghost" @click="showSkill(detail.mainSkill)"><MainSkillIcon :name="detail.mainSkill" decorative /> {{ detail.mainSkill }} ›</button>
       <div class="berry-drop">
         <BerryIcon :name="detail.berry" large />
         <strong>{{ detail.berry }} × {{ berryCount(detail.specialty) }}</strong>
       </div>
       <div class="ing-board">
         <section v-for="(col, i) in board" :key="i" class="ing-col">
-          <h3>LV {{ [1, 30, 60][i] }}</h3>
+          <h3>LV {{ INGREDIENT_GATES[i] }}</h3>
           <div class="ing-col-items">
             <div v-for="cell in col" :key="`${cell.letter}-${cell.id}`" class="ing-token" :title="cell.name">
               <span v-if="cell.letter" class="ing-letter">{{ cell.letter }}</span>

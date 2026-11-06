@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GuideEntry from '../components/shared/GuideEntry.vue'
 import { useFeaturesStore } from '../stores/features'
 import { useTabSwipe } from '../composables/useTabSwipe'
 import { taskNavigationLocked } from '../composables/taskNavigationLock'
@@ -17,7 +18,9 @@ const swipe = useTabSwipe(tab, () => (['dex', 'box', 'wall'] as const).filter(id
 
 <template>
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack pokemon-view" :class="{ 'dex-view': tab === 'dex' }">
+    <GuideEntry page="pokemon" :show-trigger="false" />
     <Segmented
+      guide-id="guide-pokemon-tabs"
       class="pokemon-tabs"
       v-if="!(tab === 'box' && route.query.boxOverview === '1')"
       v-model="tab"

@@ -5,7 +5,7 @@ import { cloneData } from './dataClone'
 import { normalizeMewSkill } from './mew'
 import type { BoxPokemon } from '../types'
 import { effectiveNature } from './natureLabels'
-import { INGREDIENTS, NATURES, POKEDEX, SUBSKILLS, pokeById } from './data'
+import { NEUTRAL_NATURE, INGREDIENTS, NATURES, POKEDEX, SUBSKILLS, pokeById } from './data'
 import { foldText } from './text'
 import { normalizeOcrMissing } from './ocrCompletion'
 import { parseIqdoohEntry } from './iqdoohBox'
@@ -31,15 +31,15 @@ function keyOf(s: unknown): string {
 }
 
 function natureOf(raw: unknown): string {
-  if (raw == null || raw === '') return '勤奋'
+  if (raw == null || raw === '') return NEUTRAL_NATURE
   if (typeof raw === 'number' && NATURE_ID[raw]) return NATURE_ID[raw]
   const k = keyOf(raw)
   if (NATURE_EN[k]) return NATURE_EN[k]
   const hit = NATURES.find((n) => keyOf(n.name) === k)
   if (hit) return hit.name
-  if (k.includes('hup')) return '固执'
-  if (k.includes('hdown')) return '大胆'
-  return '勤奋'
+  if (k.includes('hup')) return NATURE_EN.adamant ?? NEUTRAL_NATURE
+  if (k.includes('hdown')) return NATURE_EN.bold ?? NEUTRAL_NATURE
+  return NEUTRAL_NATURE
 }
 
 function subOf(raw: unknown): string {

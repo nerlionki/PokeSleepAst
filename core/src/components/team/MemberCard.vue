@@ -5,6 +5,8 @@ import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
 import { resolveMemberSkill } from '../../calc/mew'
+import { itemById, ITEM_ROLES } from '../../calc/itemCatalog'
+import { ownedSelectionSkill } from '../../calc/skillModel'
 import { skillMaxFor } from '../../calc/mainSkills'
 import { exEffects } from '../../calc/exEffects'
 import { computed, shallowRef } from 'vue'
@@ -221,9 +223,9 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <b>{{ row.energy == null ? '还未公布' : Math.round(row.energy).toLocaleString('zh-CN') }}</b>
     </p>
     <p class="member-line skill">
-      <span><MainSkillIcon :name="poke.mainSkill" /> 技能 LV{{ skillLv }} {{ poke.mainSkill }} {{ (Math.min(1, rate(poke.skillRate, 'skill', 'skillS', 'skillM') * exEffects(settings, poke.berry).skillMultiplier) * 100).toFixed(1) }}%</span>
+      <span><MainSkillIcon :name="poke.mainSkill" decorative /> 技能 LV{{ skillLv }} {{ poke.mainSkill }} {{ (Math.min(1, rate(poke.skillRate, 'skill', 'skillS', 'skillM') * exEffects(settings, poke.berry).skillMultiplier) * 100).toFixed(1) }}%</span>
     </p>
-    <p v-if="pokeId === 151" class="member-line quiet"><span>十项全能 Lv{{ skillLevel }} · 所选效果 Lv{{ skillLv }}</span></p>
+    <p v-if="ownedSelectionSkill(pokeId)" class="member-line quiet"><span>{{ ownedSelectionSkill(pokeId)?.name }} Lv{{ skillLevel }} · 所选效果 Lv{{ skillLv }}</span></p>
     <p class="member-line quiet">
       <span>{{ result.skillProcs.toFixed(2) }} 次</span>
       <b>{{ Math.round(result.skillEnergy).toLocaleString('zh-CN') }}</b>
@@ -233,7 +235,7 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <b>满包 {{ result.sneaky }}</b>
     </p>
     <p v-if="result.rewards" class="member-line quiet">
-      <span>期望奖励：糖果 {{ result.rewards.candies.toFixed(2) }} · 梦之碎片 {{ result.rewards.dreamShards.toFixed(2) }} · 树果汁 {{ result.rewards.berryJuice.toFixed(2) }}</span>
+      <span>期望奖励：糖果 {{ result.rewards.candies.toFixed(2) }} · 梦之碎片 {{ result.rewards.dreamShards.toFixed(2) }}<template v-for="(count, id) in result.rewards.items ?? { [ITEM_ROLES.berryJuice]: result.rewards.berryJuice }" :key="id"> · {{ itemById(Number(id))?.name ?? `道具 ${id}` }} {{ count.toFixed(2) }}</template></span>
     </p>
     <p v-if="result.cooking" class="member-line quiet"><span>剩余食材：{{ Object.entries(result.cooking.remain).filter(([, count]) => count > 0).map(([name, count]) => `${name} ×${count.toFixed(2)}`).join('、') || '无' }}</span></p>
     <template v-if="result.cooking && result.skillIngredients">

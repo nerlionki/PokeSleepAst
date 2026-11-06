@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.EnvironmentFields
+
 import { computed } from 'vue'
 import { BERRIES, ISLANDS } from '../../calc/data'
 import { EX_MAIN, canPickBerries, normalizeEx2Berries } from '../../calc/defaults'
@@ -19,7 +22,7 @@ const forcedBerry = computed(() => activeActivities(activity.context.value).map(
 const ex = computed(() => isExIsland(props.value.island))
 const mainChoices = computed(() => BERRIES.filter(berry => props.value.island !== 'cyanex' || EX_MAIN.includes(berry.name)))
 const secondary = computed(() => BERRIES.filter(berry => berry.name !== environment.value.berries[0]))
-const extra = computed({ get: () => props.value.helpingBonus, set: (value: number) => emit('change', { helpingBonus: Math.min(5, Math.max(0, Math.floor(Number(value) || 0))) }) })
+const extra = computed({ get: () => props.value.helpingBonus, set: (value: number) => emit('change', { helpingBonus: Math.min(INPUT_LIMITS.extra.max, Math.max(INPUT_LIMITS.extra.min, Math.floor(Number(value) || 0))) }) })
 const buff = computed({ get: () => props.value.exBuff !== false, set: (value: boolean) => emit('change', { exBuff: value }) })
 const debuff = computed({ get: () => props.value.exDebuff !== false, set: (value: boolean) => emit('change', { exDebuff: value }) })
 function pickMain(name: string) {
@@ -38,7 +41,7 @@ function toggle(name: string) {
 <template>
   <div class="stack">
     <div class="field"><label>计算营地</label><select :value="value.island" @change="emit('change', { island: ($event.target as HTMLSelectElement).value as Settings['island'] })"><option v-for="island in ISLANDS" :key="island.id" :value="island.id">{{ island.name }}</option></select></div>
-    <div class="field"><label>额外金帮数量（已有＋额外最多 5 层）</label><input v-model.number="extra" type="number" min="0" max="5" step="1"></div>
+    <div class="field"><label>额外金帮数量（已有＋额外最多 5 层）</label><input v-model.number="extra" type="number" :min="INPUT_LIMITS.extra.min" :max="INPUT_LIMITS.extra.max" :step="INPUT_LIMITS.extra.step"></div>
     <template v-if="ex">
       <div class="field"><label>本周 EX 加成</label><select :value="value.exWeeklyBonus ?? 'none'" @change="emit('change', { exWeeklyBonus: ($event.target as HTMLSelectElement).value as Settings['exWeeklyBonus'] })"><option value="none">未设置</option><option value="berries">树果能量 ×2.4</option><option value="ingredients">普通帮忙食材 +1（食材型额外 50% 再 +1）</option><option value="skills">主技能发动率 ×1.25</option></select></div>
       <p>EX 主树果</p>

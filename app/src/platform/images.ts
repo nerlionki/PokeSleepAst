@@ -1,6 +1,6 @@
 import { activeSnapshot, remoteImage, RESOURCE_ORIGIN } from '../../../core/src/resources/runtime'
 import { isBundledImage } from '../../../core/src/resources/imagePolicy'
-const localImages = import.meta.glob(['../../../core/src/assets/imgs/berry/*.webp', '../../../core/src/assets/imgs/ingredient/*.webp', '../../../core/src/assets/imgs/meal/*.webp', '../../../core/src/assets/imgs/pokemon/{icons,portrait}/*.webp'], {
+const localImages = import.meta.glob(['../../../core/src/assets/imgs/berry/*.webp', '../../../core/src/assets/imgs/ingredient/*.webp', '../../../core/src/assets/imgs/meal/*.webp', '../../../core/src/assets/imgs/mainSkill/*.webp', '../../../core/src/assets/imgs/ribbon/*.webp', '../../../core/src/assets/imgs/subSkill/*.webp', '../../../core/src/assets/imgs/pokemon/{icons,portrait}/*.webp'], {
   eager: true,
   query: '?url',
   import: 'default',

@@ -1,3 +1,5 @@
+import { itemById, ITEM_ROLES } from './itemCatalog'
+import { unlockedIngredientSlots } from './ingredients'
 import { AREA_BONUS_MAX } from './areaBonus'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
@@ -17,7 +19,6 @@ const scorePlan_scoreBounds_runtimeParameters = runtimeParameters.modules.scoreP
 const scorePlan_scoreSleeps_runtimeParameters = runtimeParameters.modules.scorePlan.scoreSleeps.values
 const scorePlan_validateScoreOptions_runtimeParameters = runtimeParameters.modules.scorePlan.validateScoreOptions.values
 const scorePlan_config_ruleCatalogs = ruleCatalogs.modules.scorePlan
-const scorePlan_scoreCandidates_runtimeParameters = runtimeParameters.modules.scorePlan.scoreCandidates.values
 const scorePlan_scoreTime_runtimeParameters = runtimeParameters.modules.scorePlan.scoreTime.values
 
 
@@ -110,7 +111,7 @@ export function validateScoreOptions(o: ScoreOptions, settings: Settings): strin
   if (!integer(o.collectMinutes, (scorePlan_validateScoreOptions_runtimeParameters.p004 as 5), (scorePlan_validateScoreOptions_runtimeParameters.p005 as 240))) return '收菜间隔须为 5–240 分钟'
   if (!integer(o.seed, 1, (scorePlan_validateScoreOptions_runtimeParameters.p006 as 2147483647))) return '规划参数无效，请恢复默认设置'
   if (!Number.isFinite(o.initialCrit) || o.initialCrit < 0 || o.initialCrit > (scorePlan_validateScoreOptions_runtimeParameters.p007 as 70) || !integer(o.initialPot, 0, (scorePlan_validateScoreOptions_runtimeParameters.p008 as 200))
-    || !Number.isFinite(o.initialZone) || o.initialZone < 0 || o.initialZone > (scorePlan_validateScoreOptions_runtimeParameters.p009 as 24) || !integer(o.initialJuice, 0, (scorePlan_validateScoreOptions_runtimeParameters.p010 as 5))) return '初始技能或道具加成超出允许范围'
+    || !Number.isFinite(o.initialZone) || o.initialZone < 0 || o.initialZone > (scorePlan_validateScoreOptions_runtimeParameters.p009 as 24) || !integer(o.initialJuice, 0, itemById(ITEM_ROLES.berryJuice)!.maxHeld!)) return '初始技能或道具加成超出允许范围'
   if (Object.entries(o.bag).some(([name, n]) => !INGREDIENTS.some(i => i.name === name) || !integer(n, 0, (scorePlan_validateScoreOptions_runtimeParameters.p011 as 800)))
     || Object.values(o.bag).reduce((a, b) => a + b, 0) > (scorePlan_validateScoreOptions_runtimeParameters.p012 as 800)) return '初始食材须为整数，合计不能超过 800'
   if (o.meals.length !== 3 || o.meals.some((m, i) => !Number.isFinite(hm(m)) || hm(m) < scorePlan_config_ruleCatalogs.validateScoreOptionsList2.values[i]! || hm(m) >= scorePlan_config_ruleCatalogs.validateScoreOptionsList3.values[i]!)) return '做饭时间须分别位于早餐 06:00–11:59、午餐 12:00–17:59、晚餐 18:00–23:59'
@@ -130,7 +131,7 @@ export function scoreCandidates(box: BoxPokemon[]) {
   const seen = new Set<string>()
   const candidates = box.filter(p => {
     const poke = pokeById(p.pokeId)
-    const slots = p.level >= (scorePlan_scoreCandidates_runtimeParameters.p001 as 60) ? 3 : p.level >= (scorePlan_scoreCandidates_runtimeParameters.p002 as 30) ? 2 : 1
+    const slots = unlockedIngredientSlots(p.level)
     let reason = ''
     if (!p.uid || seen.has(p.uid)) reason = '个体标识为空或重复'
     else if (p.napping) reason = '正在午睡岛，无法上场'
@@ -166,6 +167,7 @@ export interface ScoreTrace {
   berry: number, zone: number, skill: number, cooking: number, total: number
   bag: Record<string, number>, received: Record<string, number>, consumed: Record<string, number>, sold: Record<string, number>
   juice: { initial: number, received: number, used: number, lost: number, remain: number }
+  items?: Record<number, { initial: number, received: number, used: number, lost: number, remain: number }>
   members: ScoreMemberResult[], actions: ScoreAction[], segments: ScoreSegment[], warnings: string[]
 }
 export interface ScoreSolution {

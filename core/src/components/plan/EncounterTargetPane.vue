@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.EncounterTargetPane
+
 import { computed, onScopeDispose, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import type { EncounterGoal } from '../../calc/encounterPlan'
@@ -82,7 +85,7 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : BABY_POKE
       <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox" role="switch"> 活动期间遇到一些其他类型宝可梦</label>
       <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">恢复此目标自动活动设置</button>
       <div class="efficiency-fields">
-        <div class="field"><label for="encounter-iterations">计算次数</label><input :disabled="busy" id="encounter-iterations" v-model.number="options.iterations" type="number" min="100" max="100000" step="100" inputmode="numeric"></div>
+        <div class="field"><label for="encounter-iterations">计算次数</label><input :disabled="busy" id="encounter-iterations" v-model.number="options.iterations" type="number" :min="INPUT_LIMITS.encounter_iterations.min" :max="INPUT_LIMITS.encounter_iterations.max" :step="INPUT_LIMITS.encounter_iterations.step" inputmode="numeric"></div>
         <div class="field"><label for="encounter-precision">计算精度</label><select :disabled="busy" id="encounter-precision" v-model="options.precision"><option value="low">低 · 快速搜索</option><option value="medium">中 · 细化搜索</option><option value="high">高 · 密集搜索</option></select></div>
       </div>
       <p class="muted">每觉最多搜索 50 亿睡意之力。计算次数用于每个候选抽取状态；精度控制能量和拆分比例的搜索细度。高精度耗时较长，可随时取消。</p>

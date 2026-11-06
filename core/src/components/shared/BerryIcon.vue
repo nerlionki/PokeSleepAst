@@ -26,7 +26,7 @@ const hue = computed(() => {
 </script>
 
 <template>
-  <FallbackImage class="berry-icon" :class="{ lg: large, sm: small }" :src="random ? localImage('berry/question.webp') : berryIconUrl(name)" :alt="random ? '随机喜好树果' : name" :reset-key="random ? 'random' : name">
+  <FallbackImage class="berry-icon" :class="{ lg: large, sm: small }" :src="random ? localImage('berry/0.webp') : berryIconUrl(name)" :alt="random ? '随机喜好树果' : name" :reset-key="random ? 'random' : name">
     <template #fallback>
       <span class="berry-fallback" :class="{ lg: large, sm: small }" :style="{ background: `hsl(${hue} 55% 42%)` }" :title="random ? '随机喜好树果' : name">{{ random ? '?' : name.slice(0, 1) }}</span>
     </template>

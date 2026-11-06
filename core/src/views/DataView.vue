@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GuideEntry from '../components/shared/GuideEntry.vue'
 import { useTabSwipe } from '../composables/useTabSwipe'
 import clientDefaults from '../data/client-defaults.resource'
 
@@ -26,8 +27,9 @@ const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skil
 
 <template>
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
+    <GuideEntry page="data" :show-trigger="false" />
     <input v-if="tab !== 'recipe'" v-model="q" class="picker-search" placeholder="搜索功能或名称">
-    <div class="seg seg-4 plan-tabs">
+    <div id="guide-data-tabs" class="seg seg-4 plan-tabs">
       <button v-if="features.enabled('data', 'island')" type="button" :class="{ on: tab === 'island' }" @click="tab = 'island'">营地</button>
       <button v-if="features.enabled('data', 'berry')" type="button" :class="{ on: tab === 'berry' }" @click="tab = 'berry'">树果</button>
       <button v-if="features.enabled('data', 'ing')" type="button" :class="{ on: tab === 'ing' }" @click="tab = 'ing'">食材</button>

@@ -1,7 +1,9 @@
 import type { BoxPokemon, IngredientSlots, OcrMissingField } from '../types'
-import { NATURES, SUBSKILLS, POKEDEX, pokeById } from './data'
+import { NEUTRAL_NATURE, NATURES, SUBSKILLS, POKEDEX, pokeById } from './data'
 import { evolutionStages } from './evolution'
-import { slotDrop } from './ingredients'
+import { INGREDIENT_GATES, slotDrop } from './ingredients'
+import { MEMBER_PRESETS } from './memberPresets'
+import { POKEMON_LEVEL_MAX } from './xp'
 import { MAIN_SKILLS, skillMaxFor } from './mainSkills'
 import { defaultTune } from './member'
 import { defaultFirstSlot, isAllRounder } from './specialty'
@@ -34,7 +36,7 @@ function levelIn(text: string): number | null {
   const matched = ocrFold(text).match(/lv\.?(\d+)/)
   if (!matched) return null
   const level = Number(matched[1])
-  if (!Number.isInteger(level) || level < 1 || level > 100) return null
+  if (!Number.isInteger(level) || level < 1 || level > POKEMON_LEVEL_MAX) return null
   return level
 }
 
@@ -103,21 +105,11 @@ function nameWord(words: OcrWord[]): OcrWord | null {
   return [...upper].sort((a, b) => a.x - b.x).find((word) => !noiseLabel(word.text)) ?? null
 }
 
-function subskillId(text: string): string {
+export function subskillId(text: string): string {
   let key = ocrFold(text)
-  key = key.replace(/^[冀翼]忙速度([sm])$/, '帮忙速度$1')
-  key = key.replace(/^持有上限提开([sml])$/, '持有上限提升$1')
-  key = key.replace(/^技能等提升([sm])$/, '技能等级提升$1')
-  if (/^忙速度[sm]$/.test(key)) key = `帮${key}`
-  const recurring: Record<string, string> = {
-    手: 'helpingBonus',
-    手厅: 'helpingBonus',
-    帮手厅: 'helpingBonus',
-    帮手厂: 'helpingBonus',
-    常手爽厅: 'helpingBonus',
-    活力回复厅: 'energyRecover',
-  }
-  if (recurring[key]) return recurring[key]
+  for (const [pattern, replacement] of compatibilityMaps.modules.ocrMatching.subskillCorrections) key = key.replace(new RegExp(pattern!), replacement!)
+  const recurring = compatibilityMaps.modules.ocrMatching.subskillAliases as Record<string, string>
+  if (recurring[key] && SUBSKILLS.some(item => item.id === recurring[key])) return recurring[key]
   if (key.length < 2) return ''
   const exact = SUBSKILLS.find((item) => ocrFold(item.name) === key)
   if (exact) return exact.id
@@ -125,9 +117,10 @@ function subskillId(text: string): string {
   return prefixed.length === 1 ? prefixed[0]!.id : ''
 }
 
-function natureName(text: string): string {
+export function natureName(text: string): string {
   const key = ocrFold(text)
-  return NATURES.find((nature) => ocrFold(nature.name) === key)?.name ?? ''
+  const aliases = compatibilityMaps.modules.ocrMatching.natureAliases as Record<string, string>
+  return NATURES.find((nature) => ocrFold(nature.name) === key || ocrFold(nature.name) === ocrFold(aliases[key] ?? ''))?.name ?? ''
 }
 
 export function completeUnsupportedSpeciesName(name: string, pokeId: number, characters?: ReadonlySet<string>): string {
@@ -147,7 +140,7 @@ export function readNatureMinted(words: OcrWord[]): boolean {
   const label = words.find(word => ocrFold(word.text) === '性格')
   if (!label) return false
   const nearby = words.filter(word => word.y >= label.y - label.height && word.y <= label.y + label.height * 8)
-  const original = nearby.map(word => NATURES.find(nature => ocrFold(nature.name) === ocrFold(word.text))).find(Boolean)
+  const original = nearby.map(word => NATURES.find(nature => nature.name === natureName(word.text))).find(Boolean)
   if (!original?.up && !original?.down) return false
   return ocrFold(nearby.map(word => word.text).join('')).includes(ocrFold('没有性格带来的特色'))
 }
@@ -350,7 +343,7 @@ export function ingredientRowMarks(words: OcrWord[]): [IngredientQuantityMark | 
   const food = [...words].filter((word) => ocrFold(word.text) === '食材').sort((a, b) => a.y - b.y)[0]
   // 宝可梦信息浮层会遮住“食材”标题，但 30/60 级锁定标签和数量仍可见。
   // 必须同时找到两档标签，避免把技能等级或其它数字当成食材行。
-  const locked = [30, 60].map((level) => words.find((word) => new RegExp(`^lv[.．·]?\\s*${level}$`, 'i').test(word.text.trim())))
+  const locked = INGREDIENT_GATES.slice(1).map((level) => words.find((word) => new RegExp(`^lv[.．·]?\\s*${level}$`, 'i').test(word.text.trim())))
   const header = headerCluster(words)
   const headerBottom = header.length ? Math.max(...header.map(word => word.y + word.height)) : null
   const interval = headerBottom == null ? null : words.find(word => word.y > headerBottom && /[間间]隔/.test(word.text))
@@ -465,7 +458,8 @@ export function readMainSkill(words: OcrWord[]): string | null {
     .sort((a, b) => b.folded.length - a.folded.length)
   let found: string | null = null
   for (const word of words) {
-    const folded = ocrFold(word.text).replace(/^手支援([sS])$/, '帮手支援$1').replace(/^新月祈[（(]/, '新月祈祷(')
+    let folded = ocrFold(word.text)
+    for (const [pattern, replacement] of compatibilityMaps.modules.ocrMatching.mainSkillCorrections) folded = folded.replace(new RegExp(pattern!), replacement!)
     const hit = names.find((item) => folded.includes(item.folded))
     if (hit && (!found || ocrFold(hit.name).length > ocrFold(found).length)) found = hit.name
   }
@@ -576,12 +570,12 @@ export function parseCard(words: OcrWord[], options: ParseOptions): Omit<BoxPoke
   subskills.forEach((skill, index) => { if (!skill) ocrMissing.push(`subskill${index}` as OcrMissingField) })
   return {
     pokeId,
-    level: header?.level ?? 30,
-    nature: nature ?? '勤奋',
+    level: header?.level ?? MEMBER_PRESETS.ocrMissingLevel,
+    nature: nature ?? NEUTRAL_NATURE,
     ...(readNatureMinted(words) ? { natureMinted: true } : {}),
     subskills,
     ingredientSlots: ingredientSlotsFor(pokeId, options.slotLines),
-    skillLevel: skillLevel ?? 1,
+    skillLevel: skillLevel ?? MEMBER_PRESETS.ocrMissingSkillLevel,
     name: completeUnsupportedSpeciesName(labeled ? stripLevelPrefix(labeled.text) : '', pokeId, options.characters),
     napping: false,
     ...(options.shiny ? { shiny: true } : {}),

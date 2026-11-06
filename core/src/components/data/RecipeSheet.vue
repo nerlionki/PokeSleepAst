@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.RecipeSheet
+
   import type { RecipeDisplayRow } from '../../calc/recipeCatalog';
   import { RECIPE_LEVEL_MAX } from '../../calc/cook';
   import {
@@ -55,9 +58,9 @@
       <input
         :value="level"
         type="number"
-        min="1"
+        :min="INPUT_LIMITS.level.min"
         :max="RECIPE_LEVEL_MAX"
-        step="1"
+        :step="INPUT_LIMITS.level.step"
         @input="editLevel"
       />
     </label>

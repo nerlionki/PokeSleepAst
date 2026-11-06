@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.WhistlePane
+
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { boxLabel } from '../../calc/boxFilter'
@@ -40,11 +43,11 @@ const interval = (seconds: number) => `${Math.floor(seconds / 60)}分${seconds %
       <div class="row">
         <div class="field">
           <label for="whistle-current">当前卡比兽能量</label>
-          <input id="whistle-current" v-model.number="plan.whistle.currentEnergy" type="number" min="0" step="1" inputmode="numeric">
+          <input id="whistle-current" v-model.number="plan.whistle.currentEnergy" type="number" :min="INPUT_LIMITS.whistle_current.min" :step="INPUT_LIMITS.whistle_current.step" inputmode="numeric">
         </div>
         <div class="field">
           <label for="whistle-target">目标卡比兽能量</label>
-          <input id="whistle-target" v-model.number="plan.whistle.targetEnergy" type="number" min="0" step="1" inputmode="numeric">
+          <input id="whistle-target" v-model.number="plan.whistle.targetEnergy" type="number" :min="INPUT_LIMITS.whistle_target.min" :step="INPUT_LIMITS.whistle_target.step" inputmode="numeric">
         </div>
       </div>
       <p class="muted">每个哨子按满活力的 3 小时帮忙产量计算，计入队伍帮手奖励。露营券和活动的生产加成不生效，不触发主技能；EX 喜好树果的 2.4 倍能量加成仍生效。</p>

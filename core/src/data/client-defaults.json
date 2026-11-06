@@ -112,7 +112,8 @@
         "ingredient": "-20%",
         "skill": "-20%",
         "exp": "-18%"
-      }
+      },
+      "neutralNature": "勤奋"
     },
     "recipes": {
       "MEAL_CATEGORIES": [
@@ -265,7 +266,8 @@
       "dailyCandyInitial": 0,
       "boostInitial": "none",
       "boostCandyInitial": 0,
-      "groupInitial": "normal"
+      "groupInitial": "normal",
+      "relaxTicketCountInitial": ""
     },
     "components_pokemon_BoxOverview": {
       "tabInitial": "berries",
@@ -990,6 +992,44 @@
         "exp": 0,
         "ribbonHours": 0
       }
+    },
+    "memberPresets": {
+      "editor": {
+        "level": 30,
+        "subskills": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "ingredientSlots": [
+          0,
+          1,
+          2
+        ]
+      },
+      "extreme": {
+        "level": 70,
+        "subskills": [
+          "helpingBonus",
+          "berryS",
+          "helpM",
+          "skillM",
+          ""
+        ],
+        "ingredientSlots": [
+          0,
+          1,
+          2
+        ],
+        "wakeEnergy": 100,
+        "ribbonHours": 2000,
+        "supportTeamSize": 5
+      },
+      "comparisonWakeEnergy": 100,
+      "ocrMissingLevel": 30,
+      "ocrMissingSkillLevel": 1
     }
   }
 }

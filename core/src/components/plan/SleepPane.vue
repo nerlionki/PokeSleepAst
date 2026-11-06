@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.SleepPane
+
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { useActivities } from '../../composables/useActivities'
@@ -183,7 +186,7 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
     </div>
     <div class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop>
       <label>睡眠分数 {{ plan.sleepScore }} · {{ sleepClock(plan.sleepScore) }}</label>
-      <input :disabled="busy" v-model.number="plan.sleepScore" type="range" min="1" max="100">
+      <input :disabled="busy" v-model.number="plan.sleepScore" type="range" :min="INPUT_LIMITS.plan_sleepScore.min" :max="INPUT_LIMITS.plan_sleepScore.max">
     </div>
     <div class="field">
       <label>评级（选择后填入该岛这一档的最低能量）</label>
@@ -193,12 +196,12 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
     </div>
     <div class="field">
       <label>入睡卡比兽能量</label>
-      <input :disabled="busy" v-model.number="plan.snorlaxStrength" type="number" min="0">
+      <input :disabled="busy" v-model.number="plan.snorlaxStrength" type="number" :min="INPUT_LIMITS.plan_snorlaxStrength.min">
     </div>
     <div class="field"><label>本日研究次数</label><select :disabled="busy" v-model.number="researchSession"><option :value="0">第一次（拆觉时包括第二次）</option><option :value="1">仅第二次</option></select></div>
-    <div class="field"><label>本日此前已研究只数</label><input :disabled="busy" v-model.number="researchedBefore" type="number" min="0" max="20"></div>
+    <div class="field"><label>本日此前已研究只数</label><input :disabled="busy" v-model.number="researchedBefore" type="number" :min="INPUT_LIMITS.researchedBefore.min" :max="INPUT_LIMITS.researchedBefore.max"></div>
     <label class="row"><input :disabled="busy" v-model="specialEncountered" type="checkbox">本日实际遇到特殊UP宝可梦</label>
-    <div v-if="!whole" class="field"><label>第一觉熏香额外遭遇只数（不含露营券、特殊UP）</label><input :disabled="busy" v-model.number="firstResearchExtras" type="number" min="0" max="2"></div>
+    <div v-if="!whole" class="field"><label>第一觉熏香额外遭遇只数（不含露营券、特殊UP）</label><input :disabled="busy" v-model.number="firstResearchExtras" type="number" :min="INPUT_LIMITS.firstResearchExtras.min" :max="INPUT_LIMITS.firstResearchExtras.max"></div>
     <p class="muted">每日第11只起糖果为1，研究EXP与梦之碎片减半；实际遇到特殊UP时从第12只起减额。按抽选顺序结算，不减少捕捉数量。额外遭遇只计入累计只数，不模拟其奖励。</p>
     <div class="field">
       <label>睡眠类型</label>

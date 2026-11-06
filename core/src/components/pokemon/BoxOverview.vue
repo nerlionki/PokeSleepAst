@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.BoxOverview
+
 import { AREA_BONUS_MAX, clampAreaBonus } from '../../calc/areaBonus'
 import clientDefaults from '../../data/client-defaults.resource'
 
@@ -75,7 +78,7 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
     <ToggleField v-model="activityEnabled" label="计入活动加成" />
     <section v-if="adjusting" class="card stack" aria-label="概览计算加成">
       <div class="bonus-fields">
-        <div class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop><label for="overview-area">营地加成（%）</label><input id="overview-area" v-model.number="bonuses.areaBonus" type="range" min="0" :max="AREA_BONUS_MAX" step="0.01"><span class="muted">{{ Math.round(bonuses.areaBonus * 100) }}%</span></div>
+        <div class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop><label for="overview-area">营地加成（%）</label><input id="overview-area" v-model.number="bonuses.areaBonus" type="range" :min="INPUT_LIMITS.overview_area.min" :max="AREA_BONUS_MAX" :step="INPUT_LIMITS.overview_area.step"><span class="muted">{{ Math.round(bonuses.areaBonus * 100) }}%</span></div>
       </div>
       <label class="row"><input v-model="bonuses.goodCamp" type="checkbox">优质露营券</label>
       <p class="muted">保留个体自身的帮手奖励和缎带；帮手奖励最多叠加 5 层。加成仅用于本页。</p>

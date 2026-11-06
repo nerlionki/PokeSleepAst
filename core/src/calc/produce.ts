@@ -1,3 +1,4 @@
+import { ownedSelectionSkill } from './skillModel'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
@@ -10,7 +11,7 @@ import { skillMaxFor, skillByPokedexName } from './mainSkills'
 import { berryUnitEnergy } from './berry'
 import { pokeById } from './data'
 import { instantInterval } from './helpSpeed'
-import { slotDrop } from './ingredients'
+import { slotDrop, unlockedIngredientSlots } from './ingredients'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
 import { natureStatFactor, withEffectiveNature } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
@@ -83,7 +84,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   const poke = species && selected ? { ...species, mainSkill: selected.name, skillRate: selected.rate } : undefined
   if (!poke) return emptyProduceResult()
   // 纯能量/回复技能在固定活力比较中可使用等价快速公式，其余统一技能结算。
-  if (!comparison?.naturalOnly && input.carryMode !== 'full' && (input.pokeId === 151 || !produce_config_ruleCatalogs.produceList0.values.includes(skillByPokedexName(poke.mainSkill)?.id ?? 0))) {
+  if (!comparison?.naturalOnly && input.carryMode !== 'full' && (ownedSelectionSkill(input.pokeId) || !skillByPokedexName(poke.mainSkill)?.model.comparisonFastPath)) {
     const sim = simulateTeam(settings, [input], helpingBonus, { expectedProcs: true, fixedEnergy: input.wakeEnergy ?? produce_produce_ruleParameters.fixedComparisonEnergy, skipCooking: comparison?.skipCooking })
     const result = sim.members[0]!
     return { ...result, cooking: { energy: sim.meals.reduce((sum, meal) => sum + meal.energy, 0), remain: sim.remain } }
@@ -129,7 +130,7 @@ export function produce(settings: Settings, input: ProduceInput, helpingBonus = 
   const skillRate = Math.min(1, findingRate(poke.skillRate, input.nature, 'skill', subs, 'skillS', 'skillM') * ex.skillMultiplier * activity.skillRateMultiplier)
   const per = berryPerHelp(poke.specialty, subs) + activity.berryCountBonus
   const snacking = input.carryMode === 'full'
-  const unlocked = input.level >= (produce_produce_runtimeParameters.p006 as 60) ? 3 : input.level >= (produce_produce_runtimeParameters.p007 as 30) ? 2 : 1
+  const unlocked = unlockedIngredientSlots(input.level)
   const slots = input.ingredientSlots.slice(0, unlocked).flatMap((lineIndex, slot) => {
     if (lineIndex == null) return []
     const drop = slotDrop(poke.ingredients, slot, lineIndex)

@@ -1,4 +1,3 @@
-import { foldText } from './text';
 import meta from '../data/meta.resource';
 
 export interface AnnouncedIngredient {
@@ -59,35 +58,10 @@ interface Announcements {
 // Resolve once from the installed snapshot, just like the other resource adapters.
 const content = (meta as unknown as { announcedContent?: Announcements })
   .announcedContent;
-// Placeholder image IDs are display assets, never production/runtime IDs.
-// The already published 1.0.11 metadata predates imageId; keep it usable too.
-const officialPlaceholderImages: Record<string, number> = {
-  木棉球: 546,
-  风妖精: 547
-};
-export const ANNOUNCED =
-  content?.schemaVersion === 1
-    ? {
-        ...content,
-        ingredients: content.ingredients.map(row => ({
-          ...row,
-          imageId: row.imageId ?? (row.key === 'bite-size-nut' ? 0 : undefined)
-        })),
-        pokemon: content.pokemon.map(row => ({
-          ...row,
-          nationalDex:
-            row.nationalDex ??
-            Object.entries(officialPlaceholderImages).find(
-              ([name]) => foldText(name) === foldText(row.name)
-            )?.[1],
-          imageId:
-            row.imageId ??
-            Object.entries(officialPlaceholderImages).find(
-              ([name]) => foldText(name) === foldText(row.name)
-            )?.[1]
-        }))
-      }
-    : { ingredients: [], pokemon: [], recipes: [], activities: [] };
+// Image IDs are declared by the resource; names never infer Pokemon/ingredient artwork.
+export const ANNOUNCED = content?.schemaVersion === 1
+  ? { ...content, ingredients: content.ingredients.map(row => ({ ...row })), pokemon: content.pokemon.map(row => ({ ...row })) }
+  : { ingredients: [], pokemon: [], recipes: [], activities: [] };
 export const NUT = ANNOUNCED.ingredients.find(
   row => row.key === 'bite-size-nut'
 );

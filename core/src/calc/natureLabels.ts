@@ -2,7 +2,7 @@ import extracted0 from '../data/calc-tables.resource'
 import extracted1 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import type { NatureStat } from '../types'
-import { natureByName } from './data'
+import { NEUTRAL_NATURE, natureByName } from './data'
 const natureLabels_config_extracted0 = extracted0.modules.natureLabels
 const natureLabels_config_extracted1 = extracted1.modules.natureLabels
 
@@ -11,7 +11,7 @@ const FACTOR: Record<NatureStat, [number, number]> = (cloneData(natureLabels_con
 
 /** 净白薄荷取消能力特色，但不改写原性格。官方：https://www.pokemonsleep.net/zh/news/323930363038373331333038313633303733/ */
 export function effectiveNature(member: { nature: string, natureMinted?: boolean }): string {
-  return member.natureMinted === true ? '勤奋' : member.nature
+  return member.natureMinted === true ? NEUTRAL_NATURE : member.nature
 }
 
 /** 仅在局部计算副本中归一化；持久化数据、昵称和进化条件仍保留原性格。 */

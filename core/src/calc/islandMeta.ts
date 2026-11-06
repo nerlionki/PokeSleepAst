@@ -1,15 +1,13 @@
 import extracted0 from '../data/calc-tables.resource'
-import bundledTables from '../data/calc-tables.json'
 import { cloneData } from './dataClone'
 import type { IslandId } from '../types'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES } from './data'
 import { activitySleepStyles, createActivityContext, type ActivitySelection } from './activities'
 import { mythicalAppear } from './specialty'
 const islandMeta_config_extracted0 = extracted0.modules.islandMeta
-export const RANDOM_BERRY_DESCRIPTION = islandMeta_config_extracted0.randomBerryDescription ?? bundledTables.modules.islandMeta.randomBerryDescription
-export const RANDOM_BERRY_COUNT = islandMeta_config_extracted0.randomBerryCount ?? bundledTables.modules.islandMeta.randomBerryCount
+export const RANDOM_BERRY_DESCRIPTION = islandMeta_config_extracted0.randomBerryDescription
+export const RANDOM_BERRY_COUNT = islandMeta_config_extracted0.randomBerryCount
 const berrySelectionDescriptions: Record<string, { label: string, detail: string }> = {
-  ...bundledTables.modules.islandMeta.berrySelectionDescriptions,
   ...islandMeta_config_extracted0.berrySelectionDescriptions,
 }
 export function islandBerrySelection(id: string) { return berrySelectionDescriptions[id] }

@@ -7,7 +7,7 @@ import { EVENT_PARAMETERS, activityMiniCandyBoost, activityValues, createActivit
 import growth from '../data/growth-meta.resource'
 import legacyStockKeys from '../data/legacy-candy-stock-keys.resource'
 import type { BoxPokemon } from '../types'
-import { natureByName, pokeById } from './data'
+import { NATURES, NEUTRAL_NATURE, natureByName, pokeById } from './data'
 import { effectiveNature } from './natureLabels'
 import { candyExpAtLevel, shardsTo } from './xp'
 const candyPlan_config_extracted0 = extracted0.modules.candyPlan
@@ -54,7 +54,7 @@ export const CANDY_PLANNING_ACTIVITY: ActivityContext = {
 export function candyBoostPolicy(mode: CandyBoostId, activity?: ActivitySelection) {
   const base = CANDY_BOOSTS[mode]
   const event = mode === 'mini' ? activityMiniCandyBoost(createActivityContext('research', activity)) : undefined
-  return { ...base, ...(event ?? {}), quota: event ? event.dailyLimit : event === null ? 0 : base.quota, available: event !== null, daily: !!event }
+  return { ...base, ...(event ?? {}), quota: event ? event.dailyLimit : event === null ? 0 : base.quota ?? Infinity, available: event !== null, daily: !!event }
 }
 
 const MAX_LEVEL = (candyPlan_config_extracted0.MAX_LEVEL as 70)
@@ -147,7 +147,8 @@ export function calculateCandy(row: CandyRow, mode: CandyBoostId, useOverride?: 
   let current = (exp[level] ?? 0) + (required - remaining)
   let candies = 0
   let shards = 0
-  const nature = row.nature === 'up' ? '胆小' : row.nature === 'down' ? '勇敢' : '勤奋'
+  const nature = (row.nature === 'up' ? NATURES.find(nature => nature.up === 'exp')?.name
+    : row.nature === 'down' ? NATURES.find(nature => nature.down === 'exp')?.name : NEUTRAL_NATURE) ?? NEUTRAL_NATURE
   while (level < MAX_LEVEL && (row.method === 'target' ? level < row.target : candies < use)) {
     shards += shardsTo(level + 1) * boost.shards * effects.candyShardMultiplier
     current += candyExpAtLevel(level, nature, boost.exp * effects.candyExpMultiplier)

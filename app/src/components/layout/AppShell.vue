@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useFeaturesStore } from '../../../../core/src/stores/features'
 import TabIcon from './TabIcon.vue'
+import GuideTour from '../../../../core/src/components/shared/GuideTour.vue'
 import { taskNavigationLocked } from '../../../../core/src/composables/taskNavigationLock'
 import { usePageTab } from '../../../../core/src/composables/usePageTab'
 import { computed, onMounted, watchEffect } from 'vue'
@@ -79,5 +80,6 @@ onMounted(async () => {
       </RouterLink>
     </nav>
     <UpdateDialog />
+    <GuideTour />
   </div>
 </template>

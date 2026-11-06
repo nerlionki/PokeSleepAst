@@ -1,6 +1,8 @@
+import { resetSkillModelState } from './skillModel'
+import { ownedSelectionSkill } from './skillModel'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleParameters from '../data/rule-parameters.resource'
-import { applyMainSkill, type EffectActor } from './skillEffects'
+import { applyMainSkill, applySkillModelEffects, type EffectActor, type EffectContext } from './skillEffects'
 import { activityBerrySettings, activityValues, snapshotActivity, assertActivitySupported, type ActivityValues } from './activities'
 import { CookingSkillState } from './cookingSkillState'
 import { teamRestrictionError } from './teamRestrictions'
@@ -13,7 +15,7 @@ import { pokeById } from './data'
 import { cookMeals } from './cook'
 import { mealRecover, sleepRecoveredEnergy } from './energy'
 import { energyMultiplier, instantInterval } from './helpSpeed'
-import { slotDrop } from './ingredients'
+import { slotDrop, unlockedIngredientSlots } from './ingredients'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
 import { natureStatFactor, withEffectiveNature } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
@@ -24,7 +26,6 @@ const timeline_clockOf_runtimeParameters = runtimeParameters.modules.timeline.cl
 const timeline_carryLimit_ruleParameters = ruleParameters.modules.timeline.carryLimit
 const timeline_berryCount_ruleParameters = ruleParameters.modules.timeline.berryCount
 const timeline_simulateTeam_ruleParameters = ruleParameters.modules.timeline.simulateTeam
-const timeline_expectedHelp_runtimeParameters = runtimeParameters.modules.timeline.expectedHelp.values
 const timeline_dispatchSkill_runtimeParameters = runtimeParameters.modules.timeline.dispatchSkill.values
 const timeline_dispatchSkill_ruleParameters = ruleParameters.modules.timeline.dispatchSkill
 const timeline_applyHelp_runtimeParameters = runtimeParameters.modules.timeline.applyHelp.values
@@ -253,7 +254,7 @@ export function simulateTeam(
 
   function expectedHelp(target: EffectActor, amount: number) {
     const m = target as Member
-    const slots = m.input.ingredientSlots.slice(0, m.input.level >= (timeline_expectedHelp_runtimeParameters.p001 as 60) ? 3 : m.input.level >= (timeline_expectedHelp_runtimeParameters.p002 as 30) ? 2 : 1)
+    const slots = m.input.ingredientSlots.slice(0, unlockedIngredientSlots(m.input.level))
     const drops = slots.map((index, slot) => index == null ? null : slotDrop(m.poke.ingredients, slot, index))
     const foodRate = drops.length ? Math.min(1, m.ingRate) : 0
     let foodChance = 0
@@ -274,15 +275,9 @@ export function simulateTeam(
     if (weight < 1e-8 || depth > (timeline_dispatchSkill_runtimeParameters.p001 as 12)) return
     const previousEnergy = members.map(member => member.energy)
     m.result.skillProcs += weight
-    if (m.input.pokeId === 151) {
-      const ex = exEffects(settings, m.poke.berry, m.poke.specialty)
-      const omniLv = Math.min((timeline_dispatchSkill_runtimeParameters.p002 as 8), effectiveSkillLevel(m.input.level, m.input.skillLevel, m.input.subskills, '十项全能') + ex.skillLevels)
-      m.result.rewards ??= { dreamShards: 0, candies: 0, berryJuice: 0 }
-      m.result.rewards.candies += weight * (1 + Math.max(0, omniLv - timeline_dispatchSkill_ruleParameters.maximumEligibleTargets) * timeline_dispatchSkill_ruleParameters.staticRecoveryChance)
-    }
     const kind = skillKind(m.poke.mainSkill)
     const value = skillValue(m.poke.mainSkill, m.skillLv)
-    const applied = applyMainSkill(m, members, {
+    const skillContext: EffectContext = {
       modifiers: (actor, skillName) => {
         const effects = activityValues(snapshot.activity, settings.island, { ...(actor as Member).poke, mainSkill: skillName }, minute)
         return { ingredient: effects.skillIngredientMultiplier, berry: effects.skillBerryMultiplier, shards: effects.skillDreamShardsMultiplier, healing: effects.skillHealingMultiplier }
@@ -303,17 +298,22 @@ export function simulateTeam(
         const chance = 1 - (1 - Math.min(1, target.skillRate)) ** helps
         dispatchSkill(target as Member, minute, chance * probability, depth + 1)
       },
-    }, weight)
+    }
+    const owner = ownedSelectionSkill(m.input.pokeId)
+    if (owner) {
+      const ex = exEffects(settings, m.poke.berry, m.poke.specialty)
+      const level = Math.min(owner.maxLevel, effectiveSkillLevel(m.input.level, m.input.skillLevel, m.input.subskills, owner.name) + ex.skillLevels)
+      applySkillModelEffects(m, members, skillContext, owner, level, weight)
+    }
+    const applied = applyMainSkill(m, members, skillContext, weight)
     if (!applied) {
       if (kind === 'charge') m.result.skillEnergy += m.fill * m.activity.skillStrengthMultiplier
       if (kind === 'healSelf') m.energy = Math.min(timeline_dispatchSkill_ruleParameters.energyCap, m.energy + value * m.factor)
       if (kind === 'healAll') {
         for (const other of members) other.energy = Math.min(timeline_dispatchSkill_ruleParameters.energyCap, other.energy + value * other.factor)
       }
-      if (kind === 'healOne') {
-        const target = members.slice().sort((a, b) => a.energy - b.energy)[0]
-        if (target) target.energy = Math.min(timeline_dispatchSkill_ruleParameters.energyCap, target.energy + value * target.factor)
-      }
+      // Single-target recovery requires the catalog's target model; an unknown
+      // skill must not silently become guaranteed recovery of the lowest member.
       if (kind === 'helpAccel') {
         for (const other of members) other.accelUntil = minute + ACCEL_MINUTES
       }
@@ -354,7 +354,7 @@ export function simulateTeam(
       m.result.sneaky += 1
     }
     else if (roll(seed) < m.ingRate && m.poke.ingredients.length) {
-      const unlocked = m.input.level >= (timeline_applyHelp_runtimeParameters.p001 as 60) ? 3 : m.input.level >= (timeline_applyHelp_runtimeParameters.p002 as 30) ? 2 : 1
+      const unlocked = unlockedIngredientSlots(m.input.level)
       const slot = Math.floor(roll(seed + 3) * unlocked)
       const lineIndex = m.input.ingredientSlots[slot]
       const drop = lineIndex == null ? null : slotDrop(m.poke.ingredients, slot, lineIndex)
@@ -436,7 +436,7 @@ export function simulateTeam(
     }
     if (!asleep && t > 0 && asleepAt(t - 1)) {
       // 模型在睡眠结束时结算研究，先恢复画皮，再发动睡眠期间储存的技能。
-      for (const m of members) m.disguiseReady = 1
+      for (const m of members) resetSkillModelState(m, 'sleepStart')
       const teamBonuses = members.filter(m => unlockedSubskills(m.input.level, m.input.subskills).includes('energyRecover')).length
       for (const m of members) {
         if (opts.fixedEnergy == null) {

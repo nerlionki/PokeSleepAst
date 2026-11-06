@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { INPUT_RANGES } from '../../calc/inputRanges'
+const INPUT_LIMITS = INPUT_RANGES.SettingsPanel
+
 import { AREA_BONUS_MAX } from '../../calc/areaBonus'
 import ActivitySettings from '../shared/ActivitySettings.vue'
 import { useActivities } from '../../composables/useActivities'
@@ -58,19 +61,19 @@ function setRecipeLevel(name: string, level: number) {
         <button class="btn ghost" type="button" @click="store.applyPreset('helpMax')">帮手 MAX</button>
       </div>
       <EnvironmentFields :value="settings" @change="store.setEnvironment" />
-      <FormField v-slot="{ id }" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop :label="`营地加成 ${Math.round(settings.areaBonus * 100)}%`"><input :id="id" v-model.number="settings.areaBonus" type="range" min="0" :max="AREA_BONUS_MAX" step="0.01"></FormField>
+      <FormField v-slot="{ id }" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop :label="`营地加成 ${Math.round(settings.areaBonus * 100)}%`"><input :id="id" v-model.number="settings.areaBonus" type="range" :min="INPUT_LIMITS.settings_areaBonus.min" :max="AREA_BONUS_MAX" :step="INPUT_LIMITS.settings_areaBonus.step"></FormField>
       <div class="row">
         <FormField v-slot="{ id }" label="就寝"><input :id="id" v-model="settings.sleepStart" type="time"></FormField>
         <FormField v-slot="{ id }" label="起床"><input :id="id" v-model="settings.sleepEnd" type="time"></FormField>
       </div>
-      <FormField v-slot="{ id }" label="睡眠分数"><input :id="id" v-model.number="settings.sleepScore" type="number" min="0" max="100"></FormField>
+      <FormField v-slot="{ id }" label="睡眠分数"><input :id="id" v-model.number="settings.sleepScore" type="number" :min="INPUT_LIMITS.settings_sleepScore.min" :max="INPUT_LIMITS.settings_sleepScore.max"></FormField>
       <label class="row"><input v-model="settings.meals" type="checkbox"> 三餐回活力</label>
       <label class="row"><input v-model="settings.incense" type="checkbox"> 回复薰香（恢复 ×2）</label>
       <label class="row"><input v-model="settings.goodCamp" type="checkbox"> 优质露营券</label>
       <label class="row"><input v-model="settings.sundayPot" type="checkbox"> 周日锅 ×2（日产手动开）</label>
       <label class="row"><input v-model="shinyUp" type="checkbox"> 全局闪光 UP</label>
-      <FormField v-slot="{ id }" label="日均技能回活力（近似，时序仍会仿真发动）"><input :id="id" v-model.number="settings.dailySkillHeal" type="number" min="0"></FormField>
-      <FormField v-slot="{ id }" label="哨子额外帮忙"><input :id="id" v-model.number="settings.whistleHelps" type="number" min="0" max="20"></FormField>
+      <FormField v-slot="{ id }" label="日均技能回活力（近似，时序仍会仿真发动）"><input :id="id" v-model.number="settings.dailySkillHeal" type="number" :min="INPUT_LIMITS.settings_dailySkillHeal.min"></FormField>
+      <FormField v-slot="{ id }" label="哨子额外帮忙"><input :id="id" v-model.number="settings.whistleHelps" type="number" :min="INPUT_LIMITS.settings_whistleHelps.min" :max="INPUT_LIMITS.settings_whistleHelps.max"></FormField>
       <FormField v-slot="{ id }" label="本周喜好料理"><select :id="id" v-model="settings.mealCategory">
           <option value="curry">咖哩濃湯</option>
           <option value="salad">沙拉</option>
@@ -87,7 +90,7 @@ function setRecipeLevel(name: string, level: number) {
             <input
               :value="recipeLevelOf(settings, r.name)"
               type="number"
-              min="1"
+              :min="INPUT_LIMITS.recipeLevelOf_settings_r_name.min"
               :max="RECIPE_LEVEL_MAX"
               @change="setRecipeLevel(r.name, Number(($event.target as HTMLInputElement).value))"
             >

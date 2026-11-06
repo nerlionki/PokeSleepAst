@@ -4,7 +4,7 @@ import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
 import { INGREDIENTS, RECIPES } from '../../calc/data'
-import { fixedIngredientProducers } from '../../calc/precomputedProduction'
+import { fixedIngredientProducers, productionRibbonHours } from '../../calc/precomputedProduction'
 import { textHit } from '../../calc/text'
 import { compareRecipeEnergyDescending } from '../../calc/recipes'
 import DataRow from '../shared/DataRow.vue'
@@ -54,14 +54,14 @@ function toggle(id: number) {
         </template>
         <template #trail>
           <span class="ing-tops" :title="top(i.id).map((p) => p.name).join('、')">
-            <PokeSprite v-for="p in top(i.id)" :key="p.id" :id="p.id" :name="p.name" />
+            <PokeSprite v-for="p in top(i.id)" :key="p.id" :id="p.id" :name="p.name" :ribbon-hours="productionRibbonHours(p.id)" />
           </span>
         </template>
       </DataRow>
       <div v-if="openId === i.id" class="acc-body">
         <p class="muted">日产量 Top3</p>
         <p v-for="(p, index) in top(i.id)" :key="p.id" class="ing-top-line">
-          <PokeSprite :id="p.id" :name="p.name" />
+          <PokeSprite :id="p.id" :name="p.name" :ribbon-hours="productionRibbonHours(p.id)" />
           <span>{{ index + 1 }}. {{ p.name }} · {{ p.total.toFixed(1) }} 个/日</span>
         </p>
         <p v-if="!top(i.id).length" class="muted">没有宝可梦能产出这个食材。</p>
