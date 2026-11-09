@@ -11,7 +11,8 @@ import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
-import { computed, reactive, ref, shallowRef } from 'vue'
+import { computed, reactive, ref, shallowRef, watch } from 'vue'
+import { resetPageScroll } from '#platform/pageScroll'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import type { ImportProgress } from '../../calc/ocrImportCore'
 import { useRoute, useRouter } from 'vue-router'
@@ -60,6 +61,7 @@ const ocrMsg = shallowRef(components_pokemon_BoxPane_config_clientDefaults["ocrM
 const ocrProgress = shallowRef<ImportProgress>((cloneData(components_pokemon_BoxPane_config_clientDefaults["ocrProgressInitial"]) as unknown as ImportProgress))
 const filterPanel = shallowRef<'none' | 'sleep' | 'berry' | 'skill' | 'advanced'>('none')
 const query = reactive<Omit<BoxQuery, 'berryType' | 'specialty' | 'mainSkill'> & { berryType: string[]; specialty: string[]; mainSkill: string[]; sleepTypes: string[] }>({ ...EMPTY_BOX_QUERY, berryType: selectionList(EMPTY_BOX_QUERY.berryType), specialty: selectionList(EMPTY_BOX_QUERY.specialty), mainSkill: selectionList(EMPTY_BOX_QUERY.mainSkill), sleepTypes: [], ingredients: [], subskills: [] })
+watch(query, resetPageScroll)
 
 interface BoxDraft extends BoxPokemon {
   tune: MemberTune
@@ -202,7 +204,7 @@ const advancedCount = computed(() => Number(query.ingredients.length > 0) + Numb
     </div>
     <div v-else-if="filterPanel === 'skill'" class="picker-opts">
       <button type="button" :class="{ on: !query.mainSkill.length }" @click="query.mainSkill = []">{{ translateUi("全部") }}</button>
-      <button v-for="item in FILTER_CATALOG.skills" :key="item" type="button" :class="{ on: query.mainSkill.includes(item) }" @click="toggleChoice(query.mainSkill, item, FILTER_CATALOG.skills)"><MainSkillIcon :name="item" decorative />{{ item }}</button>
+      <button v-for="item in FILTER_CATALOG.skills" :key="item" type="button" :class="{ on: query.mainSkill.includes(item) }" @click="toggleChoice(query.mainSkill, item, FILTER_CATALOG.skills)"><MainSkillIcon :name="item" decorative />{{ gameText(item) }}</button>
     </div>
     <section v-else-if="filterPanel === 'advanced'" class="stack" :aria-label="translateUi('Box 专有筛选')">
       <div class="row">

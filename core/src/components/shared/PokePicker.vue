@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import HorizontalStrip from '#platform/HorizontalStrip.vue'
 import { t as translateUi, gameText } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { BERRIES, INGREDIENTS, POKEDEX } from '../../calc/data'
 import { selectionList, toggleChoice, matchesChoice } from '../../calc/multiChoice'
 import { pokeHit } from '../../calc/pokeSearch'
@@ -64,6 +65,8 @@ function clearFilters() {
   panel.value = 'none'
 }
 
+const resultsRevision = shallowRef(0)
+watch(list, () => { resultsRevision.value++ })
 const filterOn = computed(() => Boolean(spec.value.length || type.value.length || sleep.value.length || ing.value.length || berry.value.length || skill.value.length))
 </script>
 
@@ -73,7 +76,7 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
       <PokeSprite :id="current.id" :name="current.name" />
       <div class="poke-pick-txt">
         <strong>{{ props.nameOverrides?.[current.id] ?? gameText(current.name) }}</strong>
-        <span class="muted berry-name">#{{ current.id }} · <BerryIcon :name="current.berry" small />{{ current.berryType }}</span>
+        <span class="muted berry-name">#{{ current.id }} · <BerryIcon :name="current.berry" small />{{ gameText(current.berryType) }}</span>
       </div>
     </button>
     <Teleport to="body">
@@ -94,38 +97,40 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
               <button type="button" :class="{ on: panel === 'skill' || skill.length > 0 }" @click="toggle('skill')">{{ translateUi("主技能") }}</button>
               <button type="button" class="ghost" @click="clearFilters">{{ translateUi("清空筛选") }}</button>
             </div>
-            <div v-if="panel === 'spec'" class="picker-opts">
+            <HorizontalStrip v-if="panel === 'spec'"><div class="picker-opts">
               <button v-for="s in specs" :key="s" type="button" :class="{ on: s === '全部' ? !spec.length : spec.includes(s) }" @click="toggleChoice(spec, s, specs)">{{ s }}</button>
-            </div>
-            <div v-else-if="panel === 'type'" class="picker-opts">
+            </div></HorizontalStrip>
+            <HorizontalStrip v-else-if="panel === 'type'"><div class="picker-opts">
               <button type="button" :class="{ on: !type.length }" @click="type = []">{{ translateUi("全部") }}</button>
-              <button v-for="t in types" :key="t" type="button" :class="{ on: type.includes(t) }" @click="toggleChoice(type, t, types)">{{ t }}</button>
-            </div>
-            <div v-else-if="panel === 'sleep'" class="picker-opts">
+              <button v-for="t in types" :key="t" type="button" :class="{ on: type.includes(t) }" @click="toggleChoice(type, t, types)">{{ gameText(t) }}</button>
+            </div></HorizontalStrip>
+            <HorizontalStrip v-else-if="panel === 'sleep'"><div class="picker-opts">
               <button type="button" :class="{ on: !sleep.length }" @click="sleep = []">{{ translateUi("全部") }}</button>
               <button v-for="s in sleeps" :key="s" type="button" :class="{ on: sleep.includes(s) }" @click="toggleChoice(sleep, s, sleeps)">{{ gameText(s) }}</button>
-            </div>
-            <div v-else-if="panel === 'ing'" class="picker-opts">
+            </div></HorizontalStrip>
+            <HorizontalStrip v-else-if="panel === 'ing'"><div class="picker-opts">
               <button type="button" :class="{ on: !ing.length }" @click="ing = []">{{ translateUi("全部") }}</button>
               <button v-for="i in INGREDIENTS" :key="i.id" type="button" :class="{ on: ing.includes(i.name) }" @click="toggleChoice(ing, i.name, INGREDIENTS.map(item => item.name))">{{ gameText(i.name) }}</button>
-            </div>
-            <div v-else-if="panel === 'berry'" class="picker-opts">
+            </div></HorizontalStrip>
+            <HorizontalStrip v-else-if="panel === 'berry'"><div class="picker-opts">
               <button type="button" :class="{ on: !berry.length }" @click="berry = []">{{ translateUi("全部") }}</button>
               <button v-for="item in BERRIES" :key="item.name" type="button" :class="{ on: berry.includes(item.name) }" @click="toggleChoice(berry, item.name, BERRIES.map(item => item.name))"><BerryIcon :name="item.name" />{{ gameText(item.name) }}</button>
-            </div>
-            <div v-else-if="panel === 'skill'" class="picker-opts">
+            </div></HorizontalStrip>
+            <HorizontalStrip v-else-if="panel === 'skill'"><div class="picker-opts">
               <button type="button" :class="{ on: !skill.length }" @click="skill = []">{{ translateUi("全部") }}</button>
-              <button v-for="item in skills" :key="item" type="button" :class="{ on: skill.includes(item) }" @click="toggleChoice(skill, item, skills)">{{ item }}</button>
-            </div>
+              <button v-for="item in skills" :key="item" type="button" :class="{ on: skill.includes(item) }" @click="toggleChoice(skill, item, skills)">{{ gameText(item) }}</button>
+            </div></HorizontalStrip>
             <p class="muted">{{ list.length }} {{ translateUi("只宝可梦") }}{{ filterOn ? " " + translateUi("· 已筛选") : " " + translateUi("· 食材按可携带种类筛选") }}</p>
+            <div :key="resultsRevision" class="picker-results">
             <div class="poke-grid">
               <button v-for="p in list" :key="p.id + p.name" type="button" class="poke-cell" :class="{ on: p.id === model }" @click="pick(p.id)">
                 <PokeSprite :id="p.id" :name="p.name" />
                 <span>{{ props.nameOverrides?.[p.id] ?? gameText(p.name) }}</span>
-                <em class="berry-name"><BerryIcon :name="p.berry" small />{{ p.berryType }}</em>
+                <em class="berry-name"><BerryIcon :name="p.berry" small />{{ gameText(p.berryType) }}</em>
               </button>
             </div>
             <p class="muted">{{ translateUi("超梦等部分种类若缺定位/食材，对应筛选不会命中。") }}</p>
+            </div>
             </div>
           </section>
         </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { gameText, t as translateUi } from '../../ui/i18n'
+import { gameText, sleepStyleText, t as translateUi } from '../../ui/i18n'
 
 
 import clientDefaults from '../../data/client-defaults.resource'
@@ -17,6 +17,7 @@ import { useSettingsStore } from '../../stores/settings'
 import { useActivities } from '../../composables/useActivities'
 import { activitySleepStyles } from '../../calc/activities'
 import PokeSprite from '../shared/PokeSprite.vue'
+import { resetPageScroll } from '#platform/pageScroll'
 const components_plan_SleepGallery_config_clientDefaults = clientDefaults.modules.components_plan_SleepGallery
 
 
@@ -83,6 +84,7 @@ function setName(value: string) {
 
 function resetPage() {
   page.value = 0
+  resetPageScroll()
 }
 
 function pickIsland(id: string) {
@@ -138,11 +140,11 @@ function resetFilters() { nameQuery.value = ''; berryType.value = []; specialty.
     </div>
     <div v-if="panel === 'type'" class="picker-opts">
       <button type="button" :class="{ on: !berryType.length }" @click="pickChip('type', '全部')">{{ translateUi("全部") }}</button>
-      <button v-for="item in types" :key="item" type="button" :class="{ on: berryType.includes(item) }" @click="pickChip('type', item)">{{ item }}</button>
+      <button v-for="item in types" :key="item" type="button" :class="{ on: berryType.includes(item) }" @click="pickChip('type', item)">{{ gameText(item) }}</button>
     </div>
     <div v-else-if="panel === 'spec'" class="picker-opts">
       <button type="button" :class="{ on: !specialty.length }" @click="pickChip('spec', '全部')">{{ translateUi("全部") }}</button>
-      <button v-for="item in specs" :key="item" type="button" :class="{ on: specialty.includes(item) }" @click="pickChip('spec', item)">{{ item }}</button>
+      <button v-for="item in specs" :key="item" type="button" :class="{ on: specialty.includes(item) }" @click="pickChip('spec', item)">{{ gameText(item) }}</button>
     </div>
     <div v-else-if="panel === 'sleep'" class="picker-opts">
       <button type="button" :class="{ on: !sleepType.length }" @click="pickChip('sleep', '全部')">{{ translateUi("全部") }}</button>
@@ -161,7 +163,7 @@ function resetFilters() { nameQuery.value = ''; berryType.value = []; specialty.
       >
         <PokeSprite :id="style.pokeId" :name="style.name" />
         <strong>{{ gameText(style.name) }}</strong>
-        <span>★{{ style.stars }}{{ style.styleName ? ` · ${style.styleName}` : '' }}</span>
+        <span>★{{ style.stars }}{{ style.styleName ? ` · ${sleepStyleText(style)}` : '' }}</span>
         <span v-if="sleepReward(style)" class="style-rewards">EXP {{ sleepReward(style)?.researchExp }} {{ translateUi("· 梦碎") }} {{ sleepReward(style)?.shards }} {{ translateUi("· 糖果") }} {{ sleepReward(style)?.candy }}</span>
         <em v-if="style.limited" class="amber">{{ translateUi("活动限定睡姿") }}</em>
         <em>{{ islandName(style.island) }}</em>

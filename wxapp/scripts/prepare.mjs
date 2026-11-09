@@ -39,7 +39,6 @@ for (const file of walk(core)) {
   })
   text = text.replace(/import UpdateSettings from[^\n]*\n/g, '').replace(/<UpdateSettings\s*\/>/g, '')
   text = text.replace('<article class="card"></article>', '')
-  text = text.replace(/\s+v-back="[^"]*"/g, '')
   text = text.replace(/<Teleport\b[^>]*>/g, '').replace(/<\/Teleport>/g, '')
   // Native text nodes cannot host image children. Preserve inline icon rows
   // using a view, including berry labels and member production summaries.
@@ -80,7 +79,7 @@ for (const file of walk(core)) {
     // the page. Keep the content out of flex sizing with an absolute scroller.
     // Bind an actual boolean: Vue otherwise emits scroll-y="", which does not
     // enable scrolling in the native component as it would for an HTML boolean.
-    text = text.replace('<div :key="revision" class="virtual-dex"', '<view class="virtual-dex-viewport"><scroll-view :scroll-y="true" :scroll-top="0" :key="revision" class="virtual-dex"')
+    text = text.replace('<div ref="scrollArea" :key="revision" class="virtual-dex"', '<view class="virtual-dex-viewport"><scroll-view ref="scrollArea" :scroll-y="true" :scroll-top="restoreTop" :key="revision" class="virtual-dex"')
     const end = text.indexOf('</template>')
     const close = text.lastIndexOf('</div>', end)
     text = text.slice(0, close) + '</scroll-view></view>' + text.slice(close + 6)

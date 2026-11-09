@@ -12,13 +12,13 @@ const list = computed(() => NATURES.filter((n) => textHit(n.name, props.q)))
 function upText(stat: string | null) {
   if (!stat) return '无性格修正'
   const key = stat as NatureStat
-  return `↑ ${STAT_LABEL[key]} ${STAT_UP[key]}`
+  return `↑ ${gameText(STAT_LABEL[key])} ${STAT_UP[key]}`
 }
 
 function downText(stat: string | null) {
   if (!stat) return ''
   const key = stat as NatureStat
-  return `↓ ${STAT_LABEL[key]} ${STAT_DOWN[key]}`
+  return `↓ ${gameText(STAT_LABEL[key])} ${STAT_DOWN[key]}`
 }
 </script>
 

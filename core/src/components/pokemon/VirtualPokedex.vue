@@ -4,10 +4,12 @@ import { gameText, t as translateUi } from '../../ui/i18n'
 
 import { computed, onMounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import PokeSprite from '../shared/PokeSprite.vue'
+import { useListScroll } from '../../composables/useListScroll'
 import { virtualRowHeight, virtualViewportHeight, watchVirtualViewport } from '#platform/virtualGrid'
 const props = defineProps<{ items: readonly { id: number; name: string }[] }>()
 const emit = defineEmits<{ pick: [id: number] }>()
-const scrollTop = shallowRef(0)
+const { restoreTop, trackListScroll, resetListScroll } = useListScroll('pokedex')
+const scrollTop = shallowRef(restoreTop.value)
 const revision = shallowRef(0)
 const ROW_HEIGHT = shallowRef(virtualRowHeight(94))
 const windowHeight = shallowRef(virtualViewportHeight())
@@ -19,13 +21,12 @@ const end = computed(() => Math.min(Math.ceil(props.items.length / 3), start.val
 const visible = computed(() => props.items.slice(start.value * 3, end.value * 3))
 const bottom = computed(() => Math.max(0, Math.ceil(props.items.length / 3) - end.value) * ROW_HEIGHT.value)
 function scroll(event: Event | { detail: { scrollTop: number } }) {
-  const detail = (event as { detail?: { scrollTop?: number } }).detail
-  scrollTop.value = typeof detail?.scrollTop === 'number' ? detail.scrollTop : ((event as Event).target as HTMLElement).scrollTop
+  scrollTop.value = trackListScroll(event)
 }
-watch(() => props.items, () => { scrollTop.value = 0; revision.value++ })
+watch(() => props.items, () => { resetListScroll(); scrollTop.value = 0; revision.value++ })
 </script>
 <template>
-  <div :key="revision" class="virtual-dex" tabindex="0" :aria-label="translateUi('宝可梦图鉴，滚动查看更多')" @scroll="scroll">
+  <div ref="scrollArea" :key="revision" class="virtual-dex" tabindex="0" :aria-label="translateUi('宝可梦图鉴，滚动查看更多')" @scroll="scroll">
     <div :style="{ height: `${start * ROW_HEIGHT}px` }" aria-hidden="true"></div>
     <div class="poke-wall virtual-dex-grid">
       <button v-for="p in visible" :key="p.id + p.name" type="button" class="poke-wall-cell" @click="emit('pick', p.id)">

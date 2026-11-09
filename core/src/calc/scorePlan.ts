@@ -1,5 +1,5 @@
 import { itemById, ITEM_ROLES } from './itemCatalog'
-import { unlockedIngredientSlots } from './ingredients'
+import { unlockedIngredientSlots, validUnlockedIngredients } from './ingredients'
 import { AREA_BONUS_MAX } from './areaBonus'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
@@ -67,7 +67,8 @@ export function normalizeScoreOptions(raw?: Partial<ScoreOptions> & { initialEne
   // 清除旧存档的个体活力设置；随机种子仅作为内部复现参数，不再由界面配置。
   const saved = { ...raw }
   delete saved.initialEnergy
-  return { ...defaults, ...saved, seed: defaults.seed, bag: { ...raw?.bag }, initialDisguise: { ...raw?.initialDisguise },
+  const bag = Object.fromEntries(Object.entries(raw?.bag ?? {}).filter(([, amount]) => (amount as number | string) !== ''))
+  return { ...defaults, ...saved, seed: defaults.seed, bag, initialDisguise: { ...raw?.initialDisguise },
     meals: [...(raw?.meals ?? defaults.meals)] as ScoreOptions['meals'],
     sleeps: defaults.sleeps.map((s, i) => ({ ...s, ...raw?.sleeps?.[i] })) as ScoreOptions['sleeps'] }
 }
@@ -112,8 +113,11 @@ export function validateScoreOptions(o: ScoreOptions, settings: Settings): strin
   if (!integer(o.seed, 1, (scorePlan_validateScoreOptions_runtimeParameters.p006 as 2147483647))) return '规划参数无效，请恢复默认设置'
   if (!Number.isFinite(o.initialCrit) || o.initialCrit < 0 || o.initialCrit > (scorePlan_validateScoreOptions_runtimeParameters.p007 as 70) || !integer(o.initialPot, 0, (scorePlan_validateScoreOptions_runtimeParameters.p008 as 200))
     || !Number.isFinite(o.initialZone) || o.initialZone < 0 || o.initialZone > (scorePlan_validateScoreOptions_runtimeParameters.p009 as 24) || !integer(o.initialJuice, 0, itemById(ITEM_ROLES.berryJuice)!.maxHeld!)) return '初始技能或道具加成超出允许范围'
-  if (Object.entries(o.bag).some(([name, n]) => !INGREDIENTS.some(i => i.name === name) || !integer(n, 0, (scorePlan_validateScoreOptions_runtimeParameters.p011 as 800)))
-    || Object.values(o.bag).reduce((a, b) => a + b, 0) > (scorePlan_validateScoreOptions_runtimeParameters.p012 as 800)) return '初始食材须为整数，合计不能超过 800'
+  for (const [name, n] of Object.entries(o.bag)) {
+    if (!INGREDIENTS.some(i => i.name === name)) return `初始食材「${name}」已不在当前资料中`
+    if (!integer(n, 0, (scorePlan_validateScoreOptions_runtimeParameters.p011 as 800))) return `初始食材「${name}」的数量须为 0–800 的整数`
+  }
+  if (Object.values(o.bag).reduce((a, b) => a + b, 0) > (scorePlan_validateScoreOptions_runtimeParameters.p012 as 800)) return '初始食材合计不能超过 800'
   if (o.meals.length !== 3 || o.meals.some((m, i) => !Number.isFinite(hm(m)) || hm(m) < scorePlan_config_ruleCatalogs.validateScoreOptionsList2.values[i]! || hm(m) >= scorePlan_config_ruleCatalogs.validateScoreOptionsList3.values[i]!)) return '做饭时间须分别位于早餐 06:00–11:59、午餐 12:00–17:59、晚餐 18:00–23:59'
   if (!Number.isFinite(hm(o.dayStart)) || !Number.isFinite(hm(o.dayEnd)) || o.dayStart === o.dayEnd) return '白天分类范围须为两个不同的有效时刻'
   for (const s of o.sleeps.slice(0, o.splitSleep ? 2 : 1)) {
@@ -141,8 +145,7 @@ export function scoreCandidates(box: BoxPokemon[]) {
     else if (p.ocrMissing?.some(f => scorePlan_config_ruleCatalogs.scoreCandidatesList0.values.includes(f)
       || f.startsWith('ingredient') && Number(f.at(-1)) < slots
       || f.startsWith('subskill') && p.level >= scorePlan_config_ruleCatalogs.scoreCandidatesList1.values[Number(f.at(-1))]!)) reason = '生产相关 OCR 字段尚未确认'
-    else if (p.ingredientSlots.slice(0, slots).some((index, slot) => index == null ? poke.specialty !== '全部' || slot === 0
-      : !Number.isInteger(index) || !poke.ingredients[index]?.amounts[slot])) reason = '已解锁食材配置无效'
+    else if (!validUnlockedIngredients(poke.ingredients, p.ingredientSlots, slots, poke.specialty === '全部')) reason = '已解锁食材配置无效'
     else if (new Set(unlockedSubskills(p.level, p.subskills)).size !== unlockedSubskills(p.level, p.subskills).length) reason = '已解锁副技能重复'
     seen.add(p.uid)
     if (reason) excluded.push({ uid: p.uid, name: p.name || poke?.name || String(p.pokeId), reason })

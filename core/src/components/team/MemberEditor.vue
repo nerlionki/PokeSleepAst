@@ -155,7 +155,7 @@ function stepEvolution(delta: number) {
       <PokeSprite :id="poke.id" :name="poke.name" :shiny="props.shiny" :ribbon-hours="model.tune.ribbonHours" />
       <div>
         <strong>{{ gameText(poke.name) }}</strong>
-        <p class="muted"><MainSkillIcon :id="mainSkill?.id" :name="mainSkillName" decorative /> {{ mainSkillName }}</p>
+        <p class="muted"><MainSkillIcon :id="mainSkill?.id" :name="mainSkillName" decorative /> {{ gameText(mainSkillName) }}</p>
       </div>
     </div>
 

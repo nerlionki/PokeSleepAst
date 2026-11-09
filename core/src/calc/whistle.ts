@@ -1,4 +1,4 @@
-import { unlockedIngredientSlots } from './ingredients'
+import { unlockedIngredientSlots, validUnlockedIngredients } from './ingredients'
 import { AREA_BONUS_MAX } from './areaBonus'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
@@ -110,12 +110,7 @@ function invalidMember(pokemon: BoxPokemon): string | null {
     || field.startsWith('subskill') && pokemon.level >= whistle_config_ruleCatalogs.invalidMemberList0.values[Number(field.at(-1))]!
     || field.startsWith('ingredient') && Number(field.at(-1)) < unlocked)
   if (missing) return '生产相关 OCR 字段尚未确认'
-  for (let slot = 0; slot < unlocked; slot++) {
-    const index = pokemon.ingredientSlots[slot]
-    if (index == null && poke.specialty === '全部' && slot > 0) continue
-    if (index == null || !Number.isInteger(index) || index < 0 || index >= poke.ingredients.length || !slotDrop(poke.ingredients, slot, index)) return '已解锁食材配置无效'
-  }
-  return null
+  return validUnlockedIngredients(poke.ingredients, pokemon.ingredientSlots, unlocked, poke.specialty === '全部') ? null : '已解锁食材配置无效'
 }
 
 function addIngredients(target: Record<string, number>, source: Record<string, number>) {

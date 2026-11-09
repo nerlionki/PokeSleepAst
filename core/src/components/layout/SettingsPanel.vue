@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TimeField from '../shared/TimeField.vue'
 import { t as translateUi, gameText } from '../../ui/i18n'
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.SettingsPanel
@@ -46,7 +47,7 @@ function setRecipeLevel(name: string, level: number) {
 </script>
 
 <template>
-  <div v-back="() => emit('close')" :class="props.embedded ? 'stack' : 'overlay'" @click.self="!props.embedded && emit('close')">
+  <div v-back="props.embedded ? undefined : () => emit('close')" :class="props.embedded ? 'stack' : 'overlay'" @click.self="!props.embedded && emit('close')">
     <section :class="props.embedded ? 'card stack' : 'sheet stack'">
       <div v-if="!props.embedded" class="row">
         <h2>{{ translateUi("全局设置") }}</h2>
@@ -64,8 +65,8 @@ function setRecipeLevel(name: string, level: number) {
       <EnvironmentFields :value="settings" @change="store.setEnvironment" />
       <FormField v-slot="{ id }" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop :label="translateUi('营地加成 {arg1}%（上限 {arg2}%）', { arg1: String(Math.round(settings.areaBonus * 100)), arg2: String(AREA_BONUS_MAX_PERCENT) })"><input :id="id" v-model.number="settings.areaBonus" type="range" :min="INPUT_LIMITS.settings_areaBonus.min" :max="AREA_BONUS_MAX" :step="INPUT_LIMITS.settings_areaBonus.step"></FormField>
       <div class="row">
-        <FormField v-slot="{ id }" :label="translateUi('就寝')"><input :id="id" v-model="settings.sleepStart" type="time"></FormField>
-        <FormField v-slot="{ id }" :label="translateUi('起床')"><input :id="id" v-model="settings.sleepEnd" type="time"></FormField>
+        <FormField v-slot="{ id }" :label="translateUi('就寝')"><TimeField :id="id" v-model="settings.sleepStart" /></FormField>
+        <FormField v-slot="{ id }" :label="translateUi('起床')"><TimeField :id="id" v-model="settings.sleepEnd" /></FormField>
       </div>
       <FormField v-slot="{ id }" :label="translateUi('睡眠分数')"><input :id="id" v-model.number="settings.sleepScore" type="number" :min="INPUT_LIMITS.settings_sleepScore.min" :max="INPUT_LIMITS.settings_sleepScore.max"></FormField>
       <label class="row"><input v-model="settings.meals" type="checkbox"> {{ translateUi("三餐回活力") }}</label>

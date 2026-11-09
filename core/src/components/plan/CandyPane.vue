@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useListScroll } from '../../composables/useListScroll'
+const candyScroll = useListScroll('candy')
 import { t as translateUi, gameText } from '../../ui/i18n'
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.CandyPane
@@ -7,7 +9,6 @@ import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import FormField from '../shared/FormField.vue'
-import { useCandyViewport } from '#platform/candyViewport'
 import { newUid } from '../../calc/uid'
 import { computed, ref, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -20,7 +21,6 @@ import type { BoxPokemon } from '../../types'
 import PokePicker from '../shared/PokePicker.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 const components_plan_CandyPane_config_clientDefaults = clientDefaults.modules.components_plan_CandyPane
-const candyViewport = useCandyViewport()
 
 
 const planStore = usePlanStore()
@@ -116,14 +116,11 @@ const presets = CANDY_PRESETS
 
 <template>
   <div class="stack candy-pane">
-    <div class="stack candy-context">
-    <p class="muted">{{ translateUi("同一进化家族共用当前糖果，按行顺序扣。普通培养经验 ×") }}{{ CANDY_BOOSTS.normal.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.normal.shards }}{{ translateUi("，无增强额度限制。大型增强经验 ×") }}{{ CANDY_BOOSTS.christmas.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.christmas.shards }}{{ translateUi("、额度") }} {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}{{ translateUi("。迷你增强经验 ×") }}{{ CANDY_BOOSTS.mini.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.mini.shards }}{{ translateUi("、额度") }} {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}{{ translateUi("。随时可规划，不受活动日期限制，不含睡眠经验。") }}</p>
     <div class="seg">
       <button type="button" :class="{ on: mode === 'christmas' }" @click="mode = 'christmas'">{{ translateUi("大型增强") }}</button>
         <button type="button" :class="{ on: mode === 'mini' }" @click="mode = 'mini'">{{ translateUi("迷你增强") }}</button>
     </div>
-    </div>
-    <div class="stack candy-workspace" :style="candyViewport">
+    <div class="stack candy-workspace">
     <div class="stack candy-toolbar">
     <div class="candy-boost-stats">
       <article class="card candy-boost-stat">
@@ -149,7 +146,8 @@ const presets = CANDY_PRESETS
       <button class="btn" type="button" :disabled="!box.pokemon.length" @click="openImport">{{ translateUi("从 Box 导入") }}</button>
     </div>
     </div>
-    <div class="stack candy-list" :aria-label="translateUi('糖果增强宝可梦列表')" tabindex="0">
+    <div ref="scrollArea" class="stack candy-list" @scroll="candyScroll.trackListScroll" :aria-label="translateUi('糖果增强宝可梦列表')" tabindex="0">
+    <p class="muted">{{ translateUi("同一进化家族共用当前糖果，按行顺序扣。普通培养经验 ×") }}{{ CANDY_BOOSTS.normal.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.normal.shards }}{{ translateUi("，无增强额度限制。大型增强经验 ×") }}{{ CANDY_BOOSTS.christmas.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.christmas.shards }}{{ translateUi("、额度") }} {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}{{ translateUi("。迷你增强经验 ×") }}{{ CANDY_BOOSTS.mini.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.mini.shards }}{{ translateUi("、额度") }} {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}{{ translateUi("。随时可规划，不受活动日期限制，不含睡眠经验。") }}</p>
     <article v-for="(row, index) in plan.candyRows" :key="row.id" class="card stack">
       <div class="candy-row-top">
         <template v-if="expandedRows.has(row.id)">
@@ -247,9 +245,9 @@ const presets = CANDY_PRESETS
 </template>
 
 <style scoped>
-.candy-workspace { height: var(--candy-frame-height, calc(100vh - 12px)); height: var(--candy-frame-height, calc(100dvh - 12px)); min-height: 0; display: flex; flex-direction: column; }
-.candy-context, .candy-toolbar { flex: 0 0 auto; }
-.candy-toolbar { position: sticky; top: var(--candy-sticky-top, 0px); z-index: 4; background: var(--ink); }
+.candy-pane, .candy-workspace { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.candy-toolbar { flex: none; gap: 6px; }
+.candy-toolbar > p { margin: 0; }
 .candy-list { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; align-content: start; overscroll-behavior-y: contain; padding: 2px; }
 .candy-boost-stats { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 10px; min-width: 0; }
 .candy-boost-stat { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; gap: 4px; padding: 10px; font-size: var(--font-12); overflow-wrap: anywhere; }

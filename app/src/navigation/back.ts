@@ -1,6 +1,7 @@
 import { handleTaskNavigationBack } from '../../../core/src/composables/taskNavigationLock'
 import type { ObjectDirective } from 'vue'
 import type { Router } from 'vue-router'
+import { lockPageScroll } from '../platform/pageScrollLock'
 
 interface BackHandler { run: () => void; priority: () => number }
 
@@ -23,13 +24,16 @@ export function createBackStack() {
 
 export const backStack = createBackStack()
 const registrations = new WeakMap<HTMLElement, { run: () => void; remove: () => void }>()
-export const backDirective: ObjectDirective<HTMLElement, () => void> = {
+export const backDirective: ObjectDirective<HTMLElement, (() => void) | undefined> = {
   mounted(element, binding) {
+    if (!binding.value) return
+    const unlock = lockPageScroll()
     const handler = { run: binding.value, remove: () => {} }
-    handler.remove = backStack.add(() => handler.run(), () => Number.parseInt(getComputedStyle(element).zIndex) || 20)
+    const remove = backStack.add(() => handler.run(), () => Number.parseInt(getComputedStyle(element).zIndex) || 20)
+    handler.remove = () => { remove(); unlock() }
     registrations.set(element, handler)
   },
-  updated(element, binding) { const handler = registrations.get(element); if (handler) handler.run = binding.value },
+  updated(element, binding) { const handler = registrations.get(element); if (handler && binding.value) handler.run = binding.value },
   beforeUnmount(element) { registrations.get(element)?.remove(); registrations.delete(element) },
 }
 

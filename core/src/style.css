@@ -160,6 +160,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
 .tabbar {
   position: sticky;
   bottom: 0;
+  z-index: 5;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
@@ -228,6 +229,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
 }
 .seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.page-tab-strip { position: sticky; top: var(--page-tabs-top, 0px); z-index: 4; flex: none; min-width: 0; }
 .seg.plan-tabs button { min-height: 44px; white-space: pre-line; }
 .seg button {
   width: 100%;
@@ -299,6 +301,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   max-height: calc(92dvh - var(--safe-top));
   overflow-x: clip;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 .drawer-overlay { z-index: 30; align-items: stretch; }
 .drawer-page {
@@ -393,12 +396,21 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
 .picker-body {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 2px;
+}
+.picker-results {
+  flex: 1;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  align-content: start;
-  padding: 2px;
   overscroll-behavior-y: contain;
 }
+.picker-body > .horizontal-strip { flex: none; }
+.picker-body .picker-opts { width: max-content; min-width: 100%; flex-wrap: nowrap; }
+.picker-body .picker-opts button { flex: none; white-space: nowrap; }
 .picker-search {
   width: 100%;
   background: var(--ink);

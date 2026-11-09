@@ -20,8 +20,14 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?:
     catch { notice.value = '存储空间不足，计算继续运行；请保持小程序在前台' }
   }
   function stop(clear = true) {
-    generation++; worker?.terminate(); worker = null; busy.value = false
+    generation++
+    const current = worker
+    worker = null
     if (clear) { resumeOnKill = false; task = null; try { wx.removeStorageSync?.(STORAGE_KEY) } catch {} }
+    busy.value = false
+    // A Worker already reclaimed by WeChat can reject termination. The UI and
+    // checkpoint must stay canceled even if the native cleanup fails.
+    try { current?.terminate() } catch {}
   }
   function cancel() { stop(); notice.value = '已取消计算' }
   async function launch() {

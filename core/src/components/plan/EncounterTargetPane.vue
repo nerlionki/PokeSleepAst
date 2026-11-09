@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { gameText, t as translateUi } from '../../ui/i18n'
+import { gameText, sleepStyleText, t as translateUi } from '../../ui/i18n'
 
 
 import { INPUT_RANGES } from '../../calc/inputRanges'
@@ -72,7 +72,7 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : BABY_POKE
         <p v-if="!pokeIds.length" class="muted">{{ translateUi("暂无可选择的睡姿。可切换为自由选择，或在睡姿图鉴中取消勾选尚未收集的睡姿。") }}</p>
       </template>
       <div v-if="pokeIds.length" class="field"><label>{{ isStyle ? translateUi("目标宝可梦") : translateUi("目标一阶段宝可梦") }}</label><PokePicker v-if="!busy" v-model="options.pokeId" :allowed-ids="pokeIds" :name-overrides="isStyle ? undefined : BABY_POKEMON_NAMES" /></div>
-      <div v-if="isStyle" class="field"><label for="encounter-style">{{ translateUi("具体睡姿") }}</label><select :disabled="busy" id="encounter-style" v-model="options.completionTarget"><option value="">{{ translateUi("请选择具体睡姿") }}</option><option v-for="style in faces" :key="styleKey(style.pokeId, style.stars, style.styleId)" :value="styleKey(style.pokeId, style.stars, style.styleId)">{{ style.stars }}★ · {{ gameText(style.styleName) }}</option></select></div>
+      <div v-if="isStyle" class="field"><label for="encounter-style">{{ translateUi("具体睡姿") }}</label><select :disabled="busy" id="encounter-style" v-model="options.completionTarget"><option value="">{{ translateUi("请选择具体睡姿") }}</option><option v-for="style in faces" :key="styleKey(style.pokeId, style.stars, style.styleId)" :value="styleKey(style.pokeId, style.stars, style.styleId)">{{ style.stars }}★ · {{ sleepStyleText(style) }}</option></select></div>
       <p v-if="isStyle && !validStyle" class="amber">{{ translateUi("请先选择范围内的宝可梦及具体睡姿。") }}</p>
       <p v-else-if="isStyle" class="muted">{{ translateUi("计算这个睡姿每天至少出现一次的概率。") }}</p>
       <p v-else-if="isCandy" class="muted">{{ translateUi("糖果统计") }} {{ family }} {{ translateUi("的睡眠研究奖励；第 11 只起按每只 1 颗结算。") }}</p>
@@ -98,7 +98,7 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : BABY_POKE
     <p v-if="notice" class="muted" role="status">{{ translateUi(notice) }}</p>
     <template v-if="result">
       <p v-if="dirty" class="amber">{{ translateUi("参数已修改，请重新计算更新结果。") }}</p>
-      <p class="muted">{{ gameText(resultName) }}<template v-if="resultStyle"> · {{ resultStyle.stars }}★ {{ gameText(resultStyle.styleName) }}</template> · {{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}{{ result.options.eventMult }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : ISLANDS.find(island => island.id === result?.options.island)?.name }}{{ translateUi("。以下为本次搜索中该指标最高的方案。") }}</p>
+      <p class="muted">{{ gameText(resultName) }}<template v-if="resultStyle"> · {{ resultStyle.stars }}★ {{ sleepStyleText(resultStyle) }}</template> · {{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}{{ result.options.eventMult }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。以下为本次搜索中该指标最高的方案。") }}</p>
       <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="isStyle ? translateUi('每日补齐概率最高') : isCandy ? translateUi('家族糖果最多') : translateUi('遇见只数最多')" :unit="isCandy ? '颗' : '只'" :optimum="isCandy ? result.candy : result.catch" :precision="result.options.precision" :probability="isStyle" />
     </template>
     <ProgressDialog :open="busy" :title="'正在计算' + title" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="'已模拟 ' + progress.evaluatedStates.toLocaleString('zh-CN') + ' 个抽取状态'" cancellable cancel-text="取消计算" @cancel="cancel" />

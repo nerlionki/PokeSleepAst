@@ -14,8 +14,8 @@ exports.nativeCandyListScroll = function nativeCandyListScroll(source) {
   const start = template.loc.start.offset + list.loc.start.offset
   const end = template.loc.start.offset + list.loc.end.offset
   return source.slice(0, start)
-    + '<view class="candy-list-viewport"><scroll-view :scroll-y="true" class="candy-list-scroll">'
-    + source.slice(start, end) + '</scroll-view></view>' + source.slice(end)
+    + '<view class="candy-list-viewport"><scroll-view :scroll-y="true" :scroll-top="candyScroll.restoreTop.value" class="candy-list-scroll" @scroll="candyScroll.trackListScroll">'
+    + source.slice(start, end).replace(' @scroll="candyScroll.trackListScroll"', '') + '</scroll-view></view>' + source.slice(end)
     + `\n<style scoped>
 .candy-list-viewport { flex: 1; height: 0; min-height: 0; min-width: 0; position: relative; overflow: hidden; }
 .candy-list-scroll { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }

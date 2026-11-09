@@ -11,6 +11,23 @@
       "startsOn": "2026-10-25",
       "endsOn": "2026-10-28",
       "rules": [],
+      "features": [
+        {
+          "id": "special-encounter",
+          "name": "好眠日特别出没",
+          "status": "informational",
+          "domains": [
+            "research"
+          ],
+          "description": "梦幻可能在每日首次研究特别出现。睡姿模拟仅抽选普通睡姿，梦幻不参与抽选。",
+          "source": "https://www.pokemonsleep.net/zh/news/343532363635313734343730343236363331/",
+          "parameters": {
+            "pokemon": "梦幻",
+            "firstResearchOnly": true,
+            "probability": null
+          }
+        }
+      ],
       "phases": [
         {
           "startsOn": "2026-10-25",
@@ -1629,11 +1646,11 @@
         {
           "id": "special-encounter",
           "name": "新月日特别出没",
-          "status": "requires-input",
+          "status": "informational",
           "domains": [
             "research"
           ],
-          "description": "首次研究的特别出没概率及随未遇见次数变化的数值还未公布，暂无法给出包含该效果的完整遭遇结果。",
+          "description": "达克莱伊可能在每日首次研究特别出现。睡姿模拟仅抽选普通睡姿，达克莱伊不参与抽选。",
           "source": "https://www.pokemonsleep.net/zh/news/343537333337383034343630393136373338/",
           "parameters": {
             "pokemon": "达克莱伊",

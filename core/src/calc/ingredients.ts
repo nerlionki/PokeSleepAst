@@ -12,6 +12,15 @@ export function unlockedIngredientSlots(level: number): number {
   return INGREDIENT_GATES.filter(gate => level >= gate).length
 }
 
+export function validUnlockedIngredients(lines: IngredientLine[], slots: IngredientSlots, unlocked: number, allRounder: boolean): boolean {
+  for (let slot = 0; slot < unlocked; slot++) {
+    const index = slots[slot]
+    if (index == null && allRounder && slot > 0) continue
+    if (index == null || !Number.isInteger(index) || !lines[index] || !slotDrop(lines, slot, index)) return false
+  }
+  return true
+}
+
 
 export interface IngredientLine {
   id: number

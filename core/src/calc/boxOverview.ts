@@ -9,6 +9,7 @@ import { defaultSettings } from './defaults'
 import { SUBSKILL_GATES, unlockedSubskills } from './member'
 import { normalizeOcrMissing } from './ocrCompletion'
 import { produce } from './produce'
+import { breakdownProduceIngredients } from './produceDisplay'
 import type { ActivitySelection } from './activities'
 const factory_boxOverview_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_boxOverview
 const boxOverview_config_ruleCatalogs = ruleCatalogs.modules.boxOverview
@@ -65,10 +66,9 @@ export function calculateBoxOverview(pokemon: readonly BoxPokemon[], bonuses: Ov
     }
     if (criticalOverviewFields(member, 'ingredients').length) excludedIngredients.push(member)
     else {
-      for (const [name, total] of Object.entries(output!.ingredients)) {
-        // produce includes direct skill food and extra-help food; this panel ranks ordinary helps only.
-        const amount = total - (output!.skillIngredients?.[name] ?? 0)
-        if (!Number.isFinite(amount) || amount <= 0) continue
+      const breakdown = breakdownProduceIngredients(output!)
+      if (!breakdown) excludedIngredients.push(member)
+      else for (const [name, amount] of Object.entries(breakdown.natural)) {
         const list = ingredientRanks.get(name) ?? []
         list.push({ pokemon: member, amount })
         ingredientRanks.set(name, list)

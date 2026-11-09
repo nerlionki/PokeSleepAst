@@ -20,6 +20,7 @@ const swipe = useTabSwipe(tab, () => (['dex', 'box', 'wall'] as const).filter(id
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack pokemon-view" :class="{ 'dex-view': tab === 'dex' }">
     <GuideEntry page="pokemon" :show-trigger="false" />
     <Segmented
+      page-tabs
       guide-id="guide-pokemon-tabs"
       class="pokemon-tabs"
       v-if="!(tab === 'box' && route.query.boxOverview === '1')"

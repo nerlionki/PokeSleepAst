@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { gameText, t as translateUi } from '../../ui/i18n'
+import { gameText, sleepStyleText, t as translateUi } from '../../ui/i18n'
 
 
 import { confirmRemoval } from '#platform/confirm'
@@ -38,7 +38,7 @@ function label(goal: EncounterGoal) {
   const name = (goal.purpose !== 'sleep' ? BABY_POKEMON_NAMES[goal.options.pokeId] : '') || POKEDEX.find(poke => poke.id === goal.options.pokeId)?.name || '请选择宝可梦'
   if (goal.purpose !== 'sleep') return name
   const style = styles.value.find(style => styleKey(style.pokeId, style.stars, style.styleId) === goal.options.completionTarget)
-  return style ? `${name} · ${style.stars}★ ${style.styleName}` : `${name} · 待选择睡姿`
+  return style ? `${gameText(name)} · ${style.stars}★ ${sleepStyleText(style)}` : `${gameText(name)} · 待选择睡姿`
 }
 function add(purpose: CatchPurpose) {
   if (busy.value) return

@@ -7,3 +7,7 @@ export function confirmRemoval(message: string): Promise<boolean> {
     .then(result => result.confirm).catch(() => false).finally(() => { pending = undefined })
   return pending
 }
+
+export function showValidationError(message: string) {
+  void Taro.showModal({ title: '校验失败', content: message, showCancel: false }).catch(() => {})
+}

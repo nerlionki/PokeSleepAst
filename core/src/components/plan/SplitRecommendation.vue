@@ -11,7 +11,7 @@ import { sleepClock } from '../../calc/sleep'
 const components_plan_SplitRecommendation_config_clientDefaults = clientDefaults.modules.components_plan_SplitRecommendation
 
 
-const props = defineProps<{ title: string, optimum: SplitOptimum, result: SplitResult, metricIndex?: number }>()
+const props = defineProps<{ title: string, optimum: SplitOptimum, result: SplitResult, metricLabels: readonly string[], metricIndex?: number }>()
 const visible = ref(components_plan_SplitRecommendation_config_clientDefaults["visibleInitial"])
 const expanded = ref<Record<string, number>>((cloneData(components_plan_SplitRecommendation_config_clientDefaults["expandedInitial"]) as unknown as Record<string, number>))
 const format = (value: number) => value.toLocaleString('zh-CN', { maximumFractionDigits: 3 })
@@ -48,7 +48,7 @@ const mainValue = computed(() => {
         <button v-if="group.indices.length > (expanded[group.key] ?? 1)" class="btn ghost" type="button" @click="expanded[group.key] = (expanded[group.key] ?? 1) + 20">{{ translateUi("展开其余并列分配（剩余") }} {{ group.indices.length - (expanded[group.key] ?? 1) }}）</button>
         <div class="benefits">
           <div v-for="(metric, index) in result.metrics" :key="index" class="benefit">
-            <span>{{ translateUi(metric.label) }}</span>
+            <span>{{ translateUi(metricLabels[index] ?? metric.label) }}</span>
             <strong>{{ metric.kind === 'probability' ? translateUi("概率") : translateUi("期望") }} {{ format(group.first.values[index]! * (metric.kind === 'probability' ? 100 : 1)) }} {{ metric.kind === 'probability' ? '%' : metric.kind === 'count' ? translateUi("只") : translateUi("颗") }}</strong>
             <small class="muted">{{ result.maxima[index]! > 0 ? translateUi("相对最优 {arg1}%", { arg1: String(format(group.first.values[index]! / result.maxima[index]! * 100)) }) : translateUi("未解锁或本次模拟收益为 0") }} {{ translateUi("· 权重") }} {{ metric.weight }}</small>
           </div>

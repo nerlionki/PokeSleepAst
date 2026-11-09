@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TimeField from '../shared/TimeField.vue'
 import { gameText, t as translateUi } from '../../ui/i18n'
 
 
@@ -10,12 +11,13 @@ import clientDefaults from '../../data/client-defaults.resource'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useScorePlan } from '#platform/scorePlan'
+import { showValidationError } from '#platform/confirm'
 import { loadJson, saveJson } from '../../storage'
 import { useBoxStore } from '../../stores/box'
 import { useSettingsStore } from '../../stores/settings'
 import { INGREDIENTS, islandById } from '../../calc/data'
 import { boxLabel } from '../../calc/boxFilter'
-import { defaultScoreOptions, normalizeScoreOptions, scoreBounds, scoreTime, validateScoreOptions, type ScoreOptions } from '../../calc/scorePlan'
+import { defaultScoreOptions, normalizeScoreOptions, scoreBounds, scoreCandidates, scoreTime, validateScoreOptions, type ScoreOptions } from '../../calc/scorePlan'
 import PokeSprite from '../shared/PokeSprite.vue'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 const components_team_ScorePlanPane_config_clientDefaults = clientDefaults.modules.components_team_ScorePlanPane
@@ -24,10 +26,12 @@ const components_team_ScorePlanPane_config_clientDefaults = clientDefaults.modul
 const box = useBoxStore(), settings = useSettingsStore()
 const options = ref(defaultScoreOptions(settings.settings))
 const ready = ref(components_team_ScorePlanPane_config_clientDefaults["readyInitial"]), advanced = ref(components_team_ScorePlanPane_config_clientDefaults["advancedInitial"]), inventory = ref(components_team_ScorePlanPane_config_clientDefaults["inventoryInitial"]), selected = ref(components_team_ScorePlanPane_config_clientDefaults["selectedInitial"]), showActions = ref(components_team_ScorePlanPane_config_clientDefaults["showActionsInitial"]), actionDay = ref(components_team_ScorePlanPane_config_clientDefaults["actionDayInitial"])
+const loadError = ref('')
 const request = () => ({ settings: { ...settings.settings, mealCategory: options.value.category }, box: box.pokemon, options: options.value })
 const { busy, error, notice, result, progress, dirty, calculate, cancel, restore } = useScorePlan(request)
-const inputError = computed(() => validateScoreOptions(options.value, settings.settings))
+const inputError = computed(() => loadError.value || validateScoreOptions(options.value, settings.settings))
 const foodCount = computed(() => Object.values(options.value.bag).reduce((sum, n) => sum + (Number(n) || 0), 0))
+const unknownFoods = computed(() => Object.keys(options.value.bag).filter(name => !INGREDIENTS.some(ingredient => ingredient.name === name)))
 const environment = computed(() => `${islandById(settings.settings.island)?.name ?? ''} · 岛屿加成 ${Math.round(settings.settings.areaBonus * 100)}% · ${settings.settings.goodCamp ? '已开露营券' : '未开露营券'}`)
 const solution = computed(() => result.value?.solutions[selected.value])
 const percent = computed(() => Math.min(100, Math.floor(progress.value.completed / Math.max(1, progress.value.total) * 100)))
@@ -45,15 +49,45 @@ const advancedChanged = computed(() => {
     .some(key => JSON.stringify(options.value[key as keyof ScoreOptions]) !== JSON.stringify(defaults[key as keyof ScoreOptions]))
 })
 onMounted(async () => {
-  options.value = normalizeScoreOptions(await loadJson<Partial<ScoreOptions>>('score-options-v1', {}), settings.settings)
-  // 先完成配置恢复引起的 watcher，避免它误取消刚恢复的微信任务。
-  await nextTick(); ready.value = true; restore()
+  try {
+    options.value = normalizeScoreOptions(await loadJson<Partial<ScoreOptions>>('score-options-v1', {}), settings.settings)
+    // 先完成配置恢复引起的 watcher，避免它误取消刚恢复的微信任务。
+    await nextTick()
+    restore()
+  } catch (cause) {
+    loadError.value = cause instanceof Error ? cause.message : '无法读取冲分规划设置'
+  } finally {
+    ready.value = true
+  }
 })
-watch(options, value => { if (ready.value) void saveJson('score-options-v1', value); if (busy.value) cancel() }, { deep: true })
+watch(options, value => { if (ready.value && !loadError.value) void saveJson('score-options-v1', value); if (busy.value) cancel() }, { deep: true })
 watch(() => JSON.stringify({ settings: settings.settings, box: box.pokemon }), () => { if (busy.value) cancel() })
 watch(result, () => { selected.value = 0; actionDay.value = options.value.startDay })
-function reset() { options.value = { ...defaultScoreOptions(settings.settings), bag: { ...options.value.bag }, initialStrength: options.value.initialStrength } }
-function start() { if (!inputError.value && ready.value) void calculate() }
+function reset() {
+  loadError.value = ''
+  options.value = { ...defaultScoreOptions(settings.settings), bag: { ...options.value.bag }, initialStrength: options.value.initialStrength }
+}
+function updateFood(name: string, event: Event) {
+  const input = event.target as HTMLInputElement
+  const value = input.value
+  if (input.validity?.badInput) options.value.bag[name] = Number.NaN
+  else if (value === '') delete options.value.bag[name]
+  else options.value.bag[name] = Number(value)
+}
+function start() {
+  if (busy.value || !ready.value) return
+  const reason = inputError.value || (!box.pokemon.length ? '请先在 Box 添加宝可梦，再开始规划。' : '')
+  if (reason) { showValidationError(translateUi(reason)); return }
+  const { candidates, excluded } = scoreCandidates(box.pokemon)
+  if (!candidates.length) {
+    const reasons = [...new Set(excluded.map(item => translateUi(item.reason)))]
+    showValidationError([translateUi('Box 中没有可参与规划的个体，请先添加并确认生产资料'), ...reasons].join('\n'))
+    return
+  }
+  void calculate()
+}
+const mealSlots = [0, 1, 2] as const
+const mealLabels = ['早餐', '午餐', '晚餐'] as const
 </script>
 
 <template>
@@ -73,8 +107,12 @@ function start() { if (!inputError.value && ready.value) void calculate() }
         <div class="score-foods">
           <div v-for="ingredient in INGREDIENTS" :key="ingredient.id" class="field">
             <label :for="`score-food-${ingredient.id}`"><IngredientIcon :id="ingredient.id" :name="ingredient.name" small /> {{ gameText(ingredient.name) }}</label>
-            <input :id="`score-food-${ingredient.id}`" v-model.number="options.bag[ingredient.name]" type="number" :min="INPUT_LIMITS.options_bag_ingredient_name.min" :max="INPUT_LIMITS.options_bag_ingredient_name.max" :step="INPUT_LIMITS.options_bag_ingredient_name.step" inputmode="numeric">
+            <input :id="`score-food-${ingredient.id}`" :value="options.bag[ingredient.name]" type="number" :min="INPUT_LIMITS.options_bag_ingredient_name.min" :max="INPUT_LIMITS.options_bag_ingredient_name.max" :step="INPUT_LIMITS.options_bag_ingredient_name.step" inputmode="numeric" @input="updateFood(ingredient.name, $event)">
           </div>
+        </div>
+        <div v-for="name in unknownFoods" :key="name" class="row">
+          <span class="amber">{{ name }} · {{ translateUi("当前资料未收录") }}</span>
+          <button class="btn ghost" type="button" @click="delete options.bag[name]">{{ translateUi("删除") }}</button>
         </div>
       </div>
       <p v-if="!foodCount" class="muted">{{ translateUi("尚无初始食材，早餐只能使用开始后实际收取的产物。") }}</p>
@@ -83,20 +121,20 @@ function start() { if (!inputError.value && ready.value) void calculate() }
         <h4>{{ translateUi("规划周期与操作") }}</h4>
         <div class="row">
           <div class="field"><label for="score-day">{{ translateUi("开始星期") }}</label><select id="score-day" v-model.number="options.startDay" @change="options.days = Math.min(options.days, INPUT_LIMITS.score_days.max - options.startDay)"><option v-for="(day, i) in ['周一','周二','周三','周四','周五','周六','周日']" :key="day" :value="i">{{ day }}</option></select></div>
-          <div class="field"><label for="score-time">{{ translateUi("开始时刻") }}</label><input id="score-time" v-model="options.startTime" type="time"></div>
+          <div class="field"><label for="score-time">{{ translateUi("开始时刻") }}</label><TimeField id="score-time" v-model="options.startTime" /></div>
           <div class="field"><label for="score-days">{{ translateUi("覆盖天数") }}</label><input id="score-days" v-model.number="options.days" type="number" :min="INPUT_LIMITS.score_days.min" :max="7 - options.startDay"></div>
         </div>
         <div class="row">
           <div class="field"><label for="score-interval">{{ translateUi("白天收菜间隔（分钟）") }}</label><input id="score-interval" v-model.number="options.collectMinutes" type="number" :min="INPUT_LIMITS.score_interval.min" :max="INPUT_LIMITS.score_interval.max"></div>
           <div class="field"><label for="score-precision">{{ translateUi("搜索精度") }}</label><select id="score-precision" v-model="options.precision"><option value="medium">{{ translateUi("中 · 耗时目标 30 秒") }}</option><option value="high">{{ translateUi("高 · 耗时目标 60 秒") }}</option></select></div>
         </div>
-        <div class="row"><div v-for="(label, i) in ['早餐','午餐','晚餐']" :key="label" class="field"><label :for="`score-meal-${i}`">{{ translateUi(label) }}</label><input :id="`score-meal-${i}`" v-model="options.meals[i]" type="time"></div></div>
+        <div class="row"><div v-for="i in mealSlots" :key="i" class="field"><label :for="`score-meal-${i}`">{{ translateUi(mealLabels[i]) }}</label><TimeField :id="`score-meal-${i}`" v-model="options.meals[i]" /></div></div>
         <h4>{{ translateUi("睡眠与外设") }}</h4>
         <div class="row"><label class="score-check"><input v-model="options.splitSleep" type="checkbox"><span class="score-check-label">{{ translateUi("拆成两段睡眠") }}</span></label><label class="score-check"><input v-model="options.device" type="checkbox"><span class="score-check-label">{{ translateUi("使用外设") }}</span></label></div>
-        <div v-if="options.device" class="row"><div class="field"><label for="score-day-start">{{ translateUi("白天分类开始") }}</label><input id="score-day-start" v-model="options.dayStart" type="time"></div><div class="field"><label for="score-day-end">{{ translateUi("白天分类结束") }}</label><input id="score-day-end" v-model="options.dayEnd" type="time"></div></div>
+        <div v-if="options.device" class="row"><div class="field"><label for="score-day-start">{{ translateUi("白天分类开始") }}</label><TimeField id="score-day-start" v-model="options.dayStart" /></div><div class="field"><label for="score-day-end">{{ translateUi("白天分类结束") }}</label><TimeField id="score-day-end" v-model="options.dayEnd" /></div></div>
         <div v-for="(sleep, i) in options.sleeps.slice(0, options.splitSleep ? 2 : 1)" :key="i" class="stack score-sleep">
           <p><strong>{{ options.splitSleep ? translateUi("第 {arg1} 段睡眠", { arg1: String(i + 1) }) : translateUi("整觉") }}</strong></p>
-          <div class="row"><div class="field"><label :for="`score-sleep-start-${i}`">{{ translateUi("入睡") }}</label><input :id="`score-sleep-start-${i}`" v-model="sleep.start" type="time"></div><div class="field"><label :for="`score-sleep-end-${i}`">{{ translateUi("醒来") }}</label><input :id="`score-sleep-end-${i}`" v-model="sleep.end" type="time"></div></div>
+          <div class="row"><div class="field"><label :for="`score-sleep-start-${i}`">{{ translateUi("入睡") }}</label><TimeField :id="`score-sleep-start-${i}`" v-model="sleep.start" /></div><div class="field"><label :for="`score-sleep-end-${i}`">{{ translateUi("醒来") }}</label><TimeField :id="`score-sleep-end-${i}`" v-model="sleep.end" /></div></div>
           <template v-if="options.device">
             <div class="row">
               <div class="field"><label :for="`score-class-${i}`">{{ translateUi("睡眠分类") }}</label><select :id="`score-class-${i}`" v-model="sleep.classification"><option value="auto">{{ translateUi("按入睡时间自动判断") }}</option><option value="day">{{ translateUi("白天") }}</option><option value="night">{{ translateUi("夜间") }}</option></select></div>
@@ -120,7 +158,7 @@ function start() { if (!inputError.value && ready.value) void calculate() }
       </div>
       <p v-if="inputError" class="amber" role="alert">{{ inputError }}</p>
       <p v-if="!box.pokemon.length" class="muted">{{ translateUi("请先在 Box 添加宝可梦，再开始规划。") }}</p>
-      <div class="row"><button class="btn" type="button" :disabled="busy || !ready || !!inputError || !box.pokemon.length" @click="start">{{ busy ? translateUi("正在规划 {arg1}%", { arg1: String(percent) }) : translateUi("开始规划") }}</button></div>
+      <div class="row"><button class="btn" type="button" :disabled="busy || !ready" @click="start">{{ busy ? translateUi("正在规划 {arg1}%", { arg1: String(percent) }) : translateUi("开始规划") }}</button></div>
       <ProgressDialog :open="busy" :title="translateUi('正在计算冲分规划')" :progress="percent" stage="比较队伍与料理策略" :notice="notice"
         :detail="'已比较 ' + progress.completed + ' / ' + progress.total" cancellable cancel-text="取消规划" @cancel="cancel" />
       <p v-if="notice" role="status" class="muted">{{ translateUi(notice) }}</p><p v-if="error" role="alert" class="amber">{{ translateUi(error) }}</p>

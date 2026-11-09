@@ -78,7 +78,7 @@ function resetFilters() { q.value = ''; spec.value = []; sleep.value = []; berry
   <div class="stack dex-pane">
     <div class="row dex-fixed pokemon-search"><input v-model="q" class="picker-search" :placeholder="translateUi('搜索中文、英文或图鉴编号')"><button class="btn ghost" type="button" @click="resetFilters">{{ translateUi("重置") }}</button></div>
     <div class="picker-filters dex-fixed">
-      <button v-for="s in ['全部', ...SPECIALTY_FILTERS]" :key="s" type="button" :class="{ on: (s === '全部' ? !spec.length : spec.includes(s)) }" @click="toggleChoice(spec, s, SPECIALTY_FILTERS)">{{ s }}</button>
+      <button v-for="s in ['全部', ...SPECIALTY_FILTERS]" :key="s" type="button" :class="{ on: (s === '全部' ? !spec.length : spec.includes(s)) }" @click="toggleChoice(spec, s, SPECIALTY_FILTERS)">{{ gameText(s) }}</button>
       <button type="button" :class="{ on: panel === 'sleep' || sleep.length > 0 }" @click="toggle('sleep')">{{ translateUi("睡眠") }}</button>
       <button type="button" :class="{ on: panel === 'berry' || berry.length > 0 }" @click="toggle('berry')">{{ translateUi("树果") }}</button>
       <button type="button" :class="{ on: panel === 'skill' || skill.length > 0 }" @click="toggle('skill')">{{ translateUi("主技能") }}</button>
@@ -91,7 +91,7 @@ function resetFilters() { q.value = ''; spec.value = []; sleep.value = []; berry
       <button v-for="b in BERRIES" :key="b.name" type="button" :class="{ on: (b.name === '全部' ? !berry.length : berry.includes(b.name)) }" @click="toggleChoice(berry, b.name, BERRIES.map(item => item.name))"><BerryIcon :name="b.name" />{{ gameText(b.name) }}</button>
     </div>
     <div v-else-if="panel === 'skill'" class="picker-opts dex-fixed">
-      <button v-for="s in skills" :key="s" type="button" :class="{ on: (s === '全部' ? !skill.length : skill.includes(s)) }" @click="toggleChoice(skill, s, skills)"><MainSkillIcon v-if="s !== '全部'" :name="s" decorative />{{ s }}</button>
+      <button v-for="s in skills" :key="s" type="button" :class="{ on: (s === '全部' ? !skill.length : skill.includes(s)) }" @click="toggleChoice(skill, s, skills)"><MainSkillIcon v-if="s !== '全部'" :name="s" decorative />{{ gameText(s) }}</button>
     </div>
     <p class="muted dex-fixed">{{ list.length }} {{ translateUi("只") }}</p>
     <VirtualPokedex :items="list" @pick="selected = $event" />
@@ -109,7 +109,7 @@ function resetFilters() { q.value = ''; spec.value = []; sleep.value = []; berry
         </div>
       </div>
       <p>{{ translateUi("间隔") }} {{ detail.interval }}{{ translateUi("s · 持有") }} {{ detail.carry }} {{ translateUi("· 食材") }} {{ (detail.ingredientRate * 100).toFixed(1) }}{{ translateUi("% · 技能") }} {{ (detail.skillRate * 100).toFixed(1) }}%</p>
-      <button type="button" class="btn ghost" @click="showSkill(detail.mainSkill)"><MainSkillIcon :name="detail.mainSkill" decorative /> {{ detail.mainSkill }} ›</button>
+      <button type="button" class="btn ghost" @click="showSkill(detail.mainSkill)"><MainSkillIcon :name="detail.mainSkill" decorative /> {{ gameText(detail.mainSkill) }} ›</button>
       <div class="berry-drop">
         <BerryIcon :name="detail.berry" large />
         <strong>{{ gameText(detail.berry) }} × {{ berryCount(detail.specialty) }}</strong>

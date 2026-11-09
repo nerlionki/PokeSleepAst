@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { gameText, t as translateUi } from '../../ui/i18n'
+import { gameText, sleepStyleText, t as translateUi } from '../../ui/i18n'
 
 
 import { INPUT_RANGES } from '../../calc/inputRanges'
@@ -36,7 +36,15 @@ const eventMult = activity.field('drowsyPowerMultiplier', () => config.value.eve
 const mixMode = activity.field('eventMix', () => normalizeEventMix(config.value.eventMix) !== 'off' ? settings.value.sleepEventMix : 'off')
 const otherTypes = computed({ get: () => mixMode.value !== 'off', set: value => { mixMode.value = value ? settings.value.sleepEventMix : 'off' } })
 const options = computed<SplitOptions>(() => ({ ...config.value, island: island.value, strength: plan.value.snorlaxStrength, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
-const statuses = computed(() => options.value.targets.map(target => splitTargetStatus(target, island.value, options.value.strength, activity.context.value)))
+function displayStatus(target: SplitTarget, options: SplitOptions) {
+  const status = splitTargetStatus(target, options.island, options.strength, options.activity)
+  const style = status.namedStyle
+  const label = target.kind === 'style' && style
+    ? `${gameText(style.name)} ${style.stars}★ ${sleepStyleText(style)}`
+    : status.label
+  return { ...status, label }
+}
+const statuses = computed(() => options.value.targets.map(target => displayStatus(target, options.value)))
 const kind = ref<SplitTarget['kind']>((components_plan_SplitSleepPane_config_clientDefaults["kindInitial"] as unknown as SplitTarget['kind'])), pokeId = ref(components_plan_SplitSleepPane_config_clientDefaults["pokeIdInitial"]), face = ref(components_plan_SplitSleepPane_config_clientDefaults["faceInitial"]), advanced = ref(components_plan_SplitSleepPane_config_clientDefaults["advancedInitial"]), formError = ref(components_plan_SplitSleepPane_config_clientDefaults["formErrorInitial"])
 const currentStyles = computed(() => activitySleepStyles(SLEEP_STYLES, activity.context.value))
 const allowedIds = computed(() => kind.value === 'baby' ? BABY_POKEMON_IDS.filter(id => babyEfficiencyIslands(id, undefined, activity.context.value).some(row => row.id === island.value)) : [...new Set(currentStyles.value.filter(row => row.island === island.value).map(row => row.pokeId))])
@@ -57,7 +65,15 @@ const resultGroups = computed(() => (['count', 'candy', 'probability'] as const)
   title: metricKind === 'count' ? '宝宝遇到只数最大' : metricKind === 'candy' ? '糖果最多' : '睡姿概率最大',
   metrics: result.value?.metrics.flatMap((metric, index) => metric.kind === metricKind ? [{ ...metric, index }] : []) ?? [],
 })).filter(group => group.metrics.length))
-const resultNotices = computed(() => result.value?.options.targets.map(target => splitTargetStatus(target, result.value!.options.island, result.value!.options.strength)).filter(status => status.reason) ?? [])
+const resultStatuses = computed(() => {
+  const resultOptions = result.value?.options
+  return resultOptions?.targets.map(target => displayStatus(target, resultOptions)) ?? []
+})
+const resultNotices = computed(() => resultStatuses.value.filter(status => status.reason))
+function metricLabel(metric: { kind: string; targetIndex: number; label: string }) {
+  return metric.kind === 'probability' ? resultStatuses.value[metric.targetIndex]?.label ?? metric.label : metric.label
+}
+const metricLabels = computed(() => result.value?.metrics.map(metricLabel) ?? [])
 const zeroMetrics = computed(() => result.value?.metrics.filter((_, index) => result.value!.maxima[index] === 0) ?? [])
 const resultIsland = computed(() => ISLANDS.find(row => row.id === result.value?.options.island)?.name ?? '')
 async function removeTarget(index: number) {
@@ -87,7 +103,7 @@ async function removeTarget(index: number) {
       <div v-if="!busy" class="stack add-target">
         <div class="field"><label for="split-target-kind">{{ translateUi("添加目标类型") }}</label><select id="split-target-kind" v-model="kind"><option value="baby">{{ translateUi("宝宝") }}</option><option value="style">{{ translateUi("指定睡姿") }}</option></select></div>
         <div v-if="allowedIds.length" class="field"><label>{{ translateUi("选择宝可梦") }}</label><PokePicker v-model="pokeId" :allowed-ids="allowedIds" :name-overrides="kind === 'baby' ? BABY_POKEMON_NAMES : undefined" /></div>
-        <div v-if="kind === 'style'" class="field"><label for="split-face">{{ translateUi("指定睡姿") }}</label><select id="split-face" v-model="face"><option v-for="row in faces" :key="styleKey(row.pokeId, row.stars, row.styleId)" :value="styleKey(row.pokeId, row.stars, row.styleId)">{{ row.stars }}★ · {{ gameText(row.styleName) }}</option></select></div>
+        <div v-if="kind === 'style'" class="field"><label for="split-face">{{ translateUi("指定睡姿") }}</label><select id="split-face" v-model="face"><option v-for="row in faces" :key="styleKey(row.pokeId, row.stars, row.styleId)" :value="styleKey(row.pokeId, row.stars, row.styleId)">{{ row.stars }}★ · {{ sleepStyleText(row) }}</option></select></div>
         <button class="btn ghost" type="button" :disabled="!allowedIds.length" @click="addTarget">{{ translateUi("添加目标") }}</button>
       </div>
       <button class="btn ghost" type="button" :aria-expanded="advanced" @click="advanced = !advanced">{{ advanced ? translateUi("收起高级设置") : translateUi("高级设置 · 类型、活动与权重") }}</button>
@@ -120,15 +136,15 @@ async function removeTarget(index: number) {
       <p v-if="dirty" class="amber">{{ translateUi("参数已修改，以下为上次计算结果，请重新计算。") }}</p>
       <p class="muted">{{ resultIsland }} {{ translateUi("· 能量") }} {{ result.options.strength.toLocaleString('zh-CN') }} · {{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟／状态 · 倍率 ×") }}{{ result.options.eventMult }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} {{ translateUi("· 跨类型：") }}{{ eventMixLabel(result.options.eventMix) }}{{ translateUi("。结果为本次候选搜索的模拟估计。") }}</p>
       <p v-for="status in resultNotices" :key="status.label" class="amber">{{ status.label }}：{{ translateUi(status.reason) }}</p>
-      <p v-for="metric in zeroMetrics" :key="`zero-${metric.targetIndex}-${metric.kind}`" class="muted">{{ metric.label }}{{ translateUi("：未解锁或本次模拟收益为 0，不参与综合评分。") }}</p>
+      <p v-for="metric in zeroMetrics" :key="`zero-${metric.targetIndex}-${metric.kind}`" class="muted">{{ metricLabel(metric) }}{{ translateUi("：未解锁或本次模拟收益为 0，不参与综合评分。") }}</p>
       <p class="muted">{{ translateUi("只数、糖果是该方案所有睡眠合计的期望值（模拟平均）。例如两觉合计期望 1.084 只，表示长期重复相同条件时，平均每天约 1.084 只，不代表大概率至少遇到 1 只；单日可能为 0 只、1 只或更多。") }}</p>
       <p class="muted">{{ translateUi("“相对最优”是该指标收益占本次候选方案中最优值的比例，综合评分是这些比例的加权平均，均不是遇见概率。标注“概率”的目标睡姿指标才表示该方案至少遇见一次目标的模拟概率。") }}</p>
-      <SplitRecommendation :key="`${JSON.stringify(result.options)}-combined`" :title="translateUi('综合推荐')" :result="result" :optimum="result.combined" />
-      <SplitRecommendation :key="`${JSON.stringify(result.options)}-whole`" :title="translateUi('整觉对照 · 综合最优')" :result="result" :optimum="result.whole" />
+      <SplitRecommendation :key="`${JSON.stringify(result.options)}-combined`" :title="translateUi('综合推荐')" :result="result" :metric-labels="metricLabels" :optimum="result.combined" />
+      <SplitRecommendation :key="`${JSON.stringify(result.options)}-whole`" :title="translateUi('整觉对照 · 综合最优')" :result="result" :metric-labels="metricLabels" :optimum="result.whole" />
       <section v-for="group in resultGroups" :key="group.kind" class="stack">
         <h3>{{ translateUi(group.title) }}</h3>
         <template v-for="metric in group.metrics" :key="`${JSON.stringify(result.options)}-${metric.index}`">
-          <SplitRecommendation v-if="metric.kind !== 'probability' || splitTargetStatus(result.options.targets[metric.targetIndex]!, result.options.island, result.options.strength).unlocked" :title="metric.label" :result="result" :metric-index="metric.index" :optimum="result.individual[metric.index]!" />
+          <SplitRecommendation v-if="metric.kind !== 'probability' || resultStatuses[metric.targetIndex]?.unlocked" :title="metricLabel(metric)" :result="result" :metric-labels="metricLabels" :metric-index="metric.index" :optimum="result.individual[metric.index]!" />
         </template>
       </section>
     </template>

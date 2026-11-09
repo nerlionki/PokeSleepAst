@@ -33,7 +33,7 @@ function edit(key: NumericActivityField, value: string) {
       <p class="muted">{{ names || translateUi("周期首日没有配置活动") }} · {{ activity.context.value.startDate }} {{ translateUi("起。按设备本地时间凌晨 04:00 切日，周模拟逐日应用；手动值覆盖对应项目。") }}</p>
       <label class="row"><input v-model="allRecipes" type="checkbox">{{ translateUi("全料理类型可制作") }}</label>
       <p v-if="fixedDrops.length" class="muted">{{ translateUi("额外食材：") }}{{ fixedDrops.join('、') }}{{ translateUi("。未公布能量的食材只统计数量，相关料理收益提示资料未公布。") }}</p>
-      <p v-for="feature in features" :key="feature.id" class="muted">{{ feature.name }}：{{ feature.status === 'informational' ? translateUi("资料已记录") : feature.description }}</p>
+      <p v-for="feature in features" :key="feature.id" class="muted">{{ translateUi(feature.name) }}：{{ translateUi(feature.description) }}</p>
       <div v-for="key in fields" :key="key" class="field">
         <label :for="`activity-${key}`">{{ translateUi(ACTIVITY_FIELDS[key].label) }}{{ settings.activity?.overrides?.[key] != null ? translateUi("（手动）") : translateUi("（自动）") }}</label>
         <div class="row">

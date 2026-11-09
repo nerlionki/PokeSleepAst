@@ -6,7 +6,7 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { taskNavigationLocked } from '../../../core/src/composables/taskNavigationLock'
 import { hydrate } from '../platform/hydrate'
 import { usePageTab } from '../../../core/src/composables/usePageTab'
-import { route } from '../platform/router'
+import { activatePage, route } from '../platform/router'
 import { useAppearanceStore } from '../../../core/src/stores/appearance'
 import { luminance } from '../../../core/src/ui/appearance'
 const props = defineProps<{ page: string }>()
@@ -35,7 +35,8 @@ function active() {
     void Taro.switchTab({ url: '/pages/' + route.name + '/index' })
     return
   }
-  if (route.name !== props.page) route.query = {}; route.name = props.page; route.path = '/' + props.page }
+  activatePage(props.page)
+}
 async function load() { try { await hydrate(); applyLanguage(); ready.value = true; error.value = '' } catch (cause) { error.value = cause instanceof Error ? cause.message : '本机数据无法加载，请重试' } }
 onMounted(() => { active(); void load() })
 useDidShow(() => { active(); applyBars(); applyLanguage() })
@@ -50,7 +51,7 @@ useDidShow(() => { active(); applyBars(); applyLanguage() })
 </template>
 <style>
 .appearance-root { min-height: 100vh; background: var(--ink); color: var(--text); font-size: var(--font-16); font-family: var(--font-family, sans-serif); }
-.dex-page-shell { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.dex-page-shell > .page { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 12px; overflow: hidden; }
-.candy-page-shell > .page { padding-bottom: 12px; }
+.dex-page-shell, .candy-page-shell { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.dex-page-shell > .page, .candy-page-shell > .page { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 12px; overflow: hidden; }
+.candy-page-shell .plan-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 </style>

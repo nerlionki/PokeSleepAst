@@ -50,7 +50,7 @@ export function splitTargetStatus(target: SplitTarget, island: IslandId, strengt
   const namedStyle = style ?? SLEEP_STYLES.find(row => row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
   const label = target.kind === 'baby' ? babyEfficiencyPokemonName(target.pokeId) : namedStyle ? `${namedStyle.name} ${namedStyle.stars}★ ${namedStyle.styleName}` : target.style
   const reason = !available ? '当前岛屿无此普通研究目标，请更换岛屿或移除目标' : !unlocked ? `未达到解锁能量 ${unlockStrength!.toLocaleString('zh-CN')}，当前权重为 0` : ''
-  return { label, available, unlocked, unlockStrength, reason }
+  return { label, namedStyle, available, unlocked, unlockStrength, reason }
 }
 function validTarget(target: SplitTarget): boolean {
   if (!target || !splitSleep_config_ruleCatalogs.validTargetList0.values.includes(target.kind)) return false

@@ -1,6 +1,6 @@
 import { nextTick, watch, type Ref } from 'vue'
+import { lockPageScroll } from './pageScrollLock'
 
-let scrollLocks = 0, previousOverflow = ''
 /** Browser focus/scroll behavior is kept out of the shared and native templates. */
 export function useProgressDialogFocus(open: Readonly<Ref<boolean>>, target: () => unknown) {
   function focus() {
@@ -10,9 +10,9 @@ export function useProgressDialogFocus(open: Readonly<Ref<boolean>>, target: () 
   watch(open, async (value, _previous, onCleanup) => {
     if (!value || typeof document === 'undefined') return
     const previousFocus = document.activeElement
-    if (scrollLocks++ === 0) { previousOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden' }
+    const unlock = lockPageScroll()
     onCleanup(() => {
-      if (--scrollLocks === 0) document.body.style.overflow = previousOverflow
+      unlock()
       void nextTick(() => {
         if (!open.value && previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true })
       })

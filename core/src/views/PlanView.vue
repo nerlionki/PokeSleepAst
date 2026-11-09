@@ -29,9 +29,10 @@ const swipe = useTabSwipe(tab, () => (['encounter', 'sleep', 'split', 'candy', '
 </script>
 
 <template>
-  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack plan-view">
     <GuideEntry page="plan" :show-trigger="false" />
     <Segmented
+      page-tabs
       guide-id="guide-plan-tabs"
       v-model="tab"
       class="plan-tabs"

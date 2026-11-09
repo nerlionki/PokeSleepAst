@@ -5,6 +5,7 @@ import { taskNavigationLocked } from '../../core/src/composables/taskNavigationL
 import { refreshActivityClock } from '../../core/src/composables/activityClock'
 import { createPinia } from 'pinia'
 import Taro from '@tarojs/taro'
+import { modalScrollLock } from './platform/pageScrollLock'
 import './tailwind.css'
 import './app.css'
 let tabUpdate = Promise.resolve()
@@ -28,5 +29,5 @@ const app = createApp({
   },
 })
 app.use(createPinia())
-app.directive('back', {})
+app.directive('back', modalScrollLock)
 export default app

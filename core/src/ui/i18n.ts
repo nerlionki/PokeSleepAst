@@ -5,6 +5,8 @@ import { gameLabel } from './gameLabels'
 
 export const languages = [
   { id: 'zh-CN', label: '简体中文' },
+  { id: 'zh-TW', label: '繁體中文' },
+  { id: 'ja', label: '日本語' },
   { id: 'en', label: 'English' },
 ] as const
 export type Language = typeof languages[number]['id']
@@ -37,20 +39,30 @@ function catalog() {
   return meta?.i18n?.schemaVersion === 1 ? meta.i18n : undefined
 }
 
-export function t(key = '', values?: Values): string {
+function translate(key: string, values?: Values, scope?: string): string {
   const data = catalog()
   const aliases = data?.aliases
   const alias = aliases && Object.hasOwn(aliases, key) ? aliases[key] : undefined
   const source = typeof alias === 'string' ? alias : key
   const messages = selected.value !== 'zh-CN' ? data?.locales?.[selected.value]?.messages : undefined
   const lookup = source.includes('\n') ? source.replace(/\s+/g, ' ').trim() : source
-  const entry = messages && Object.hasOwn(messages, lookup) ? messages[lookup] : undefined
+  const scopedKey = scope ? lookup + '#' + scope : lookup
+  const entry = messages && Object.hasOwn(messages, scopedKey) ? messages[scopedKey]
+    : messages && Object.hasOwn(messages, lookup) ? messages[lookup] : undefined
   const result = typeof entry === 'string' && entry.trim() ? entry : source
   return values
     ? result.replace(/\{(\w+)\}/g, (token, name: string) => Object.hasOwn(values, name) ? String(values[name]) : token)
     : result
 }
 
+export function t(key = '', values?: Values): string {
+  return translate(key, values)
+}
+
 export function gameText(name = ''): string {
   return t(gameLabel(name))
+}
+
+export function sleepStyleText(style: { styleName: string; pokeId: number; stars: number }): string {
+  return translate(gameLabel(style.styleName), undefined, `${style.pokeId}-${style.stars}`)
 }

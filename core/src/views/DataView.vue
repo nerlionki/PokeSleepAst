@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { t as translateUi } from '../ui/i18n'
+import { resetPageScroll } from '#platform/pageScroll'
+import Segmented from '../components/shared/Segmented.vue'
 import GuideEntry from '../components/shared/GuideEntry.vue'
 import { useTabSwipe } from '../composables/useTabSwipe'
 import clientDefaults from '../data/client-defaults.resource'
 
-import { shallowRef } from 'vue'
+import { shallowRef, watch } from 'vue'
 import { useFeaturesStore } from '../stores/features'
 const features = useFeaturesStore()
 import { usePageTab } from '../composables/usePageTab'
@@ -21,7 +23,20 @@ import EventBundlesPane from '../components/data/EventBundlesPane.vue'
 const views_DataView_config_clientDefaults = clientDefaults.modules.views_DataView
 
 
+const options = [
+  { id: 'island', label: '营地' },
+  { id: 'berry', label: '树果' },
+  { id: 'ing', label: '食材' },
+  { id: 'recipe', label: '食谱' },
+  { id: 'skill', label: '技能' },
+  { id: 'nature', label: '性格' },
+  { id: 'pot', label: '锅容量' },
+  { id: 'item', label: '道具' },
+  { id: 'flower', label: '彩庆花' },
+  { id: 'bundles', label: '活动\n礼包' },
+] as const
 const q = shallowRef(views_DataView_config_clientDefaults["qInitial"])
+watch(q, resetPageScroll)
 const tab = usePageTab(['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'item', 'flower', 'bundles'] as const, 'island')
 const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'item', 'flower', 'bundles'] as const).filter(id => features.enabled('data', id)))
 </script>
@@ -30,19 +45,7 @@ const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skil
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
     <GuideEntry page="data" :show-trigger="false" />
     <input v-if="tab !== 'recipe'" v-model="q" class="picker-search" :placeholder="translateUi('搜索功能或名称')">
-    <div id="guide-data-tabs" class="seg seg-4 plan-tabs">
-      <button v-if="features.enabled('data', 'island')" type="button" :class="{ on: tab === 'island' }" @click="tab = 'island'">{{ translateUi("营地") }}</button>
-      <button v-if="features.enabled('data', 'berry')" type="button" :class="{ on: tab === 'berry' }" @click="tab = 'berry'">{{ translateUi("树果") }}</button>
-      <button v-if="features.enabled('data', 'ing')" type="button" :class="{ on: tab === 'ing' }" @click="tab = 'ing'">{{ translateUi("食材") }}</button>
-      <button v-if="features.enabled('data', 'recipe')" type="button" :class="{ on: tab === 'recipe' }" @click="tab = 'recipe'">{{ translateUi("食谱") }}</button>
-      <button v-if="features.enabled('data', 'skill')" type="button" :class="{ on: tab === 'skill' }" @click="tab = 'skill'">{{ translateUi("技能") }}</button>
-      <button v-if="features.enabled('data', 'nature')" type="button" :class="{ on: tab === 'nature' }" @click="tab = 'nature'">{{ translateUi("性格") }}</button>
-      <button v-if="features.enabled('data', 'pot')" type="button" :class="{ on: tab === 'pot' }" @click="tab = 'pot'">{{ translateUi("锅容量") }}</button>
-      <button v-if="features.enabled('data', 'item')" type="button" :class="{ on: tab === 'item' }" @click="tab = 'item'">{{ translateUi("道具") }}</button>
-      <button v-if="features.enabled('data', 'flower')" type="button" :class="{ on: tab === 'flower' }" @click="tab = 'flower'">{{ translateUi("彩庆花") }}</button>
-      <button v-if="features.enabled('data', 'bundles')" type="button" :class="{ on: tab === 'bundles' }" @click="tab = 'bundles'">{{ translateUi("活动 礼包") }}</button>
-    </div>
-    <p v-if="!tab" class="muted">{{ translateUi("本页功能已隐藏，可在“我的 → 功能开关”重新开启。") }}</p>
+    <Segmented page-tabs guide-id="guide-data-tabs" v-model="tab" class="plan-tabs" :options="options" />
     <IslandPane v-if="tab === 'island'" :q="q" />
     <BerryPane v-else-if="tab === 'berry'" :q="q" />
     <IngredientPane v-else-if="tab === 'ing'" :q="q" />

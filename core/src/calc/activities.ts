@@ -3,6 +3,7 @@ import runtimeParameters from '../data/runtime-parameters.resource'
 import extracted0 from '../data/runtime-contracts.resource'
 import catalog from '../data/activities.resource'
 import parameters from '../data/event-parameters.resource'
+import mythical from '../data/mythical.resource'
 import { skillByPokedexName } from './mainSkills'
 import { foldText } from './text'
 import type { SleepStyleRow } from './data'
@@ -155,7 +156,11 @@ export function activityFeatures(context: ActivityContext, domain?: ActivityDoma
   return activeActivities(context, minute).flatMap(event => (event.features ?? []).filter(feature => (!domain || feature.domains.includes(domain)) && (!feature.islands || island != null && feature.islands.includes(island))))
 }
 export function assertActivitySupported(context: ActivityContext, domain: ActivityDomain, minute = 240, island?: string, researchSession = 0) {
-  const pending = activityFeatures(context, domain, minute, island).filter(feature => feature.status !== 'informational' && !(feature.parameters?.firstResearchOnly === true && researchSession > 0))
+  const pending = activityFeatures(context, domain, minute, island).filter(feature => {
+    // Older resource snapshots marked the optional mythical draw as required.
+    if (domain === 'research' && feature.id === 'special-encounter') return false
+    return feature.status !== 'informational' && !(feature.parameters?.firstResearchOnly === true && researchSession > 0)
+  })
   if (pending.length) throw new Error(pending.map(feature => `${feature.name}：${feature.description}`).join('；'))
 }
 export function activityRecipeCategories(values: ActivityValues, selected: string) { return values.availableRecipeCategories.length ? values.availableRecipeCategories : [selected] }
@@ -163,10 +168,12 @@ export function activityRecipeCategories(values: ActivityValues, selected: strin
 /** Activity rows replace only their matching island/style; the bundled pool is never mutated. */
 export function activitySleepStyles(base: readonly SleepStyleRow[], context = createActivityContext('research')): SleepStyleRow[] {
   const phases = activeActivities(context).flatMap(event => [event, ...(event.phases ?? []).filter(phase => active(phase, activityDate(context)))])
-  const spawns = phases.flatMap(phase => phase.spawns ?? [])
-  if (!spawns.length) return base.filter(style => !style.limited)
+  // Event-only mythical encounters are recorded in the Pokédex, outside the simulated pool.
+  const ordinary = (style: SleepStyleRow) => !Object.hasOwn(mythical, style.pokeId)
+  const spawns = phases.flatMap(phase => phase.spawns ?? []).filter(ordinary)
+  if (!spawns.length) return base.filter(style => !style.limited && ordinary(style))
   const overrides = new Set(spawns.map(style => `${style.island}:${style.pokeId}:${style.stars}`))
-  return [...base.filter(style => !style.limited && !overrides.has(`${style.island}:${style.pokeId}:${style.stars}`)), ...spawns]
+  return [...base.filter(style => !style.limited && ordinary(style) && !overrides.has(`${style.island}:${style.pokeId}:${style.stars}`)), ...spawns]
 }
 
 /** undefined means a legacy what-if catalog; null means a configured event is currently unavailable. */
