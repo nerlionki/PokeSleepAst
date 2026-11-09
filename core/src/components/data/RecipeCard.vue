@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
+
   import { bonusLabel, dishEnergy } from '../../calc/recipes';
   import type { RecipeDisplayRow } from '../../calc/recipeCatalog';
   import { RECIPE_LEVEL_MAX } from '../../calc/cook';
@@ -16,16 +18,16 @@
 <template>
   <button type="button" class="meal-card" @click="$emit('open')">
     <span class="meal-card-head">
-      <strong>{{ recipe.name }}</strong>
+      <strong>{{ gameText(recipe.name) }}</strong>
       <MealIcon :name="recipe.name" :id="recipe.id" />
     </span>
     <span class="meal-card-meta">{{
-      recipe.bonus == null ? '还未公布' : bonusLabel(recipe.bonus)
+      recipe.bonus == null ? translateUi("还未公布") : bonusLabel(recipe.bonus)
     }}</span>
     <span class="meal-card-energy">
-      <template v-if="recipe.baseEnergy == null">还未公布</template>
+      <template v-if="recipe.baseEnergy == null">{{ translateUi("还未公布") }}</template>
       <template v-else-if="level == null">
-        满级（Lv.{{ RECIPE_LEVEL_MAX }}）{{
+        {{ translateUi("满级（Lv.") }}{{ RECIPE_LEVEL_MAX }}）{{
           dishEnergy(recipe.baseEnergy, RECIPE_LEVEL_MAX).toLocaleString(
             'zh-CN'
           )
@@ -46,9 +48,9 @@
       <em class="pot-badge">{{ recipe.pot }}</em>
       <span v-for="ing in recipe.ingredients" :key="ing.name" class="meal-ing">
         <IngredientIcon :id="ing.id" :name="ing.name" small />
-        <i>{{ ing.count ?? '还未公布' }}</i>
+        <i>{{ ing.count ?? translateUi("还未公布") }}</i>
       </span>
-      <span v-if="!recipe.ingredients.length" class="muted">剩余食材</span>
+      <span v-if="!recipe.ingredients.length" class="muted">{{ translateUi("剩余食材") }}</span>
     </span>
   </button>
 </template>

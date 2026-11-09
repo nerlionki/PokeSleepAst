@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.EnvironmentFields
 
@@ -40,21 +41,21 @@ function toggle(name: string) {
 </script>
 <template>
   <div class="stack">
-    <div class="field"><label>计算营地</label><select :value="value.island" @change="emit('change', { island: ($event.target as HTMLSelectElement).value as Settings['island'] })"><option v-for="island in ISLANDS" :key="island.id" :value="island.id">{{ island.name }}</option></select></div>
-    <div class="field"><label>额外金帮数量（已有＋额外最多 5 层）</label><input v-model.number="extra" type="number" :min="INPUT_LIMITS.extra.min" :max="INPUT_LIMITS.extra.max" :step="INPUT_LIMITS.extra.step"></div>
+    <div class="field"><label>{{ translateUi("计算营地") }}</label><select :value="value.island" @change="emit('change', { island: ($event.target as HTMLSelectElement).value as Settings['island'] })"><option v-for="island in ISLANDS" :key="island.id" :value="island.id">{{ gameText(island.name) }}</option></select></div>
+    <div class="field"><label>{{ translateUi("额外金帮数量（已有＋额外最多 5 层）") }}</label><input v-model.number="extra" type="number" :min="INPUT_LIMITS.extra.min" :max="INPUT_LIMITS.extra.max" :step="INPUT_LIMITS.extra.step"></div>
     <template v-if="ex">
-      <div class="field"><label>本周 EX 加成</label><select :value="value.exWeeklyBonus ?? 'none'" @change="emit('change', { exWeeklyBonus: ($event.target as HTMLSelectElement).value as Settings['exWeeklyBonus'] })"><option value="none">未设置</option><option value="berries">树果能量 ×2.4</option><option value="ingredients">普通帮忙食材 +1（食材型额外 50% 再 +1）</option><option value="skills">主技能发动率 ×1.25</option></select></div>
-      <p>EX 主树果</p>
-      <div class="picker-opts"><button v-for="berry in mainChoices" :key="berry.name" class="btn ghost" type="button" :disabled="!!forcedBerry && berry.name !== forcedBerry" :class="{ on: environment.berries[0] === berry.name }" @click="pickMain(berry.name)"><BerryIcon :name="berry.name" small />{{ berry.name }}</button></div>
-      <p>副树果 {{ Math.max(0, environment.berries.length - 1) }}/2</p>
-      <div class="picker-opts"><button v-for="berry in secondary" :key="berry.name" class="btn ghost" type="button" :class="{ on: environment.berries.slice(1).includes(berry.name) }" @click="toggle(berry.name)"><BerryIcon :name="berry.name" small />{{ berry.name }}</button></div>
-      <label class="row"><input v-model="buff" type="checkbox">主树果 buff（帮忙速度、主技能等级 +1）</label>
-      <label class="row"><input v-model="debuff" type="checkbox">非喜好树果 debuff（帮忙速度）</label>
+      <div class="field"><label>{{ translateUi("本周 EX 加成") }}</label><select :value="value.exWeeklyBonus ?? 'none'" @change="emit('change', { exWeeklyBonus: ($event.target as HTMLSelectElement).value as Settings['exWeeklyBonus'] })"><option value="none">{{ translateUi("未设置") }}</option><option value="berries">{{ translateUi("树果能量 ×2.4") }}</option><option value="ingredients">{{ translateUi("普通帮忙食材 +1（食材型额外 50% 再 +1）") }}</option><option value="skills">{{ translateUi("主技能发动率 ×1.25") }}</option></select></div>
+      <p>{{ translateUi("EX 主树果") }}</p>
+      <div class="picker-opts"><button v-for="berry in mainChoices" :key="berry.name" class="btn ghost" type="button" :disabled="!!forcedBerry && berry.name !== forcedBerry" :class="{ on: environment.berries[0] === berry.name }" @click="pickMain(berry.name)"><BerryIcon :name="berry.name" small />{{ gameText(berry.name) }}</button></div>
+      <p>{{ translateUi("副树果") }} {{ Math.max(0, environment.berries.length - 1) }}/2</p>
+      <div class="picker-opts"><button v-for="berry in secondary" :key="berry.name" class="btn ghost" type="button" :class="{ on: environment.berries.slice(1).includes(berry.name) }" @click="toggle(berry.name)"><BerryIcon :name="berry.name" small />{{ gameText(berry.name) }}</button></div>
+      <label class="row"><input v-model="buff" type="checkbox">{{ translateUi("主树果 buff（帮忙速度、主技能等级 +1）") }}</label>
+      <label class="row"><input v-model="debuff" type="checkbox">{{ translateUi("非喜好树果 debuff（帮忙速度）") }}</label>
     </template>
     <template v-else-if="canPickBerries(value.island)">
-      <p>喜好树果 {{ environment.berries.length }}/3</p>
-      <div class="picker-opts"><button v-for="berry in BERRIES" :key="berry.name" class="btn ghost" type="button" :disabled="berry.name === forcedBerry" :class="{ on: environment.berries.includes(berry.name) }" @click="toggle(berry.name)"><BerryIcon :name="berry.name" small />{{ berry.name }}</button></div>
+      <p>{{ translateUi("喜好树果") }} {{ environment.berries.length }}/3</p>
+      <div class="picker-opts"><button v-for="berry in BERRIES" :key="berry.name" class="btn ghost" type="button" :disabled="berry.name === forcedBerry" :class="{ on: environment.berries.includes(berry.name) }" @click="toggle(berry.name)"><BerryIcon :name="berry.name" small />{{ gameText(berry.name) }}</button></div>
     </template>
-    <p v-else class="muted">固定喜好：{{ environment.berries.join('、') }}</p>
+    <p v-else class="muted">{{ translateUi("固定喜好：") }}{{ environment.berries.join('、') }}</p>
   </div>
 </template>

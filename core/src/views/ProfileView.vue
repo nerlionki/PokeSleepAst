@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../ui/i18n'
 import clientDefaults from '../data/client-defaults.resource'
 import { cloneData } from '../calc/dataClone'
 
@@ -24,17 +25,17 @@ const titles = { ...cloneData(views_ProfileView_config_clientDefaults["titles"])
     <template v-if="tab === 'home'">
       <GuideEntry page="profile" />
       <section v-if="userInfo" class="card"><h3>{{ userInfo.name }}</h3></section>
-      <button class="card profile-entry" type="button" @click="tab = 'backup'"><span>导入 / 导出</span><span aria-hidden="true">›</span></button>
-      <button class="card profile-entry" type="button" @click="tab = 'settings'"><span>全局设置</span><span aria-hidden="true">›</span></button>
-      <button class="card profile-entry" type="button" @click="tab = 'appearance'"><span>外观设置</span><span aria-hidden="true">›</span></button>
+      <button class="card profile-entry" type="button" @click="tab = 'backup'"><span>{{ translateUi("导入 / 导出") }}</span><span aria-hidden="true">›</span></button>
+      <button class="card profile-entry" type="button" @click="tab = 'settings'"><span>{{ translateUi("全局设置") }}</span><span aria-hidden="true">›</span></button>
+      <button class="card profile-entry" type="button" @click="tab = 'appearance'"><span>{{ translateUi("外观设置") }}</span><span aria-hidden="true">›</span></button>
       <button class="card profile-entry" type="button" @click="tab = 'credits'"><span>鸣谢</span><span aria-hidden="true">›</span></button>
-      <button v-if="canCheckAppUpdate" class="card profile-entry" type="button" @click="tab = 'update'"><span>检查更新</span><span aria-hidden="true">›</span></button>
-      <button class="card profile-entry" type="button" @click="tab = 'features'"><span>功能开关</span><span aria-hidden="true">›</span></button>
+      <button v-if="canCheckAppUpdate" class="card profile-entry" type="button" @click="tab = 'update'"><span>{{ translateUi("检查更新") }}</span><span aria-hidden="true">›</span></button>
+      <button class="card profile-entry" type="button" @click="tab = 'features'"><span>{{ translateUi("功能开关") }}</span><span aria-hidden="true">›</span></button>
       <DataSourcePane />
       <slot name="app-tools" />
     </template>
     <template v-else>
-      <div class="row"><button class="btn ghost" type="button" @click="tab = 'home'">返回我的</button><h2>{{ titles[tab] }}</h2></div>
+      <div class="row"><button class="btn ghost" type="button" @click="tab = 'home'">{{ translateUi("返回我的") }}</button><h2>{{ translateUi(titles[tab]) }}</h2></div>
       <FeaturesPane v-if="tab === 'features'" />
       <BackupPane v-else-if="tab === 'backup'" />
       <AppearancePane v-else-if="tab === 'appearance'" />

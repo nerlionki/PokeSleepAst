@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { gameText } from '../../ui/i18n'
 import { computed, shallowRef, watch } from 'vue'
 import { SUBSKILLS } from '../../calc/data'
 import { subskillImageUrl } from '../../calc/raeImage'
@@ -28,12 +29,12 @@ const mask = computed(() => {
     :style="mask"
     role="img"
     :aria-hidden="decorative || undefined"
-    :aria-label="decorative ? undefined : skill.name"
-    :title="skill.name"
+    :aria-label="decorative ? undefined : gameText(skill.name)"
+    :title="gameText(skill.name)"
   >
     <img class="sub-mask-loader" :src="src" alt="" aria-hidden="true" @error="failed = true" @load="loadedMask = ($event.target as HTMLImageElement).src">
   </span>
-  <span v-else-if="skill && !decorative">{{ skill.name }}</span>
+  <span v-else-if="skill && !decorative">{{ gameText(skill.name) }}</span>
 </template>
 <style scoped>
 .sub-mask-loader { display: none; }

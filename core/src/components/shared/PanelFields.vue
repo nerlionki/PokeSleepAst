@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.PanelFields
 
@@ -43,27 +46,27 @@ function setSub(index: number, value: string) {
 <template>
   <div class="stack">
     <div class="field">
-      <label>宝可梦</label>
+      <label>{{ translateUi("宝可梦") }}</label>
       <PokePicker v-model="pokeId" />
     </div>
-    <FormField v-slot="{ id }" label="等级"><input :id="id" v-model.number="level" type="number" :min="INPUT_LIMITS.level.min" :max="POKEMON_LEVEL_MAX"></FormField>
-    <FormField v-slot="{ id }" label="性格"><select :id="id" v-model="nature">
-        <option v-for="n in NATURES" :key="n.name" :value="n.name">{{ n.name }}</option>
+    <FormField v-slot="{ id }" :label="translateUi('等级')"><input :id="id" v-model.number="level" type="number" :min="INPUT_LIMITS.level.min" :max="POKEMON_LEVEL_MAX"></FormField>
+    <FormField v-slot="{ id }" :label="translateUi('性格')"><select :id="id" v-model="nature">
+        <option v-for="n in NATURES" :key="n.name" :value="n.name">{{ gameText(n.name) }}</option>
       </select></FormField>
-    <ToggleField v-model="natureMinted" label="已使用净白薄荷（性格无加减成）" />
+    <ToggleField v-model="natureMinted" :label="translateUi('已使用净白薄荷（性格无加减成）')" />
     <div v-for="i in SUBSKILL_GATES.length" :key="i" class="field">
-      <label>副技能 {{ i }}</label>
+      <label>{{ translateUi("副技能") }} {{ i }}</label>
       <select :value="model.subskills[i - 1] ?? ''" @change="setSub(i - 1, ($event.target as HTMLSelectElement).value)">
-        <option value="">（空）</option>
-        <option v-for="s in SUBSKILLS" :key="s.id" :value="s.id">{{ s.name }}</option>
+        <option value="">{{ translateUi("（空）") }}</option>
+        <option v-for="s in SUBSKILLS" :key="s.id" :value="s.id">{{ gameText(s.name) }}</option>
       </select>
     </div>
     <div v-for="(ing, i) in poke.ingredients" :key="ing.id" class="field">
-      <label class="row">食材 {{ i + 1 }} <IngredientIcon :id="ing.id" :name="ing.name" /> {{ ing.name }}</label>
+      <label class="row">{{ translateUi("食材") }} {{ i + 1 }} <IngredientIcon :id="ing.id" :name="ing.name" /> {{ gameText(ing.name) }}</label>
       <select :value="model.ingredientSlots[i] ?? 0" @change="setSlot(i, Number(($event.target as HTMLSelectElement).value))">
         <option v-for="(amt, ai) in ing.amounts" :key="ai" :value="ai">{{ amt }}</option>
       </select>
     </div>
-    <FormField v-slot="{ id }" label="技能等级"><input :id="id" v-model.number="skillLevel" type="number" :min="INPUT_LIMITS.skillLevel.min" :max="skillMax"></FormField>
+    <FormField v-slot="{ id }" :label="translateUi('技能等级')"><input :id="id" v-model.number="skillLevel" type="number" :min="INPUT_LIMITS.skillLevel.min" :max="skillMax"></FormField>
   </div>
 </template>

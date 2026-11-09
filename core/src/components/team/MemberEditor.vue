@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.MemberEditor
 
@@ -151,15 +152,15 @@ function stepEvolution(delta: number) {
 <template>
   <div class="stack member-editor">
     <div v-if="poke && visible('profile')" class="row">
-      <PokeSprite :id="poke.id" :name="poke.name" :shiny="props.shiny" />
+      <PokeSprite :id="poke.id" :name="poke.name" :shiny="props.shiny" :ribbon-hours="model.tune.ribbonHours" />
       <div>
-        <strong>{{ poke.name }}</strong>
+        <strong>{{ gameText(poke.name) }}</strong>
         <p class="muted"><MainSkillIcon :id="mainSkill?.id" :name="mainSkillName" decorative /> {{ mainSkillName }}</p>
       </div>
     </div>
 
-    <section v-if="stages.length > 1 && visible('evolutionChain')" class="evo-chain" aria-label="进化链">
-      <h3>进化链</h3>
+    <section v-if="stages.length > 1 && visible('evolutionChain')" class="evo-chain" :aria-label="translateUi('进化链')">
+      <h3>{{ translateUi("进化链") }}</h3>
       <div class="evo-stages">
         <template v-for="(stage, index) in stages" :key="index">
           <span v-if="index" class="evo-arrow" aria-hidden="true">↓</span>
@@ -168,7 +169,7 @@ function stepEvolution(delta: number) {
               :class="{ on: node.id === model.pokeId }" :aria-pressed="node.id === model.pokeId"
               @click="switchEvolution(node.id)">
               <PokeSprite :id="node.id" :name="node.name" :shiny="props.shiny" />
-              <span>{{ node.name }}</span>
+              <span>{{ gameText(node.name) }}</span>
             </button>
           </div>
         </template>
@@ -176,11 +177,11 @@ function stepEvolution(delta: number) {
     </section>
 
     <label v-if="poke && ownedSelectionSkill(poke.id) && visible('mewSkill')" class="field">
-      <span>{{ ownedSelectionSkill(poke.id)?.name }} · 当前习得技能</span>
+      <span>{{ gameText(ownedSelectionSkill(poke.id)?.name) }} {{ translateUi("· 当前习得技能") }}</span>
       <select :value="normalizeMewSkill(model.mewSkill)" @change="patch({ mewSkill: Number(($event.target as HTMLSelectElement).value) })">
-        <option v-for="skill in MEW_SKILLS" :key="skill.id" :value="skill.id">{{ skill.name }} · {{ (skill.rate * 100).toFixed(2) }}%</option>
+        <option v-for="skill in MEW_SKILLS" :key="skill.id" :value="skill.id">{{ gameText(skill.name) }} · {{ (skill.rate * 100).toFixed(2) }}%</option>
       </select>
-      <small class="muted">保留原主技能等级，效果按所选技能等级上限计算。</small>
+      <small class="muted">{{ translateUi("保留原主技能等级，效果按所选技能等级上限计算。") }}</small>
     </label>
 
     <template v-if="visible('level')">
@@ -199,8 +200,8 @@ function stepEvolution(delta: number) {
     <div class="ing-board">
       <section v-for="(col, colIndex) in board" :key="colIndex" class="ing-col">
         <h3>Lv {{ INGREDIENT_GATES[colIndex] }}</h3>
-        <button v-if="isAllRounder(poke) && colIndex > 0" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">空</button>
-        <p v-if="isAllRounder(poke) && colIndex === 0 && model.ingredientSlots[0] == null" class="amber" role="alert">Lv.1 食材不能为空，请选择实际食材。</p>
+        <button v-if="isAllRounder(poke) && colIndex > 0" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">{{ translateUi("空") }}</button>
+        <p v-if="isAllRounder(poke) && colIndex === 0 && model.ingredientSlots[0] == null" class="amber" role="alert">{{ translateUi("Lv.1 食材不能为空，请选择实际食材。") }}</p>
         <div class="ing-col-items">
           <button
             v-for="(cell, cellIndex) in col"
@@ -216,21 +217,21 @@ function stepEvolution(delta: number) {
         </div>
       </section>
     </div>
-    <p class="muted">亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽。{{ isAllRounder(poke) ? 'Lv.1 必须选择食材，不能留空。' : '第 1 槽固定。' }}</p>
+    <p class="muted">{{ translateUi("亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽。") }}{{ isAllRounder(poke) ? translateUi("Lv.1 必须选择食材，不能留空。") : translateUi("第 1 槽固定。") }}</p>
     </template>
 
     <div v-if="visible('evolutions')" class="tune-row">
-      <span>进化次数</span>
+      <span>{{ translateUi("进化次数") }}</span>
       <button type="button" :disabled="model.tune.evolutions <= 0" @click="stepEvolution(-1)">−</button>
       <b>{{ model.tune.evolutions }}</b>
       <button type="button" :disabled="model.tune.evolutions >= maxEvolutions" @click="stepEvolution(1)">+</button>
     </div>
     <div v-if="visible('seeds')" class="tune-row">
-      <span>金种子</span>
+      <span>{{ translateUi("金种子") }}</span>
       <button type="button" :disabled="model.tune.goldSeeds <= 0" @click="stepGold(-1)">−</button>
       <b>{{ model.tune.goldSeeds }}</b>
       <button type="button" :disabled="model.skillLevel + skillBonus >= skillMax" @click="stepGold(1)">+</button>
-      <span>银种子</span>
+      <span>{{ translateUi("银种子") }}</span>
       <button type="button" :disabled="model.tune.silverSeeds <= 0" @click="stepSilver()">−</button>
       <b>{{ model.tune.silverSeeds }}</b>
       <button type="button" :disabled="!silverChoices.length || model.tune.silverSeeds >= 9" @click="silverOpen = !silverOpen">+</button>
@@ -241,55 +242,55 @@ function stepEvolution(delta: number) {
       </button>
     </div>
     <div v-if="visible('skill')" class="tune-row">
-      <span>主技能</span>
+      <span>{{ translateUi("主技能") }}</span>
       <button type="button" @click="setSkill(model.skillLevel - 1)">−</button>
       <b>LV {{ model.skillLevel }} / {{ skillMax }}</b>
       <button type="button" @click="setSkill(model.skillLevel + 1)">+</button>
       <button type="button" @click="setSkill(skillMax)">MAX</button>
     </div>
 
-    <section v-if="visible('subskills')" class="stack subskill-section" aria-label="副技能">
-      <p class="muted">副技能 {{ model.subskills.filter(Boolean).length }}/5 · 点击已选技能可移除</p>
+    <section v-if="visible('subskills')" class="stack subskill-section" :aria-label="translateUi('副技能')">
+      <p class="muted">{{ translateUi("副技能") }} {{ model.subskills.filter(Boolean).length }}{{ translateUi("/5 · 点击已选技能可移除") }}</p>
       <div class="picker-opts subskill-tags">
-        <button v-for="item in subChoices" :key="item.id" type="button" class="chip" :class="{ on: model.subskills.includes(item.id) }" :aria-pressed="model.subskills.includes(item.id)" @click="chooseSub(item.id)">
+        <button v-for="item in subChoices" :key="item.id" type="button" class="chip" :class="[`rarity-${item.rarity}`, { on: model.subskills.includes(item.id) }]" :aria-pressed="model.subskills.includes(item.id)" @click="chooseSub(item.id)">
           <b v-if="model.subskills.includes(item.id)" class="subskill-level">Lv.{{ SUBSKILL_GATES[model.subskills.indexOf(item.id)] }}</b>
           <SubskillIcon :id="item.id" decorative />
-          <span>{{ item.name }}</span>
+          <span>{{ gameText(item.name) }}</span>
           <span v-if="model.subskills.includes(item.id)" aria-hidden="true">×</span>
         </button>
       </div>
     </section>
 
     <template v-if="visible('nature')">
-    <ToggleField v-model="natureMinted" label="已使用净白薄荷（性格无加减成）" />
-    <button class="btn ghost" type="button" @click="natureOpen = !natureOpen">性格 · {{ model.nature }}</button>
+    <ToggleField v-model="natureMinted" :label="translateUi('已使用净白薄荷（性格无加减成）')" />
+    <button class="btn ghost" type="button" @click="natureOpen = !natureOpen">{{ translateUi("性格 ·") }} {{ gameText(model.nature) }}</button>
     <div v-if="natureOpen" class="picker-opts">
       <button v-for="nature in NATURES" :key="nature.name" type="button" :class="{ on: model.nature === nature.name }" @click="patch({ nature: nature.name }); natureOpen = false">
-        {{ nature.name }} {{ model.natureMinted ? '' : natureMark(nature.up, '↑') }} {{ model.natureMinted ? '' : natureMark(nature.down, '↓') }}
+        {{ gameText(nature.name) }} {{ model.natureMinted ? '' : natureMark(nature.up, '↑') }} {{ model.natureMinted ? '' : natureMark(nature.down, '↓') }}
       </button>
     </div>
 
     </template>
     <template v-if="visible('ribbon')">
-    <p class="muted">睡饱饱勋章 · 还能进化 {{ stagesLeft(model.pokeId) }} 次</p>
+    <p class="muted">{{ translateUi("睡饱饱勋章 · 还能进化") }} {{ stagesLeft(model.pokeId) }} {{ translateUi("次") }}</p>
     <div class="lv-row">
       <button v-for="hours in RIBBON_HOURS" :key="hours" type="button" :class="{ on: model.tune.ribbonHours === hours }" @click="patchTune({ ribbonHours: hours })">
-        {{ hours === 0 ? '无' : `${hours}小时` }}
+        {{ hours === 0 ? translateUi("无") : translateUi("{arg1}小时", { arg1: String(hours) }) }}
       </button>
     </div>
-    <p class="muted"><template v-if="visible('ribbonCarry')">持有 +{{ ribbon.carry }}，</template>{{ ribbon.speedCut ? `帮忙间隔缩短 ${Math.round(ribbon.speedCut * 100)}%，帮忙速度变快` : '帮忙间隔不变' }}</p>
+    <p class="muted"><template v-if="visible('ribbonCarry')">{{ translateUi("持有 +") }}{{ ribbon.carry }}，</template>{{ ribbon.speedCut ? translateUi("帮忙间隔缩短 {arg1}%，帮忙速度变快", { arg1: String(Math.round(ribbon.speedCut * 100)) }) : translateUi("帮忙间隔不变") }}</p>
     </template>
 
     <template v-if="visible('carryMode')">
-    <p class="muted">持有上限计算模式</p>
+    <p class="muted">{{ translateUi("持有上限计算模式") }}</p>
     <div class="seg seg-4">
-      <button v-for="mode in MODES" :key="mode.id" type="button" :class="{ on: model.tune.carryMode === mode.id }" @click="patchTune({ carryMode: mode.id })">{{ mode.label }}</button>
+      <button v-for="mode in MODES" :key="mode.id" type="button" :class="{ on: model.tune.carryMode === mode.id }" @click="patchTune({ carryMode: mode.id })">{{ translateUi(mode.label) }}</button>
     </div>
 
     </template>
     <div v-if="props.actions && visible('actions')" class="row editor-actions">
-      <button class="btn ghost" type="button" @click="emit('copy')">复制</button>
-      <button class="btn ghost rose" type="button" @click="emit('remove')">移除</button>
+      <button class="btn ghost" type="button" @click="emit('copy')">{{ translateUi("复制") }}</button>
+      <button class="btn ghost rose" type="button" @click="emit('remove')">{{ translateUi("移除") }}</button>
     </div>
   </div>
 </template>
@@ -297,5 +298,9 @@ function stepEvolution(delta: number) {
 <style scoped>
 .subskill-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .subskill-tags button { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 40px; white-space: normal; text-align: left; }
+.subskill-tags button.on.rarity-gold { background: var(--rarity-gold); color: var(--on-accent); }
+.subskill-tags button.on.rarity-blue { background: var(--rarity-blue); color: var(--on-sage); }
+.subskill-tags button.on.rarity-white { background: var(--text); color: var(--ink); }
+.subskill-tags button.on :deep(.sub-ico) { color: inherit; }
 .subskill-level { flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: var(--font-12); }
 </style>

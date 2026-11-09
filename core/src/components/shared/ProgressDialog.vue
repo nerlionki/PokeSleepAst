@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../ui/i18n'
 import { computed, toRef, useTemplateRef } from 'vue'
 import { useTaskNavigationLock } from '../../composables/taskNavigationLock'
 import { useProgressDialogFocus } from '#platform/progressDialogFocus'
@@ -31,15 +32,15 @@ const { focus } = useProgressDialogFocus(open, () => props.cancellable ? cancelB
       @keydown.esc.prevent="requestCancel" @keydown.tab.prevent="focus" @touchmove.self.prevent>
       <section ref="panel" class="card stack progress-panel" tabindex="-1" role="status" aria-live="polite">
         <div v-if="percent == null" class="progress-spinner" aria-hidden="true" />
-        <h3>{{ title }}</h3>
-        <p v-if="notice" class="muted">{{ notice }}</p>
+        <h3>{{ translateUi(title) }}</h3>
+        <p v-if="notice" class="muted">{{ translateUi(notice) }}</p>
         <p v-if="stage">{{ stage }}</p>
         <div v-if="percent != null" class="progress-track" role="progressbar" :aria-label="title + '进度'" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100">
           <div :style="{ width: percent + '%' }" />
         </div>
         <p v-if="percent != null || detail"><span v-if="percent != null">{{ percent }}%{{ detail ? ' · ' : '' }}</span>{{ detail }}</p>
         <slot />
-        <p v-if="hint" class="muted">{{ hint }}</p>
+        <p v-if="hint" class="muted">{{ translateUi(hint) }}</p>
         <button v-if="cancellable" ref="cancelButton" class="btn ghost" type="button" @click="requestCancel">{{ cancelText }}</button>
       </section>
     </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../ui/i18n'
 import GuideEntry from '../components/shared/GuideEntry.vue'
 import { useFeaturesStore } from '../stores/features'
 import { useTabSwipe } from '../composables/useTabSwipe'
@@ -45,7 +46,7 @@ const swipe = useTabSwipe(tab, () => (['encounter', 'sleep', 'split', 'candy', '
       ]"
     />
     <section v-if="tab === 'encounter'" class="stack">
-      <button class="btn ghost" type="button" @click="switchVersion">{{ legacy ? '切换至新版' : '切换至旧版' }}</button>
+      <button class="btn ghost" type="button" @click="switchVersion">{{ legacy ? translateUi("切换至新版") : translateUi("切换至旧版") }}</button>
       <LegacyEncounterPane v-if="legacy" />
       <EncounterPane v-else />
     </section>

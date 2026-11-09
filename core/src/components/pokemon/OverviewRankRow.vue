@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import { computed } from 'vue'
 import type { OverviewRank } from '../../calc/boxOverview'
 import { formatOverviewAmount } from '../../calc/boxOverview'
@@ -21,14 +22,14 @@ const amount = computed(() => formatOverviewAmount(props.row.amount, props.ingre
 <template>
   <div class="overview-rank">
     <span class="rank-position" :class="{ leading: rank === 1 }">{{ rank }}</span>
-    <div class="rank-portrait"><PokeSprite :id="mon.pokeId" :name="boxLabel(mon)" :shiny="mon.shiny" /></div>
+    <div class="rank-portrait"><PokeSprite :id="mon.pokeId" :name="boxLabel(mon)" :shiny="mon.shiny" :ribbon-hours="mon.tune?.ribbonHours" /></div>
     <div class="rank-details">
       <strong>{{ boxLabel(mon) }}</strong>
-      <p class="muted">{{ species?.name }} · Lv.{{ mon.level }} · {{ mon.nature }}</p>
+      <p class="muted">{{ gameText(species?.name) }} · Lv.{{ mon.level }} · {{ gameText(mon.nature) }}</p>
       <div v-if="ingredients" class="rank-slots"><span v-for="slot in slots" :key="slot.slot" class="row"><IngredientIcon :id="slot.id" :name="slot.name" small /><span>×{{ slot.amount }}</span></span></div>
       <p v-if="skills" class="muted rank-skills">{{ skills }}</p>
     </div>
-    <div class="rank-amount"><strong>{{ amount }}</strong><span class="muted">{{ unit }}/日</span></div>
+    <div class="rank-amount"><strong>{{ amount }}</strong><span class="muted">{{ unit }}{{ translateUi("/日") }}</span></div>
   </div>
 </template>
 <style scoped>

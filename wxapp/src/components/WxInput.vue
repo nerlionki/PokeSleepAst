@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../../core/src/ui/i18n'
 import { computed } from 'vue'
 import { useAppearanceStore } from '../../../core/src/stores/appearance'
 const appearance = useAppearanceStore()
@@ -6,10 +7,21 @@ const props = defineProps<{ modelValue?: unknown; value?: unknown; checked?: boo
 const emit = defineEmits<{ 'update:modelValue': [value: unknown]; change: [event: { target: { value: unknown; checked?: boolean } }]; input: [event: { target: { value: unknown } }] }>()
 const current = computed(() => props.modelValue ?? (props.type === 'checkbox' ? props.checked : undefined) ?? props.value ?? '')
 const sliderScale = computed(() => 10 ** Math.min(6, (String(props.step ?? 1).split('.')[1] ?? '').length))
+const sliderMin = computed(() => Math.round(Number(props.min ?? 0) * sliderScale.value))
+const sliderMax = computed(() => Math.round(Number(props.max ?? 100) * sliderScale.value))
+
+function boundedSliderValue(value: number) {
+  return Math.min(sliderMax.value, Math.max(sliderMin.value, value))
+}
+
 function change(event: unknown) {
   if (props.disabled) return
   let value = (event as { detail: { value: unknown } }).detail.value
-  if (props.type === 'range') value = Number(value) / sliderScale.value
+  if (props.type === 'range') {
+    const position = Number(value)
+    if (!Number.isFinite(position)) return
+    value = boundedSliderValue(position) / sliderScale.value
+  }
   if (props.modelModifiers?.trim && typeof value === 'string') value = value.trim()
   if (props.modelModifiers?.number && value !== '') { const n = Number(value); if (Number.isFinite(n)) value = n }
   emit('update:modelValue', value); emit('input', { target: { value } }); emit('change', { target: { value, checked: typeof value === 'boolean' ? value : undefined } })
@@ -17,8 +29,8 @@ function change(event: unknown) {
 </script>
 <template>
   <view v-if="type === 'checkbox'" class="wx-switch-control"><switch @touchstart.stop @touchend.stop @touchcancel.stop :checked="Boolean(current)" :disabled="disabled" :color="appearance.palette.amber" @change="change" /></view>
-  <slider @touchstart.stop @touchend.stop @touchcancel.stop v-else-if="type === 'range'" class="wx-range" :disabled="disabled" :value="Math.round(Number(current) * sliderScale)" :min="Math.round(Number(min ?? 0) * sliderScale)" :max="Math.round(Number(max ?? 100) * sliderScale)" :step="Math.max(1, Math.round(Number(step ?? 1) * sliderScale))" :active-color="appearance.palette.amber" @change="change" @changing="change" />
-  <picker @touchstart.stop @touchend.stop @touchcancel.stop v-else-if="type === 'time'" class="wx-control" mode="time" :disabled="disabled" :value="String(current)" @change="change"><view class="wx-select">{{ current || '选择时间' }}</view></picker>
+  <slider @touchstart.stop @touchend.stop @touchcancel.stop v-else-if="type === 'range'" class="wx-range" :disabled="disabled" :value="boundedSliderValue(Math.round(Number(current) * sliderScale))" :min="sliderMin" :max="sliderMax" :step="Math.max(1, Math.round(Number(step ?? 1) * sliderScale))" :active-color="appearance.palette.amber" @change="change" @changing="change" />
+  <picker @touchstart.stop @touchend.stop @touchcancel.stop v-else-if="type === 'time'" class="wx-control" mode="time" :disabled="disabled" :value="String(current)" @change="change"><view class="wx-select">{{ current || translateUi("选择时间") }}</view></picker>
   <input @touchstart.stop @touchend.stop @touchcancel.stop v-else class="wx-control wx-input" :type="type === 'number' ? 'digit' : 'text'" :value="String(current)" :placeholder="placeholder" :disabled="disabled" @input="change" />
 </template>
 <style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import { computed } from 'vue'
 import { NATURES } from '../../calc/data'
 import { STAT_DOWN, STAT_LABEL, STAT_UP } from '../../calc/natureLabels'
@@ -26,8 +27,8 @@ function downText(stat: string | null) {
     <div v-for="(n, i) in list" :key="n.name" class="data-row">
       <span class="data-row-lead muted">#{{ i + 1 }}</span>
       <span class="data-row-txt">
-        <strong>{{ n.name }}</strong>
-        <span v-if="!n.up" class="muted">无性格修正</span>
+        <strong>{{ gameText(n.name) }}</strong>
+        <span v-if="!n.up" class="muted">{{ translateUi("无性格修正") }}</span>
         <template v-else>
           <span class="sage">{{ upText(n.up) }}</span>
           <span v-if="n.down" class="rose">{{ downText(n.down) }}</span>

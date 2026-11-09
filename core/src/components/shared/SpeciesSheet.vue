@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
@@ -18,17 +21,17 @@ const list = computed(() => POKEDEX.filter((poke) => pokeHit(poke, q.value)).sor
   <div v-back="() => emit('close')" class="overlay" @click.self="emit('close')">
     <section class="sheet stack">
       <div class="row">
-        <h3>添加宝可梦</h3>
-        <button class="btn ghost" type="button" @click="emit('close')">关闭</button>
+        <h3>{{ translateUi("添加宝可梦") }}</h3>
+        <button class="btn ghost" type="button" @click="emit('close')">{{ translateUi("关闭") }}</button>
       </div>
-      <input v-model="q" class="picker-search" placeholder="搜索中文、英文或编号">
+      <input v-model="q" class="picker-search" :placeholder="translateUi('搜索中文、英文或编号')">
       <div class="poke-wall">
         <button v-for="poke in list" :key="poke.id" type="button" class="poke-wall-cell" @click="emit('pick', poke.id)">
           <PokeSprite :id="poke.id" :name="poke.name" />
-          <span>{{ poke.name }}</span>
+          <span>{{ gameText(poke.name) }}</span>
         </button>
       </div>
-      <p v-if="!list.length" class="muted">没有匹配的宝可梦。</p>
+      <p v-if="!list.length" class="muted">{{ translateUi("没有匹配的宝可梦。") }}</p>
     </section>
   </div>
 </template>

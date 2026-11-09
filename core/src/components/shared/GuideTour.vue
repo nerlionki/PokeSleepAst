@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../ui/i18n'
 import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import GuideScroll from '#platform/GuideScroll.vue'
@@ -120,37 +121,37 @@ function navigate(tab: string) {
       <div v-for="(mask, index) in masks" :key="index" class="guide-mask" :style="boxStyle(mask)" aria-hidden="true" />
       <div v-if="layout.target" class="guide-highlight" :style="boxStyle(layout.target)" aria-hidden="true" />
       <div v-if="layout.side !== 'none'" class="guide-arrow" :style="{ left: `${layout.panel.left + layout.arrowLeft - 7}px`, top: `${layout.side === 'bottom' ? layout.panel.top - 7 : layout.panel.top + layout.panel.height - 7}px` }" aria-hidden="true" />
-      <section ref="panel" class="guide-popover" :style="panelStyle" role="dialog" aria-modal="true" aria-label="使用引导" tabindex="-1" @keydown.tab="trapFocus">
+      <section ref="panel" class="guide-popover" :style="panelStyle" role="dialog" aria-modal="true" :aria-label="translateUi('使用引导')" tabindex="-1" @keydown.tab="trapFocus">
         <header class="guide-header">
-          <span v-if="overview" class="guide-progress" aria-live="polite">{{ guide.step + 1 }} / {{ OVERVIEW_STEPS.length }} · {{ current.label }}</span>
-          <button v-else class="guide-link" type="button" @click="guide.openOverview()">功能总览</button>
-          <button class="guide-skip" type="button" aria-label="跳过引导" @click="close">跳过</button>
+          <span v-if="overview" class="guide-progress" aria-live="polite">{{ guide.step + 1 }} / {{ OVERVIEW_STEPS.length }} · {{ translateUi(current.label) }}</span>
+          <button v-else class="guide-link" type="button" @click="guide.openOverview()">{{ translateUi("功能总览") }}</button>
+          <button class="guide-skip" type="button" :aria-label="translateUi('跳过引导')" @click="close">{{ translateUi("跳过") }}</button>
         </header>
         <div class="guide-viewport">
           <GuideScroll :key="overview ? guide.step : page">
             <div id="guide-tour-content" class="guide-content">
               <template v-if="overview">
-                <h2>{{ current.title }}</h2>
+                <h2>{{ translateUi(current.title) }}</h2>
                 <p v-for="paragraph in current.paragraphs" :key="paragraph">{{ paragraph }}</p>
                 <p v-if="'note' in current" class="guide-return-note">{{ current.note }}</p>
               </template>
               <template v-else>
-                <h2>{{ content.title }}</h2>
-                <p v-if="content.intro">{{ content.intro }}</p>
-                <ol v-if="content.steps" class="guide-steps"><li v-for="text in content.steps" :key="text">{{ text }}</li></ol>
-                <section v-for="section in content.sections" :key="section.title" class="guide-section"><h3>{{ section.title }}</h3><p>{{ section.text }}</p></section>
+                <h2>{{ translateUi(content.title) }}</h2>
+                <p v-if="content.intro">{{ translateUi(content.intro) }}</p>
+                <ol v-if="content.steps" class="guide-steps"><li v-for="text in content.steps" :key="text">{{ translateUi(text) }}</li></ol>
+                <section v-for="section in content.sections" :key="section.title" class="guide-section"><h3>{{ translateUi(section.title) }}</h3><p>{{ translateUi(section.text) }}</p></section>
                 <p v-if="content.note" class="guide-note">{{ content.note }}</p>
-                <div v-if="actions.length" class="guide-actions"><button v-for="action in actions" :key="action.tab" type="button" class="guide-button" @click="navigate(action.tab)">{{ action.label }}</button></div>
+                <div v-if="actions.length" class="guide-actions"><button v-for="action in actions" :key="action.tab" type="button" class="guide-button" @click="navigate(action.tab)">{{ translateUi(action.label) }}</button></div>
               </template>
             </div>
           </GuideScroll>
         </div>
         <footer class="guide-footer">
           <template v-if="overview">
-            <button v-if="guide.step > 0" class="guide-button" type="button" @click="guide.step--">上一步</button>
-            <button class="guide-button guide-primary" type="button" @click="next">{{ guide.step === OVERVIEW_STEPS.length - 1 ? '开始使用' : '下一步' }}</button>
+            <button v-if="guide.step > 0" class="guide-button" type="button" @click="guide.step--">{{ translateUi("上一步") }}</button>
+            <button class="guide-button guide-primary" type="button" @click="next">{{ guide.step === OVERVIEW_STEPS.length - 1 ? translateUi("开始使用") : translateUi("下一步") }}</button>
           </template>
-          <button v-else class="guide-button guide-primary" type="button" @click="close">知道了</button>
+          <button v-else class="guide-button guide-primary" type="button" @click="close">{{ translateUi("知道了") }}</button>
         </footer>
       </section>
     </div>
@@ -163,7 +164,7 @@ function navigate(tab: string) {
 .guide-mask { position: absolute; pointer-events: none; background: var(--overlay); }
 .guide-highlight { position: absolute; pointer-events: none; border: 2px solid var(--sage); box-sizing: border-box; border-radius: 8px; }
 .guide-arrow { position: absolute; pointer-events: none; width: 14px; height: 14px; background: var(--card); transform: rotate(45deg); }
-.guide-popover { position: absolute; display: flex; flex-direction: column; min-width: 0; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); background: var(--card); color: var(--text); border-radius: 8px; box-shadow: var(--shadow); box-sizing: border-box; text-align: left; overflow: hidden; font-size: var(--font-14, 14px); }
+.guide-popover { position: absolute; display: flex; flex-direction: column; min-width: 0; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); max-width: calc(100dvw - 32px); max-height: calc(100dvh - 32px); background: var(--card); color: var(--text); border-radius: 8px; box-shadow: var(--shadow); box-sizing: border-box; text-align: left; overflow: hidden; font-size: var(--font-14, 14px); }
 .guide-popover:focus { outline: none; }
 .guide-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 4px 16px; min-height: 44px; box-sizing: border-box; }
 .guide-progress { color: var(--muted); font-size: var(--font-12, 12px); }

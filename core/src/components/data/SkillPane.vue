@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
@@ -52,16 +53,16 @@ function toggle(id: number) {
 <template>
   <div class="stack">
     <div class="seg">
-      <button type="button" :class="{ on: part === 'main' }" @click="part = 'main'">主技能</button>
-      <button type="button" :class="{ on: part === 'sub' }" @click="part = 'sub'">副技能</button>
+      <button type="button" :class="{ on: part === 'main' }" @click="part = 'main'">{{ translateUi("主技能") }}</button>
+      <button type="button" :class="{ on: part === 'sub' }" @click="part = 'sub'">{{ translateUi("副技能") }}</button>
     </div>
 
     <template v-if="part === 'main'">
-      <p class="muted">{{ shown }} 个主技能</p>
+      <p class="muted">{{ shown }} {{ translateUi("个主技能") }}</p>
       <section v-for="group in groups" :key="group.name" class="stack">
-        <h3 class="skill-group">{{ group.name }}</h3>
+        <h3 class="skill-group">{{ translateUi(group.name) }}</h3>
         <article v-for="skill in group.skills" :key="skill.id" class="acc">
-          <DataRow :title="skill.name" :subtitle="`最高 Lv.${skill.maxLevel}`" @click="toggle(skill.id)">
+          <DataRow :title="skill.name" :subtitle="translateUi('最高 Lv.{arg1}', { arg1: String(skill.maxLevel) })" @click="toggle(skill.id)">
             <template #lead>
               <MainSkillIcon :id="skill.id" :name="skill.name" decorative />
             </template>
@@ -72,8 +73,8 @@ function toggle(id: number) {
           <div v-if="open === skill.id" class="acc-body plain">
             <p>{{ skill.summary }}</p>
             <SkillLevels v-if="skill.levels.length" :columns="skill.columns" :levels="skill.levels" />
-            <p v-else class="muted">这个技能没有逐级数值。</p>
-            <button class="btn ghost" type="button" @click="detailId = skill.id">查看说明</button>
+            <p v-else class="muted">{{ translateUi("这个技能没有逐级数值。") }}</p>
+            <button class="btn ghost" type="button" @click="detailId = skill.id">{{ translateUi("查看说明") }}</button>
           </div>
         </article>
       </section>
@@ -82,27 +83,27 @@ function toggle(id: number) {
     <div v-else class="sub-list">
       <article v-for="item in subs" :key="item.id" class="sub-line">
         <header>
-          <div class="sub-name"><SubskillIcon :id="item.id" decorative /><strong>{{ item.name }}</strong></div>
+          <div class="sub-name"><SubskillIcon :id="item.id" decorative /><strong>{{ gameText(item.name) }}</strong></div>
           <span class="chip" :class="`rarity-${item.rarity}`">{{ RARITY_LABEL[item.rarity as keyof typeof RARITY_LABEL] }}</span>
         </header>
         <p>{{ SUBSKILL_NOTES[item.id] ?? '' }}</p>
       </article>
-      <p v-if="!subs.length" class="muted">没有匹配的副技能。</p>
+      <p v-if="!subs.length" class="muted">{{ translateUi("没有匹配的副技能。") }}</p>
     </div>
 
     <DrawerSheet v-if="detail" :title="detail.name" @close="detailId = null">
       <p>{{ detail.detail }}</p>
       <SkillLevels v-if="detail.levels.length" :columns="detail.columns" :levels="detail.levels" />
       <template v-for="table in detail.extra ?? []" :key="table.title">
-        <h3>{{ table.title }}</h3>
+        <h3>{{ translateUi(table.title) }}</h3>
         <SkillLevels :columns="table.columns" :levels="table.levels" />
       </template>
-      <h3>会这个技能的宝可梦</h3>
-      <p v-if="!holders.length" class="muted">图鉴里没有对应名字。</p>
+      <h3>{{ translateUi("会这个技能的宝可梦") }}</h3>
+      <p v-if="!holders.length" class="muted">{{ translateUi("图鉴里没有对应名字。") }}</p>
       <div v-else class="poke-wall">
         <div v-for="poke in holders" :key="poke.id" class="poke-wall-cell">
           <PokeSprite :id="poke.id" :name="poke.name" />
-          <span>{{ poke.name }}</span>
+          <span>{{ gameText(poke.name) }}</span>
         </div>
       </div>
     </DrawerSheet>

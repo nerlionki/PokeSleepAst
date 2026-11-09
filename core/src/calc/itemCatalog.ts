@@ -5,6 +5,10 @@ export interface GameItem {
   name: string
   category: string
   imageFile: string
+  /** 常驻商店按单件折算的钻石售价；缺省表示无单买价资料。 */
+  diamondPrice?: number
+  diamondPurchaseQuantity?: number
+  aliases?: string[]
   acquisition?: string
   additionalAcquisition?: string
   maxHeld?: number

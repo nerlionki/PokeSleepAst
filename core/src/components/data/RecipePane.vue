@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import { INGREDIENT_CATALOG } from '../../calc/ingredientCatalog'
 import { RECIPE_CATALOG, type RecipeDisplayRow } from '../../calc/recipeCatalog'
 import clientDefaults from '../../data/client-defaults.resource'
@@ -47,37 +50,37 @@ function resetFilters() { ingredients.value = [] }
         type="button"
         :class="{ on: category === c.id }"
         @click="category = c.id"
-      >{{ c.label }}</button>
+      >{{ translateUi(c.label) }}</button>
     </div>
     <div class="picker-filters">
-      <button type="button" :aria-expanded="showIngredients" @click="showIngredients = !showIngredients">{{ showIngredients ? '收起食材' : '展开食材' }}{{ ingredients.length ? `（已选 ${ingredients.length}）` : '' }}</button>
-      <button type="button" class="ghost" @click="resetFilters">重置筛选</button>
+      <button type="button" :aria-expanded="showIngredients" @click="showIngredients = !showIngredients">{{ showIngredients ? translateUi("收起食材") : translateUi("展开食材") }}{{ ingredients.length ? translateUi("（已选 {arg1}）", { arg1: String(ingredients.length) }) : '' }}</button>
+      <button type="button" class="ghost" @click="resetFilters">{{ translateUi("重置筛选") }}</button>
     </div>
     <section v-if="showIngredients" class="stack">
-      <p class="muted">包含任一所选食材</p>
+      <p class="muted">{{ translateUi("包含任一所选食材") }}</p>
       <div class="picker-opts">
-        <button type="button" :class="{ on: !ingredients.length }" @click="ingredients = []">全部</button>
-        <button v-for="ingredient in ingredientOptions" :key="ingredient.name" type="button" :class="{ on: ingredients.includes(ingredient.name) }" :aria-pressed="ingredients.includes(ingredient.name)" @click="toggleChoice(ingredients, ingredient.name, ingredientOptions.map(item => item.name))"><IngredientIcon :id="ingredient.imageId" :name="ingredient.name" small />{{ ingredient.name }}</button>
+        <button type="button" :class="{ on: !ingredients.length }" @click="ingredients = []">{{ translateUi("全部") }}</button>
+        <button v-for="ingredient in ingredientOptions" :key="ingredient.name" type="button" :class="{ on: ingredients.includes(ingredient.name) }" :aria-pressed="ingredients.includes(ingredient.name)" @click="toggleChoice(ingredients, ingredient.name, ingredientOptions.map(item => item.name))"><IngredientIcon :id="ingredient.imageId" :name="ingredient.name" small />{{ gameText(ingredient.name) }}</button>
       </div>
     </section>
     <div class="recipe-tools">
       <label>
-        排序
+        {{ translateUi("排序") }}
         <select v-model="sort">
-          <option value="energy">基础能量</option>
-          <option value="pot">锅容量</option>
+          <option value="energy">{{ translateUi("基础能量") }}</option>
+          <option value="pot">{{ translateUi("锅容量") }}</option>
         </select>
       </label>
       <label>
-        顺序
+        {{ translateUi("顺序") }}
         <select v-model="ascending">
-          <option :value="false">从高到低</option>
-          <option :value="true">从低到高</option>
+          <option :value="false">{{ translateUi("从高到低") }}</option>
+          <option :value="true">{{ translateUi("从低到高") }}</option>
         </select>
       </label>
     </div>
-    <p class="muted">{{ list.length }} 道</p>
-    <p v-if="!list.length" class="muted">暂无符合条件的食谱，可调整食材筛选。</p>
+    <p class="muted">{{ list.length }} {{ translateUi("道") }}</p>
+    <p v-if="!list.length" class="muted">{{ translateUi("暂无符合条件的食谱，可调整食材筛选。") }}</p>
     <div class="meal-grid">
       <RecipeCard
         v-for="r in list"

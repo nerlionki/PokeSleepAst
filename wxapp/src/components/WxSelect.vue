@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../../core/src/ui/i18n'
 import { computed, useSlots, type VNode } from 'vue'
 const props = defineProps<{ modelValue?: unknown; value?: unknown; modelModifiers?: { number?: boolean }; disabled?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: unknown]; change: [event: { target: { value: unknown } }] }>()
@@ -20,4 +21,4 @@ function change(event: { detail: { value: number | string } }) {
   emit('update:modelValue', value); emit('change', { target: { value } })
 }
 </script>
-<template><picker @touchstart.stop @touchend.stop @touchcancel.stop class="wx-control" :range="items" range-key="label" :value="selected" :disabled="disabled" @change="change"><view class="wx-select">{{ items[selected]?.label ?? '请选择' }} ▾</view></picker></template>
+<template><picker @touchstart.stop @touchend.stop @touchcancel.stop class="wx-control" :range="items" range-key="label" :value="selected" :disabled="disabled" @change="change"><view class="wx-select">{{ items[selected]?.label ?? translateUi("请选择") }} ▾</view></picker></template>

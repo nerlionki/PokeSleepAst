@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.WhistlePane
 
@@ -36,55 +39,55 @@ const interval = (seconds: number) => `${Math.floor(seconds / 60)}分${seconds %
 <template>
   <div class="stack">
     <article class="card stack">
-      <h3>吹哨规划</h3>
-      <p class="muted">从 Box 自动挑选树果收益最高的队伍。仅树果计入目标能量，食材单独列出；调整输入后自动更新。</p>
+      <h3>{{ translateUi("吹哨规划") }}</h3>
+      <p class="muted">{{ translateUi("从 Box 自动挑选树果收益最高的队伍。仅树果计入目标能量，食材单独列出；调整输入后自动更新。") }}</p>
       <p>{{ environment }}</p>
-      <p class="muted">喜好树果：{{ settings.berries.join('、') || '未设置' }}</p>
+      <p class="muted">{{ translateUi("喜好树果：") }}{{ settings.berries.join('、') || translateUi("未设置") }}</p>
       <div class="row">
         <div class="field">
-          <label for="whistle-current">当前卡比兽能量</label>
+          <label for="whistle-current">{{ translateUi("当前卡比兽能量") }}</label>
           <input id="whistle-current" v-model.number="plan.whistle.currentEnergy" type="number" :min="INPUT_LIMITS.whistle_current.min" :step="INPUT_LIMITS.whistle_current.step" inputmode="numeric">
         </div>
         <div class="field">
-          <label for="whistle-target">目标卡比兽能量</label>
+          <label for="whistle-target">{{ translateUi("目标卡比兽能量") }}</label>
           <input id="whistle-target" v-model.number="plan.whistle.targetEnergy" type="number" :min="INPUT_LIMITS.whistle_target.min" :step="INPUT_LIMITS.whistle_target.step" inputmode="numeric">
         </div>
       </div>
-      <p class="muted">每个哨子按满活力的 3 小时帮忙产量计算，计入队伍帮手奖励。露营券和活动的生产加成不生效，不触发主技能；EX 喜好树果的 2.4 倍能量加成仍生效。</p>
+      <p class="muted">{{ translateUi("每个哨子按满活力的 3 小时帮忙产量计算，计入队伍帮手奖励。露营券和活动的生产加成不生效，不触发主技能；EX 喜好树果的 2.4 倍能量加成仍生效。") }}</p>
     </article>
-    <p v-if="calculation.error" class="amber" role="alert">{{ calculation.error }}</p>
+    <p v-if="calculation.error" class="amber" role="alert">{{ translateUi(calculation.error) }}</p>
     <template v-if="result">
       <article class="card stack" aria-live="polite">
-        <h3>需要 {{ result.whistles == null ? '—' : number(result.whistles) }} 个哨子</h3>
-        <p v-if="result.gap === 0">当前能量已达到目标，无需吹哨。</p>
-        <p v-else-if="result.whistles == null" class="amber">没有可产生树果能量的有效队伍，请先在 Box 添加并确认宝可梦资料。</p>
-        <p v-else>还差 {{ number(result.gap) }} 能量 · 吹哨后预计达到 {{ number(result.finalEnergy!) }}</p>
-        <p>每哨树果能量 <strong>{{ number(result.berryEnergy) }}</strong> · 食材 {{ number(foodCount) }} 个</p>
-        <p class="muted">同一队伍的吹哨产物固定，按期望值四舍五入计算，无需随机模拟。结果使用 Box 当前等级、性格、副技能、食材配置和睡饱饱勋章。</p>
+        <h3>{{ translateUi("需要") }} {{ result.whistles == null ? '—' : number(result.whistles) }} {{ translateUi("个哨子") }}</h3>
+        <p v-if="result.gap === 0">{{ translateUi("当前能量已达到目标，无需吹哨。") }}</p>
+        <p v-else-if="result.whistles == null" class="amber">{{ translateUi("没有可产生树果能量的有效队伍，请先在 Box 添加并确认宝可梦资料。") }}</p>
+        <p v-else>{{ translateUi("还差") }} {{ number(result.gap) }} {{ translateUi("能量 · 吹哨后预计达到") }} {{ number(result.finalEnergy!) }}</p>
+        <p>{{ translateUi("每哨树果能量") }} <strong>{{ number(result.berryEnergy) }}</strong> {{ translateUi("· 食材") }} {{ number(foodCount) }} {{ translateUi("个") }}</p>
+        <p class="muted">{{ translateUi("同一队伍的吹哨产物固定，按期望值四舍五入计算，无需随机模拟。结果使用 Box 当前等级、性格、副技能、食材配置和睡饱饱勋章。") }}</p>
       </article>
       <article v-if="result.members.length" class="card stack">
-        <h3>推荐队伍 · {{ result.members.length }} 只</h3>
-        <p class="muted">帮手奖励 {{ result.helpingBonus }} 层（含全局额外设置）；已比较 {{ result.teamsCompared }} 种可行的帮手奖励人数配置。</p>
-        <p v-if="result.members.length < 5" class="amber">考虑有效个体与同队限制，按收益最高的合法 {{ result.members.length }} 只队伍计算。</p>
+        <h3>{{ translateUi("推荐队伍 ·") }} {{ result.members.length }} {{ translateUi("只") }}</h3>
+        <p class="muted">{{ translateUi("帮手奖励") }} {{ result.helpingBonus }} {{ translateUi("层（含全局额外设置）；已比较") }} {{ result.teamsCompared }} {{ translateUi("种可行的帮手奖励人数配置。") }}</p>
+        <p v-if="result.members.length < 5" class="amber">{{ translateUi("考虑有效个体与同队限制，按收益最高的合法") }} {{ result.members.length }} {{ translateUi("只队伍计算。") }}</p>
         <div v-for="member in result.members" :key="member.pokemon.uid" class="whistle-member">
-          <PokeSprite :id="member.pokemon.pokeId" :name="boxLabel(member.pokemon)" :shiny="member.pokemon.shiny" />
+          <PokeSprite :id="member.pokemon.pokeId" :name="boxLabel(member.pokemon)" :shiny="member.pokemon.shiny" :ribbon-hours="member.pokemon.tune?.ribbonHours" />
           <div class="stack whistle-description">
-            <p><strong>{{ boxLabel(member.pokemon) }}</strong> · Lv.{{ member.pokemon.level }} <span v-if="member.helpingBonus" class="chip">帮手奖励</span></p>
-            <p>{{ member.berry }} {{ member.berries }} 颗 · {{ number(member.berryEnergy) }} 能量／哨</p>
-            <p class="muted">{{ member.pokemon.nature }} · 队伍帮忙间隔 {{ interval(member.interval) }} · 食材率 {{ number(member.ingredientRate * 100) }}%</p>
+            <p><strong>{{ boxLabel(member.pokemon) }}</strong> · Lv.{{ member.pokemon.level }} <span v-if="member.helpingBonus" class="chip">{{ translateUi("帮手奖励") }}</span></p>
+            <p>{{ gameText(member.berry) }} {{ member.berries }} {{ translateUi("颗 ·") }} {{ number(member.berryEnergy) }} {{ translateUi("能量／哨") }}</p>
+            <p class="muted">{{ member.pokemon.nature }} {{ translateUi("· 队伍帮忙间隔") }} {{ interval(member.interval) }} {{ translateUi("· 食材率") }} {{ number(member.ingredientRate * 100) }}%</p>
           </div>
         </div>
       </article>
       <article v-if="foods.length" class="card stack">
-        <h3>附带食材</h3>
+        <h3>{{ translateUi("附带食材") }}</h3>
         <div v-for="food in foods" :key="food.name" class="row">
           <IngredientIcon :id="food.id" :name="food.name" small />
-          <span>{{ food.name }} · 每哨 {{ food.amount }} 个<span v-if="result.whistles != null"> · 目标所需合计 {{ number(food.total) }} 个</span></span>
+          <span>{{ gameText(food.name) }} {{ translateUi("· 每哨") }} {{ food.amount }} {{ translateUi("个") }}<span v-if="result.whistles != null"> {{ translateUi("· 目标所需合计") }} {{ number(food.total) }} {{ translateUi("个") }}</span></span>
         </div>
-        <p class="muted">食材不折算为卡比兽能量。请预留食材背包空间，并领完本次哨子的产物后再吹下一次。</p>
+        <p class="muted">{{ translateUi("食材不折算为卡比兽能量。请预留食材背包空间，并领完本次哨子的产物后再吹下一次。") }}</p>
       </article>
       <article v-if="result.excluded.length" class="card stack">
-        <h3>未参与计算 · {{ result.excluded.length }} 只</h3>
+        <h3>{{ translateUi("未参与计算 ·") }} {{ result.excluded.length }} {{ translateUi("只") }}</h3>
         <p v-for="(item, index) in result.excluded" :key="index" class="muted">{{ item.name }}：{{ item.reason }}</p>
       </article>
     </template>

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import { computed, onMounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import { virtualRowHeight, virtualViewportHeight, watchVirtualViewport } from '#platform/virtualGrid'
@@ -22,12 +25,12 @@ function scroll(event: Event | { detail: { scrollTop: number } }) {
 watch(() => props.items, () => { scrollTop.value = 0; revision.value++ })
 </script>
 <template>
-  <div :key="revision" class="virtual-dex" tabindex="0" aria-label="宝可梦图鉴，滚动查看更多" @scroll="scroll">
+  <div :key="revision" class="virtual-dex" tabindex="0" :aria-label="translateUi('宝可梦图鉴，滚动查看更多')" @scroll="scroll">
     <div :style="{ height: `${start * ROW_HEIGHT}px` }" aria-hidden="true"></div>
     <div class="poke-wall virtual-dex-grid">
       <button v-for="p in visible" :key="p.id + p.name" type="button" class="poke-wall-cell" @click="emit('pick', p.id)">
         <PokeSprite :id="p.id" :name="p.name" />
-        <span>{{ p.name }}</span>
+        <span>{{ gameText(p.name) }}</span>
       </button>
     </div>
     <div :style="{ height: `${bottom}px` }" aria-hidden="true"></div>

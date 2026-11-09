@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -26,9 +27,9 @@ const hue = computed(() => {
 </script>
 
 <template>
-  <FallbackImage class="berry-icon" :class="{ lg: large, sm: small }" :src="random ? localImage('berry/0.webp') : berryIconUrl(name)" :alt="random ? '随机喜好树果' : name" :reset-key="random ? 'random' : name">
+  <FallbackImage class="berry-icon" :class="{ lg: large, sm: small }" :src="random ? localImage('berry/0.webp') : berryIconUrl(name)" :alt="random ? translateUi('随机喜好树果') : gameText(name)" :reset-key="random ? 'random' : name">
     <template #fallback>
-      <span class="berry-fallback" :class="{ lg: large, sm: small }" :style="{ background: `hsl(${hue} 55% 42%)` }" :title="random ? '随机喜好树果' : name">{{ random ? '?' : name.slice(0, 1) }}</span>
+      <span class="berry-fallback" :class="{ lg: large, sm: small }" :style="{ background: `hsl(${hue} 55% 42%)` }" :title="random ? translateUi('随机喜好树果') : gameText(name)">{{ random ? '?' : gameText(name).slice(0, 1) }}</span>
     </template>
   </FallbackImage>
 </template>

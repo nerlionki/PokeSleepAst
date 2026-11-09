@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import { ingredientEnergyValue } from '../../calc/activityIngredients'
 import { INGREDIENT_CATALOG } from '../../calc/ingredientCatalog'
 import clientDefaults from '../../data/client-defaults.resource'
@@ -150,26 +153,26 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
         :class="{ on: showIndividualInfo }"
         type="button"
         :aria-expanded="showIndividualInfo"
-        :aria-label="showIndividualInfo ? '收起个体信息' : '查看个体信息详情'"
-        :title="showIndividualInfo ? '收起个体信息' : '查看个体信息详情'"
+        :aria-label="showIndividualInfo ? translateUi('收起个体信息') : translateUi('查看个体信息详情')"
+        :title="showIndividualInfo ? translateUi('收起个体信息') : translateUi('查看个体信息详情')"
         @click="showIndividualInfo = !showIndividualInfo"
-      >{{ showIndividualInfo ? '收起' : '详情' }}</button>
+      >{{ showIndividualInfo ? translateUi("收起") : translateUi("详情") }}</button>
     </header>
-    <PokeSprite :id="poke.id" :name="poke.name" large />
+    <PokeSprite :id="poke.id" :name="poke.name" :ribbon-hours="props.ribbonHours" large />
     <div v-if="!showIndividualInfo" class="member-summary">
       <p v-if="poke.specialty === '树果型' || poke.specialty === '全部'" class="member-line berry">
-        <span><BerryIcon :name="poke.berry" small /> 树果产量</span>
-        <b>{{ result.berries.toFixed(2) }} 颗</b>
+        <span><BerryIcon :name="poke.berry" small /> {{ translateUi("树果产量") }}</span>
+        <b>{{ result.berries.toFixed(2) }} {{ translateUi("颗") }}</b>
       </p>
       <template v-if="poke.specialty === '食材型' || poke.specialty === '全部'">
         <p v-for="row in ingRows" :key="row.name" class="member-line ing">
-          <span><IngredientIcon :id="row.id" :name="row.name" small /> {{ row.name }}</span>
-          <b>{{ row.count.toFixed(2) }} 个</b>
+          <span><IngredientIcon :id="row.id" :name="row.name" small /> {{ gameText(row.name) }}</span>
+          <b>{{ row.count.toFixed(2) }} {{ translateUi("个") }}</b>
         </p>
-        <p v-if="!ingRows.length" class="member-line ing"><span>食材产量</span><b>0.00 个</b></p>
+        <p v-if="!ingRows.length" class="member-line ing"><span>{{ translateUi("食材产量") }}</span><b>{{ translateUi("0.00 个") }}</b></p>
       </template>
       <p v-if="poke.specialty === '技能型' || poke.specialty === '全部'" class="member-line quiet">
-        <span>技能触发</span><b>{{ result.skillProcs.toFixed(2) }} 次</b>
+        <span>{{ translateUi("技能触发") }}</span><b>{{ result.skillProcs.toFixed(2) }} {{ translateUi("次") }}</b>
       </p>
     </div>
     <template v-else>
@@ -188,12 +191,12 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       />
     </div>
     <p class="member-nature">
-      {{ props.nature }} <span v-if="natureMinted">净白薄荷 · 无加减成</span>
+      {{ props.nature }} <span v-if="natureMinted">{{ translateUi("净白薄荷 · 无加减成") }}</span>
       <span v-if="nature.up">{{ STAT[nature.up] }}↑</span>
       <span v-if="nature.down">{{ STAT[nature.down] }}↓</span>
     </p>
-    <p class="member-total">{{ unknownFoodEnergy ? '还未公布' : Math.round(totalEnergy).toLocaleString('zh-CN') }}</p>
-    <div v-if="!unknownFoodEnergy" class="mix-bar" :title="`树果 ${berryShare}% · ${result.cooking ? '料理' : '食材'} ${ingShare}% · 技能 ${skillShare}%`">
+    <p class="member-total">{{ unknownFoodEnergy ? translateUi("还未公布") : Math.round(totalEnergy).toLocaleString('zh-CN') }}</p>
+    <div v-if="!unknownFoodEnergy" class="mix-bar" :title="translateUi('树果 {arg1}% · {arg2} {arg3}% · 技能 {arg4}%', { arg1: String(berryShare), arg2: String(result.cooking ? '料理' : '食材'), arg3: String(ingShare), arg4: String(skillShare) })">
       <i class="berry" :style="{ width: `${berryShare}%` }" />
       <i class="ing" :style="{ width: `${ingShare}%` }" />
       <i class="skill" :style="{ width: `${skillShare}%` }" />
@@ -207,40 +210,40 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
       <span>{{ helpClock(seconds) }}</span>
       <b>{{ seconds ? (86400 / seconds).toFixed(2) : '0.00' }}</b>
     </p>
-    <p class="member-speed"><span>白天</span><b>{{ bandFactor(false) }}x</b></p>
-    <p class="member-speed"><span>睡眠</span><b>{{ bandFactor(true) }}x</b></p>
+    <p class="member-speed"><span>{{ translateUi("白天") }}</span><b>{{ bandFactor(false) }}x</b></p>
+    <p class="member-speed"><span>{{ translateUi("睡眠") }}</span><b>{{ bandFactor(true) }}x</b></p>
     <p class="member-line berry">
-      <span><BerryIcon :name="poke.berry" small /> 树果 {{ result.berries.toFixed(2) }}</span>
+      <span><BerryIcon :name="poke.berry" small /> {{ translateUi("树果") }} {{ result.berries.toFixed(2) }}</span>
       <b>{{ Math.round(result.berryEnergy).toLocaleString('zh-CN') }}</b>
     </p>
     <p class="member-line ing">
-      <span>食材 {{ (rate(poke.ingredientRate, 'ingredient', 'ingS', 'ingM') * 100).toFixed(1) }}%</span>
-      <b>{{ unknownFoodEnergy ? '还未公布' : Math.round(ingEnergy).toLocaleString('zh-CN') }}</b>
+      <span>{{ translateUi("食材") }} {{ (rate(poke.ingredientRate, 'ingredient', 'ingS', 'ingM') * 100).toFixed(1) }}%</span>
+      <b>{{ unknownFoodEnergy ? translateUi("还未公布") : Math.round(ingEnergy).toLocaleString('zh-CN') }}</b>
     </p>
-    <p v-if="result.cooking" class="member-line ing"><span>实际料理期望</span><b>{{ Math.round(result.cooking.energy).toLocaleString('zh-CN') }}</b></p>
+    <p v-if="result.cooking" class="member-line ing"><span>{{ translateUi("实际料理期望") }}</span><b>{{ Math.round(result.cooking.energy).toLocaleString('zh-CN') }}</b></p>
     <p v-for="row in ingRows" :key="row.name" class="member-line quiet">
       <span><IngredientIcon :id="row.id" :name="row.name" small /> {{ row.count.toFixed(2) }}</span>
-      <b>{{ row.energy == null ? '还未公布' : Math.round(row.energy).toLocaleString('zh-CN') }}</b>
+      <b>{{ row.energy == null ? translateUi("还未公布") : Math.round(row.energy).toLocaleString('zh-CN') }}</b>
     </p>
     <p class="member-line skill">
-      <span><MainSkillIcon :name="poke.mainSkill" decorative /> 技能 LV{{ skillLv }} {{ poke.mainSkill }} {{ (Math.min(1, rate(poke.skillRate, 'skill', 'skillS', 'skillM') * exEffects(settings, poke.berry).skillMultiplier) * 100).toFixed(1) }}%</span>
+      <span><MainSkillIcon :name="poke.mainSkill" decorative /> {{ translateUi("技能 LV") }}{{ skillLv }} {{ poke.mainSkill }} {{ (Math.min(1, rate(poke.skillRate, 'skill', 'skillS', 'skillM') * exEffects(settings, poke.berry).skillMultiplier) * 100).toFixed(1) }}%</span>
     </p>
-    <p v-if="ownedSelectionSkill(pokeId)" class="member-line quiet"><span>{{ ownedSelectionSkill(pokeId)?.name }} Lv{{ skillLevel }} · 所选效果 Lv{{ skillLv }}</span></p>
+    <p v-if="ownedSelectionSkill(pokeId)" class="member-line quiet"><span>{{ gameText(ownedSelectionSkill(pokeId)?.name) }} Lv{{ skillLevel }} {{ translateUi("· 所选效果 Lv") }}{{ skillLv }}</span></p>
     <p class="member-line quiet">
-      <span>{{ result.skillProcs.toFixed(2) }} 次</span>
+      <span>{{ result.skillProcs.toFixed(2) }} {{ translateUi("次") }}</span>
       <b>{{ Math.round(result.skillEnergy).toLocaleString('zh-CN') }}</b>
     </p>
     <p class="member-line quiet">
-      <span>持有 {{ carry }}</span>
-      <b>满包 {{ result.sneaky }}</b>
+      <span>{{ translateUi("持有") }} {{ carry }}</span>
+      <b>{{ translateUi("满包") }} {{ result.sneaky }}</b>
     </p>
     <p v-if="result.rewards" class="member-line quiet">
-      <span>期望奖励：糖果 {{ result.rewards.candies.toFixed(2) }} · 梦之碎片 {{ result.rewards.dreamShards.toFixed(2) }}<template v-for="(count, id) in result.rewards.items ?? { [ITEM_ROLES.berryJuice]: result.rewards.berryJuice }" :key="id"> · {{ itemById(Number(id))?.name ?? `道具 ${id}` }} {{ count.toFixed(2) }}</template></span>
+      <span>{{ translateUi("期望奖励：糖果") }} {{ result.rewards.candies.toFixed(2) }} {{ translateUi("· 梦之碎片") }} {{ result.rewards.dreamShards.toFixed(2) }}<template v-for="(count, id) in result.rewards.items ?? { [ITEM_ROLES.berryJuice]: result.rewards.berryJuice }" :key="id"> · {{ itemById(Number(id))?.name ?? translateUi("道具 {arg1}", { arg1: String(id) }) }} {{ count.toFixed(2) }}</template></span>
     </p>
-    <p v-if="result.cooking" class="member-line quiet"><span>剩余食材：{{ Object.entries(result.cooking.remain).filter(([, count]) => count > 0).map(([name, count]) => `${name} ×${count.toFixed(2)}`).join('、') || '无' }}</span></p>
+    <p v-if="result.cooking" class="member-line quiet"><span>{{ translateUi("剩余食材：") }}{{ Object.entries(result.cooking.remain).filter(([, count]) => count > 0).map(([name, count]) => `${name} ×${count.toFixed(2)}`).join('、') || translateUi("无") }}</span></p>
     <template v-if="result.cooking && result.skillIngredients">
-      <p class="member-line ing"><span>技能食材原始能量（不计总分）</span><b>{{ Math.round(skillFoodEnergy).toLocaleString('zh-CN') }}</b></p>
-      <p v-for="(count, name) in result.skillIngredients" :key="name" class="member-line quiet"><span>{{ name }}</span><b>{{ count.toFixed(2) }}</b></p>
+      <p class="member-line ing"><span>{{ translateUi("技能食材原始能量（不计总分）") }}</span><b>{{ Math.round(skillFoodEnergy).toLocaleString('zh-CN') }}</b></p>
+      <p v-for="(count, name) in result.skillIngredients" :key="name" class="member-line quiet"><span>{{ gameText(name) }}</span><b>{{ count.toFixed(2) }}</b></p>
     </template>
     </template>
   </article>

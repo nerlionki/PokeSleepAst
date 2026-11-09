@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../ui/i18n'
 import { computed, ref } from 'vue'
 import { calculateSp, defaultSpInput, spInputFromMember } from '../../calc/sp'
 import { defaultTune, type MemberDraft } from '../../calc/member'
@@ -29,13 +30,13 @@ function load() {
 </script>
 <template>
   <div class="stack">
-    <h3>SP 计算</h3>
-    <p class="muted">可自由编辑个体，也可从 Box 载入后继续编辑，不会修改 Box 中的原个体。SP 不计营地、活动或队友加成。</p>
-    <button class="btn ghost" type="button" @click="choose(input.pokeId)">新建个体</button>
-    <label class="field"><span>从 Box 载入副本</span><select v-model="selected" @change="load"><option value="">手动设置</option><option v-for="member in box.pokemon" :key="member.uid" :value="member.uid">{{ boxLabel(member) }} · Lv.{{ member.level }}</option></select></label>
+    <h3>{{ translateUi("SP 计算") }}</h3>
+    <p class="muted">{{ translateUi("可自由编辑个体，也可从 Box 载入后继续编辑，不会修改 Box 中的原个体。SP 不计营地、活动或队友加成。") }}</p>
+    <button class="btn ghost" type="button" @click="choose(input.pokeId)">{{ translateUi("新建个体") }}</button>
+    <label class="field"><span>{{ translateUi("从 Box 载入副本") }}</span><select v-model="selected" @change="load"><option value="">{{ translateUi("手动设置") }}</option><option v-for="member in box.pokemon" :key="member.uid" :value="member.uid">{{ boxLabel(member) }} · Lv.{{ member.level }}</option></select></label>
     <PokePicker :model-value="input.pokeId" @update:model-value="choose" />
     <SpResult v-if="calculation.result" :result="calculation.result" />
-    <p v-if="calculation.error" class="amber" role="alert">{{ calculation.error }}</p>
+    <p v-if="calculation.error" class="amber" role="alert">{{ translateUi(calculation.error) }}</p>
     <MemberEditor v-model="input" :ignore="SP_EDITOR_IGNORE" />
   </div>
 </template>

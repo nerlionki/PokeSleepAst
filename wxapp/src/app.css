@@ -106,7 +106,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   position: sticky;
   top: 0;
   z-index: 5;
-  background: linear-gradient(180deg, var(--ink) 70%, transparent);
+  background: var(--ink);
 }
 
 .brand {
@@ -114,7 +114,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   flex-direction: column;
   gap: 2px;
 }
-.brand small { color: var(--muted); letter-spacing: 0.14em; font-size: var(--font-10); }
+.brand small { color: var(--muted); letter-spacing: 0.08em; font-size: max(11px, var(--font-11)); }
 .gear {
   width: 42px;
   height: 42px;
@@ -197,7 +197,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
 }
 .seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.plan-tabs button { white-space: pre-line; }
+.seg.plan-tabs button { min-height: 44px; white-space: pre-line; }
 .seg button {
   width: 100%;
   margin: 0;
@@ -299,7 +299,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   line-height: 1;
   color: var(--text);
 }
-.drawer-page { overflow-x: clip; overflow-y: auto; padding-bottom: 24px; }
+.drawer-body { overflow-x: clip; overflow-y: auto; padding-bottom: 24px; }
 
 .sprite {
   width: 56px;
@@ -359,7 +359,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   line-height: 1.2;
   white-space: nowrap;
 }
-.picker-page {
+.picker-body {
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
@@ -568,7 +568,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
 .acc {
   border-bottom: 1px solid rgba(var(--line-rgb), 0.55);
 }
-.acc-page { padding: 0 2px 12px 52px; display: grid; gap: 4px; }
+.acc-body { padding: 0 2px 12px 52px; display: grid; gap: 4px; }
 .ing-tops { display: flex; gap: 2px; }
 .ing-tops .sprite { width: 32px; height: 32px; }
 .ing-top-line { display: flex; align-items: center; gap: 8px; margin: 0; }
@@ -615,7 +615,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   box-shadow: 0 0 0 1px rgba(var(--line-rgb), 0.35);
 }
 .expect-line b { font-variant-numeric: tabular-nums; color: var(--text); }
-.acc-page.plain { padding-left: 2px; }
+.acc-body.plain { padding-left: 2px; }
 .berry-icon, .berry-fallback {
   width: 40px;
   height: 40px;
@@ -1045,4 +1045,4 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 input, textarea { caret-color: var(--sage); }
 ::selection { color: var(--on-accent); background: var(--amber); }
 
-page{padding:0;box-sizing:border-box;font-size:var(--font-16);min-height:100vh;background:var(--ink);background-image:none} view,text,button,input,picker,textarea{box-sizing:border-box} .page{width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding-left:16px;padding-right:16px} .wx-control{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:var(--font-16);color:var(--text)} .wx-input{height:44px;line-height:24px;padding:10px 12px} .wx-select{padding:10px 12px;min-height:44px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere} .wx-inline{display:inline-flex;align-items:center;gap:4px;min-width:0} .wx-sub-ico{background:transparent;mask-image:none;-webkit-mask-image:none} .wx-textarea{padding:10px 12px} image{display:inline-block} button{line-height:1.5;margin:0} textarea{width:100%;min-height:100px} .source-link{color:var(--sage);margin-right:12px} .wx-settings{margin-bottom:14px}
+page{padding:0;box-sizing:border-box;font-size:var(--font-16);min-height:100vh;background:var(--ink);background-image:none} view,text,button,input,picker,textarea{box-sizing:border-box} .page{width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding-left:16px;padding-right:16px;padding-bottom:12px} .wx-control{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:var(--font-16);color:var(--text)} .wx-input{height:44px;line-height:24px;padding:10px 12px} .wx-select{padding:10px 12px;min-height:44px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere} .wx-inline{display:inline-flex;align-items:center;gap:4px;min-width:0} .wx-sub-ico{background:transparent;mask-image:none;-webkit-mask-image:none} .wx-textarea{padding:10px 12px} image{display:inline-block} button{line-height:1.5;margin:0} textarea{width:100%;min-height:100px} .source-link{color:var(--sage);margin-right:12px} .wx-settings{margin-bottom:14px}

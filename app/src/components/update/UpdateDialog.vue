@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../../../core/src/ui/i18n'
 import { computed, onMounted, onUnmounted, watch, nextTick, shallowRef } from 'vue'
 import { useUpdateStore } from '../../stores/update'
 const store = useUpdateStore()
@@ -32,19 +33,19 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
   <Teleport to="body">
     <div v-if="store.visible && store.update" v-back="() => { void store.dismiss() }" class="overlay update-overlay" @click.self="store.dismiss()">
       <section ref="panel" class="sheet stack update-dialog" role="dialog" aria-modal="true" aria-labelledby="update-title" tabindex="-1">
-        <h2 id="update-title">发现新版本 {{ store.update.version }}</h2>
-        <p class="muted">当前 {{ store.currentVersion }} · 安装包 {{ size }} MB</p>
-        <p class="update-notes">{{ store.update.notes || '新版本已发布，欢迎更新。' }}</p>
+        <h2 id="update-title">{{ translateUi("发现新版本") }} {{ store.update.version }}</h2>
+        <p class="muted">{{ translateUi("当前") }} {{ store.currentVersion }} {{ translateUi("· 安装包") }} {{ size }} MB</p>
+        <p class="update-notes">{{ store.update.notes || translateUi("新版本已发布，欢迎更新。") }}</p>
         <div v-if="store.phase === 'downloading' || store.phase === 'verifying'" class="stack" role="status" aria-live="polite">
-          <progress :value="percent" max="100" aria-label="安装包下载进度" />
+          <progress :value="percent" max="100" :aria-label="translateUi('安装包下载进度')" />
           <span class="muted">{{ action }}</span>
         </div>
-        <p v-if="store.message && store.phase === 'ready'" class="muted" role="status">{{ store.message }}</p>
-        <p v-if="store.error" class="update-error" role="alert">{{ store.error }}</p>
+        <p v-if="store.message && store.phase === 'ready'" class="muted" role="status">{{ translateUi(store.message) }}</p>
+        <p v-if="store.error" class="update-error" role="alert">{{ translateUi(store.error) }}</p>
         <button class="btn" type="button" :disabled="store.busy" @click="store.install()">{{ action }}</button>
         <div class="row">
-          <button class="btn ghost" type="button" :disabled="store.busy" @click="store.dismiss()">稍后提醒</button>
-          <button class="btn ghost" type="button" :disabled="store.busy" @click="store.dismiss(true)">跳过此版本</button>
+          <button class="btn ghost" type="button" :disabled="store.busy" @click="store.dismiss()">{{ translateUi("稍后提醒") }}</button>
+          <button class="btn ghost" type="button" :disabled="store.busy" @click="store.dismiss(true)">{{ translateUi("跳过此版本") }}</button>
         </div>
       </section>
     </div>

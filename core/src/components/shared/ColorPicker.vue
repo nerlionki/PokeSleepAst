@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../ui/i18n'
 import { computed, ref, useId, watch } from 'vue'
 import { useColorPickerDrag } from '#platform/colorPicker'
 import { colorToHsv, hsvToColor } from '../../ui/color'
@@ -31,23 +32,23 @@ function keyboard(kind: ColorPlaneKind, event: KeyboardEvent) {
 </script>
 <template>
   <div class="color-picker">
-    <button :id="id" type="button" class="btn ghost color-picker-trigger" :aria-label="`选择${label}颜色`" :aria-expanded="open" @click="emit('update:open', !open)">
+    <button :id="id" type="button" class="btn ghost color-picker-trigger" :aria-label="translateUi('选择{arg1}颜色', { arg1: String(label) })" :aria-expanded="open" @click="emit('update:open', !open)">
       <span class="color-picker-swatch" :style="{ backgroundColor: color }" aria-hidden="true"></span><span>{{ color }}</span>
     </button>
-    <div v-if="open" class="color-picker-panel stack" role="group" :aria-label="`${label}调色板`">
+    <div v-if="open" class="color-picker-panel stack" role="group" :aria-label="translateUi('{arg1}调色板', { arg1: String(label) })">
       <div class="color-picker-controls">
-        <div :id="areaId + '-sv'" class="color-picker-sv" :style="{ backgroundColor: pureHue }" role="slider" tabindex="0" :aria-label="`${label}饱和度与明度`" :aria-valuenow="Math.round(hsv.saturation)" :aria-valuetext="`饱和度 ${Math.round(hsv.saturation)}%，明度 ${Math.round(hsv.value)}%`" aria-valuemin="0" aria-valuemax="100"
+        <div :id="areaId + '-sv'" class="color-picker-sv" :style="{ backgroundColor: pureHue }" role="slider" tabindex="0" :aria-label="translateUi('{arg1}饱和度与明度', { arg1: String(label) })" :aria-valuenow="Math.round(hsv.saturation)" :aria-valuetext="`饱和度 ${Math.round(hsv.saturation)}%，明度 ${Math.round(hsv.value)}%`" aria-valuemin="0" aria-valuemax="100"
           @pointerdown.stop.prevent="drag.pointerDown('sv', '#' + areaId + '-sv', $event)" @pointermove="drag.pointerMove" @pointerup="drag.pointerEnd" @pointercancel="drag.cancel"
           @touchstart.stop.prevent="drag.touchStart('sv', '#' + areaId + '-sv', $event)" @touchmove.stop.prevent="drag.touchMove" @touchend="drag.touchEnd" @touchcancel="drag.cancel" @keydown="keyboard('sv', $event)">
           <span class="color-picker-cursor" :style="{ left: hsv.saturation + '%', top: (100 - hsv.value) + '%' }" aria-hidden="true"></span>
         </div>
-        <div :id="areaId + '-hue'" class="color-picker-hue" role="slider" tabindex="0" :aria-label="`${label}色相`" aria-orientation="vertical" :aria-valuenow="Math.round(hsv.hue)" aria-valuemin="0" aria-valuemax="360"
+        <div :id="areaId + '-hue'" class="color-picker-hue" role="slider" tabindex="0" :aria-label="translateUi('{arg1}色相', { arg1: String(label) })" aria-orientation="vertical" :aria-valuenow="Math.round(hsv.hue)" aria-valuemin="0" aria-valuemax="360"
           @pointerdown.stop.prevent="drag.pointerDown('hue', '#' + areaId + '-hue', $event)" @pointermove="drag.pointerMove" @pointerup="drag.pointerEnd" @pointercancel="drag.cancel"
           @touchstart.stop.prevent="drag.touchStart('hue', '#' + areaId + '-hue', $event)" @touchmove.stop.prevent="drag.touchMove" @touchend="drag.touchEnd" @touchcancel="drag.cancel" @keydown="keyboard('hue', $event)">
           <span class="color-picker-hue-cursor" :style="{ top: hsv.hue / 360 * 100 + '%' }" aria-hidden="true"></span>
         </div>
       </div>
-      <div class="color-picker-footer"><span class="color-picker-value" aria-live="polite">{{ color }}</span><button type="button" class="btn ghost" @click="emit('update:open', false)">完成选色</button></div>
+      <div class="color-picker-footer"><span class="color-picker-value" aria-live="polite">{{ color }}</span><button type="button" class="btn ghost" @click="emit('update:open', false)">{{ translateUi("完成选色") }}</button></div>
     </div>
   </div>
 </template>

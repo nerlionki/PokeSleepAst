@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.BoxOverview
 
-import { AREA_BONUS_MAX, clampAreaBonus } from '../../calc/areaBonus'
+import { AREA_BONUS_MAX, AREA_BONUS_MAX_PERCENT, clampAreaBonus } from '../../calc/areaBonus'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, reactive, shallowRef, onMounted, watch } from 'vue'
@@ -70,56 +73,56 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
 <template>
   <div class="stack box-overview">
     <div class="overview-heading">
-      <button class="btn ghost" type="button" @click="emit('back')">返回 Box</button>
-      <h2>Box 概览</h2>
-      <button class="btn ghost" type="button" :class="{ on: customized }" :disabled="!loaded" :aria-expanded="adjusting" @click="adjusting = !adjusting">调整加成</button>
+      <button class="btn ghost" type="button" @click="emit('back')">{{ translateUi("返回 Box") }}</button>
+      <h2>{{ translateUi("Box 概览") }}</h2>
+      <button class="btn ghost" type="button" :class="{ on: customized }" :disabled="!loaded" :aria-expanded="adjusting" @click="adjusting = !adjusting">{{ translateUi("调整加成") }}</button>
     </div>
-    <p class="muted">当前培养状态 · 全天满活 · {{ box.pokemon.length }} 只宝可梦</p>
-    <ToggleField v-model="activityEnabled" label="计入活动加成" />
-    <section v-if="adjusting" class="card stack" aria-label="概览计算加成">
+    <p class="muted">{{ translateUi("当前培养状态 · 全天满活 ·") }} {{ box.pokemon.length }} {{ translateUi("只宝可梦") }}</p>
+    <ToggleField v-model="activityEnabled" :label="translateUi('计入活动加成')" />
+    <section v-if="adjusting" class="card stack" :aria-label="translateUi('概览计算加成')">
       <div class="bonus-fields">
-        <div class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop><label for="overview-area">营地加成（%）</label><input id="overview-area" v-model.number="bonuses.areaBonus" type="range" :min="INPUT_LIMITS.overview_area.min" :max="AREA_BONUS_MAX" :step="INPUT_LIMITS.overview_area.step"><span class="muted">{{ Math.round(bonuses.areaBonus * 100) }}%</span></div>
+        <div class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop><label for="overview-area">{{ translateUi("营地加成（%）") }}</label><input id="overview-area" v-model.number="bonuses.areaBonus" type="range" :min="INPUT_LIMITS.overview_area.min" :max="AREA_BONUS_MAX" :step="INPUT_LIMITS.overview_area.step"><span class="muted">{{ Math.round(bonuses.areaBonus * 100) }}{{ translateUi("%（上限") }} {{ AREA_BONUS_MAX_PERCENT }}%）</span></div>
       </div>
-      <label class="row"><input v-model="bonuses.goodCamp" type="checkbox">优质露营券</label>
-      <p class="muted">保留个体自身的帮手奖励和缎带；帮手奖励最多叠加 5 层。加成仅用于本页。</p>
+      <label class="row"><input v-model="bonuses.goodCamp" type="checkbox">{{ translateUi("优质露营券") }}</label>
+      <p class="muted">{{ translateUi("保留个体自身的帮手奖励和缎带；帮手奖励最多叠加 5 层。加成仅用于本页。") }}</p>
       <EnvironmentFields :value="environment" :activity-selection="calculationSettings.activity" @change="setEnvironment" />
-      <button class="btn ghost" type="button" @click="resetBonuses">恢复基础口径</button>
+      <button class="btn ghost" type="button" @click="resetBonuses">{{ translateUi("恢复基础口径") }}</button>
     </section>
-    <p v-if="customized" class="muted">营地加成 {{ Math.round(clampAreaBonus(bonuses.areaBonus) * 100) }}% · 其他队员帮手奖励 {{ Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0))) }} 层{{ bonuses.goodCamp ? ' · 优质露营券' : '' }}{{ bonuses.favoredBerries.length ? ' · 已设置喜好树果' : '' }}</p>
+    <p v-if="customized" class="muted">{{ translateUi("营地加成") }} {{ Math.round(clampAreaBonus(bonuses.areaBonus) * 100) }}{{ translateUi("% · 其他队员帮手奖励") }} {{ Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0))) }} {{ translateUi("层") }}{{ bonuses.goodCamp ? " " + translateUi("· 优质露营券") : '' }}{{ bonuses.favoredBerries.length ? " " + translateUi("· 已设置喜好树果") : '' }}</p>
     <Segmented v-model="tab" :options="[{ id: 'berries', label: '树果产量' }, { id: 'ingredients', label: '食材产量' }]" />
     <div v-if="excluded.length" class="overview-warning">
-      <p>{{ excluded.length }} 只个体缺少本项计算所需字段，暂未参与排名。</p>
-      <button class="btn ghost" type="button" @click="emit('complete', excluded.map((pokemon) => pokemon.uid))">去补全</button>
+      <p>{{ excluded.length }} {{ translateUi("只个体缺少本项计算所需字段，暂未参与排名。") }}</p>
+      <button class="btn ghost" type="button" @click="emit('complete', excluded.map((pokemon) => pokemon.uid))">{{ translateUi("去补全") }}</button>
     </div>
-    <p v-if="!box.pokemon.length" class="card muted">Box 还没有宝可梦，返回 Box 后新增或导入即可查看产量。</p>
+    <p v-if="!box.pokemon.length" class="card muted">{{ translateUi("Box 还没有宝可梦，返回 Box 后新增或导入即可查看产量。") }}</p>
     <template v-else-if="tab === 'berries'">
-      <p class="muted">24 小时全时满包 · 每种树果按能量取前 3 名 · 不计主技能能量</p>
+      <p class="muted">{{ translateUi("24 小时全时满包 · 每种树果按能量取前 3 名 · 不计主技能能量") }}</p>
       <div v-if="rankedBerries.length" class="berry-rank-grid">
         <section v-for="berry in rankedBerries" :key="berry.name" class="card berry-group">
-          <div class="berry-heading"><BerryIcon :name="berry.name" /><h3>{{ berry.name }}</h3><span class="muted">{{ berry.type }}</span></div>
+          <div class="berry-heading"><BerryIcon :name="berry.name" /><h3>{{ gameText(berry.name) }}</h3><span class="muted">{{ berry.type }}</span></div>
           <OverviewRankRow v-for="(row, index) in berry.rows" :key="row.pokemon.uid" :row="row" :rank="index + 1" unit="能量" />
         </section>
       </div>
-      <p v-else class="card muted">暂无可计算树果能量的个体，请先补全关键字段。</p>
-      <p v-if="emptyBerryCount" class="muted">其余 {{ emptyBerryCount }} 种树果暂无可参与排名的个体。</p>
+      <p v-else class="card muted">{{ translateUi("暂无可计算树果能量的个体，请先补全关键字段。") }}</p>
+      <p v-if="emptyBerryCount" class="muted">{{ translateUi("其余") }} {{ emptyBerryCount }} {{ translateUi("种树果暂无可参与排名的个体。") }}</p>
     </template>
     <template v-else>
-      <p class="muted">24 小时无持有上限 · 仅普通帮忙食材 · 点击查看全部个体排名</p>
+      <p class="muted">{{ translateUi("24 小时无持有上限 · 仅普通帮忙食材 · 点击查看全部个体排名") }}</p>
       <div class="ingredient-grid">
         <button v-for="ingredient in overview.ingredients" :key="ingredient.id" class="ingredient-tile" type="button" :disabled="!ingredient.rows.length" :aria-label="ingredient.name + (ingredient.rows.length ? '产量排名' : '暂无产出')" @click="openIngredient(ingredient.id)">
           <IngredientIcon :id="ingredient.id" :name="ingredient.name" />
-          <span>{{ ingredient.name }}</span>
-          <strong>{{ formatOverviewAmount(ingredient.rows[0]?.amount) }}<small v-if="ingredient.rows.length"> /日</small></strong>
-          <span class="muted">{{ ingredient.rows.length ? '最高单只 · ' + ingredient.rows.length + ' 只产出' : '暂无产出' }}</span>
+          <span>{{ gameText(ingredient.name) }}</span>
+          <strong>{{ formatOverviewAmount(ingredient.rows[0]?.amount) }}<small v-if="ingredient.rows.length"> {{ translateUi("/日") }}</small></strong>
+          <span class="muted">{{ ingredient.rows.length ? '最高单只 · ' + ingredient.rows.length + ' 只产出' : translateUi("暂无产出") }}</span>
         </button>
       </div>
     </template>
     <div v-if="selected" v-back="() => { ingredientId = null }" class="overlay" role="dialog" aria-modal="true" aria-labelledby="ingredient-ranking-title" @click.self="ingredientId = null" @keydown.esc="ingredientId = null">
       <section class="sheet stack ingredient-ranking">
-        <div class="row"><IngredientIcon :id="selected.id" :name="selected.name" /><h3 id="ingredient-ranking-title">{{ selected.name }}产量排名</h3><button class="btn ghost" type="button" @click="ingredientId = null">关闭</button></div>
-        <p class="muted">当前等级 · 全天满活 · 无持有上限 · {{ selected.rows.length }} 只个体</p>
+        <div class="row"><IngredientIcon :id="selected.id" :name="selected.name" /><h3 id="ingredient-ranking-title">{{ gameText(selected.name) }}{{ translateUi("产量排名") }}</h3><button class="btn ghost" type="button" @click="ingredientId = null">{{ translateUi("关闭") }}</button></div>
+        <p class="muted">{{ translateUi("当前等级 · 全天满活 · 无持有上限 ·") }} {{ selected.rows.length }} {{ translateUi("只个体") }}</p>
         <OverviewRankRow v-for="(row, index) in selected.rows.slice(0, visibleRanks)" :key="row.pokemon.uid" :row="row" :rank="index + 1" unit="个" ingredients />
-        <button v-if="selected.rows.length > visibleRanks" class="btn ghost" type="button" @click="visibleRanks += 20">加载更多（还有 {{ selected.rows.length - visibleRanks }} 只）</button>
+        <button v-if="selected.rows.length > visibleRanks" class="btn ghost" type="button" @click="visibleRanks += 20">{{ translateUi("加载更多（还有") }} {{ selected.rows.length - visibleRanks }} {{ translateUi("只）") }}</button>
       </section>
     </div>
   </div>
@@ -131,7 +134,7 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
 .bonus-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .favored-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .favored-choice { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: transparent; padding: 8px; color: var(--text); border-radius: 8px; }
-.favored-choice.on { background: var(--sage); color: var(--ink); }
+.favored-choice.on { background: var(--sage); color: var(--on-sage); }
 .overview-warning { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--amber); }
 .overview-warning .btn { flex-shrink: 0; white-space: nowrap; }
 .berry-rank-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }

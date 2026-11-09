@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../ui/i18n'
 import GuideEntry from '../components/shared/GuideEntry.vue'
 import { useTabSwipe } from '../composables/useTabSwipe'
 import clientDefaults from '../data/client-defaults.resource'
@@ -28,20 +29,20 @@ const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skil
 <template>
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
     <GuideEntry page="data" :show-trigger="false" />
-    <input v-if="tab !== 'recipe'" v-model="q" class="picker-search" placeholder="搜索功能或名称">
+    <input v-if="tab !== 'recipe'" v-model="q" class="picker-search" :placeholder="translateUi('搜索功能或名称')">
     <div id="guide-data-tabs" class="seg seg-4 plan-tabs">
-      <button v-if="features.enabled('data', 'island')" type="button" :class="{ on: tab === 'island' }" @click="tab = 'island'">营地</button>
-      <button v-if="features.enabled('data', 'berry')" type="button" :class="{ on: tab === 'berry' }" @click="tab = 'berry'">树果</button>
-      <button v-if="features.enabled('data', 'ing')" type="button" :class="{ on: tab === 'ing' }" @click="tab = 'ing'">食材</button>
-      <button v-if="features.enabled('data', 'recipe')" type="button" :class="{ on: tab === 'recipe' }" @click="tab = 'recipe'">食谱</button>
-      <button v-if="features.enabled('data', 'skill')" type="button" :class="{ on: tab === 'skill' }" @click="tab = 'skill'">技能</button>
-      <button v-if="features.enabled('data', 'nature')" type="button" :class="{ on: tab === 'nature' }" @click="tab = 'nature'">性格</button>
-      <button v-if="features.enabled('data', 'pot')" type="button" :class="{ on: tab === 'pot' }" @click="tab = 'pot'">锅容量</button>
-      <button v-if="features.enabled('data', 'item')" type="button" :class="{ on: tab === 'item' }" @click="tab = 'item'">道具</button>
-      <button v-if="features.enabled('data', 'flower')" type="button" :class="{ on: tab === 'flower' }" @click="tab = 'flower'">彩庆花</button>
-      <button v-if="features.enabled('data', 'bundles')" type="button" :class="{ on: tab === 'bundles' }" @click="tab = 'bundles'">{{ '活动\n礼包' }}</button>
+      <button v-if="features.enabled('data', 'island')" type="button" :class="{ on: tab === 'island' }" @click="tab = 'island'">{{ translateUi("营地") }}</button>
+      <button v-if="features.enabled('data', 'berry')" type="button" :class="{ on: tab === 'berry' }" @click="tab = 'berry'">{{ translateUi("树果") }}</button>
+      <button v-if="features.enabled('data', 'ing')" type="button" :class="{ on: tab === 'ing' }" @click="tab = 'ing'">{{ translateUi("食材") }}</button>
+      <button v-if="features.enabled('data', 'recipe')" type="button" :class="{ on: tab === 'recipe' }" @click="tab = 'recipe'">{{ translateUi("食谱") }}</button>
+      <button v-if="features.enabled('data', 'skill')" type="button" :class="{ on: tab === 'skill' }" @click="tab = 'skill'">{{ translateUi("技能") }}</button>
+      <button v-if="features.enabled('data', 'nature')" type="button" :class="{ on: tab === 'nature' }" @click="tab = 'nature'">{{ translateUi("性格") }}</button>
+      <button v-if="features.enabled('data', 'pot')" type="button" :class="{ on: tab === 'pot' }" @click="tab = 'pot'">{{ translateUi("锅容量") }}</button>
+      <button v-if="features.enabled('data', 'item')" type="button" :class="{ on: tab === 'item' }" @click="tab = 'item'">{{ translateUi("道具") }}</button>
+      <button v-if="features.enabled('data', 'flower')" type="button" :class="{ on: tab === 'flower' }" @click="tab = 'flower'">{{ translateUi("彩庆花") }}</button>
+      <button v-if="features.enabled('data', 'bundles')" type="button" :class="{ on: tab === 'bundles' }" @click="tab = 'bundles'">{{ translateUi("活动 礼包") }}</button>
     </div>
-    <p v-if="!tab" class="muted">本页功能已隐藏，可在“我的 → 功能开关”重新开启。</p>
+    <p v-if="!tab" class="muted">{{ translateUi("本页功能已隐藏，可在“我的 → 功能开关”重新开启。") }}</p>
     <IslandPane v-if="tab === 'island'" :q="q" />
     <BerryPane v-else-if="tab === 'berry'" :q="q" />
     <IngredientPane v-else-if="tab === 'ing'" :q="q" />

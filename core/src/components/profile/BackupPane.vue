@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../ui/i18n'
 import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
@@ -67,24 +68,24 @@ async function wipe() {
 </script>
 <template>
     <article class="card stack">
-      <h3>本机备份</h3>
-      <p class="muted">可导入本机 / sdrice 盒子数组 / iqdooh 宝可梦盒备份 JSON。缺失字段可在 Box 中补全。</p>
+      <h3>{{ translateUi("本机备份") }}</h3>
+      <p class="muted">{{ translateUi("可导入本机 / sdrice 盒子数组 / iqdooh 宝可梦盒备份 JSON。缺失字段可在 Box 中补全。") }}</p>
       <div class="field">
-        <label>导出格式</label>
+        <label>{{ translateUi("导出格式") }}</label>
         <select v-model="mode">
-          <option value="native">本机 schemaVersion 1</option>
-          <option value="sdrice">sdrice 盒子数组</option>
+          <option value="native">{{ translateUi("本机 schemaVersion 1") }}</option>
+          <option value="sdrice">{{ translateUi("sdrice 盒子数组") }}</option>
         </select>
       </div>
-      <button class="btn" type="button" @click="exportBox">导出 Box JSON</button>
-      <button class="btn ghost" type="button" :disabled="readingFile" @click="chooseBackupFile">{{ readingFile ? '正在读取文件…' : '选择 JSON 文件' }}</button>
+      <button class="btn" type="button" @click="exportBox">{{ translateUi("导出 Box JSON") }}</button>
+      <button class="btn ghost" type="button" :disabled="readingFile" @click="chooseBackupFile">{{ readingFile ? translateUi("正在读取文件…") : translateUi("选择 JSON 文件") }}</button>
       <p class="muted">{{ backupFileHint }}</p>
-      <textarea v-model="incoming" :disabled="readingFile" rows="6" placeholder="粘贴本机、sdrice 或 iqdooh Box JSON" aria-label="待导入的 Box JSON"></textarea>
+      <textarea v-model="incoming" :disabled="readingFile" rows="6" :placeholder="translateUi('粘贴本机、sdrice 或 iqdooh Box JSON')" :aria-label="translateUi('待导入的 Box JSON')"></textarea>
       <div class="row">
-        <button class="btn sage" type="button" :disabled="readingFile" @click="applyImport(false)">合并导入</button>
-        <button class="btn ghost" type="button" :disabled="readingFile" @click="applyImport(true)">覆盖导入</button>
+        <button class="btn sage" type="button" :disabled="readingFile" @click="applyImport(false)">{{ translateUi("合并导入") }}</button>
+        <button class="btn ghost" type="button" :disabled="readingFile" @click="applyImport(true)">{{ translateUi("覆盖导入") }}</button>
       </div>
-      <button class="btn ghost" type="button" @click="wipe">清空本机缓存 / 重置设置</button>
+      <button class="btn ghost" type="button" @click="wipe">{{ translateUi("清空本机缓存 / 重置设置") }}</button>
       <p v-if="msg" class="amber">{{ msg }}</p>
     </article>
 

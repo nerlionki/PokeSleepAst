@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
@@ -16,7 +17,7 @@ const components_data_BerryPane_config_clientDefaults = clientDefaults.modules.c
 const props = defineProps<{ q: string }>()
 const open = shallowRef(components_data_BerryPane_config_clientDefaults["openInitial"])
 
-const list = computed(() => BERRIES.filter((b) => textHit(`${b.name} ${b.type}`, props.q)))
+const list = computed(() => BERRIES.filter((b) => textHit(`${b.name} ${gameText(b.name)} ${b.type}`, props.q)))
 const current = computed(() => BERRIES.find((b) => b.name === open.value))
 const tab = shallowRef<'energy' | 'production'>('energy')
 const producers = computed(() => current.value ? fixedBerryProducers(current.value.name) : [])
@@ -37,21 +38,21 @@ const conditions: Record<string, string> = { full: '全时满包', normal: '一�
         @click="showBerry(b.name)"
       >
         <BerryIcon :name="b.name" />
-        <span>{{ b.name }}</span>
+        <span>{{ gameText(b.name) }}</span>
       </button>
     </div>
-    <DrawerSheet v-if="current" :title="current.name" @close="open = ''">
+    <DrawerSheet v-if="current" :title="gameText(current.name)" @close="open = ''">
       <div class="stack">
       <div class="row">
         <BerryIcon :name="current.name" large />
         <div>
           <strong>{{ current.type }}</strong>
-          <p class="muted">{{ tab === 'energy' ? `1–${POKEMON_LEVEL_MAX} 级树果能量` : '每日树果总产量' }}</p>
+          <p class="muted">{{ tab === 'energy' ? translateUi("1–{arg1} 级树果能量", { arg1: String(POKEMON_LEVEL_MAX) }) : translateUi("每日树果总产量") }}</p>
         </div>
       </div>
-      <div class="berry-detail-tabs" role="tablist" aria-label="树果详情">
-        <button type="button" role="tab" :aria-selected="tab === 'energy'" :class="{ on: tab === 'energy' }" @click="tab = 'energy'">树果能量</button>
-        <button type="button" role="tab" :aria-selected="tab === 'production'" :class="{ on: tab === 'production' }" @click="tab = 'production'">产量 Top 5</button>
+      <div class="berry-detail-tabs" role="tablist" :aria-label="translateUi('树果详情')">
+        <button type="button" role="tab" :aria-selected="tab === 'energy'" :class="{ on: tab === 'energy' }" @click="tab = 'energy'">{{ translateUi("树果能量") }}</button>
+        <button type="button" role="tab" :aria-selected="tab === 'production'" :class="{ on: tab === 'production' }" @click="tab = 'production'">{{ translateUi("产量 Top 5") }}</button>
       </div>
       <template v-if="tab === 'energy'">
       <p class="berry-snaps">
@@ -69,14 +70,14 @@ const conditions: Record<string, string> = { full: '全时满包', normal: '一�
           <span class="berry-producer-rank">{{ index + 1 }}</span>
           <PokeSprite :id="p.id" :name="p.name" :ribbon-hours="productionRibbonHours(p.id, p.mode)" />
           <div class="berry-producer-info">
-            <strong>{{ p.name }}（{{ p.condition ?? conditions[p.mode ?? ''] ?? '一般' }}）</strong>
+            <strong>{{ gameText(p.name) }}（{{ p.condition ?? conditions[p.mode ?? ''] ?? translateUi("一般") }}）</strong>
           </div>
           <div class="berry-producer-output">
-            <strong>{{ amount(p.total) }}<span> 颗/日</span></strong>
-            <span v-if="p.skill != null && p.skill > 0" class="berry-skill-yield">其中技能 {{ amount(p.skill) }} 颗/日</span>
+            <strong>{{ amount(p.total) }}<span> {{ translateUi("颗/日") }}</span></strong>
+            <span v-if="p.skill != null && p.skill > 0" class="berry-skill-yield">{{ translateUi("其中技能") }} {{ amount(p.skill) }} {{ translateUi("颗/日") }}</span>
           </div>
         </div>
-        <p v-if="!producers.length" class="muted">暂无产出这种树果的宝可梦。</p>
+        <p v-if="!producers.length" class="muted">{{ translateUi("暂无产出这种树果的宝可梦。") }}</p>
       </div>
     </div>
     </DrawerSheet>

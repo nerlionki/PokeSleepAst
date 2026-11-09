@@ -116,7 +116,7 @@ export function cookMeals(bag: IngredientBag, settings: CookSettings, meals = co
 }
 
 export function categoryLabel(c: MealCategory): string {
-  if (c === 'curry') return '咖哩濃湯'
+  if (c === 'curry') return '咖喱、浓汤'
   if (c === 'salad') return '沙拉'
-  return '点心饮料'
+  return '点心、饮料'
 }

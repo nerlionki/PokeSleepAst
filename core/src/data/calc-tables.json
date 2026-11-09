@@ -533,15 +533,24 @@
         "26": "成就：10 只宝可梦升至 5 级。",
         "27": "成就：以队伍 SP 4,700 进行睡眠研究。"
       },
+      "diamondPriceSource": {
+        "url": "https://wikiwiki.jp/poke_sleep/ショップ関連",
+        "checkedOn": "2026-11-06",
+        "basis": "常驻综合商店钻石售价，按单件折算；无钻石单买价的道具不估值。"
+      },
       "catalog": [
         {
           "id": 9,
+          "diamondPrice": 60,
+          "diamondPurchaseQuantity": 3,
           "name": "寶可沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/9.webp"
         },
         {
           "id": 10,
+          "diamondPrice": 200,
+          "diamondPurchaseQuantity": 3,
           "name": "超級沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/10.webp"
@@ -566,6 +575,8 @@
         },
         {
           "id": 94,
+          "diamondPrice": 400,
+          "diamondPurchaseQuantity": 1,
           "name": "高級沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/94.webp"
@@ -713,18 +724,25 @@
         },
         {
           "id": 1,
+          "diamondPrice": 150,
+          "diamondPurchaseQuantity": 1,
           "name": "專注薰香",
           "category": "功能型薰香",
           "imageFile": "items/1.webp"
         },
         {
           "id": 2,
+          "diamondPrice": 150,
+          "diamondPurchaseQuantity": 1,
           "name": "幸運薰香",
+          "aliases": ["幸运薰香"],
           "category": "功能型薰香",
           "imageFile": "items/2.webp"
         },
         {
           "id": 3,
+          "diamondPrice": 200,
+          "diamondPurchaseQuantity": 1,
           "name": "成長薰香",
           "category": "功能型薰香",
           "imageFile": "items/3.webp"
@@ -737,6 +755,8 @@
         },
         {
           "id": 34,
+          "diamondPrice": 150,
+          "diamondPurchaseQuantity": 1,
           "name": "友好薰香",
           "category": "功能型薰香",
           "imageFile": "items/34.webp"
@@ -1163,24 +1183,32 @@
         },
         {
           "id": 5,
+          "diamondPrice": 60,
+          "diamondPurchaseQuantity": 1,
           "name": "活力枕頭",
           "category": "其他",
           "imageFile": "items/5.webp"
         },
         {
           "id": 6,
+          "diamondPrice": 200,
+          "diamondPurchaseQuantity": 1,
           "name": "幫手哨子",
           "category": "其他",
           "imageFile": "items/6.webp"
         },
         {
           "id": 7,
+          "diamondPrice": 150,
+          "diamondPurchaseQuantity": 1,
           "name": "營地移動券",
           "category": "其他",
           "imageFile": "items/7.webp"
         },
         {
           "id": 8,
+          "diamondPrice": 500,
+          "diamondPurchaseQuantity": 1,
           "name": "好露營券",
           "category": "其他",
           "imageFile": "items/8.webp"
@@ -1223,6 +1251,8 @@
         },
         {
           "id": 32,
+          "diamondPrice": 900,
+          "diamondPurchaseQuantity": 1,
           "name": "主技能種子",
           "category": "其他",
           "imageFile": "items/32.webp"
@@ -1255,6 +1285,8 @@
         },
         {
           "id": 114,
+          "diamondPrice": 700,
+          "diamondPurchaseQuantity": 1,
           "name": "午睡放鬆券",
           "category": "其他",
           "imageFile": "items/114.webp"

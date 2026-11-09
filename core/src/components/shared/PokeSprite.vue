@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../ui/i18n'
 import { computed, shallowRef, watch } from 'vue'
 import { localImage } from '#platform/images'
 import { pokeById } from '../../calc/data'
+import { RIBBON_HOURS } from '../../calc/ribbon'
 import { pokemonIconUrl, pokemonPortraitUrl, pokemonShinyIconUrl, pokemonShinyPortraitUrl } from '../../calc/raeImage'
 const props = defineProps<{ id: number; name?: string; large?: boolean; shiny?: boolean; ribbonHours?: number }>()
-const ribbonSrc = computed(() => props.ribbonHours && props.ribbonHours >= 2000 ? localImage('ribbon/2000.webp') : '')
+const ribbonStage = computed(() => Math.max(0, ...RIBBON_HOURS.filter(hours => hours > 0 && hours <= (props.ribbonHours ?? 0))))
+const ribbonSrc = computed(() => ribbonStage.value ? localImage(`ribbon/${ribbonStage.value}.webp`) : '')
+const ribbonLabel = computed(() => `${ribbonStage.value} 小时睡饱饱勋章`)
 const failed = shallowRef(false)
 const useIcon = shallowRef(false)
 const shinyFailed = shallowRef(false)
@@ -26,8 +30,8 @@ function onError() {
   <div class="sprite sprite-frame" :class="{ lg: large }">
     <img v-if="src && !failed" class="sprite-image" loading="lazy" decoding="async" :src="src" :alt="label" @error="onError">
     <span v-else class="sprite-label">{{ label }}</span>
-    <span v-if="showShinyMark" class="sprite-shiny" aria-label="闪光">闪</span>
-    <img v-if="ribbonSrc" class="sprite-ribbon" :src="ribbonSrc" alt="2000 小时睡饱饱勋章" title="2000 小时睡饱饱勋章" decoding="async">
+    <span v-if="showShinyMark" class="sprite-shiny" :aria-label="translateUi('闪光')">{{ translateUi("闪") }}</span>
+    <img v-if="ribbonSrc" class="sprite-ribbon" :src="ribbonSrc" :alt="ribbonLabel" :title="ribbonLabel" decoding="async">
   </div>
 </template>
 <style scoped>
@@ -35,5 +39,5 @@ function onError() {
 .sprite-image { width: 100%; height: 100%; object-fit: contain; }
 .sprite-ribbon { position: absolute; top: -2px; right: -2px; width: 44%; height: 44%; object-fit: contain; pointer-events: none; z-index: 1; }
 .sprite-label { font-size: 12px; text-align: center; overflow-wrap: anywhere; }
-.sprite-shiny { position: absolute; top: 0; right: 0; font-size: 11px; line-height: 16px; padding: 0 3px; border-radius: 4px; color: var(--ink); background: var(--sage); }
+.sprite-shiny { position: absolute; top: 0; right: 0; font-size: 11px; line-height: 16px; padding: 0 3px; border-radius: 4px; color: var(--on-sage); background: var(--sage); }
 </style>

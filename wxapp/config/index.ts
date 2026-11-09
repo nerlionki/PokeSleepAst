@@ -13,6 +13,8 @@ export default defineConfig({
   outputRoot: 'dist',
   framework: 'vue3',
   compiler: 'webpack5',
+  // Keep Chinese fallback text in UTF-8 to fit the main package budget.
+  terser: { config: { output: { ascii_only: false } } },
   plugins: ['@tarojs/plugin-html'],
   alias: {
     '#platform': path.resolve(__dirname, '../src/platform'),

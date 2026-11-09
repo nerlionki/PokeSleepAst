@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../ui/i18n'
 import { computed } from 'vue'
 import { taskNavigationLocked } from '../../composables/taskNavigationLock'
 import { useGuideStore } from '../../stores/guide'
@@ -14,9 +15,9 @@ function start() {
 <template>
   <div v-if="showTrigger !== false" class="guide-entry" @touchstart.stop @touchend.stop @touchcancel.stop>
     <button :class="profile ? 'card guide-profile-trigger' : 'btn ghost guide-trigger'" type="button" :disabled="taskNavigationLocked" @click="start">
-      <span>{{ profile ? '重新查看引导' : '使用引导' }}</span><span v-if="profile" aria-hidden="true">›</span>
+      <span>{{ profile ? translateUi("重新查看引导") : translateUi("使用引导") }}</span><span v-if="profile" aria-hidden="true">›</span>
     </button>
-    <p v-if="guide.error" class="muted guide-error" role="status">{{ guide.error }}</p>
+    <p v-if="guide.error" class="muted guide-error" role="status">{{ translateUi(guide.error) }}</p>
   </div>
 </template>
 <style scoped>

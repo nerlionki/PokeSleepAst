@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../../core/src/ui/i18n'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Component from '../../../core/src/views/ProfileView.vue'
@@ -11,12 +12,12 @@ function show(tab: 'home' | 'logs') { void router.push({ path: route.path, query
 
 <template>
   <div v-if="logsOpen" class="stack">
-    <div class="row"><button class="btn ghost" type="button" @click="show('home')">返回我的</button><h2>应用日志</h2></div>
+    <div class="row"><button class="btn ghost" type="button" @click="show('home')">{{ translateUi("返回我的") }}</button><h2>{{ translateUi("应用日志") }}</h2></div>
     <AppLogsPane />
   </div>
   <Component v-else>
     <template #app-tools>
-      <button class="card app-logs-entry" type="button" @click="show('logs')"><span>应用日志</span><span aria-hidden="true">›</span></button>
+      <button class="card app-logs-entry" type="button" @click="show('logs')"><span>{{ translateUi("应用日志") }}</span><span aria-hidden="true">›</span></button>
     </template>
   </Component>
 </template>

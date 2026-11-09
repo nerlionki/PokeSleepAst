@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi } from '../../ui/i18n'
 import { editorMemberFields, MEMBER_PRESETS } from '../../calc/memberPresets'
 
 
@@ -210,13 +211,13 @@ function saveCustomToBox() {
 
 <template>
   <div class="stack">
-    <ToggleField v-model="activityEnabled" label="计入活动加成" />
+    <ToggleField v-model="activityEnabled" :label="translateUi('计入活动加成')" />
     <LevelSelector v-model="level" :levels="LEVELS" allow-original />
     <div class="seg">
-      <button type="button" :class="{ on: settings.period === 'day' }" @click="settings.period = 'day'">每日</button>
-      <button type="button" :class="{ on: settings.period === 'week' }" @click="settings.period = 'week'">每周</button>
+      <button type="button" :class="{ on: settings.period === 'day' }" @click="settings.period = 'day'">{{ translateUi("每日") }}</button>
+      <button type="button" :class="{ on: settings.period === 'week' }" @click="settings.period = 'week'">{{ translateUi("每周") }}</button>
     </div>
-    <p class="muted">并排比较个体产量，同一行里最高的数字会高亮。按全天满活力计算；自身有帮手奖励时按 5 层。</p>
+    <p class="muted">{{ translateUi("并排比较个体产量，同一行里最高的数字会高亮。按全天满活力计算；自身有帮手奖励时按 5 层。") }}</p>
     <div class="cmp-board">
       <article v-for="row in rows" :key="row.uid" class="card cmp-col">
         <MemberCard
@@ -236,29 +237,29 @@ function saveCustomToBox() {
           :helping-bonus="row.bonus"
           :label="row.name"
         />
-        <span v-if="best(strength(row))" class="chip">最高</span>
+        <span v-if="best(strength(row))" class="chip">{{ translateUi("最高") }}</span>
         <div class="row">
-          <button class="btn ghost" type="button" @click="editing = row.uid">编辑</button>
-          <button class="btn ghost" type="button" @click="copyRow(row.uid)">复制</button>
-          <button class="btn ghost" type="button" @click="remove(row.uid)">移除</button>
+          <button class="btn ghost" type="button" @click="editing = row.uid">{{ translateUi("编辑") }}</button>
+          <button class="btn ghost" type="button" @click="copyRow(row.uid)">{{ translateUi("复制") }}</button>
+          <button class="btn ghost" type="button" @click="remove(row.uid)">{{ translateUi("移除") }}</button>
         </div>
       </article>
       <article class="card cmp-col slot-card">
         <span class="slot-empty">＋</span>
-        <button class="btn" type="button" @click="picking = true">从盒子</button>
-        <button class="btn ghost" type="button" @click="adding = true">自定义</button>
+        <button class="btn" type="button" @click="picking = true">{{ translateUi("从盒子") }}</button>
+        <button class="btn ghost" type="button" @click="adding = true">{{ translateUi("自定义") }}</button>
       </article>
     </div>
 
     <div v-if="picking" v-back="() => { picking = false }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="picking = false">
       <section class="sheet stack">
-        <h3>加入比较</h3>
+        <h3>{{ translateUi("加入比较") }}</h3>
         <button v-for="p in box.pokemon" :key="p.uid" class="data-row" type="button" @click="take(p.uid)">
-          <PokeSprite :id="p.pokeId" :name="boxLabel(p)" :shiny="p.shiny" />
+          <PokeSprite :id="p.pokeId" :name="boxLabel(p)" :shiny="p.shiny" :ribbon-hours="p.tune?.ribbonHours" />
           <span>{{ boxLabel(p) }} Lv.{{ p.level }} · {{ p.nature }}</span>
         </button>
-        <p v-if="!box.pokemon.length" class="muted">盒子是空的，可以用自定义面板。</p>
-        <button class="btn ghost" type="button" @click="picking = false">关闭</button>
+        <p v-if="!box.pokemon.length" class="muted">{{ translateUi("盒子是空的，可以用自定义面板。") }}</p>
+        <button class="btn ghost" type="button" @click="picking = false">{{ translateUi("关闭") }}</button>
       </section>
     </div>
 
@@ -267,11 +268,11 @@ function saveCustomToBox() {
     <div v-if="editingPanel" v-back="() => { editing = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="editing = null">
       <section class="sheet stack">
         <div class="row">
-          <h3>{{ customs.some((item) => item.uid === editing) ? '自定义面板' : '编辑个体' }}</h3>
+          <h3>{{ customs.some((item) => item.uid === editing) ? translateUi("自定义面板") : translateUi("编辑个体") }}</h3>
         </div>
         <MemberEditor v-model="editingPanel" @copy="duplicateEditing" @remove="remove(editing ?? '')" />
-        <button v-if="customs.some((item) => item.uid === editing)" class="btn" type="button" :disabled="[151, 491].includes(editingPanel.pokeId) && editingPanel.ingredientSlots[0] == null" @click="saveCustomToBox">保存到盒子</button>
-        <button class="btn" type="button" :disabled="[151, 491].includes(editingPanel.pokeId) && editingPanel.ingredientSlots[0] == null" @click="editing = null">完成</button>
+        <button v-if="customs.some((item) => item.uid === editing)" class="btn" type="button" :disabled="[151, 491].includes(editingPanel.pokeId) && editingPanel.ingredientSlots[0] == null" @click="saveCustomToBox">{{ translateUi("保存到盒子") }}</button>
+        <button class="btn" type="button" :disabled="[151, 491].includes(editingPanel.pokeId) && editingPanel.ingredientSlots[0] == null" @click="editing = null">{{ translateUi("完成") }}</button>
       </section>
     </div>
   </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T extends string">
+import { t as translateUi } from '../../ui/i18n'
 import { taskNavigationLocked } from '../../composables/taskNavigationLock'
 import SegmentedControl from './SegmentedControl.vue'
 import { computed } from 'vue'
@@ -17,5 +18,5 @@ const visibleOptions = computed(() => props.options.filter(option => features.en
 
 <template>
   <SegmentedControl v-if="visibleOptions.length" v-model="model" :guide-id="guideId" :options="visibleOptions" :disabled="disabled || taskNavigationLocked" />
-  <p v-else class="muted">本页功能已隐藏，可在“我的 → 功能开关”重新开启。</p>
+  <p v-else class="muted">{{ translateUi("本页功能已隐藏，可在“我的 → 功能开关”重新开启。") }}</p>
 </template>

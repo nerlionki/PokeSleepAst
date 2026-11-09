@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -28,30 +31,30 @@ const mainValue = computed(() => {
 
 <template>
   <section class="card stack split-result">
-    <div class="row result-heading"><h3>{{ title }}</h3><strong v-if="optimum.indices.length" class="sage">{{ mainValue }}</strong></div>
-    <p v-if="!optimum.indices.length" class="muted">本次搜索未找到有正收益的方案，请检查目标解锁条件，或增加模拟次数后重试。</p>
+    <div class="row result-heading"><h3>{{ translateUi(title) }}</h3><strong v-if="optimum.indices.length" class="sage">{{ mainValue }}</strong></div>
+    <p v-if="!optimum.indices.length" class="muted">{{ translateUi("本次搜索未找到有正收益的方案，请检查目标解锁条件，或增加模拟次数后重试。") }}</p>
     <template v-else>
-      <p class="muted">{{ optimum.indices.length }} 个模拟并列方案 · 按相同收益合并展示</p>
+      <p class="muted">{{ optimum.indices.length }} {{ translateUi("个模拟并列方案 · 按相同收益合并展示") }}</p>
       <article v-for="group in groups.slice(0, visible)" :key="group.key" class="outcome stack">
         <div v-for="index in group.indices.slice(0, expanded[group.key] ?? 1)" :key="index" class="schedule stack">
-          <strong>{{ result.candidates[index]!.sleeps.length === 1 ? '整觉 100 分' : '两觉合计 100 分' }}</strong>
+          <strong>{{ result.candidates[index]!.sleeps.length === 1 ? translateUi("整觉 100 分") : translateUi("两觉合计 100 分") }}</strong>
           <div v-for="(sleep, sleepIndex) in result.candidates[index]!.sleeps" :key="sleepIndex" class="sleep-row">
-            <span>{{ result.candidates[index]!.sleeps.length === 1 ? '整觉' : `第 ${sleepIndex + 1} 觉` }}</span>
-            <strong>{{ sleep.score }} 分 · {{ sleepClock(sleep.score) }}</strong>
-            <span>{{ sleep.sleepType }}</span>
-            <small class="muted">睡意之力 {{ format(sleep.power) }} · {{ sleep.encounters }} 只普通研究{{ result.options.campTicket && sleepIndex === 0 ? ' + 露营券 1 只' : '' }}</small>
+            <span>{{ result.candidates[index]!.sleeps.length === 1 ? translateUi("整觉") : translateUi("第 {arg1} 觉", { arg1: String(sleepIndex + 1) }) }}</span>
+            <strong>{{ sleep.score }} {{ translateUi("分 ·") }} {{ sleepClock(sleep.score) }}</strong>
+            <span>{{ gameText(sleep.sleepType) }}</span>
+            <small class="muted">{{ translateUi("睡意之力") }} {{ format(sleep.power) }} · {{ sleep.encounters }} {{ translateUi("只普通研究") }}{{ result.options.campTicket && sleepIndex === 0 ? " " + translateUi("+ 露营券 1 只") : '' }}</small>
           </div>
         </div>
-        <button v-if="group.indices.length > (expanded[group.key] ?? 1)" class="btn ghost" type="button" @click="expanded[group.key] = (expanded[group.key] ?? 1) + 20">展开其余并列分配（剩余 {{ group.indices.length - (expanded[group.key] ?? 1) }}）</button>
+        <button v-if="group.indices.length > (expanded[group.key] ?? 1)" class="btn ghost" type="button" @click="expanded[group.key] = (expanded[group.key] ?? 1) + 20">{{ translateUi("展开其余并列分配（剩余") }} {{ group.indices.length - (expanded[group.key] ?? 1) }}）</button>
         <div class="benefits">
           <div v-for="(metric, index) in result.metrics" :key="index" class="benefit">
-            <span>{{ metric.label }}</span>
-            <strong>{{ metric.kind === 'probability' ? '概率' : '期望' }} {{ format(group.first.values[index]! * (metric.kind === 'probability' ? 100 : 1)) }} {{ metric.kind === 'probability' ? '%' : metric.kind === 'count' ? '只' : '颗' }}</strong>
-            <small class="muted">{{ result.maxima[index]! > 0 ? `相对最优 ${format(group.first.values[index]! / result.maxima[index]! * 100)}%` : '未解锁或本次模拟收益为 0' }} · 权重 {{ metric.weight }}</small>
+            <span>{{ translateUi(metric.label) }}</span>
+            <strong>{{ metric.kind === 'probability' ? translateUi("概率") : translateUi("期望") }} {{ format(group.first.values[index]! * (metric.kind === 'probability' ? 100 : 1)) }} {{ metric.kind === 'probability' ? '%' : metric.kind === 'count' ? translateUi("只") : translateUi("颗") }}</strong>
+            <small class="muted">{{ result.maxima[index]! > 0 ? translateUi("相对最优 {arg1}%", { arg1: String(format(group.first.values[index]! / result.maxima[index]! * 100)) }) : translateUi("未解锁或本次模拟收益为 0") }} {{ translateUi("· 权重") }} {{ metric.weight }}</small>
           </div>
         </div>
       </article>
-      <button v-if="groups.length > visible" class="btn ghost" type="button" @click="visible += 5">显示更多收益组合（剩余 {{ groups.length - visible }}）</button>
+      <button v-if="groups.length > visible" class="btn ghost" type="button" @click="visible += 5">{{ translateUi("显示更多收益组合（剩余") }} {{ groups.length - visible }}）</button>
     </template>
   </section>
 </template>

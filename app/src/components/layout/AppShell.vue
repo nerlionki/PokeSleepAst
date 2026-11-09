@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, language, t } from '../../../../core/src/ui/i18n'
 import { useFeaturesStore } from '../../../../core/src/stores/features'
 import TabIcon from './TabIcon.vue'
 import GuideTour from '../../../../core/src/components/shared/GuideTour.vue'
@@ -25,11 +26,12 @@ const titles: Record<string, string> = {
 const route = useRoute()
 const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
 const planTab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle'] as const, 'sleep')
-const title = computed(() => titles[String(route.name)] ?? '宝睡助手')
+const title = computed(() => t(titles[String(route.name)] ?? '宝睡助手'))
 const settings = useSettingsStore()
 const updater = useUpdateStore()
 const appearance = useAppearanceStore()
 watchEffect(() => {
+  document.documentElement.lang = language.value
   for (const [key, value] of Object.entries(appearance.variables)) document.documentElement.style.setProperty(key, value)
 })
 
@@ -60,23 +62,23 @@ onMounted(async () => {
     <nav class="tabbar" :inert="taskNavigationLocked" :aria-disabled="taskNavigationLocked">
       <RouterLink :to="{ name: 'pokemon' }">
         <TabIcon name="pokemon" />
-        宝可梦
+        {{ translateUi("宝可梦") }}
       </RouterLink>
       <RouterLink :to="{ name: 'plan' }">
         <TabIcon name="plan" />
-        规划
+        {{ translateUi("规划") }}
       </RouterLink>
       <RouterLink :to="{ name: 'team' }">
         <TabIcon name="team" />
-        配队
+        {{ translateUi("配队") }}
       </RouterLink>
       <RouterLink :to="{ name: 'data' }">
         <TabIcon name="data" />
-        资料
+        {{ translateUi("资料") }}
       </RouterLink>
       <RouterLink :to="{ name: 'profile' }">
         <TabIcon name="profile" />
-        我的
+        {{ translateUi("我的") }}
       </RouterLink>
     </nav>
     <UpdateDialog />

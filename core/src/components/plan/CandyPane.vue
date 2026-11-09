@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.CandyPane
 
@@ -116,39 +117,39 @@ const presets = CANDY_PRESETS
 <template>
   <div class="stack candy-pane">
     <div class="stack candy-context">
-    <p class="muted">同一进化家族共用当前糖果，按行顺序扣。普通培养经验 ×{{ CANDY_BOOSTS.normal.exp }}、梦碎 ×{{ CANDY_BOOSTS.normal.shards }}，无增强额度限制。大型增强经验 ×{{ CANDY_BOOSTS.christmas.exp }}、梦碎 ×{{ CANDY_BOOSTS.christmas.shards }}、额度 {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}。迷你增强经验 ×{{ CANDY_BOOSTS.mini.exp }}、梦碎 ×{{ CANDY_BOOSTS.mini.shards }}、额度 {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}。随时可规划，不受活动日期限制，不含睡眠经验。</p>
+    <p class="muted">{{ translateUi("同一进化家族共用当前糖果，按行顺序扣。普通培养经验 ×") }}{{ CANDY_BOOSTS.normal.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.normal.shards }}{{ translateUi("，无增强额度限制。大型增强经验 ×") }}{{ CANDY_BOOSTS.christmas.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.christmas.shards }}{{ translateUi("、额度") }} {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}{{ translateUi("。迷你增强经验 ×") }}{{ CANDY_BOOSTS.mini.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.mini.shards }}{{ translateUi("、额度") }} {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}{{ translateUi("。随时可规划，不受活动日期限制，不含睡眠经验。") }}</p>
     <div class="seg">
-      <button type="button" :class="{ on: mode === 'christmas' }" @click="mode = 'christmas'">大型增强</button>
-        <button type="button" :class="{ on: mode === 'mini' }" @click="mode = 'mini'">迷你增强</button>
+      <button type="button" :class="{ on: mode === 'christmas' }" @click="mode = 'christmas'">{{ translateUi("大型增强") }}</button>
+        <button type="button" :class="{ on: mode === 'mini' }" @click="mode = 'mini'">{{ translateUi("迷你增强") }}</button>
     </div>
     </div>
     <div class="stack candy-workspace" :style="candyViewport">
     <div class="stack candy-toolbar">
     <div class="candy-boost-stats">
       <article class="card candy-boost-stat">
-        <p class="muted">普通培养</p>
-        <p>{{ plans.normal.candies.toLocaleString('zh-CN') }} 颗</p>
-        <p>梦碎 {{ plans.normal.shards.toLocaleString('zh-CN') }}</p>
+        <p class="muted">{{ translateUi("普通培养") }}</p>
+        <p>{{ plans.normal.candies.toLocaleString('zh-CN') }} {{ translateUi("颗") }}</p>
+        <p>{{ translateUi("梦碎") }} {{ plans.normal.shards.toLocaleString('zh-CN') }}</p>
       </article>
       <article class="card candy-boost-stat">
-        <p class="muted">大型增强</p>
-        <p>{{ plans.christmas.candies.toLocaleString('zh-CN') }} / {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }} 颗</p>
-        <p>梦碎 {{ plans.christmas.shards.toLocaleString('zh-CN') }}</p>
+        <p class="muted">{{ translateUi("大型增强") }}</p>
+        <p>{{ plans.christmas.candies.toLocaleString('zh-CN') }} / {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }} {{ translateUi("颗") }}</p>
+        <p>{{ translateUi("梦碎") }} {{ plans.christmas.shards.toLocaleString('zh-CN') }}</p>
       </article>
       <article class="card candy-boost-stat">
-        <p class="muted">迷你增强</p>
-        <p>{{ plans.mini.candies.toLocaleString('zh-CN') }} / {{ plans.mini.quota.toLocaleString('zh-CN') }} 颗</p>
-        <p>梦碎 {{ plans.mini.shards.toLocaleString('zh-CN') }}</p>
+        <p class="muted">{{ translateUi("迷你增强") }}</p>
+        <p>{{ plans.mini.candies.toLocaleString('zh-CN') }} / {{ plans.mini.quota.toLocaleString('zh-CN') }} {{ translateUi("颗") }}</p>
+        <p>{{ translateUi("梦碎") }} {{ plans.mini.shards.toLocaleString('zh-CN') }}</p>
       </article>
     </div>
-    <p v-if="active.over" class="amber">超出{{ boost.name }}额度 {{ active.over.toLocaleString('zh-CN') }} 颗</p>
-    <p v-if="active.missing" class="amber">缺糖 {{ active.missing.toLocaleString('zh-CN') }} 颗</p>
+    <p v-if="active.over" class="amber">{{ translateUi("超出") }}{{ translateUi(boost.name) }}{{ translateUi("额度") }} {{ active.over.toLocaleString('zh-CN') }} {{ translateUi("颗") }}</p>
+    <p v-if="active.missing" class="amber">{{ translateUi("缺糖") }} {{ active.missing.toLocaleString('zh-CN') }} {{ translateUi("颗") }}</p>
     <div class="row">
-      <button class="btn" type="button" @click="addRow">新增宝可梦</button>
-      <button class="btn" type="button" :disabled="!box.pokemon.length" @click="openImport">从 Box 导入</button>
+      <button class="btn" type="button" @click="addRow">{{ translateUi("新增宝可梦") }}</button>
+      <button class="btn" type="button" :disabled="!box.pokemon.length" @click="openImport">{{ translateUi("从 Box 导入") }}</button>
     </div>
     </div>
-    <div class="stack candy-list" aria-label="糖果增强宝可梦列表" tabindex="0">
+    <div class="stack candy-list" :aria-label="translateUi('糖果增强宝可梦列表')" tabindex="0">
     <article v-for="(row, index) in plan.candyRows" :key="row.id" class="card stack">
       <div class="candy-row-top">
         <template v-if="expandedRows.has(row.id)">
@@ -164,27 +165,27 @@ const presets = CANDY_PRESETS
           :class="{ on: expandedRows.has(row.id) }"
           type="button"
           :aria-expanded="expandedRows.has(row.id)"
-          :aria-label="expandedRows.has(row.id) ? '收起糖果规划' : '查看糖果规划详情'"
-          :title="expandedRows.has(row.id) ? '收起糖果规划' : '查看糖果规划详情'"
+          :aria-label="expandedRows.has(row.id) ? translateUi('收起糖果规划') : translateUi('查看糖果规划详情')"
+          :title="expandedRows.has(row.id) ? translateUi('收起糖果规划') : translateUi('查看糖果规划详情')"
           @click="toggleRow(row.id)"
-        >{{ expandedRows.has(row.id) ? '收起' : '详情' }}</button>
+        >{{ expandedRows.has(row.id) ? translateUi("收起") : translateUi("详情") }}</button>
       </div>
       <template v-if="expandedRows.has(row.id)">
       <div class="row">
-        <FormField v-slot="{ id }" label="当前糖果"><input :id="id" :value="stockOf(row.pokeId)" type="number" :min="INPUT_LIMITS.stockOf_row_pokeId.min" @change="setStock(row.pokeId, Number(($event.target as HTMLInputElement).value))"></FormField>
-        <FormField v-slot="{ id }" label="输入方式"><select :id="id" v-model="row.method">
-            <option value="target">目标等级</option>
-            <option value="manual">指定糖果</option>
+        <FormField v-slot="{ id }" :label="translateUi('当前糖果')"><input :id="id" :value="stockOf(row.pokeId)" type="number" :min="INPUT_LIMITS.stockOf_row_pokeId.min" @change="setStock(row.pokeId, Number(($event.target as HTMLInputElement).value))"></FormField>
+        <FormField v-slot="{ id }" :label="translateUi('输入方式')"><select :id="id" v-model="row.method">
+            <option value="target">{{ translateUi("目标等级") }}</option>
+            <option value="manual">{{ translateUi("指定糖果") }}</option>
           </select></FormField>
       </div>
       <div class="row">
-        <FormField v-slot="{ id }" label="当前等级"><input :id="id" v-model.number="row.start" type="number" :min="INPUT_LIMITS.row_start.min" :max="INPUT_LIMITS.row_start.max"></FormField>
+        <FormField v-slot="{ id }" :label="translateUi('当前等级')"><input :id="id" v-model.number="row.start" type="number" :min="INPUT_LIMITS.row_start.min" :max="INPUT_LIMITS.row_start.max"></FormField>
         <div v-if="row.method === 'target'" class="field">
-          <label>目标等级</label>
+          <label>{{ translateUi("目标等级") }}</label>
           <input v-model.number="row.target" type="number" :min="INPUT_LIMITS.row_target.min" :max="INPUT_LIMITS.row_target.max">
         </div>
         <div v-else class="field">
-          <label>使用糖果</label>
+          <label>{{ translateUi("使用糖果") }}</label>
           <input v-model.number="row.use" type="number" :min="INPUT_LIMITS.row_use.min" :disabled="row.useAll">
         </div>
       </div>
@@ -196,50 +197,49 @@ const presets = CANDY_PRESETS
           type="button"
           :class="{ on: row.target === lv }"
           @click="row.target = lv"
-        >进化 {{ lv }}</button>
+        >{{ translateUi("进化") }} {{ lv }}</button>
       </div>
-      <label v-else class="row"><input v-model="row.useAll" type="checkbox"> 用光当前剩余糖果</label>
+      <label v-else class="row"><input v-model="row.useAll" type="checkbox"> {{ translateUi("用光当前剩余糖果") }}</label>
       <div class="row">
-        <FormField v-slot="{ id }" label="经验修正"><select :id="id" v-model="row.nature">
-            <option value="flat">无修正</option>
+        <FormField v-slot="{ id }" :label="translateUi('经验修正')"><select :id="id" v-model="row.nature">
+            <option value="flat">{{ translateUi("无修正") }}</option>
             <option value="up">+EXP</option>
             <option value="down">−EXP</option>
           </select></FormField>
-        <FormField v-slot="{ id }" label="升级还需 EXP"><input :id="id"
+        <FormField v-slot="{ id }" :label="translateUi('升级还需 EXP')"><input :id="id"
             :value="row.remaining ?? ''"
             type="number"
             :min="INPUT_LIMITS.row_remaining.min"
-            placeholder="留空＝刚到本级"
+            :placeholder="translateUi('留空＝刚到本级')"
             @change="setRemaining(row, ($event.target as HTMLInputElement).value)"
           ></FormField>
       </div>
       <p v-if="active.results[index] && !active.results[index].error">
-        使用 {{ active.results[index].candies.toLocaleString('zh-CN') }} 颗
-        · 梦碎 {{ active.results[index].shards.toLocaleString('zh-CN') }}
-        · 到 Lv.{{ active.results[index].level }}
+        {{ translateUi("使用") }} {{ active.results[index].candies.toLocaleString('zh-CN') }} {{ translateUi("颗 · 梦碎") }} {{ active.results[index].shards.toLocaleString('zh-CN') }}
+        {{ translateUi("· 到 Lv.") }}{{ active.results[index].level }}
       </p>
       <p :class="active.results[index]?.error || active.results[index]?.missing ? 'amber' : 'muted'">{{ statusOf(index) }}</p>
       <div class="row">
-        <button class="btn ghost" type="button" :disabled="index === 0" @click="moveRow(index, -1)">上移</button>
-        <button class="btn ghost" type="button" :disabled="index === plan.candyRows.length - 1" @click="moveRow(index, 1)">下移</button>
-        <button class="btn ghost" type="button" @click="removeRow(row.id)">删除</button>
+        <button class="btn ghost" type="button" :disabled="index === 0" @click="moveRow(index, -1)">{{ translateUi("上移") }}</button>
+        <button class="btn ghost" type="button" :disabled="index === plan.candyRows.length - 1" @click="moveRow(index, 1)">{{ translateUi("下移") }}</button>
+        <button class="btn ghost" type="button" @click="removeRow(row.id)">{{ translateUi("删除") }}</button>
       </div>
       </template>
     </article>
-    <p v-if="!plan.candyRows.length" class="muted">新增宝可梦，填写目标等级或要花的糖果。</p>
+    <p v-if="!plan.candyRows.length" class="muted">{{ translateUi("新增宝可梦，填写目标等级或要花的糖果。") }}</p>
     </div>
     </div>
     <div v-if="importing" v-back="() => { importing = false }" class="overlay" @click.self="importing = false">
       <section class="sheet stack">
         <div class="row">
-          <h3>从 Box 导入</h3>
-          <button class="btn ghost" type="button" @click="importing = false">完成</button>
+          <h3>{{ translateUi("从 Box 导入") }}</h3>
+          <button class="btn ghost" type="button" @click="importing = false">{{ translateUi("完成") }}</button>
         </div>
-        <p class="muted">带入等级、经验性格和升级还需 EXP，目标等级默认下一档。可连续点选多只。</p>
+        <p class="muted">{{ translateUi("带入等级、经验性格和升级还需 EXP，目标等级默认下一档。可连续点选多只。") }}</p>
         <button v-for="p in boxList" :key="p.uid" class="data-row" type="button" @click="importFromBox(p)">
-          <PokeSprite :id="p.pokeId" :name="boxLabel(p)" :shiny="p.shiny" />
-          <span>{{ boxLabel(p) }} Lv.{{ p.level }} · {{ p.nature }}</span>
-          <span v-if="imported.has(p.uid)" class="chip">已加入</span>
+          <PokeSprite :id="p.pokeId" :name="boxLabel(p)" :shiny="p.shiny" :ribbon-hours="p.tune?.ribbonHours" />
+          <span>{{ boxLabel(p) }} Lv.{{ p.level }} · {{ gameText(p.nature) }}</span>
+          <span v-if="imported.has(p.uid)" class="chip">{{ translateUi("已加入") }}</span>
         </button>
       </section>
     </div>
@@ -247,7 +247,7 @@ const presets = CANDY_PRESETS
 </template>
 
 <style scoped>
-.candy-workspace { height: var(--candy-frame-height, calc(100vh - 12px)); min-height: 0; display: flex; flex-direction: column; }
+.candy-workspace { height: var(--candy-frame-height, calc(100vh - 12px)); height: var(--candy-frame-height, calc(100dvh - 12px)); min-height: 0; display: flex; flex-direction: column; }
 .candy-context, .candy-toolbar { flex: 0 0 auto; }
 .candy-toolbar { position: sticky; top: var(--candy-sticky-top, 0px); z-index: 4; background: var(--ink); }
 .candy-list { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; align-content: start; overscroll-behavior-y: contain; padding: 2px; }

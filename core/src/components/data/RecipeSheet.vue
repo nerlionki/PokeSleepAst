@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.RecipeSheet
 
@@ -33,28 +34,28 @@ const INPUT_LIMITS = INPUT_RANGES.RecipeSheet
 </script>
 
 <template>
-  <DrawerSheet :title="recipe.name" @close="$emit('close')">
+  <DrawerSheet :title="gameText(recipe.name)" @close="$emit('close')">
     <div class="row">
       <MealIcon :name="recipe.name" :id="recipe.id" />
       <div>
         <p>
-          {{ categoryLabel(recipe.category) }} · 锅 {{ recipe.pot || '不限' }}
+          {{ categoryLabel(recipe.category) }} {{ translateUi("· 锅") }} {{ recipe.pot || translateUi("不限") }}
         </p>
         <p class="muted">
-          {{ recipe.bonus == null ? '还未公布' : bonusLabel(recipe.bonus) }}
+          {{ recipe.bonus == null ? translateUi("还未公布") : bonusLabel(recipe.bonus) }}
         </p>
       </div>
     </div>
-    <p v-if="recipe.nameUnannounced" class="muted">食谱名称还未公布</p>
+    <p v-if="recipe.nameUnannounced" class="muted">{{ translateUi("食谱名称还未公布") }}</p>
     <div v-if="recipe.ingredients.length" class="stack">
       <div v-for="ing in recipe.ingredients" :key="ing.name" class="row">
         <IngredientIcon :id="ing.id" :name="ing.name" />
-        <span>{{ ing.name }} × {{ ing.count ?? '还未公布' }}</span>
+        <span>{{ gameText(ing.name) }} × {{ ing.count ?? translateUi("还未公布") }}</span>
       </div>
     </div>
-    <p v-else class="muted">拌拌食谱，用当餐剩下的食材。</p>
+    <p v-else class="muted">{{ translateUi("拌拌食谱，用当餐剩下的食材。") }}</p>
     <label v-if="editableLevel && !recipe.mix" class="field">
-      <span>食谱等级（同步全局设置）</span>
+      <span>{{ translateUi("食谱等级（同步全局设置）") }}</span>
       <input
         :value="level"
         type="number"
@@ -74,7 +75,7 @@ const INPUT_LIMITS = INPUT_RANGES.RecipeSheet
         <span>Lv.{{ lv }}</span>
         <strong>{{
           recipe.baseEnergy == null
-            ? '还未公布'
+            ? translateUi("还未公布")
             : dishEnergy(recipe.baseEnergy, lv).toLocaleString('zh-CN')
         }}</strong>
       </div>

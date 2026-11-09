@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t as translateUi, gameText } from '../../ui/i18n'
 import { ANNOUNCED } from '../../calc/announcedContent'
 import clientDefaults from '../../data/client-defaults.resource'
 
@@ -38,15 +39,15 @@ function toggle(id: number) {
 <template>
   <div>
     <article v-for="i in announced" :key="i.key" class="acc">
-      <DataRow :title="i.name" subtitle="能量与详情还未公布">
+      <DataRow :title="gameText(i.name)" :subtitle="translateUi('能量与详情还未公布')">
         <template #lead><IngredientIcon v-if="i.imageId != null" :id="i.imageId" :name="i.name" /></template>
         <template #trail><span /></template>
       </DataRow>
     </article>
     <article v-for="i in list" :key="i.id" class="acc">
       <DataRow
-        :title="i.name"
-        :subtitle="`能量 ${i.energy} · 梦碎 ${i.shards}`"
+        :title="gameText(i.name)"
+        :subtitle="translateUi('能量 {arg1} · 梦碎 {arg2}', { arg1: String(i.energy), arg2: String(i.shards) })"
         @click="toggle(i.id)"
       >
         <template #lead>
@@ -59,24 +60,24 @@ function toggle(id: number) {
         </template>
       </DataRow>
       <div v-if="openId === i.id" class="acc-body">
-        <p class="muted">日产量 Top3</p>
+        <p class="muted">{{ translateUi("日产量 Top3") }}</p>
         <p v-for="(p, index) in top(i.id)" :key="p.id" class="ing-top-line">
           <PokeSprite :id="p.id" :name="p.name" :ribbon-hours="productionRibbonHours(p.id)" />
-          <span>{{ index + 1 }}. {{ p.name }} · {{ p.total.toFixed(1) }} 个/日</span>
+          <span>{{ index + 1 }}. {{ gameText(p.name) }} · {{ p.total.toFixed(1) }} {{ translateUi("个/日") }}</span>
         </p>
-        <p v-if="!top(i.id).length" class="muted">没有宝可梦能产出这个食材。</p>
+        <p v-if="!top(i.id).length" class="muted">{{ translateUi("没有宝可梦能产出这个食材。") }}</p>
         <DataRow
           v-for="r in usesOf(i.id)"
           :key="r.name"
-          :title="r.name"
-          :subtitle="`用量 ${r.count} · 锅 ${r.pot}`"
+          :title="gameText(r.name)"
+          :subtitle="translateUi('用量 {arg1} · 锅 {arg2}', { arg1: String(r.count), arg2: String(r.pot) })"
         >
           <template #lead>
             <MealIcon :name="r.name" />
           </template>
           <template #trail><span /></template>
         </DataRow>
-        <p v-if="!usesOf(i.id).length" class="muted">没有收录使用该食材的食谱。</p>
+        <p v-if="!usesOf(i.id).length" class="muted">{{ translateUi("没有收录使用该食材的食谱。") }}</p>
       </div>
     </article>
   </div>

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { gameText, t as translateUi } from '../../ui/i18n'
+
+
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, ref, shallowRef } from 'vue'
@@ -108,45 +111,45 @@ function resetFilters() { nameQuery.value = ''; berryType.value = []; specialty.
 <template>
   <div class="stack">
     <article class="card stack">
-      <h3>睡姿图鉴墙</h3>
-      <p class="muted">用图鉴立绘铺成照片墙，不抓取游戏内睡姿照片。默认每一张都已选中，表示这些睡姿都收集过。点卡片可以取消或重新选中。反选后，亮着的都是还没收集到的睡姿。</p>
+      <h3>{{ translateUi("睡姿图鉴墙") }}</h3>
+      <p class="muted">{{ translateUi("用图鉴立绘铺成照片墙，不抓取游戏内睡姿照片。默认每一张都已选中，表示这些睡姿都收集过。点卡片可以取消或重新选中。反选后，亮着的都是还没收集到的睡姿。") }}</p>
     </article>
     <div class="field">
-      <label>地图</label>
-      <div class="picker-opts"><button type="button" :class="{ on: !island.length }" @click="pickIsland('all')">全部地图</button><button v-for="item in ISLANDS" :key="item.id" type="button" :class="{ on: island.includes(item.id) }" @click="pickIsland(item.id)">{{ item.name }}</button></div>
+      <label>{{ translateUi("地图") }}</label>
+      <div class="picker-opts"><button type="button" :class="{ on: !island.length }" @click="pickIsland('all')">{{ translateUi("全部地图") }}</button><button v-for="item in ISLANDS" :key="item.id" type="button" :class="{ on: island.includes(item.id) }" @click="pickIsland(item.id)">{{ gameText(item.name) }}</button></div>
     </div>
     <div class="field">
-      <label>宝可梦</label>
-      <div class="row gallery-search"><input :value="nameQuery" placeholder="宝可梦名称" @input="setName(($event.target as HTMLInputElement).value)"><button class="btn ghost" type="button" @click="resetFilters">重置</button></div>
+      <label>{{ translateUi("宝可梦") }}</label>
+      <div class="row gallery-search"><input :value="nameQuery" :placeholder="translateUi('宝可梦名称')" @input="setName(($event.target as HTMLInputElement).value)"><button class="btn ghost" type="button" @click="resetFilters">{{ translateUi("重置") }}</button></div>
     </div>
     <div class="seg seg-4">
-      <button type="button" :class="{ on: !stars.length }" @click="stars = []; resetPage()">全部星</button>
+      <button type="button" :class="{ on: !stars.length }" @click="stars = []; resetPage()">{{ translateUi("全部星") }}</button>
       <button v-for="n in 5" :key="n" type="button" :class="{ on: stars.includes(n) }" @click="toggleChoice(stars, n, [1, 2, 3, 4, 5]); resetPage()">★{{ n }}</button>
     </div>
     <div class="seg seg-3">
-      <button type="button" :class="{ on: view === 'all' }" @click="view = 'all'; resetPage()">全部</button>
-      <button type="button" :class="{ on: view === 'found' }" @click="view = 'found'; resetPage()">已发现</button>
-      <button type="button" :class="{ on: view === 'missing' }" @click="invert">反选</button>
+      <button type="button" :class="{ on: view === 'all' }" @click="view = 'all'; resetPage()">{{ translateUi("全部") }}</button>
+      <button type="button" :class="{ on: view === 'found' }" @click="view = 'found'; resetPage()">{{ translateUi("已发现") }}</button>
+      <button type="button" :class="{ on: view === 'missing' }" @click="invert">{{ translateUi("反选") }}</button>
     </div>
     <div class="picker-filters">
-      <button type="button" :class="{ on: panel === 'type' || berryType.length > 0 }" @click="togglePanel('type')">属性</button>
-      <button type="button" :class="{ on: panel === 'spec' || specialty.length > 0 }" @click="togglePanel('spec')">类型</button>
-      <button type="button" :class="{ on: panel === 'sleep' || sleepType.length > 0 }" @click="togglePanel('sleep')">睡眠类型</button>
+      <button type="button" :class="{ on: panel === 'type' || berryType.length > 0 }" @click="togglePanel('type')">{{ translateUi("属性") }}</button>
+      <button type="button" :class="{ on: panel === 'spec' || specialty.length > 0 }" @click="togglePanel('spec')">{{ translateUi("类型") }}</button>
+      <button type="button" :class="{ on: panel === 'sleep' || sleepType.length > 0 }" @click="togglePanel('sleep')">{{ translateUi("睡眠类型") }}</button>
     </div>
     <div v-if="panel === 'type'" class="picker-opts">
-      <button type="button" :class="{ on: !berryType.length }" @click="pickChip('type', '全部')">全部</button>
+      <button type="button" :class="{ on: !berryType.length }" @click="pickChip('type', '全部')">{{ translateUi("全部") }}</button>
       <button v-for="item in types" :key="item" type="button" :class="{ on: berryType.includes(item) }" @click="pickChip('type', item)">{{ item }}</button>
     </div>
     <div v-else-if="panel === 'spec'" class="picker-opts">
-      <button type="button" :class="{ on: !specialty.length }" @click="pickChip('spec', '全部')">全部</button>
+      <button type="button" :class="{ on: !specialty.length }" @click="pickChip('spec', '全部')">{{ translateUi("全部") }}</button>
       <button v-for="item in specs" :key="item" type="button" :class="{ on: specialty.includes(item) }" @click="pickChip('spec', item)">{{ item }}</button>
     </div>
     <div v-else-if="panel === 'sleep'" class="picker-opts">
-      <button type="button" :class="{ on: !sleepType.length }" @click="pickChip('sleep', '全部')">全部</button>
-      <button v-for="item in sleeps" :key="item" type="button" :class="{ on: sleepType.includes(item) }" @click="pickChip('sleep', item)">{{ item }}</button>
+      <button type="button" :class="{ on: !sleepType.length }" @click="pickChip('sleep', '全部')">{{ translateUi("全部") }}</button>
+      <button v-for="item in sleeps" :key="item" type="button" :class="{ on: sleepType.includes(item) }" @click="pickChip('sleep', item)">{{ gameText(item) }}</button>
     </div>
-    <p v-if="view === 'missing'" class="muted">当前选中的是还没有收集到的睡姿。</p>
-    <p class="muted">{{ filtered.length }} 个睡姿 · 第 {{ Math.min(page + 1, pages) }}/{{ pages }} 页</p>
+    <p v-if="view === 'missing'" class="muted">{{ translateUi("当前选中的是还没有收集到的睡姿。") }}</p>
+    <p class="muted">{{ filtered.length }} {{ translateUi("个睡姿 · 第") }} {{ Math.min(page + 1, pages) }}/{{ pages }} {{ translateUi("页") }}</p>
     <div class="style-wall">
       <button
         v-for="style in slice"
@@ -157,16 +160,16 @@ function resetFilters() { nameQuery.value = ''; berryType.value = []; specialty.
         @click="planStore.toggleStyle(styleKey(style.pokeId, style.stars, style.styleId))"
       >
         <PokeSprite :id="style.pokeId" :name="style.name" />
-        <strong>{{ style.name }}</strong>
+        <strong>{{ gameText(style.name) }}</strong>
         <span>★{{ style.stars }}{{ style.styleName ? ` · ${style.styleName}` : '' }}</span>
-        <span v-if="sleepReward(style)" class="style-rewards">EXP {{ sleepReward(style)?.researchExp }} · 梦碎 {{ sleepReward(style)?.shards }} · 糖果 {{ sleepReward(style)?.candy }}</span>
-        <em v-if="style.limited" class="amber">活动限定睡姿</em>
+        <span v-if="sleepReward(style)" class="style-rewards">EXP {{ sleepReward(style)?.researchExp }} {{ translateUi("· 梦碎") }} {{ sleepReward(style)?.shards }} {{ translateUi("· 糖果") }} {{ sleepReward(style)?.candy }}</span>
+        <em v-if="style.limited" class="amber">{{ translateUi("活动限定睡姿") }}</em>
         <em>{{ islandName(style.island) }}</em>
       </button>
     </div>
     <div class="row">
-      <button class="btn ghost" type="button" :disabled="page <= 0" @click="page -= 1">上一页</button>
-      <button class="btn ghost" type="button" :disabled="page >= pages - 1" @click="page += 1">下一页</button>
+      <button class="btn ghost" type="button" :disabled="page <= 0" @click="page -= 1">{{ translateUi("上一页") }}</button>
+      <button class="btn ghost" type="button" :disabled="page >= pages - 1" @click="page += 1">{{ translateUi("下一页") }}</button>
     </div>
   </div>
 </template>

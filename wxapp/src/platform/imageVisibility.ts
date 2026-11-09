@@ -20,7 +20,10 @@ export function whenImageVisible(id: string, start: Start, afterRender: (callbac
       if (!current.pending.size) return
       try {
         current.observer = wx.createIntersectionObserver(page, { observeAll: true, thresholds: [0], initialRatio: 0 })
-        current.observer.relativeToViewport().observe('.resource-awaiting-image', result => {
+        // Taro splits deep trees (including the picker grid) into native comp
+        // instances. A page-local selector silently misses images inside them.
+        // PageShell's outer root stays in the page scope; >>> crosses comp bounds.
+        current.observer.relativeToViewport().observe('.resource-awaiting-image, .appearance-root >>> .resource-awaiting-image', result => {
           if (result.intersectionRatio <= 0) return
           const key = String(result.dataset?.resourceId ?? result.id)
           const show = current.pending.get(key)
