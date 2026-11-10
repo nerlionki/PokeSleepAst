@@ -9,7 +9,7 @@ import type { IslandId, SleepType } from '../types'
 import { ISLANDS, SLEEP_STYLES } from './data'
 import { BABY_POKEMON_IDS, babyEfficiencyIslands, babyEfficiencyPokemonName, efficiencyCurve, efficiencyDrawState, efficiencyIslands, EFFICIENCY_SLEEP_TYPES, MAX_EFFICIENCY_DROWSY_POWER, normalizeBabyEfficiencyPokemonId, type EfficiencyIsland } from './babyEfficiency'
 import { createDrawStateKey, efficiencyRandom, efficiencyRewardsAfterResearch, simulateEfficiencySlots, type EfficiencySimulation } from './babyEfficiencyDraw'
-import { drowsyPower, encounterCount, rankStrength, RANK_ORDER, styleKey, styleUnlockIndex } from './sleep'
+import { drowsyPower, encounterCount, rankStrength, RANK_ORDER, styleKey, styleUnlockIndex, type SleepDiscoveryOptions } from './sleep'
 import { normalizeEventMix, type EventMix } from './sleepRules'
 const factory_splitSleep_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_splitSleep
 const splitSleep_config_ruleCatalogs = ruleCatalogs.modules.splitSleep
@@ -26,7 +26,7 @@ export interface SplitTarget {
   candyWeight: number
   probabilityWeight: number
 }
-export interface SplitOptions {
+export interface SplitOptions extends SleepDiscoveryOptions {
   campTicket?: boolean
   activity?: ActivitySelection
   island: IslandId
@@ -114,7 +114,7 @@ export interface SplitResult {
   individual: SplitOptimum[]
 }
 interface Session { count: number, probability: number, candies: number[], camp?: Session }
-export interface SplitCheckpoint { version: 1, signature: string, completed: number, sessions: Session[][] }
+export interface SplitCheckpoint { version: 2, signature: string, completed: number, sessions: Session[][] }
 export interface SplitRequest { splitOptions: SplitOptions, checkpoint?: SplitCheckpoint }
 export type SplitMessage = { type: 'checkpoint', checkpoint: SplitCheckpoint } | { type: 'progress', completed: number, total: number } | { type: 'result', result: SplitResult } | { type: 'error', message: string }
 export function splitScore(values: number[], maxima: number[], metrics: SplitMetric[]): number | null {
@@ -150,7 +150,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
   if (error) throw new Error(error)
   const signature = JSON.stringify(options) + (options.campTicket ? ":camp-v1" : "")
   const checkpoint = request.checkpoint
-  if (checkpoint && (checkpoint.version !== 1 || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
+  if (checkpoint && (checkpoint.version !== 2 || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
   const types = options.sleepType === 'all' ? EFFICIENCY_SLEEP_TYPES : [options.sleepType]
   const total = options.targets.length * 100 * types.length
   if (checkpoint && (!Number.isInteger(checkpoint.completed) || checkpoint.completed < 0 || checkpoint.completed > total || checkpoint.sessions.length !== options.targets.length)) throw new Error('拆觉检查点无效，请重新计算')
@@ -170,7 +170,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
     const end = (targetIndex + 1) * 100 * types.length
     if (completed >= end) continue
     const status = splitTargetStatus(target, options.island, options.strength, context)
-    const island = activityEfficiencyIsland(efficiencyIslands(target.pokeId, target.kind === 'style' ? target.style : undefined, context).find(row => row.id === options.island)!, context)
+    const island = activityEfficiencyIsland(efficiencyIslands(target.pokeId, target.kind === 'style' ? target.style : undefined, context).find(row => row.id === options.island)!, context, options)
     const pool = fixedPool(island, options.strength, options.eventMult)
     const keyOf = createDrawStateKey(), cache = new Map<string, EfficiencySimulation>()
     for (let score = 1; score <= (splitSleep_splitSleepSteps_runtimeParameters.p003 as 100); score++) {
@@ -198,7 +198,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
         sessions[targetIndex]![offset] = session
         completed++
       }
-      yield { version: 1, signature, completed, sessions }
+      yield { version: 2, signature, completed, sessions }
     }
   }
   const metrics = splitMetrics(options), candidates: SplitCandidate[] = []

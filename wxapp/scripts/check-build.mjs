@@ -10,6 +10,13 @@ const compatibility = JSON.parse(fs.readFileSync(path.join(root, 'config/compati
 const packageVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).version
 if (compatibility.minimumMiniProgramVersion !== packageVersion || compatibility.minimumBaseLibraryVersion !== '2.27.3') throw Error('Invalid minimum supported versions')
 const config = JSON.parse(fs.readFileSync(path.join(dist, 'app.json')))
+const baseWxml = fs.readFileSync(path.join(dist, 'base.wxml'), 'utf8')
+const inputTags = [...baseWxml.matchAll(/<input\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/g)]
+if (!inputTags.length || inputTags.some(match => {
+  const [tag] = match
+  const end = match.index + tag.length
+  return !tag.endsWith('/>') && !/^\s*<\/input>/.test(baseWxml.slice(end))
+})) throw Error('Taro base.wxml contains an unclosed native input tag')
 for (const item of config.tabBar.list) {
   for (const key of ['iconPath', 'selectedIconPath']) {
     const icon = item[key]
@@ -26,7 +33,10 @@ const files = walk(dist)
 for (const worker of ['baby.js', 'sleep.js', 'ocr.js']) if (!fs.existsSync(path.join(dist, 'workers', worker))) throw Error('Missing background calculation worker: ' + worker)
 const require = createRequire(import.meta.url)
 const compressedJson = require('../config/compressed-json.cjs')
-for (const file of [...walk(path.resolve(root, '../core/src/data')).filter(file => file.endsWith('.json')), ...['image-map.json', 'image-manifest.json'].map(name => path.join(root, 'src/platform', name))]) {
+for (const file of [...walk(path.resolve(root, '../core/src/data')).filter(file => file.endsWith('.json')),
+  path.resolve(root, '../core/src/ui/gameLabels.json'),
+  ...['image-map.json', 'image-manifest.json'].map(name => path.join(root, 'src/platform', name)),
+]) {
   const source = fs.readFileSync(file, 'utf8')
   const module = { exports: {} }
   runInNewContext(compressedJson(source), { module, require, Uint8Array, wx: {
@@ -37,7 +47,7 @@ for (const file of [...walk(path.resolve(root, '../core/src/data')).filter(file 
   } }, { filename: file })
   if (JSON.stringify(module.exports) !== JSON.stringify(JSON.parse(source))) throw Error(`Compressed JSON changed data: ${file}`)
 }
-console.log('Verified lossless synchronous decompression of every shared data table and both image indexes.')
+console.log('Verified lossless synchronous decompression of shared data, fallback labels and both image indexes.')
 const images = JSON.parse(fs.readFileSync(path.join(root, 'src/platform/image-map.json'), 'utf8'))
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'src/platform/image-manifest.json'), 'utf8'))
 const imageKinds = new Map()

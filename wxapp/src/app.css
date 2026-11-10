@@ -33,9 +33,6 @@ page {
   --shiny-rgb: 246, 211, 101;
   --rank-copper: #d08a5a;
   --rank-silver: #d5dde6;
-  --meal-line: var(--line);
-  --meal-surface: var(--ink-2);
-  --meal-text: var(--text);
   --rarity-gold: var(--amber);
   --rarity-blue: var(--sage);
   --chart-berry: #3ecf8e;
@@ -58,7 +55,6 @@ page {
   --font-28: 28px;
   --font-32: 32px;
   --font-40: 40px;
-  --shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
   font-size: var(--font-16);
   color-scheme: var(--color-scheme);
   color: var(--text);
@@ -129,6 +125,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
 .tabbar {
   position: sticky;
   bottom: 0;
+  z-index: 5;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
@@ -160,7 +157,6 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   padding: 14px;
-  box-shadow: var(--shadow);
 }
 .source-block { display: grid; gap: 4px; }
 .source-block p { margin: 0; }
@@ -197,6 +193,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
 }
 .seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.page-tab-strip { position: sticky; top: var(--page-tabs-top, 0px); z-index: 4; flex: none; min-width: 0; }
 .seg.plan-tabs button { min-height: 44px; white-space: pre-line; }
 .seg button {
   width: 100%;
@@ -268,6 +265,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   max-height: calc(92dvh - var(--safe-top));
   overflow-x: clip;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 .drawer-overlay { z-index: 30; align-items: stretch; }
 .drawer-page {
@@ -362,12 +360,21 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
 .picker-body {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 2px;
+}
+.picker-results {
+  flex: 1;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  align-content: start;
-  padding: 2px;
   overscroll-behavior-y: contain;
 }
+.picker-body > .horizontal-strip { flex: none; }
+.picker-body .picker-opts { width: max-content; min-width: 100%; flex-wrap: nowrap; }
+.picker-body .picker-opts button { flex: none; white-space: nowrap; }
 .picker-search {
   width: 100%;
   background: var(--ink);
@@ -612,7 +619,7 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   border-radius: 50%;
   object-fit: cover;
   background: var(--ink-2);
-  box-shadow: 0 0 0 1px rgba(var(--line-rgb), 0.35);
+  border: 1px solid rgba(var(--line-rgb), 0.35);
 }
 .expect-line b { font-variant-numeric: tabular-nums; color: var(--text); }
 .acc-body.plain { padding-left: 2px; }
@@ -789,13 +796,13 @@ h1, h2, h3 { font-family: inherit; margin: 0; }
   text-align: left;
   padding: 10px;
   border-radius: 16px;
-  border: 1px solid var(--meal-line);
-  background: var(--meal-surface);
+  border: 1px solid var(--line);
+  background: var(--card);
   color: var(--text);
 }
 .meal-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .meal-card-head strong { font-size: var(--font-14); }
-.meal-card-meta, .meal-card-energy { color: var(--meal-text); font-size: var(--font-12); }
+.meal-card-meta, .meal-card-energy { color: var(--muted); font-size: var(--font-12); }
 .meal-card-ings { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .meal-ing { display: inline-flex; align-items: center; gap: 2px; }
 .meal-ing i { font-style: normal; font-size: var(--font-12); }

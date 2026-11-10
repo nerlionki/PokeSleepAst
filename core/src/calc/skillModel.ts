@@ -17,7 +17,8 @@ export function ownedSelectionSkill(pokeId: number) {
   return MAIN_SKILLS.find(skill => skill.model.selection?.kind === 'choose' && skill.model.selection.owners?.includes(pokeId))
 }
 export function modelFirstIngredient(pokeId: number, slot: number | null | undefined) {
-  return slot == null ? '' : pokeById(pokeId)?.ingredients[slot]?.name ?? ''
+  const id = slot == null ? undefined : pokeById(pokeId)?.ingredients[slot]?.id
+  return id == null ? '' : String(id)
 }
 export function modelCondition(condition: SkillCondition | undefined, ctx: ModelContext): boolean {
   if (!condition) return true

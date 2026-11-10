@@ -28,20 +28,20 @@ const { focus } = useProgressDialogFocus(open, () => props.cancellable ? cancelB
 
 <template>
   <Teleport to="body">
-    <div v-if="open" v-back="requestCancel" class="overlay progress-dialog" role="dialog" aria-modal="true" :aria-label="title"
+    <div v-if="open" v-back="requestCancel" class="overlay progress-dialog" role="dialog" aria-modal="true" :aria-label="translateUi(title)"
       @keydown.esc.prevent="requestCancel" @keydown.tab.prevent="focus" @touchmove.self.prevent>
       <section ref="panel" class="card stack progress-panel" tabindex="-1" role="status" aria-live="polite">
         <div v-if="percent == null" class="progress-spinner" aria-hidden="true" />
         <h3>{{ translateUi(title) }}</h3>
         <p v-if="notice" class="muted">{{ translateUi(notice) }}</p>
-        <p v-if="stage">{{ stage }}</p>
-        <div v-if="percent != null" class="progress-track" role="progressbar" :aria-label="title + '进度'" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100">
+        <p v-if="stage">{{ translateUi(stage) }}</p>
+        <div v-if="percent != null" class="progress-track" role="progressbar" :aria-label="translateUi('{title}进度', { title: translateUi(title) })" :aria-valuenow="percent" aria-valuemin="0" aria-valuemax="100">
           <div :style="{ width: percent + '%' }" />
         </div>
         <p v-if="percent != null || detail"><span v-if="percent != null">{{ percent }}%{{ detail ? ' · ' : '' }}</span>{{ detail }}</p>
         <slot />
         <p v-if="hint" class="muted">{{ translateUi(hint) }}</p>
-        <button v-if="cancellable" ref="cancelButton" class="btn ghost" type="button" @click="requestCancel">{{ cancelText }}</button>
+        <button v-if="cancellable" ref="cancelButton" class="btn ghost" type="button" @click="requestCancel">{{ translateUi(cancelText) }}</button>
       </section>
     </div>
   </Teleport>
@@ -49,7 +49,7 @@ const { focus } = useProgressDialogFocus(open, () => props.cancellable ? cancelB
 
 <style scoped>
 .progress-dialog { z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.progress-panel { width: 100%; max-width: 380px; max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; min-width: 0; box-sizing: border-box; text-align: center; box-shadow: var(--shadow); overflow-wrap: anywhere; }
+.progress-panel { width: 100%; max-width: 380px; max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; min-width: 0; box-sizing: border-box; text-align: center; overflow-wrap: anywhere; }
 .progress-track { height: 8px; background: var(--line); border-radius: 8px; overflow: hidden; }
 .progress-track > div { height: 100%; background: var(--sage); transition: width .2s; }
 .progress-spinner { width: 34px; height: 34px; justify-self: center; border: 3px solid var(--line); border-top-color: var(--sage); border-radius: 50%; animation: progress-spin .8s linear infinite; }

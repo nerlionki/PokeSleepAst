@@ -3,6 +3,7 @@ import extracted0 from '../data/calc-tables.resource'
 import extracted1 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { isAllRounderId } from './specialty'
+import { natureStatFactor } from './natureLabels'
 import type { IngredientSlots } from '../types'
 const ingredients_config_extracted0 = extracted0.modules.ingredients
 const ingredients_config_extracted1 = extracted1.modules.ingredients
@@ -10,6 +11,21 @@ export const INGREDIENT_GATES: readonly number[] = ingredients_config_extracted0
 export const INGREDIENT_CHOICES: readonly (readonly number[])[] = ingredients_config_extracted0.SLOT_CHOICES
 export function unlockedIngredientSlots(level: number): number {
   return INGREDIENT_GATES.filter(gate => level >= gate).length
+}
+
+export function selectedIngredientDrops(lines: IngredientLine[], slots: IngredientSlots, level: number): IngredientCell[] {
+  return slots.slice(0, unlockedIngredientSlots(level)).flatMap((index, slot) => {
+    const drop = index == null ? null : slotDrop(lines, slot, index)
+    return drop ? [drop] : []
+  })
+}
+
+export function berriesPerHelp(specialty: string, subskills: readonly string[], bonus: number): number {
+  return berryCount(specialty) + (subskills.includes('berryS') ? bonus : 0)
+}
+
+export function findingChance(base: number, nature: string, stat: 'ingredient' | 'skill', small: boolean, medium: boolean, smallBonus: number, mediumBonus: number): number {
+  return base * natureStatFactor(nature, stat) * (1 + (small ? smallBonus : 0) + (medium ? mediumBonus : 0))
 }
 
 export function validUnlockedIngredients(lines: IngredientLine[], slots: IngredientSlots, unlocked: number, allRounder: boolean): boolean {

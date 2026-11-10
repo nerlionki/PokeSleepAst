@@ -1,3 +1,4 @@
+import { migrateCatalogCounts, recipeKey } from './catalogIds'
 import { clampAreaBonus } from './areaBonus'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
@@ -53,12 +54,14 @@ export function mergeSettings(saved: (Partial<Settings> & { recipeLevel?: number
   const base = defaultSettings()
   if (!saved) return base
   const { recipeLevel: _legacy, goodNightRibbon: _ribbon, ...rest } = saved
+  const { counts: recipeLevels, unresolved } = migrateCatalogCounts(saved.recipeLevels ?? {}, recipeKey, saved.unresolvedRecipeLevels)
   const merged: Settings = {
     ...base,
     ...rest,
     sleepEventMix: saved.sleepEventMix === 'all' ? 'all' : 'some',
     berries: saved.berries?.length ? saved.berries : base.berries,
-    recipeLevels: { ...(saved.recipeLevels ?? {}) },
+    recipeLevels,
+    unresolvedRecipeLevels: unresolved,
   }
   merged.exWeeklyBonus = defaults_config_ruleCatalogs.mergeSettingsList0.values.includes(saved.exWeeklyBonus ?? '') ? saved.exWeeklyBonus : 'none'
   merged.islandBonuses = { ...saved.islandBonuses }

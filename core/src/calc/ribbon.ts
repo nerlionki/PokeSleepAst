@@ -10,6 +10,10 @@ const LEFT = left as Record<string, number>
 
 export const RIBBON_HOURS = (cloneData(ribbon_config_extracted0.RIBBON_HOURS) as unknown as readonly [0,200,500,1000,2000])
 
+export function ribbonStage(hours: number): number {
+  return Math.max(0, ...RIBBON_HOURS.filter(threshold => threshold <= hours))
+}
+
 /** 还能再进化几次。最终形态是 0，不会因为勋章缩短帮忙间隔。 */
 export function stagesLeft(pokeId: number): number {
   return LEFT[String(pokeId)] ?? 0

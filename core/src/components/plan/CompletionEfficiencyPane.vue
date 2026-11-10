@@ -12,7 +12,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { completionTargets } from '../../calc/completionEfficiency'
-import { EVENT_BONUSES, styleKey } from '../../calc/sleep'
+import { EVENT_BONUSES, sleepDiscoveryOptions, styleKey } from '../../calc/sleep'
 import { ISLANDS, SLEEP_STYLES } from '../../calc/data'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useBabyEfficiency } from '../../composables/useBabyEfficiency'
@@ -37,7 +37,7 @@ const otherTypes = computed({
   get: () => mixMode.value !== 'off',
   set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' },
 })
-const simulationOptions = computed(() => ({ ...options.value, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 watch(pokeIds, ids => {
   if (!ids.includes(options.value.pokeId)) options.value.pokeId = ids[0] ?? 0
 }, { immediate: true })
@@ -99,7 +99,7 @@ watch(() => options.value.selectionMode, () => {
       <p class="muted">{{ gameText(resultStyle?.name) }} · {{ resultStyle?.stars }}★ {{ resultStyle ? sleepStyleText(resultStyle) : "" }} · {{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}{{ result.options.eventMult }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。列出本次搜索中每日补齐概率最高的方案。") }}</p>
       <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="translateUi('每日补齐概率最高')" unit="%" :optimum="result.catch" :precision="result.options.precision" probability />
     </template>
-    <ProgressDialog :open="busy" :title="translateUi('正在计算补齐效率')" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="'已模拟 ' + progress.evaluatedStates.toLocaleString('zh-CN') + ' 个抽取状态'" cancellable cancel-text="取消计算" @cancel="cancel" />
+    <ProgressDialog :open="busy" :title="translateUi('正在计算补齐效率')" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="translateUi('已模拟 {count} 个抽取状态', { count: progress.evaluatedStates.toLocaleString('zh-CN') })" cancellable cancel-text="取消计算" @cancel="cancel" />
   </div>
 </template>
 

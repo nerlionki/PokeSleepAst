@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { recipeById } from '../../calc/catalogIds'
 import { gameText, t as translateUi } from '../../ui/i18n'
 
 
@@ -243,7 +244,7 @@ function saveCustomToBox() {
       <article class="card">
         <h3>{{ translateUi("三餐") }}</h3>
         <p class="muted">{{ translateUi("每天 08:00／12:00／18:00，最多每周 21 顿。餐点与睡眠重叠时无法做饭，请调整全局睡眠时间。") }}</p>
-        <p v-for="(meal, i) in result.meals.slice(0, settings.period === 'week' ? 21 : 3)" :key="i">{{ translateUi("第") }} {{ Math.floor((meal.minute ?? 0) / 1440) + 1 }} {{ translateUi("天") }} {{ clockOf(meal.minute ?? 0) }} · {{ gameText(meal.name) }} · {{ meal.energy.toLocaleString() }} {{ translateUi("· 锅") }} {{ meal.potSize }} {{ translateUi("· 暴击") }} {{ ((meal.critChance ?? 0) * 100).toFixed(1) }}%</p>
+        <p v-for="(meal, i) in result.meals.slice(0, settings.period === 'week' ? 21 : 3)" :key="i">{{ translateUi("第") }} {{ Math.floor((meal.minute ?? 0) / 1440) + 1 }} {{ translateUi("天") }} {{ clockOf(meal.minute ?? 0) }} · {{ gameText(recipeById(meal.recipeId)?.name ?? meal.name) }} · {{ meal.energy.toLocaleString() }} {{ translateUi("· 锅") }} {{ meal.potSize }} {{ translateUi("· 暴击") }} {{ ((meal.critChance ?? 0) * 100).toFixed(1) }}%</p>
       </article>
     </template>
 

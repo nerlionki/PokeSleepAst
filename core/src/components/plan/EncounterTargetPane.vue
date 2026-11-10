@@ -10,7 +10,7 @@ import { storeToRefs } from 'pinia'
 import type { EncounterGoal } from '../../calc/encounterPlan'
 import { BABY_POKEMON_IDS, BABY_POKEMON_NAMES, babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { completionTargets } from '../../calc/completionEfficiency'
-import { EVENT_BONUSES, styleKey } from '../../calc/sleep'
+import { EVENT_BONUSES, sleepDiscoveryOptions, styleKey } from '../../calc/sleep'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useActivities } from '../../composables/useActivities'
 import { useBabyEfficiency } from '../../composables/useBabyEfficiency'
@@ -45,7 +45,7 @@ watch(pokeIds, ids => {
 const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId))
 const validStyle = computed(() => faces.value.some(style => styleKey(style.pokeId, style.stars, style.styleId) === options.value.completionTarget))
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, isStyle.value ? options.value.completionTarget : undefined, activity.context.value))
-const simulationOptions = computed(() => ({ ...options.value, objective: isStyle.value ? undefined : props.goal.purpose === 'candy' ? 'candy' as const : 'catch' as const, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), objective: isStyle.value ? undefined : props.goal.purpose === 'candy' ? 'candy' as const : 'catch' as const, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions, props.goal.id)
 watch(busy, value => emit('busy', value), { immediate: true })
 onScopeDispose(() => emit('busy', false))
@@ -101,7 +101,7 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : BABY_POKE
       <p class="muted">{{ gameText(resultName) }}<template v-if="resultStyle"> · {{ resultStyle.stars }}★ {{ sleepStyleText(resultStyle) }}</template> · {{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}{{ result.options.eventMult }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。以下为本次搜索中该指标最高的方案。") }}</p>
       <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="isStyle ? translateUi('每日补齐概率最高') : isCandy ? translateUi('家族糖果最多') : translateUi('遇见只数最多')" :unit="isCandy ? '颗' : '只'" :optimum="isCandy ? result.candy : result.catch" :precision="result.options.precision" :probability="isStyle" />
     </template>
-    <ProgressDialog :open="busy" :title="'正在计算' + title" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="'已模拟 ' + progress.evaluatedStates.toLocaleString('zh-CN') + ' 个抽取状态'" cancellable cancel-text="取消计算" @cancel="cancel" />
+    <ProgressDialog :open="busy" :title="translateUi('正在计算{title}', { title: translateUi(title) })" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="translateUi('已模拟 {count} 个抽取状态', { count: progress.evaluatedStates.toLocaleString('zh-CN') })" cancellable cancel-text="取消计算" @cancel="cancel" />
   </section>
 </template>
 

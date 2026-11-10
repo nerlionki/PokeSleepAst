@@ -38,12 +38,6 @@ const recipeGroups = computed(() => (['curry', 'salad', 'dessert'] as MealCatego
     .sort((a, b) => compareRecipeEnergyDescending(a, b)),
 })))
 
-function setRecipeLevel(name: string, level: number) {
-  settings.value.recipeLevels = {
-    ...settings.value.recipeLevels,
-    [name]: Math.min(RECIPE_LEVEL_MAX, Math.max(1, Number(level) || 1)),
-  }
-}
 </script>
 
 <template>
@@ -84,17 +78,21 @@ function setRecipeLevel(name: string, level: number) {
       <div class="stack">
         <p>{{ translateUi("食谱等级") }}</p>
         <p class="muted">{{ translateUi("每个食谱单独填写，未填按 1 级。") }}</p>
+        <div v-for="(level, key) in settings.unresolvedRecipeLevels" :key="key" class="row">
+          <span class="amber">{{ key }} · Lv.{{ level }} · {{ translateUi('旧食谱等级未匹配或冲突') }}</span>
+          <button class="btn ghost" type="button" @click="store.removeUnresolvedRecipeLevel(key)">{{ translateUi('删除') }}</button>
+        </div>
         <details v-for="g in recipeGroups" :key="g.id" class="recipe-levels">
           <summary>{{ translateUi(g.label) }} · {{ g.recipes.length }} {{ translateUi("道") }}</summary>
-          <div v-for="r in g.recipes" :key="r.name" class="recipe-lv-row">
-            <MealIcon :name="r.name" />
+          <div v-for="r in g.recipes" :key="r.id" class="recipe-lv-row">
+            <MealIcon :name="r.name" :id="r.id" />
             <span>{{ gameText(r.name) }}</span>
             <input
-              :value="recipeLevelOf(settings, r.name)"
+              :value="recipeLevelOf(settings, r.id)"
               type="number"
               :min="INPUT_LIMITS.recipeLevelOf_settings_r_name.min"
               :max="RECIPE_LEVEL_MAX"
-              @change="setRecipeLevel(r.name, Number(($event.target as HTMLInputElement).value))"
+              @change="store.setRecipeLevel(r.id, Number(($event.target as HTMLInputElement).value))"
             >
           </div>
         </details>

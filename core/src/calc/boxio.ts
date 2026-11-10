@@ -9,12 +9,15 @@ import { NEUTRAL_NATURE, INGREDIENTS, NATURES, POKEDEX, SUBSKILLS, pokeById } fr
 import { foldText } from './text'
 import { normalizeOcrMissing } from './ocrCompletion'
 import { parseIqdoohEntry } from './iqdoohBox'
+import { defaultSkillLevel, defaultTune, parseImportedSkillLevel } from './member'
+import { evolutionDepth } from './evolution'
 const boxio_config_extracted0 = extracted0.modules.boxio
 const boxio_config_ruleCatalogs = ruleCatalogs.modules.boxio
 const boxio_fromAny_runtimeParameters = runtimeParameters.modules.boxio.fromAny.values
 
 
 export type BoxSource = 'native' | 'sdrice' | 'iqdooh' | 'mixed'
+interface BoxImportOptions { iqdoohMaxSkillLevel?: boolean }
 
 const NATURE_EN: Record<string, string> = (cloneData(boxio_config_extracted0.NATURE_EN) as unknown as Record<string, string>)
 
@@ -153,11 +156,19 @@ function nativeSlots(raw: unknown): BoxPokemon['ingredientSlots'] {
   return [at(0), at(1), at(2)]
 }
 
-function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
+function importedEvolutions(value: unknown, pokeId: number): number | undefined {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return
+  const count = Number(value)
+  if (Number.isSafeInteger(count) && count >= 0 && count <= evolutionDepth(pokeId)) return count
+}
+
+function fromAny(item: unknown, source: BoxSource, options: BoxImportOptions): BoxPokemon | null {
   const o = asRecord(item)
   if (!o) return null
-  if (source === 'iqdooh') return parseIqdoohEntry(o)
+  if (source === 'iqdooh') return parseIqdoohEntry(o, options.iqdoohMaxSkillLevel)
   if (typeof o.pokeId === 'number' && o.uid) {
+    const tune = asRecord(o.tune)
+    const evolutions = importedEvolutions(tune?.evolutions, o.pokeId)
     return {
       uid: String(o.uid),
       pokeId: o.pokeId,
@@ -166,7 +177,7 @@ function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
       ...(o.natureMinted === true ? { natureMinted: true } : {}),
       subskills: Array.isArray(o.subskills) ? o.subskills.map(String) : boxio_config_ruleCatalogs.fromAnyList0.values,
       ingredientSlots: nativeSlots(o.ingredientSlots),
-      skillLevel: Number(o.skillLevel) || 1,
+      skillLevel: parseImportedSkillLevel(o.skillLevel) ?? defaultSkillLevel(o.pokeId, evolutions),
       ...(o.pokeId === 151 ? { mewSkill: normalizeMewSkill(o.mewSkill) } : {}),
       name: String(o.name ?? o.note ?? ''),
       napping: Boolean(o.napping),
@@ -180,6 +191,7 @@ function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
   if (o.pokemonId == null) return null
   const pokeId = pokeIdOf(o.pokemonId)
   if (!pokeId) return null
+  const evolutions = importedEvolutions(o.evotimes ?? o.evolutions, pokeId)
   const uid = String(o.uid ?? o.uuid ?? o.dataId ?? `imp-${source}-${pokeId}-${o.level ?? 1}-${Math.random().toString((boxio_fromAny_runtimeParameters.p001 as 16)).slice(2, (boxio_fromAny_runtimeParameters.p002 as 8))}`)
   return {
     uid,
@@ -189,28 +201,34 @@ function fromAny(item: unknown, source: BoxSource): BoxPokemon | null {
     ...(o.natureMinted === true ? { natureMinted: true } : {}),
     subskills: subsOf(o.subskills ?? o.subSkill ?? o.subSkills ?? o.skill),
     ingredientSlots: slotsOf(pokeId, o.ingredientSlots ?? o.ingredients ?? o.useFoods ?? o.ingredient),
-    skillLevel: Number(o.skillLevel ?? o.skilllevel ?? o.mainSkillLevel ?? 1) || 1,
+    skillLevel: parseImportedSkillLevel(o.skillLevel ?? o.skilllevel ?? o.mainSkillLevel) ?? defaultSkillLevel(pokeId, evolutions),
+    ...(evolutions !== undefined ? { tune: { ...defaultTune(pokeId), evolutions } } : {}),
     name: String(o.nickname ?? o.note ?? o.name ?? ''),
     napping: Boolean(o.napping),
   }
 }
 
-export function parseBoxImport(raw: unknown): { source: BoxSource, pokemon: BoxPokemon[], skipped: number } {
+export function parseBoxImport(raw: unknown, options: BoxImportOptions = {}): { source: BoxSource, pokemon: BoxPokemon[], skipped: number } {
   const { list, source } = extractList(raw)
   const pokemon: BoxPokemon[] = []
   let skipped = 0
   for (const item of list) {
-    const row = fromAny(item, source)
+    const row = fromAny(item, source, options)
     if (row) pokemon.push(row)
     else skipped += 1
   }
   return { source, pokemon, skipped }
 }
 
-export function parseBoxText(text: string) {
+export function detectBoxSource(text: string): BoxSource {
+  try { return extractList(JSON.parse(text)).source }
+  catch { return 'mixed' }
+}
+
+export function parseBoxText(text: string, options?: BoxImportOptions) {
   const trimmed = text.trim()
   if (!trimmed) return { source: 'mixed' as BoxSource, pokemon: [], skipped: 0 }
-  return parseBoxImport(JSON.parse(trimmed))
+  return parseBoxImport(JSON.parse(trimmed), options)
 }
 
 export function exportNative(pokemon: BoxPokemon[]) {

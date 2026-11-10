@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { ingredientLabel } from '../../calc/catalogIds'
 import { t as translateUi } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
-import { ACTIVITY_FIELDS, activeActivities, activityFeatures, activityValues, type NumericActivityField } from '../../calc/activities'
+import { ACTIVITY_FIELDS, activeActivities, activityFeatureDescription, activityFeatures, activityValues, type NumericActivityField } from '../../calc/activities'
 import { useActivities } from '../../composables/useActivities'
 import { useSettingsStore } from '../../stores/settings'
 const components_shared_ActivitySettings_config_clientDefaults = clientDefaults.modules.components_shared_ActivitySettings
@@ -17,7 +18,7 @@ const expanded = shallowRef(components_shared_ActivitySettings_config_clientDefa
 const fields = Object.keys(ACTIVITY_FIELDS) as NumericActivityField[]
 const controls = Object.fromEntries(fields.map(key => [key, activity.field(key, key === 'drowsyPowerMultiplier' ? () => settings.value.eventMult : undefined)]))
 const features = computed(() => activityFeatures(activity.context.value, undefined, 240, settings.value.island))
-const fixedDrops = computed(() => Object.keys(activityValues(activity.context.value, settings.value.island).fixedIngredientDrops))
+const fixedDrops = computed(() => Object.keys(activityValues(activity.context.value, settings.value.island).fixedIngredientDrops).map(ingredientLabel))
 const names = computed(() => activeActivities(activity.context.value).map(event => event.name).join('、'))
 function edit(key: NumericActivityField, value: string) {
   if (value === '') { activity.reset(key); return }
@@ -33,7 +34,7 @@ function edit(key: NumericActivityField, value: string) {
       <p class="muted">{{ names || translateUi("周期首日没有配置活动") }} · {{ activity.context.value.startDate }} {{ translateUi("起。按设备本地时间凌晨 04:00 切日，周模拟逐日应用；手动值覆盖对应项目。") }}</p>
       <label class="row"><input v-model="allRecipes" type="checkbox">{{ translateUi("全料理类型可制作") }}</label>
       <p v-if="fixedDrops.length" class="muted">{{ translateUi("额外食材：") }}{{ fixedDrops.join('、') }}{{ translateUi("。未公布能量的食材只统计数量，相关料理收益提示资料未公布。") }}</p>
-      <p v-for="feature in features" :key="feature.id" class="muted">{{ translateUi(feature.name) }}：{{ translateUi(feature.description) }}</p>
+      <p v-for="feature in features" :key="feature.id" class="muted">{{ translateUi(feature.name) }}：{{ translateUi(activityFeatureDescription(feature)) }}</p>
       <div v-for="key in fields" :key="key" class="field">
         <label :for="`activity-${key}`">{{ translateUi(ACTIVITY_FIELDS[key].label) }}{{ settings.activity?.overrides?.[key] != null ? translateUi("（手动）") : translateUi("（自动）") }}</label>
         <div class="row">

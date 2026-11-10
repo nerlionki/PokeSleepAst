@@ -5,6 +5,7 @@ import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 import type { CookMeal, MealCategory, Settings } from '../types'
 import { RECIPES } from './data'
+import { ingredientKey, migrateCatalogCounts, recipeById, recipeKey } from './catalogIds'
 import { activityValues, createActivityContext, activityRecipeCategories, assertActivitySupported } from './activities'
 const cook_config_extracted0 = extracted0.modules.cook
 const cook_cookEnergy_ruleParameters = ruleParameters.modules.cook.cookEnergy
@@ -17,8 +18,8 @@ export const RECIPE_LEVEL_MAX = (cook_config_extracted0.RECIPE_LEVEL_MAX as 70)
 /** 真实等级加成，来源：https://wikiwiki.jp/poke_sleep/料理 */
 const LEVEL_BONUS = cloneData(cook_config_extracted0.LEVEL_BONUS)
 
-export function recipeLevelOf(settings: CookSettings, name: string): number {
-  return Math.min(RECIPE_LEVEL_MAX, Math.max(1, settings.recipeLevels?.[name] || 1))
+export function recipeLevelOf(settings: CookSettings, id: number): number {
+  return Math.min(RECIPE_LEVEL_MAX, Math.max(1, settings.recipeLevels?.[id] || 1))
 }
 
 export function recipeLevelMult(level: number): number {
@@ -26,8 +27,8 @@ export function recipeLevelMult(level: number): number {
   return 1 + LEVEL_BONUS[lv - 1]! / 100
 }
 
-export function cookEnergy(recipeName: string, extra: number, sunday: boolean, recipeLevel = 1): number {
-  const recipe = RECIPES.find((r) => r.name === recipeName)
+export function cookEnergy(recipeId: number | string, extra: number, sunday: boolean, recipeLevel = 1): number {
+  const recipe = recipeById(Number(recipeKey(String(recipeId))))
   if (!recipe) return 0
   const extraEnergy = extra * cook_cookEnergy_ruleParameters.unknownIngredientEnergy
   const raw = recipe.baseEnergy * recipeLevelMult(recipeLevel) + extraEnergy
@@ -39,31 +40,47 @@ export type CookSettings = Readonly<Pick<Settings, 'goodCamp' | 'sundayPot' | 'p
 export type IngredientBag = Readonly<Record<string, number>>
 export interface CookOptions { minute?: number, pot?: number, multiplier?: number }
 export interface CookResult { meals: CookMeal[], remain: Record<string, number> }
-export interface IngredientAllocation { remain: Record<string, number>, used: number, energy: number }
+export interface IngredientAllocation { remain: Record<string, number>, used: number, energy: number, consumed: Record<string, number> }
+type Recipe = typeof RECIPES[number]
 
-
-/** Allocate filler ingredients by energy without changing the caller's inventory.
- * Unknown ingredients retain the existing branch-specific energy fallback. */
-export function allocateIngredients(bag: IngredientBag, capacity: number, unknownEnergy = 0, energyMultipliers: Readonly<Record<string, number>> = {}): IngredientAllocation {
+export function canCookRecipe(recipe: Recipe, bag: IngredientBag, capacity: number, servings = 1): boolean {
+  return recipe.pot <= capacity && recipe.ingredients.every(item => (bag[item.id] ?? 0) >= item.count * servings)
+}
+export function takeRecipeIngredients(recipe: Recipe | undefined, bag: IngredientBag) {
+  const remain = { ...bag }
+  const consumed: Record<string, number> = {}
+  for (const { id, count } of recipe?.ingredients ?? []) {
+    remain[id] = (remain[id] ?? 0) - count
+    consumed[id] = count
+  }
+  return { remain, consumed }
+}
+export function mealEnergy(raw: number, areaBonus: number, multiplier: number): number {
+  return Math.round(raw * (1 + areaBonus) * multiplier)
+}
+export function allocateIngredients(bag: IngredientBag, capacity: number, unknownEnergy = 0, energyMultipliers: Readonly<Record<string, number>> = {}, strategy?: { reserve: (id: string) => number }): IngredientAllocation {
   assertKnownIngredientEnergy(bag, capacity)
-  const energyOf = (name: string) => (ingredientEnergyValue(name) ?? unknownEnergy) * (energyMultipliers[name] ?? 1)
-  const names = Object.keys(bag).sort((a, b) => energyOf(b) - energyOf(a))
-  return names.reduce<IngredientAllocation>((state, name) => {
-    const take = Math.min(Math.floor(state.remain[name] ?? 0), capacity - state.used)
-    if (take <= 0) return state
-    return {
-      remain: { ...state.remain, [name]: (state.remain[name] ?? 0) - take },
-      used: state.used + take,
-      energy: state.energy + take * energyOf(name),
-    }
-  }, { remain: { ...bag }, used: 0, energy: 0 })
+  const baseEnergy = (key: string) => ingredientEnergyValue(key) ?? unknownEnergy
+  const energyOf = (key: string) => baseEnergy(key) * (energyMultipliers[key] ?? 1)
+  const rankEnergy = strategy ? baseEnergy : energyOf
+  const state: IngredientAllocation = { remain: { ...bag }, used: 0, energy: 0, consumed: {} }
+  for (const key of Object.keys(bag).sort((a, b) => rankEnergy(b) - rankEnergy(a))) {
+    const available = bag[key] ?? 0
+    const take = Math.min(strategy ? available - strategy.reserve(key) : Math.floor(available), capacity - state.used)
+    if (take <= 0) continue
+    state.remain[key] = available - take
+    state.consumed[key] = take
+    state.used += take
+    state.energy += take * energyOf(key)
+  }
+  return state
 }
 
 export function recipeEnergy(recipe: typeof RECIPES[number], settings: CookSettings, modifiers: readonly RecipeEnergyModifier[] = []): number {
-  const matches = modifiers.filter(rule => (!rule.ingredientNames || rule.ingredientNames.every(name => recipe.ingredients.some(i => i.name === name)))
-    && (!rule.recipeNames || rule.recipeNames.includes(recipe.name)) && (!rule.categories || rule.categories.includes(recipe.category)))
+  const matches = modifiers.filter(rule => (!rule.ingredientNames || rule.ingredientNames.every(key => recipe.ingredients.some(i => String(i.id) === ingredientKey(key))))
+    && (!rule.recipeNames || rule.recipeNames.some(key => recipeKey(key) === String(recipe.id))) && (!rule.categories || rule.categories.includes(recipe.category)))
   const multiplier = matches.length ? Math.max(...matches.map(rule => rule.multiplier)) : 1
-  return recipe.baseEnergy * recipeLevelMult(recipeLevelOf(settings, recipe.name)) * multiplier
+  return recipe.baseEnergy * recipeLevelMult(recipeLevelOf(settings, recipe.id)) * multiplier
 }
 
 function cookingContext(settings: CookSettings, sunday: boolean, options: CookOptions) {
@@ -81,20 +98,17 @@ function cookingContext(settings: CookSettings, sunday: boolean, options: CookOp
 
 function cookMealWithContext(bag: IngredientBag, context: ReturnType<typeof cookingContext>): { meal: CookMeal, remain: Record<string, number> } {
   const { pot, pool, mix, settings, multiplier, activity } = context
-  const hit = pool.find(recipe => recipe.pot <= pot && recipe.ingredients.every(ingredient => (bag[ingredient.name] ?? 0) >= ingredient.count))
-  const baseBag = hit ? hit.ingredients.reduce<Record<string, number>>((remain, ingredient) => ({
-    ...remain, [ingredient.name]: (remain[ingredient.name] ?? 0) - ingredient.count,
-  }), { ...bag }) : bag
-  const allocation = allocateIngredients(baseBag, hit ? Math.max(0, pot - hit.pot) : pot, hit ? 0 : cook_cookMealWithContext_ruleParameters.unknownIngredientEnergy, activity.extraIngredientEnergyMultipliers)
+  const hit = pool.find(recipe => canCookRecipe(recipe, bag, pot))
+  const { remain } = takeRecipeIngredients(hit, bag)
+  const allocation = allocateIngredients(remain, hit ? Math.max(0, pot - hit.pot) : pot, hit ? 0 : cook_cookMealWithContext_ruleParameters.unknownIngredientEnergy, activity.extraIngredientEnergyMultipliers)
   const baseEnergy = hit ? recipeEnergy(hit, settings, activity.recipeEnergyModifiers) : 0
   return {
     meal: {
       name: hit?.name ?? mix?.name ?? '拌拌',
+      recipeId: hit?.id ?? mix?.id ?? null,
       mix: !hit,
       potUsed: (hit?.pot ?? 0) + allocation.used,
-      energy: hit
-        ? Math.round((baseEnergy + allocation.energy) * (1 + settings.areaBonus) * multiplier)
-        : Math.round(allocation.energy * multiplier * (1 + settings.areaBonus)),
+      energy: mealEnergy(baseEnergy + allocation.energy, settings.areaBonus, multiplier),
     },
     remain: allocation.remain,
   }
@@ -102,7 +116,13 @@ function cookMealWithContext(bag: IngredientBag, context: ReturnType<typeof cook
 
 /** Calculate one meal as an inventory transition, independently of stores or platforms. */
 export function cookMeal(bag: IngredientBag, settings: CookSettings, sunday = false, options: CookOptions = {}): { meal: CookMeal, remain: Record<string, number> } {
-  return cookMealWithContext(bag, cookingContext(settings, sunday, options))
+  return cookMealWithContext(cookingInventory(bag), cookingContext(settings, sunday, options))
+}
+
+function cookingInventory(bag: IngredientBag) {
+  const { counts, unresolved } = migrateCatalogCounts(bag, ingredientKey)
+  if (Object.keys(unresolved).length) throw new Error(`无法识别或冲突的食材：${Object.keys(unresolved).join('、')}`)
+  return counts
 }
 
 export function cookMeals(bag: IngredientBag, settings: CookSettings, meals = cook_cookMeals_ruleParameters.defaultMeals, sunday = false, options: CookOptions = {}): CookResult {
@@ -112,7 +132,7 @@ export function cookMeals(bag: IngredientBag, settings: CookSettings, meals = co
   return Array.from({ length: count }).reduce<CookResult>(state => {
     const next = cookMealWithContext(state.remain, context)
     return { meals: [...state.meals, next.meal], remain: next.remain }
-  }, { meals: [], remain: { ...bag } })
+  }, { meals: [], remain: cookingInventory(bag) })
 }
 
 export function categoryLabel(c: MealCategory): string {

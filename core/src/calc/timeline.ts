@@ -15,7 +15,8 @@ import { pokeById } from './data'
 import { cookMeals } from './cook'
 import { mealRecover, sleepRecoveredEnergy } from './energy'
 import { energyMultiplier, instantInterval } from './helpSpeed'
-import { slotDrop, unlockedIngredientSlots } from './ingredients'
+import { berriesPerHelp, findingChance, slotDrop, unlockedIngredientSlots } from './ingredients'
+import { addIngredient } from './catalogIds'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
 import { natureStatFactor, withEffectiveNature } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
@@ -67,12 +68,6 @@ export function carryLimit(base: number, subskills: string[], goodCamp: boolean,
   if (subskills.includes('invL')) extra += timeline_carryLimit_ruleParameters.inventoryL
   const camp = mode === 'normal' ? false : goodCamp
   return Math.ceil((base + extra) * activityMultiplier * (camp ? timeline_carryLimit_ruleParameters.campCarryMultiplier : 1))
-}
-
-function berryCount(specialty: string, subskills: string[]): number {
-  let n = specialty === '树果型' || specialty === '全部' ? timeline_berryCount_ruleParameters.specialistBerries : timeline_berryCount_ruleParameters.normalBerries
-  if (subskills.includes('berryS')) n += ruleParameters.modules.timeline.berryCount.berrySFruitBonus
-  return n
 }
 
 export interface SkillEvent {
@@ -148,7 +143,7 @@ export function simulateTeam(
   const produced: Record<string, number> = {}
   const heldFood = new Map<Member, Record<string, number>>()
   function creditFood(actor: EffectActor, name: string, amount: number, fromSkill = false) {
-    actor.result.ingredients[name] = (actor.result.ingredients[name] ?? 0) + amount
+    addIngredient(actor.result.ingredients, name, amount)
     if (fromSkill) {
       actor.result.skillIngredients ??= {}
       actor.result.skillIngredients[name] = (actor.result.skillIngredients[name] ?? 0) + amount
@@ -186,9 +181,9 @@ export function simulateTeam(
       factor: natureStatFactor(input.nature, 'energy'),
       favored,
       carry: carryLimit(poke.carry, subs, settings.goodCamp, input.carryMode, ribbon.carry, ex.carryExtra + activityValues(snapshot.activity, settings.island, poke, 0).carryCapacityBonus, activityValues(snapshot.activity, settings.island, poke, 0).carryCapacityMultiplier),
-      perHelp: berryCount(poke.specialty, subs),
-      ingRate: poke.ingredientRate * natureStatFactor(input.nature, 'ingredient')
-        * (1 + (subs.includes('ingS') ? timeline_simulateTeam_ruleParameters.findingS : 0) + (subs.includes('ingM') ? timeline_simulateTeam_ruleParameters.findingM : 0)),
+      perHelp: berriesPerHelp(poke.specialty, subs, timeline_berryCount_ruleParameters.berrySFruitBonus),
+      ingRate: findingChance(poke.ingredientRate, input.nature, 'ingredient', subs.includes('ingS'), subs.includes('ingM'),
+        timeline_simulateTeam_ruleParameters.findingS, timeline_simulateTeam_ruleParameters.findingM),
       skillRate: poke.skillRate * natureStatFactor(input.nature, 'skill')
         * (1 + (subs.includes('skillS') ? timeline_simulateTeam_ruleParameters.findingS : 0) + (subs.includes('skillM') ? timeline_simulateTeam_ruleParameters.findingM : 0)) * ex.skillMultiplier,
       skillLv,
@@ -262,7 +257,7 @@ export function simulateTeam(
       if (!drop) continue
       const chance = foodRate / drops.length
       foodChance += chance
-      creditSkillFood(m, drop.name, amount * chance * drop.amount)
+      creditSkillFood(m, String(drop.id), amount * chance * drop.amount)
     }
     const berries = amount * (1 - foodChance) * m.perHelp
     m.result.helps += amount
@@ -364,9 +359,9 @@ export function simulateTeam(
         const amount = fromSupport ? drop.amount + extra : Math.min(drop.amount + extra + m.activity.ingredientCountBonus, Math.max(0, m.carry - m.held))
         if (asleepAt(minute)) {
           const held = heldFood.get(m) ?? {}
-          held[drop.name] = (held[drop.name] ?? 0) + amount
+          held[String(drop.id)] = (held[String(drop.id)] ?? 0) + amount
           heldFood.set(m, held)
-        } else creditFood(m, drop.name, amount)
+        } else creditFood(m, String(drop.id), amount)
         m.held += amount
         for (const [name, bonus] of Object.entries(fromSupport ? {} : m.activity.fixedIngredientDrops)) {
           const amount = Math.min(bonus, Math.max(0, m.carry - m.held))
@@ -480,7 +475,7 @@ export function simulateTeam(
           if (recovered > m.energy) m.lastDecay = t
           m.energy = recovered
         }
-      } else meals.push({ name: '无可用食材', mix: true, potUsed: 0, energy: 0, minute: t, potSize: pot, critChance: 0 })
+      } else meals.push({ name: '无可用食材', recipeId: null, mix: true, potUsed: 0, energy: 0, minute: t, potSize: pot, critChance: 0 })
     }
     t += 1
   }
@@ -509,7 +504,7 @@ export function teamTimeline(settings: Settings, roster: BoxPokemon[]) {
   for (const m of sim.members) {
     berryEnergy += m.berryEnergy
     skillEnergy += m.skillEnergy
-    for (const [k, v] of Object.entries(m.ingredients)) bag[k] = (bag[k] ?? 0) + v
+    for (const [k, v] of Object.entries(m.ingredients)) addIngredient(bag, k, v)
   }
   const cooked = sim.meals
   const cookEnergy = cooked.reduce((sum, meal) => sum + meal.energy, 0)

@@ -13,8 +13,9 @@ import ProgressDialog from '../shared/ProgressDialog.vue'
 import { computed, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ISLANDS } from '../../calc/data'
-import { drowsyPower, energyLost, EVENT_BONUSES, expectSpecies, maxEncounters, RANK_ORDER, rankFromStrength, rankStrength, rankToNext, resolvedSleepdex, sleepClock, strengthToNext } from '../../calc/sleep'
+import { drowsyPower, energyLost, EVENT_BONUSES, expectSpecies, maxEncounters, RANK_ORDER, rankFromStrength, rankStrength, rankToNext, resolvedSleepdex, prefersUndiscovered, sleepShinyRate, sleepClock, strengthToNext } from '../../calc/sleep'
 import PokeSprite from '../shared/PokeSprite.vue'
+import ShinyMark from '../shared/ShinyMark.vue'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
 import type { SleepType } from '../../types'
@@ -48,7 +49,12 @@ const island = computed({
 const activity = useActivities(settings, () => island.value)
 const researchSession = shallowRef<0 | 1>(0)
 const eventMult = activity.field('drowsyPowerMultiplier', () => settings.value.eventMult)
-const shinyUp = activity.field('shinyUp', () => plan.value.shinyUp || settings.value.shinyUp)
+const shinyUp = computed(() => plan.value.shinyUp || settings.value.shinyUp)
+const shinyRate = computed(() => sleepShinyRate(activity.context.value, shinyUp.value, island.value, undefined, researchSession.value))
+const undiscoveredBoost = computed({
+  get: () => prefersUndiscovered(activity.context.value, plan.value.undiscoveredPreference),
+  set: (value: boolean) => { plan.value.undiscoveredPreference = value },
+})
 const rank = computed(() => rankFromStrength(island.value, plan.value.snorlaxStrength))
 const nextRank = computed(() => rankToNext(island.value, plan.value.snorlaxStrength))
 const pickedRank = computed({
@@ -103,7 +109,7 @@ let drawSeed = components_plan_SleepPane_config_clientDefaults["drawSeed"]
 watch(() => [island.value, plan.value.snorlaxStrength, eventMult.value], () => {
   manualWhole.value = null
 })
-watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, eventMult.value, whole.value, plan.value.sleepType, plan.value.undiscoveredBoost, plan.value.rare, plan.value.shinyUp, shinyUp.value, activity.context.value, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded, researchedBefore.value, researchSession.value, specialEncountered.value, firstResearchExtras.value, plan.value.campTicket], () => {
+watch(() => [island.value, plan.value.sleepScore, plan.value.snorlaxStrength, eventMult.value, whole.value, plan.value.sleepType, undiscoveredBoost.value, plan.value.rare, plan.value.shinyUp, shinyUp.value, activity.context.value, eventMix.value, plan.value.sleepdexMode, plan.value.sleepdex, plan.value.sleepdexExcluded, researchedBefore.value, researchSession.value, specialEncountered.value, firstResearchExtras.value, plan.value.campTicket], () => {
   reset()
 }, { deep: true, flush: 'sync' })
 
@@ -122,7 +128,7 @@ function calculate() {
     firstResearchExtras: Math.max(0, Math.floor(firstResearchExtras.value)) + Number(plan.value.campTicket) + Number(specialEncountered.value),
     rank: rank.value,
     discovered: resolvedSleepdex(plan.value),
-    undiscoveredBoost: plan.value.undiscoveredBoost,
+    undiscoveredBoost: undiscoveredBoost.value,
     rare: plan.value.rare,
     shinyUp: shinyUp.value,
     activity: activity.context.value,
@@ -136,7 +142,14 @@ function calculate() {
     iterations: BATCH, seed: drawSeed, options: opts })
 }
 
-const board = computed(() => expectSpecies(seen.value))
+const seenShiny = computed(() => seen.value.reduce((sum, row) => sum + row.shiny, 0))
+const board = computed(() => {
+  const total = seen.value.reduce((sum, row) => sum + row.count, 0)
+  const rows = [false, true].flatMap(shiny => expectSpecies(seen.value.map(row => ({
+    ...row, count: shiny ? row.shiny : row.count - row.shiny,
+  }))).filter(row => row.count > 0).map(row => ({ ...row, shiny, percent: row.count / total * 100 })))
+  return rows.sort((a, b) => b.count - a.count || a.pokeId - b.pokeId)
+})
 const candies = computed(() => candyExpectation(seen.value, BATCH))
 const seenTotal = computed(() => seen.value.reduce((sum, row) => sum + row.count, 0))
 const rewards = computed(() => seen.value.reduce((sum, row) => ({
@@ -222,14 +235,16 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
       <select v-model.number="incenseSession" :disabled="busy"><option :value="0">{{ translateUi("第一觉") }}</option><option :value="1">{{ translateUi("第二觉") }}</option></select>
     </label>
     <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox"> {{ translateUi("活动期间遇到一些其他类型宝可梦") }}</label>
-    <label class="row"><input :disabled="busy" v-model="plan.undiscoveredBoost" type="checkbox"> {{ translateUi("优先遇到未发现睡姿") }}</label>
+    <label class="row"><input :disabled="busy" v-model="undiscoveredBoost" type="checkbox"> {{ translateUi("优先遇到未发现睡姿") }}</label>
     <p class="muted">
       {{ ISLANDS.find((i) => i.id === island)?.name }}{{ translateUi("评级") }} {{ rank }}<template v-if="nextRank">{{ translateUi("，再") }} {{ nextRank.need.toLocaleString('zh-CN') }} {{ translateUi("能量升到") }} {{ nextRank.rank }}</template>{{ translateUi("。 露营券加 1 只。分数按满睡眠 8 小时 30 分 = 100 分换算。") }}
     </p>
+    <button v-if="plan.undiscoveredPreference !== undefined" class="btn ghost" type="button" :disabled="busy" @click="plan.undiscoveredPreference = undefined">{{ translateUi('未发现睡姿优先跟随活动') }}</button>
     <article class="expect-board">
       <div class="row">
         <button class="btn sage" type="button" :disabled="busy" @click="calculate">{{ busy ? translateUi("正在模拟…") : translateUi("计算 4000 次") }}</button>
       </div>
+      <p class="muted">{{ translateUi('每只独立抽选闪光 · 全体适用模拟概率') }} {{ (shinyRate * 100).toFixed(2) }}%<template v-if="seenTotal"> · {{ translateUi('抽到闪光') }} {{ seenShiny.toLocaleString('zh-CN') }} {{ translateUi('只') }}</template></p>
       <p v-if="simulationError" class="amber" role="alert">{{ simulationError }}</p>
       <p v-if="notice" class="muted" role="status">{{ translateUi(notice) }}</p>
       <p v-if="seenTotal" class="muted">{{ translateUi("本次模拟") }} {{ BATCH.toLocaleString('zh-CN') }} {{ translateUi("次") }}{{ whole ? translateUi("整觉") : translateUi("拆分方案") }}{{ translateUi("，共遇到") }} {{ seenTotal.toLocaleString('zh-CN') }} {{ translateUi("只。预期只数 = 这只遇到的数量 / 全部遇到的数量。再点一次会重新算，不会累加。") }}</p>
@@ -246,20 +261,20 @@ const average = (n: number) => n.toLocaleString('zh-CN', { maximumFractionDigits
         <p class="muted">{{ translateUi("每次方案平均糖果（同一进化链合并）") }}</p>
         <div v-for="candy in candies" :key="candy.pokeId" class="sleep-candy-line">
           <PokeSprite :id="candy.pokeId" :name="candy.name" />
-          <span>{{ candy.name }}</span><strong>{{ average(candy.average) }}</strong>
+          <span>{{ gameText(candy.name) }}</span><strong>{{ average(candy.average) }}</strong>
         </div>
       </div>
       <p v-if="seenTotal && plan.campTicket && researchSession === 0" class="muted">{{ translateUi("已计入露营券额外抽选及奖励。") }}</p>
       <div v-if="resultTab === 'encounters' && board.length" class="expect-list">
-        <div v-for="item in board" :key="item.pokeId" class="expect-line">
-          <PokeSprite :id="item.pokeId" :name="item.name" />
-          <strong>{{ gameText(item.name) }}</strong>
+        <div v-for="item in board" :key="`${item.pokeId}-${item.shiny}`" class="expect-line">
+          <PokeSprite :id="item.pokeId" :name="item.name" :shiny="item.shiny" />
+          <strong>{{ gameText(item.name) }}<ShinyMark v-if="item.shiny" /></strong>
           <span class="muted">{{ translateUi("遇到") }} {{ item.count.toLocaleString('zh-CN') }}</span>
           <b>{{ item.percent.toFixed(2) }}%</b>
         </div>
       </div>
     </article>
     <ProgressDialog :open="busy" :title="translateUi('正在模拟睡姿')" :progress="percent" :notice="notice" hint="模拟期间参数已锁定"
-      :detail="'已模拟 ' + progress.completed.toLocaleString('zh-CN') + ' / ' + progress.total.toLocaleString('zh-CN') + ' 次'" cancellable cancel-text="取消模拟" @cancel="cancel" />
+      :detail="translateUi('已模拟 {done} / {total} 次', { done: progress.completed.toLocaleString('zh-CN'), total: progress.total.toLocaleString('zh-CN') })" cancellable cancel-text="取消模拟" @cancel="cancel" />
   </div>
 </template>

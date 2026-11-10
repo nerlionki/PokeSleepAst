@@ -39,6 +39,7 @@ export interface Settings {
   eventMult: number
   sleepEventMix: import('./calc/sleepRules').EventMix
   recipeLevels: Record<string, number>
+  unresolvedRecipeLevels?: Record<string, number>
   whistleHelps: number
   shinyUp: boolean
   sundayPot: boolean
@@ -141,6 +142,7 @@ export interface ProduceResult {
 }
 
 export interface CookMeal {
+  recipeId: number | null
   minute?: number
   critChance?: number
   potSize?: number

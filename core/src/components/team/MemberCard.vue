@@ -2,9 +2,9 @@
 import { gameText, t as translateUi } from '../../ui/i18n'
 
 
+import { ingredientImageId, ingredientLabel } from '../../calc/catalogIds'
 import { ingredientEnergyValue } from '../../calc/activityIngredients'
 import { breakdownProduceIngredients } from '../../calc/produceDisplay'
-import { INGREDIENT_CATALOG } from '../../calc/ingredientCatalog'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -15,7 +15,7 @@ import { skillMaxFor } from '../../calc/mainSkills'
 import { exEffects } from '../../calc/exEffects'
 import { computed, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
-import { ingredientByName, natureByName, pokeById } from '../../calc/data'
+import { natureByName, pokeById } from '../../calc/data'
 import { energyMultiplier, instantInterval } from '../../calc/helpSpeed'
 import { effectiveSkillLevel, unlockedSubskills, SUBSKILL_GATES } from '../../calc/member'
 import { effectiveNature, natureStatFactor } from '../../calc/natureLabels'
@@ -77,13 +77,12 @@ const lines = computed(() => {
 const unknownFoodEnergy = computed(() => Object.entries(props.result.ingredients).some(([name, count]) => count > 0 && ingredientEnergyValue(name) == null))
 const breakdown = computed(() => breakdownProduceIngredients(props.result))
 function foodRows(foods: Record<string, number>) {
-  const order = new Map([...new Set(lines.value.map(line => line.name))].map((name, index) => [name, index]))
+  const order = new Map([...new Set(lines.value.map(line => String(line.id)))].map((key, index) => [key, index]))
   return Object.entries(foods).filter(([, count]) => count > 0)
     .sort(([a], [b]) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity) || a.localeCompare(b, 'zh-CN'))
-    .map(([name, count]) => {
-      const unit = ingredientEnergyValue(name)
-      const id = ingredientByName(name)?.id ?? INGREDIENT_CATALOG.find(row => row.name === name)?.imageId ?? 0
-      return { name, id, count, energy: unit == null ? null : count * unit }
+    .map(([key, count]) => {
+      const unit = ingredientEnergyValue(key)
+      return { name: ingredientLabel(key), id: ingredientImageId(key), count, energy: unit == null ? null : count * unit }
     })
 }
 const naturalRows = computed(() => foodRows(breakdown.value?.natural ?? props.result.ingredients))
@@ -263,7 +262,7 @@ function rate(base: number, stat: 'ingredient' | 'skill', small: string, medium:
     <p v-if="result.rewards" class="member-line quiet">
       <span>{{ translateUi("期望奖励：糖果") }} {{ result.rewards.candies.toFixed(2) }} {{ translateUi("· 梦之碎片") }} {{ result.rewards.dreamShards.toFixed(2) }}<template v-for="(count, id) in result.rewards.items ?? { [ITEM_ROLES.berryJuice]: result.rewards.berryJuice }" :key="id"> · {{ itemById(Number(id))?.name ?? translateUi("道具 {arg1}", { arg1: String(id) }) }} {{ count.toFixed(2) }}</template></span>
     </p>
-    <p v-if="result.cooking" class="member-line quiet"><span>{{ translateUi("剩余食材：") }}{{ Object.entries(result.cooking.remain).filter(([, count]) => count > 0).map(([name, count]) => `${name} ×${count.toFixed(2)}`).join('、') || translateUi("无") }}</span></p>
+    <p v-if="result.cooking" class="member-line quiet"><span>{{ translateUi("剩余食材：") }}{{ Object.entries(result.cooking.remain).filter(([, count]) => count > 0).map(([key, count]) => `${gameText(ingredientLabel(key))} ×${count.toFixed(2)}`).join('、') || translateUi("无") }}</span></p>
     </template>
   </article>
 </template>

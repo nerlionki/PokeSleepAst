@@ -82,7 +82,7 @@ function groups(id: string) {
           <template v-if="i.berries.length">
             <span v-for="b in i.berries" :key="b" class="berry-name"><BerryIcon :name="b" small />{{ gameText(b) }}</span>
           </template>
-          <template v-else><BerryIcon v-for="n in RANDOM_BERRY_COUNT" :key="`random-${n}`" name="随机喜好树果" random small />{{ RANDOM_BERRY_DESCRIPTION }}</template>
+          <template v-else><BerryIcon v-for="n in RANDOM_BERRY_COUNT" :key="`random-${n}`" name="随机喜好树果" random small />{{ translateUi(RANDOM_BERRY_DESCRIPTION) }}</template>
         </p>
         <p v-if="islandBerrySelection(i.id)?.detail" class="muted">{{ islandBerrySelection(i.id)?.detail }}</p>
         <div class="seg">

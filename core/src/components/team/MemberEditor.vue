@@ -15,7 +15,7 @@ import { evolutionDepth, evolutionStages } from '../../calc/evolution'
 import { MEW_SKILLS, normalizeMewSkill } from '../../calc/mew'
 import { ownedSelectionSkill } from '../../calc/skillModel'
 import { skillByPokedexName, skillMaxFor } from '../../calc/mainSkills'
-import { RIBBON_HOURS, ribbonBonus, stagesLeft } from '../../calc/ribbon'
+import { RIBBON_HOURS, ribbonBonus, ribbonStage, stagesLeft } from '../../calc/ribbon'
 import { isAllRounder } from '../../calc/specialty'
 import { POKEMON_LEVEL_MAX } from '../../calc/xp'
 import type { CarryMode, OcrMissingField } from '../../types'
@@ -55,6 +55,7 @@ const maxEvolutions = computed(() => evolutionDepth(model.value.pokeId))
 const board = computed(() => poke.value ? ingredientColumns(poke.value.ingredients) : [])
 const skillMax = computed(() => mainSkill.value?.maxLevel ?? skillMaxFor(poke.value?.mainSkill ?? ''))
 const ribbon = computed(() => ribbonBonus(model.value.tune.ribbonHours, stagesLeft(model.value.pokeId)))
+const selectedRibbon = computed(() => ribbonStage(model.value.tune.ribbonHours))
 const subChoices = computed(() => model.value.subskills.filter(Boolean).length < 5 ? SUBSKILLS : model.value.subskills.flatMap(id => {
   const item = SUBSKILLS.find(skill => skill.id === id)
   return item ? [item] : []
@@ -274,7 +275,7 @@ function stepEvolution(delta: number) {
     <template v-if="visible('ribbon')">
     <p class="muted">{{ translateUi("睡饱饱勋章 · 还能进化") }} {{ stagesLeft(model.pokeId) }} {{ translateUi("次") }}</p>
     <div class="lv-row">
-      <button v-for="hours in RIBBON_HOURS" :key="hours" type="button" :class="{ on: model.tune.ribbonHours === hours }" @click="patchTune({ ribbonHours: hours })">
+      <button v-for="hours in RIBBON_HOURS" :key="hours" type="button" :class="{ on: selectedRibbon === hours }" @click="hours !== selectedRibbon && patchTune({ ribbonHours: hours })">
         {{ hours === 0 ? translateUi("无") : translateUi("{arg1}小时", { arg1: String(hours) }) }}
       </button>
     </div>

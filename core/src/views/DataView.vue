@@ -20,6 +20,7 @@ import SkillPane from '../components/data/SkillPane.vue'
 import ItemPane from '../components/data/ItemPane.vue'
 import FlowerPane from '../components/data/FlowerPane.vue'
 import EventBundlesPane from '../components/data/EventBundlesPane.vue'
+import ActivityCalendarPane from '../components/data/ActivityCalendarPane.vue'
 const views_DataView_config_clientDefaults = clientDefaults.modules.views_DataView
 
 
@@ -34,17 +35,19 @@ const options = [
   { id: 'item', label: '道具' },
   { id: 'flower', label: '彩庆花' },
   { id: 'bundles', label: '活动\n礼包' },
+  { id: 'calendar', label: '活动\n日历' },
 ] as const
 const q = shallowRef(views_DataView_config_clientDefaults["qInitial"])
 watch(q, resetPageScroll)
-const tab = usePageTab(['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'item', 'flower', 'bundles'] as const, 'island')
-const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'item', 'flower', 'bundles'] as const).filter(id => features.enabled('data', id)))
+const tabs = options.map(option => option.id)
+const tab = usePageTab(tabs, 'island')
+const swipe = useTabSwipe(tab, () => tabs.filter(id => features.enabled('data', id)))
 </script>
 
 <template>
   <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack">
     <GuideEntry page="data" :show-trigger="false" />
-    <input v-if="tab !== 'recipe'" v-model="q" class="picker-search" :placeholder="translateUi('搜索功能或名称')">
+    <input v-if="tab !== 'recipe' && tab !== 'calendar'" v-model="q" class="picker-search" :placeholder="translateUi('搜索功能或名称')">
     <Segmented page-tabs guide-id="guide-data-tabs" v-model="tab" class="plan-tabs" :options="options" />
     <IslandPane v-if="tab === 'island'" :q="q" />
     <BerryPane v-else-if="tab === 'berry'" :q="q" />
@@ -56,5 +59,6 @@ const swipe = useTabSwipe(tab, () => (['island', 'berry', 'ing', 'recipe', 'skil
     <ItemPane v-else-if="tab === 'item'" :q="q" />
     <FlowerPane v-else-if="tab === 'flower'" />
     <EventBundlesPane v-else-if="tab === 'bundles'" :q="q" />
+    <ActivityCalendarPane v-else-if="tab === 'calendar'" />
   </div>
 </template>

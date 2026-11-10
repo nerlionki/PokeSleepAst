@@ -3,12 +3,12 @@ import { t as translateUi } from '../../ui/i18n'
 import { computed, shallowRef, watch } from 'vue'
 import { localImage } from '#platform/images'
 import { pokeById } from '../../calc/data'
-import { RIBBON_HOURS } from '../../calc/ribbon'
+import { ribbonStage } from '../../calc/ribbon'
 import { pokemonIconUrl, pokemonPortraitUrl, pokemonShinyIconUrl, pokemonShinyPortraitUrl } from '../../calc/raeImage'
 const props = defineProps<{ id: number; name?: string; large?: boolean; shiny?: boolean; ribbonHours?: number }>()
-const ribbonStage = computed(() => Math.max(0, ...RIBBON_HOURS.filter(hours => hours > 0 && hours <= (props.ribbonHours ?? 0))))
-const ribbonSrc = computed(() => ribbonStage.value ? localImage(`ribbon/${ribbonStage.value}.webp`) : '')
-const ribbonLabel = computed(() => `${ribbonStage.value} 小时睡饱饱勋章`)
+const ribbon = computed(() => ribbonStage(props.ribbonHours ?? 0))
+const ribbonSrc = computed(() => ribbon.value ? localImage(`ribbon/${ribbon.value}.webp`) : '')
+const ribbonLabel = computed(() => translateUi('{hours} 小时睡饱饱勋章', { hours: ribbon.value }))
 const failed = shallowRef(false)
 const useIcon = shallowRef(false)
 const shinyFailed = shallowRef(false)

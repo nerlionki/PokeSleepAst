@@ -1,7 +1,7 @@
 import { withResources, resourceRevision, compatibleCheckpoint } from '../../../core/src/resources/runtime'
 import { createScorePlanTask, type ScoreWorker } from '../../../core/src/composables/scorePlanTask'
 import { scoreFingerprint } from '../../../core/src/calc/scoreSearch'
-import type { ScoreCheckpoint, ScoreMessage, ScoreRequest } from '../../../core/src/calc/scorePlan'
+import { SCORE_RULE_VERSION, type ScoreCheckpoint, type ScoreMessage, type ScoreRequest } from '../../../core/src/calc/scorePlan'
 import { requireWorkerSupport } from './compatibility'
 import { workerErrorMessage } from './workerError'
 const KEY = 'score-plan-checkpoint-v1'
@@ -39,7 +39,10 @@ export function useScorePlan(currentInput: () => ScoreRequest) {
   }, currentInput)
   function restore() { try {
     const saved = wx.getStorageSync(KEY) as (ScoreRequest & { resourceRevision?: string }) | undefined
-    if (saved?.checkpoint && compatibleCheckpoint(saved) && scoreFingerprint(saved) === scoreFingerprint(currentInput())) void task.calculate(saved)
+    if (!saved) return
+    if (saved.checkpoint?.version === SCORE_RULE_VERSION && compatibleCheckpoint(saved) && scoreFingerprint(saved) === scoreFingerprint(currentInput())) {
+      void task.calculate(saved)
+    } else wx.removeStorageSync(KEY)
   } catch { /* 损坏或过期的存档不影响重新规划。 */ } }
   return { ...task, restore }
 }

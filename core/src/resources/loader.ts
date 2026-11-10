@@ -4,7 +4,9 @@ import { sha256, utf8 } from './sha256'
 import { RESOURCE_FILES } from './files'
 import type { LoadingProgress } from './loadingProgress'
 import { validateActivityResource } from './validateActivities'
+import { validateCatalogReferences } from './catalogReferences'
 import { validateSkillResources } from './validateSkillResources'
+import { validateActivityArchive } from './activityArchive'
 export interface ResourceTransport {
   readCache(): Promise<string | null>
   writeCache(value: string): Promise<void>
@@ -29,7 +31,10 @@ export function decodeSnapshot(manifest: unknown, payload: string, context?: Res
   const data = JSON.parse(payload) as Record<string, unknown>
   if (!data || Array.isArray(data) || Object.keys(data).sort().join('\n') !== RESOURCE_FILES.join('\n') || Object.values(data).some(value => value === null || typeof value !== 'object')) throw new Error('资料包不完整')
   validateActivityResource(data)
+  validateCatalogReferences(data)
   validateSkillResources(data)
+  const { activityArchive } = data['meta.json'] as { activityArchive?: unknown }
+  if (activityArchive !== undefined) validateActivityArchive(activityArchive)
   return { manifest, data }
 }
 export async function initializeResources(transport: ResourceTransport, budget = 8000, onProgress: (progress: LoadingProgress) => void = () => {}, context?: ResourceContext): Promise<'remote' | 'cache' | 'bundled'> {

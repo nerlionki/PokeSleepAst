@@ -1,7 +1,7 @@
 import { defaultSkillLevel } from './member'
 import skillTables from '../data/skill-tables.resource'
 import ruleParameters from '../data/rule-parameters.resource'
-import { NATURES, NEUTRAL_NATURE, ingredientByName, pokeById } from './data'
+import { NATURES, NEUTRAL_NATURE, ingredientById, pokeById } from './data'
 import { berryEnergyAt } from './berry'
 import { INGREDIENT_GATES, ingredientColumns, slotDrop } from './ingredients'
 import { skillByPokedexName } from './mainSkills'
@@ -104,7 +104,7 @@ export function calculateSp(input: SpInput): SpResult {
     if (index == null && poke.specialty === '全部' && slot > 0) continue
     const cell = index == null ? null : ingredientColumns(poke.ingredients)[slot]?.find(cell => cell.index === index)
     if (!cell || !slotDrop(poke.ingredients, slot, cell.index)) throw Error(`请选择有效的 Lv.${INGREDIENT_GATES[slot]} 食材`)
-    const ingredient = ingredientByName(cell.name)
+    const ingredient = ingredientById(cell.id)
     if (!ingredient) throw Error('缺少食材基础能量资料')
     ingredientEnergy += ingredient.energy * cell.amount
     count++

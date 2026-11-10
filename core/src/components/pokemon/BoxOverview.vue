@@ -113,7 +113,7 @@ function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
           <IngredientIcon :id="ingredient.id" :name="ingredient.name" />
           <span>{{ gameText(ingredient.name) }}</span>
           <strong>{{ formatOverviewAmount(ingredient.rows[0]?.amount) }}<small v-if="ingredient.rows.length"> {{ translateUi("/日") }}</small></strong>
-          <span class="muted">{{ ingredient.rows.length ? '最高单只 · ' + ingredient.rows.length + ' 只产出' : translateUi("暂无产出") }}</span>
+          <span class="muted">{{ ingredient.rows.length ? translateUi('最高单只 · {count} 只产出', { count: ingredient.rows.length }) : translateUi("暂无产出") }}</span>
         </button>
       </div>
     </template>

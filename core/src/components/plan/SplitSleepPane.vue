@@ -16,7 +16,7 @@ import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
 import { BABY_POKEMON_IDS, BABY_POKEMON_NAMES, babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { ISLANDS, SLEEP_STYLES } from '../../calc/data'
-import { EVENT_BONUSES, styleKey } from '../../calc/sleep'
+import { EVENT_BONUSES, sleepDiscoveryOptions, styleKey } from '../../calc/sleep'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { newSplitTarget, splitTargetKey, splitTargetStatus, type SplitOptions, type SplitTarget } from '../../calc/splitSleep'
 import { useSplitSleep } from '../../composables/useSplitSleep'
@@ -35,7 +35,7 @@ const activity = useActivities(config, () => island.value, () => settings.value.
 const eventMult = activity.field('drowsyPowerMultiplier', () => config.value.eventMult)
 const mixMode = activity.field('eventMix', () => normalizeEventMix(config.value.eventMix) !== 'off' ? settings.value.sleepEventMix : 'off')
 const otherTypes = computed({ get: () => mixMode.value !== 'off', set: value => { mixMode.value = value ? settings.value.sleepEventMix : 'off' } })
-const options = computed<SplitOptions>(() => ({ ...config.value, island: island.value, strength: plan.value.snorlaxStrength, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const options = computed<SplitOptions>(() => ({ ...config.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), island: island.value, strength: plan.value.snorlaxStrength, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 function displayStatus(target: SplitTarget, options: SplitOptions) {
   const status = splitTargetStatus(target, options.island, options.strength, options.activity)
   const style = status.namedStyle
@@ -148,7 +148,7 @@ async function removeTarget(index: number) {
         </template>
       </section>
     </template>
-    <ProgressDialog :open="busy" :title="translateUi('正在计算目标拆觉')" :progress="percent" stage="比较分数、睡眠类型与目标收益" :detail="`已完成 ${progress.completed} / ${progress.total} 个研究状态`" :notice="notice" cancellable cancel-text="取消计算" @cancel="cancel" />
+    <ProgressDialog :open="busy" :title="translateUi('正在计算目标拆觉')" :progress="percent" stage="比较分数、睡眠类型与目标收益" :detail="translateUi('已完成 {done} / {total} 个研究状态', { done: progress.completed, total: progress.total })" :notice="notice" cancellable cancel-text="取消计算" @cancel="cancel" />
   </div>
 </template>
 

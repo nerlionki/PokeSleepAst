@@ -37,7 +37,7 @@ function keyboard(kind: ColorPlaneKind, event: KeyboardEvent) {
     </button>
     <div v-if="open" class="color-picker-panel stack" role="group" :aria-label="translateUi('{arg1}调色板', { arg1: String(label) })">
       <div class="color-picker-controls">
-        <div :id="areaId + '-sv'" class="color-picker-sv" :style="{ backgroundColor: pureHue }" role="slider" tabindex="0" :aria-label="translateUi('{arg1}饱和度与明度', { arg1: String(label) })" :aria-valuenow="Math.round(hsv.saturation)" :aria-valuetext="`饱和度 ${Math.round(hsv.saturation)}%，明度 ${Math.round(hsv.value)}%`" aria-valuemin="0" aria-valuemax="100"
+        <div :id="areaId + '-sv'" class="color-picker-sv" :style="{ backgroundColor: pureHue }" role="slider" tabindex="0" :aria-label="translateUi('{arg1}饱和度与明度', { arg1: String(label) })" :aria-valuenow="Math.round(hsv.saturation)" :aria-valuetext="translateUi('饱和度 {saturation}%，明度 {value}%', { saturation: Math.round(hsv.saturation), value: Math.round(hsv.value) })" aria-valuemin="0" aria-valuemax="100"
           @pointerdown.stop.prevent="drag.pointerDown('sv', '#' + areaId + '-sv', $event)" @pointermove="drag.pointerMove" @pointerup="drag.pointerEnd" @pointercancel="drag.cancel"
           @touchstart.stop.prevent="drag.touchStart('sv', '#' + areaId + '-sv', $event)" @touchmove.stop.prevent="drag.touchMove" @touchend="drag.touchEnd" @touchcancel="drag.cancel" @keydown="keyboard('sv', $event)">
           <span class="color-picker-cursor" :style="{ left: hsv.saturation + '%', top: (100 - hsv.value) + '%' }" aria-hidden="true"></span>
@@ -62,8 +62,8 @@ function keyboard(kind: ColorPlaneKind, event: KeyboardEvent) {
 /* Fixed white/black primaries represent the HSV gamut, independent of the app theme. */
 .color-picker-sv { background-image: linear-gradient(to top, #000000, transparent), linear-gradient(to right, #ffffff, transparent); }
 .color-picker-hue { background: linear-gradient(to bottom, #ff0000 0%, #ffff00 16.667%, #00ff00 33.333%, #00ffff 50%, #0000ff 66.667%, #ff00ff 83.333%, #ff0000 100%); }
-.color-picker-cursor { position: absolute; width: 10px; height: 10px; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 1px 3px #000000; transform: translate(-50%, -50%); pointer-events: none; }
-.color-picker-hue-cursor { position: absolute; left: -2px; right: -2px; height: 5px; border: 1px solid #ffffff; box-shadow: 0 1px 3px #000000; transform: translateY(-50%); pointer-events: none; }
+.color-picker-cursor { position: absolute; width: 10px; height: 10px; border: 2px solid #ffffff; border-radius: 50%; outline: 1px solid #000000; transform: translate(-50%, -50%); pointer-events: none; }
+.color-picker-hue-cursor { position: absolute; left: -2px; right: -2px; height: 5px; border: 1px solid #ffffff; outline: 1px solid #000000; transform: translateY(-50%); pointer-events: none; }
 .color-picker-sv:focus-visible, .color-picker-hue:focus-visible { outline: 2px solid var(--sage); outline-offset: 3px; }
 .color-picker-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .color-picker-value { font-size: var(--font-13); font-variant-numeric: tabular-nums; }

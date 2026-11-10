@@ -3,6 +3,7 @@ import { gameText, t as translateUi } from '../../ui/i18n'
 
 
 import { INGREDIENT_CATALOG } from '../../calc/ingredientCatalog'
+import { ingredientKey } from '../../calc/catalogIds'
 import { RECIPE_CATALOG, type RecipeDisplayRow } from '../../calc/recipeCatalog'
 import clientDefaults from '../../data/client-defaults.resource'
 
@@ -15,7 +16,10 @@ import RecipeSheet from './RecipeSheet.vue'
 const components_data_RecipePane_config_clientDefaults = clientDefaults.modules.components_data_RecipePane
 
 
-const ingredientOptions = INGREDIENT_CATALOG
+const ingredientOptions = INGREDIENT_CATALOG.flatMap(ingredient => {
+  const key = ingredientKey(ingredient.name)
+  return key ? [{ ...ingredient, key }] : []
+})
 const ingredients = ref<string[]>([])
 const showIngredients = shallowRef(true)
 const category = shallowRef<(typeof MEAL_CATEGORIES)[number]['id']>((components_data_RecipePane_config_clientDefaults["categoryInitial"] as unknown as (typeof MEAL_CATEGORIES)[number]['id']))
@@ -26,7 +30,8 @@ const opened = shallowRef<RecipeDisplayRow | null>((components_data_RecipePane_c
 const list = computed(() => {
   const rows = RECIPE_CATALOG.filter((r) => {
     return r.category === category.value
-      && (!ingredients.value.length || r.ingredients.some(ingredient => ingredients.value.includes(ingredient.name)))
+      && (!ingredients.value.length || r.ingredients.some(ingredient =>
+        ingredients.value.includes(r.bonus === null ? ingredientKey(ingredient.name) ?? '' : String(ingredient.id))))
   })
   return rows.sort((a, b) => {
     const left = sort.value === 'pot' ? a.pot : a.baseEnergy
@@ -60,7 +65,7 @@ function resetFilters() { ingredients.value = [] }
       <p class="muted">{{ translateUi("包含任一所选食材") }}</p>
       <div class="picker-opts">
         <button type="button" :class="{ on: !ingredients.length }" @click="ingredients = []">{{ translateUi("全部") }}</button>
-        <button v-for="ingredient in ingredientOptions" :key="ingredient.name" type="button" :class="{ on: ingredients.includes(ingredient.name) }" :aria-pressed="ingredients.includes(ingredient.name)" @click="toggleChoice(ingredients, ingredient.name, ingredientOptions.map(item => item.name))"><IngredientIcon :id="ingredient.imageId" :name="ingredient.name" small />{{ gameText(ingredient.name) }}</button>
+        <button v-for="ingredient in ingredientOptions" :key="ingredient.key" type="button" :class="{ on: ingredients.includes(ingredient.key) }" :aria-pressed="ingredients.includes(ingredient.key)" @click="toggleChoice(ingredients, ingredient.key, ingredientOptions.map(item => item.key))"><IngredientIcon :id="ingredient.imageId" :name="ingredient.name" small />{{ gameText(ingredient.name) }}</button>
       </div>
     </section>
     <div class="recipe-tools">

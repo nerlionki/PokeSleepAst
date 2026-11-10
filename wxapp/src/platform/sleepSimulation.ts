@@ -3,7 +3,7 @@ import { createSleepSimulationTask, type SleepSimulationWorker } from '../../../
 import type { SleepSimulationCheckpoint, SleepSimulationMessage, SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
 import { requireWorkerSupport } from './compatibility'
 import { workerErrorMessage } from './workerError'
-const STORAGE_KEY = 'sleep-simulation-checkpoint-v1'
+const STORAGE_KEY = 'sleep-simulation-checkpoint-v3'
 export function useSleepSimulation() {
   const state = createSleepSimulationTask(async (isActive) => {
     requireWorkerSupport()

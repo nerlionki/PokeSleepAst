@@ -26,7 +26,7 @@ interface PlanState {
   /** all：默认全选，sleepdexExcluded 里的是取消的。list：sleepdex 是手动记下的已发现。 */
   sleepdexMode: 'all' | 'list'
   sleepdexExcluded: string[]
-  undiscoveredBoost: boolean
+  undiscoveredPreference?: boolean
   rare: boolean
   shinyUp: boolean
   catchGoals: CatchGoal[]
@@ -49,7 +49,6 @@ const empty: PlanState = {
   sleepdex: cloneData(stores_plans_config_clientDefaults["empty_sleepdex"]),
   sleepdexMode: (stores_plans_config_clientDefaults["empty_sleepdexMode"] as "all"),
   sleepdexExcluded: cloneData(stores_plans_config_clientDefaults["empty_sleepdexExcluded"]),
-  undiscoveredBoost: (stores_plans_config_clientDefaults["empty_undiscoveredBoost"] as true),
   rare: (stores_plans_config_clientDefaults["empty_rare"] as true),
   shinyUp: (stores_plans_config_clientDefaults["empty_shinyUp"] as false),
   catchGoals: cloneData(stores_plans_config_clientDefaults["empty_catchGoals"]),
@@ -67,7 +66,7 @@ export const usePlanStore = defineStore('plans', () => {
   const ready = ref(stores_plans_config_clientDefaults["readyInitial"])
 
   async function hydrate() {
-    const saved = await loadJson<Partial<PlanState>>('plans', empty)
+    const { undiscoveredBoost: legacyBoost, ...saved } = await loadJson<Partial<PlanState> & { undiscoveredBoost?: boolean }>('plans', empty)
     const babyEfficiency = { ...DEFAULT_BABY_EFFICIENCY, ...saved.babyEfficiency }
     babyEfficiency.pokeId = normalizeBabyEfficiencyPokemonId(babyEfficiency.pokeId)
     const selectionMode = saved.completionEfficiency?.selectionMode === 'free' ? 'free' : 'sleepdex'
@@ -75,6 +74,8 @@ export const usePlanStore = defineStore('plans', () => {
     plan.value = {
       ...empty,
       ...saved,
+      // The former default was true. Only a saved false was an explicit change.
+      undiscoveredPreference: saved.undiscoveredPreference ?? (legacyBoost === false ? false : undefined),
       sleepdex: saved.sleepdex ?? [],
       sleepdexMode: saved.sleepdexMode ?? ((saved.sleepdex?.length ?? 0) > 0 ? 'list' : 'all'),
       sleepdexExcluded: saved.sleepdexExcluded ?? [],

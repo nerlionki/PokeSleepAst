@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { t as translateUi, language, languages, setLanguage, t } from '../../ui/i18n'
+import { t as translateUi, hasInterfaceTranslations, language, languages, setLanguage, t } from '../../ui/i18n'
+import { confirmRemoval as confirmAction } from '#platform/confirm'
 import type { Language } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 
@@ -14,6 +15,7 @@ const components_profile_AppearancePane_config_clientDefaults = clientDefaults.m
 const appearance = useAppearanceStore()
 const draft = ref<Palette>({ ...appearance.palette })
 const message = ref(components_profile_AppearancePane_config_clientDefaults["messageInitial"])
+const changingLanguage = ref(false)
 const activeColor = ref<ColorKey | null>((components_profile_AppearancePane_config_clientDefaults["activeColorInitial"] as unknown as ColorKey | null))
 watch(() => appearance.palette, palette => { draft.value = { ...palette } }, { deep: true })
 function theme(id: Appearance['theme']) {
@@ -27,9 +29,16 @@ function applyColors() {
   message.value = '自定义颜色已应用。'
 }
 async function selectLanguage(next: Language) {
-  message.value = ''
-  try { await setLanguage(next) }
+  if (next === language.value || changingLanguage.value) return
+  const label = languages.find(option => option.id === next)!.label
+  changingLanguage.value = true
+  try {
+    if (!await confirmAction('确认将界面语言切换为{language}？', { language: label })) return
+    message.value = ''
+    await setLanguage(next)
+  }
   catch { message.value = '语言已切换，但未能保存到本机。' }
+  finally { changingLanguage.value = false }
 }
 function reset() { void appearance.reset(); message.value = '已恢复默认外观。' }
 </script>
@@ -38,8 +47,9 @@ function reset() { void appearance.reset(); message.value = '已恢复默认外�
     <section class="card stack">
       <h3>{{ t('界面语言') }}</h3>
       <div class="appearance-choices" role="group" :aria-label="t('界面语言')">
-        <button v-for="option in languages" :key="option.id" type="button" class="btn ghost" :class="{ selected: language === option.id }" :aria-pressed="language === option.id" @click="selectLanguage(option.id)">{{ option.label }}</button>
+        <button v-for="option in languages" :key="option.id" type="button" class="btn ghost" :class="{ selected: language === option.id }" :aria-pressed="language === option.id" :disabled="changingLanguage" @click="selectLanguage(option.id)">{{ option.label }}</button>
       </div>
+      <p v-if="!hasInterfaceTranslations(language)" class="muted appearance-hint">{{ t('当前资料缺少所选语言的界面翻译，缺失内容将显示简体中文。') }}</p>
     </section>
     <section class="card stack">
       <h3>{{ translateUi("主题") }}</h3>
@@ -76,7 +86,7 @@ function reset() { void appearance.reset(); message.value = '已恢复默认外�
 .appearance-hint { margin: 0; font-size: var(--font-13); line-height: 1.6; }
 .appearance-choices { display: flex; flex-wrap: wrap; gap: 8px; }
 .appearance-themes { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
-.appearance-choices .selected { border-color: var(--amber); color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); }
+.appearance-choices .selected { border-color: var(--amber); color: var(--amber); }
 .appearance-choice { display: grid; gap: 8px; min-width: 0; text-align: left; }
 .appearance-swatches { display: flex; gap: 5px; }
 .appearance-swatches > span { width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 6px; flex: none; }

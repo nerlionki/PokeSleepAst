@@ -39,6 +39,12 @@ function catalog() {
   return meta?.i18n?.schemaVersion === 1 ? meta.i18n : undefined
 }
 
+export function hasInterfaceTranslations(next: Language): boolean {
+  if (next === 'zh-CN') return true
+  const label = catalog()?.locales?.[next]?.messages?.['界面语言']
+  return typeof label === 'string' && !!label.trim()
+}
+
 function translate(key: string, values?: Values, scope?: string): string {
   const data = catalog()
   const aliases = data?.aliases

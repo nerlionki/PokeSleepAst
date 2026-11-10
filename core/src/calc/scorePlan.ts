@@ -5,14 +5,13 @@ import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
-import extracted0 from '../data/client-defaults.resource'
 import type { BoxPokemon, MealCategory, Settings } from '../types'
-import { INGREDIENTS, NATURES, pokeById } from './data'
+import { NATURES, pokeById } from './data'
+import { ingredientKey, ingredientLabel, ingredientRow, migrateCatalogCounts } from './catalogIds'
 import { POKEMON_LEVEL_MAX } from './xp'
 import { unlockedSubskills } from './member'
 import { skillByPokedexName } from './mainSkills'
 import { resolveMemberSkill } from './mew'
-const scorePlan_config_extracted0 = extracted0.modules.scorePlan
 const factory_scorePlan_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_scorePlan
 const scorePlan_clockIn_runtimeParameters = runtimeParameters.modules.scorePlan.clockIn.values
 const scorePlan_scoreBounds_runtimeParameters = runtimeParameters.modules.scorePlan.scoreBounds.values
@@ -22,7 +21,8 @@ const scorePlan_config_ruleCatalogs = ruleCatalogs.modules.scorePlan
 const scorePlan_scoreTime_runtimeParameters = runtimeParameters.modules.scorePlan.scoreTime.values
 
 
-export const SCORE_RULE_VERSION = (scorePlan_config_extracted0.SCORE_RULE_VERSION as 3)
+// Checkpoint layout includes the ID-based policy and inventories.
+export const SCORE_RULE_VERSION = 4
 export interface ScoreSleep {
   start: string
   end: string
@@ -37,6 +37,7 @@ export interface ScoreOptions {
   days: number
   initialStrength: number
   bag: Record<string, number>
+  unresolvedBag?: Record<string, number>
   category: MealCategory
   meals: [string, string, string]
   collectMinutes: number
@@ -67,8 +68,11 @@ export function normalizeScoreOptions(raw?: Partial<ScoreOptions> & { initialEne
   // 清除旧存档的个体活力设置；随机种子仅作为内部复现参数，不再由界面配置。
   const saved = { ...raw }
   delete saved.initialEnergy
-  const bag = Object.fromEntries(Object.entries(raw?.bag ?? {}).filter(([, amount]) => (amount as number | string) !== ''))
-  return { ...defaults, ...saved, seed: defaults.seed, bag, initialDisguise: { ...raw?.initialDisguise },
+  const { counts: bag, unresolved } = migrateCatalogCounts(
+    Object.fromEntries(Object.entries(raw?.bag ?? {}).filter(([, amount]) => (amount as number | string) !== '')),
+    ingredientKey, raw?.unresolvedBag,
+  )
+  return { ...defaults, ...saved, seed: defaults.seed, bag, unresolvedBag: unresolved, initialDisguise: { ...raw?.initialDisguise },
     meals: [...(raw?.meals ?? defaults.meals)] as ScoreOptions['meals'],
     sleeps: defaults.sleeps.map((s, i) => ({ ...s, ...raw?.sleeps?.[i] })) as ScoreOptions['sleeps'] }
 }
@@ -113,9 +117,11 @@ export function validateScoreOptions(o: ScoreOptions, settings: Settings): strin
   if (!integer(o.seed, 1, (scorePlan_validateScoreOptions_runtimeParameters.p006 as 2147483647))) return '规划参数无效，请恢复默认设置'
   if (!Number.isFinite(o.initialCrit) || o.initialCrit < 0 || o.initialCrit > (scorePlan_validateScoreOptions_runtimeParameters.p007 as 70) || !integer(o.initialPot, 0, (scorePlan_validateScoreOptions_runtimeParameters.p008 as 200))
     || !Number.isFinite(o.initialZone) || o.initialZone < 0 || o.initialZone > (scorePlan_validateScoreOptions_runtimeParameters.p009 as 24) || !integer(o.initialJuice, 0, itemById(ITEM_ROLES.berryJuice)!.maxHeld!)) return '初始技能或道具加成超出允许范围'
-  for (const [name, n] of Object.entries(o.bag)) {
-    if (!INGREDIENTS.some(i => i.name === name)) return `初始食材「${name}」已不在当前资料中`
-    if (!integer(n, 0, (scorePlan_validateScoreOptions_runtimeParameters.p011 as 800))) return `初始食材「${name}」的数量须为 0–800 的整数`
+  const unresolved = Object.keys(o.unresolvedBag ?? {})
+  if (unresolved.length) return `请处理无法迁移或数量冲突的初始食材：${unresolved.join('、')}`
+  for (const [key, n] of Object.entries(o.bag)) {
+    if (!ingredientRow(key)) return `初始食材「${ingredientLabel(key)}」已不在当前资料中`
+    if (!integer(n, 0, (scorePlan_validateScoreOptions_runtimeParameters.p011 as 800))) return `初始食材「${ingredientLabel(key)}」的数量须为 0–800 的整数`
   }
   if (Object.values(o.bag).reduce((a, b) => a + b, 0) > (scorePlan_validateScoreOptions_runtimeParameters.p012 as 800)) return '初始食材合计不能超过 800'
   if (o.meals.length !== 3 || o.meals.some((m, i) => !Number.isFinite(hm(m)) || hm(m) < scorePlan_config_ruleCatalogs.validateScoreOptionsList2.values[i]! || hm(m) >= scorePlan_config_ruleCatalogs.validateScoreOptionsList3.values[i]!)) return '做饭时间须分别位于早餐 06:00–11:59、午餐 12:00–17:59、晚餐 18:00–23:59'
@@ -157,7 +163,7 @@ export interface ScorePolicy {
   day: string[][]
   sleep: string[][]
   settle: string[][]
-  recipe: string
+  recipeId: number | null
   reserveMeals: number
   rotateMinutes: number
   fill: boolean
@@ -168,7 +174,8 @@ export interface ScoreSegment { start: number, end: number, members: string[], p
 export interface ScoreMemberResult { uid: string, hours: number, dailyHours: number[], energy: number, exp: number, heldBerries: number, heldFood: Record<string, number>, stock: number }
 export interface ScoreTrace {
   berry: number, zone: number, skill: number, cooking: number, total: number
-  bag: Record<string, number>, received: Record<string, number>, consumed: Record<string, number>, sold: Record<string, number>
+  bag: Record<string, number>
+  unresolvedBag?: Record<string, number>, received: Record<string, number>, consumed: Record<string, number>, sold: Record<string, number>
   juice: { initial: number, received: number, used: number, lost: number, remain: number }
   items?: Record<number, { initial: number, received: number, used: number, lost: number, remain: number }>
   members: ScoreMemberResult[], actions: ScoreAction[], segments: ScoreSegment[], warnings: string[]
@@ -186,8 +193,9 @@ export function seededRandom(seed: number) {
   let state = seed >>> 0
   return () => { state += 0x6D2B79F5; let x = state; x = Math.imul(x ^ x >>> 15, x | 1); x ^= x + Math.imul(x ^ x >>> 7, x | 61); return ((x ^ x >>> 14) >>> 0) / 4294967296 }
 }
-export function scoreTime(minute: number): string {
+export function scoreTime(minute: number, label = (value: string) => value): string {
   const day = Math.floor((minute - (scorePlan_scoreTime_runtimeParameters.p001 as 240)) / 1440)
   const m = ((Math.floor(minute) % 1440) + (scorePlan_scoreTime_runtimeParameters.p002 as 1440)) % 1440
-  return `${day < 0 ? '上周日' : day > (scorePlan_scoreTime_runtimeParameters.p003 as 6) ? '下周一' : scorePlan_config_ruleCatalogs.scoreTimeList0.values[day]} ${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+  const weekday = day < 0 ? '上周日' : day > (scorePlan_scoreTime_runtimeParameters.p003 as 6) ? '下周一' : scorePlan_config_ruleCatalogs.scoreTimeList0.values[day]
+  return `${label(weekday)} ${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }

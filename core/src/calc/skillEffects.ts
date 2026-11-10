@@ -97,7 +97,7 @@ export function applySkillModelEffects(actor: EffectActor, team: EffectActor[], 
           case 'drainEnergy': targetActor.energy = Math.max(0, targetActor.energy - value() * p); break
           case 'ingredients': {
             const pool = effect.pool ? INGREDIENTS.filter(item => effect.pool!.includes(item.id)) : INGREDIENTS
-            for (const item of pool) context.ingredient(actor, item.name, value() * p * modifiers.ingredient / pool.length)
+            for (const item of pool) context.ingredient(actor, String(item.id), value() * p * modifiers.ingredient / pool.length)
             break
           }
           case 'firstIngredient': if (base.firstIngredient) context.ingredient(actor, base.firstIngredient, value() * p * modifiers.ingredient); break

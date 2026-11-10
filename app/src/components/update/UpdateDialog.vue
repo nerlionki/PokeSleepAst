@@ -7,8 +7,9 @@ const panel = shallowRef<HTMLElement | null>(null)
 let previousFocus: HTMLElement | null = null
 const percent = computed(() => Math.min(100, Math.floor(store.progress.downloaded / Math.max(1, store.progress.total) * 100)))
 const size = computed(() => ((store.update?.size ?? 0) / 1024 / 1024).toFixed(1))
-const action = computed(() => store.phase === 'downloading' ? `正在下载 ${percent.value}%`
-  : store.phase === 'verifying' ? '正在校验…' : store.phase === 'ready' ? '继续安装' : store.error ? '重试更新' : '立即更新')
+const action = computed(() => store.phase === 'downloading' ? translateUi('正在下载 {percent}%', { percent: percent.value })
+  : store.phase === 'verifying' ? translateUi('正在校验…') : store.phase === 'ready' ? translateUi('继续安装')
+  : store.error ? translateUi('重试更新') : translateUi('立即更新'))
 
 function onKey(event: KeyboardEvent) {
   if (!store.visible || !panel.value) return

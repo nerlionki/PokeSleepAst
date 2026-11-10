@@ -1,14 +1,15 @@
 import runtimeParameters from '../data/runtime-parameters.resource'
-import ruleCatalogs from '../data/rule-catalogs.resource'
 import extracted0 from '../data/compatibility-maps.resource'
 import { cloneData } from './dataClone'
 import { newUid } from './uid'
 import { NEUTRAL_NATURE, NATURES, SUBSKILLS, pokeById } from './data'
 import { ingredientColumns } from './ingredients'
+import { defaultSkillLevel, defaultTune, parseImportedSkillLevel } from './member'
+import { skillMaxFor } from './mainSkills'
+import { resolveMemberSkill } from './mew'
 import type { BoxPokemon, NatureStat, OcrMissingField } from '../types'
 import { POKEMON_LEVEL_MAX } from './xp'
 const iqdoohBox_config_extracted0 = extracted0.modules.iqdoohBox
-const iqdoohBox_config_ruleCatalogs = ruleCatalogs.modules.iqdoohBox
 const iqdoohBox_parseIqdoohEntry_runtimeParameters = runtimeParameters.modules.iqdoohBox.parseIqdoohEntry.values
 
 
@@ -16,17 +17,22 @@ const FORMS: Record<string, number> = (cloneData(iqdoohBox_config_extracted0.FOR
 const ATTRS: Record<string, NatureStat> = (cloneData(iqdoohBox_config_extracted0.ATTRS) as unknown as Record<string, NatureStat>)
 const SKILLS: Record<string, string> = (cloneData(iqdoohBox_config_extracted0.SKILLS) as unknown as Record<string, string>)
 
-export function parseIqdoohEntry(raw: Record<string, unknown>): BoxPokemon | null {
+function parseLevel(value: unknown): number | undefined {
+  if (typeof value !== 'number' && typeof value !== 'string') return undefined
+  const level = Number(value)
+  if (Number.isInteger(level) && level >= 1 && level <= POKEMON_LEVEL_MAX) return level
+}
+
+export function parseIqdoohEntry(raw: Record<string, unknown>, defaultMaxSkillLevel = true): BoxPokemon | null {
   const dex = String(raw.dex ?? '').match(/^#?(\d+)(?:-(\d+))?$/)
   if (!dex) return null
   const base = Number(dex[1])
   const pokeId = dex[2] ? FORMS[`${base}-${Number(dex[2])}`] : base
   const poke = pokeId ? pokeById(pokeId) : undefined
   if (!poke) return null
-  const missing: OcrMissingField[] = [...iqdoohBox_config_ruleCatalogs.parseIqdoohEntryList0.values] as OcrMissingField[]
-  const realLevel = Number(raw.levelReal ?? raw.level)
-  const level = Number.isInteger(realLevel) && realLevel >= 1 && realLevel <= POKEMON_LEVEL_MAX ? realLevel : 1
-  if (level !== realLevel) missing.push('level')
+  const missing: OcrMissingField[] = []
+  const level = parseLevel(raw.levelReal) ?? parseLevel(raw.level)
+  if (level === undefined) missing.push('level')
   const neutral = raw.incAttr == null && raw.decAttr == null
   const nature = neutral ? NEUTRAL_NATURE : NATURES.find(n =>
     n.up === ATTRS[String(raw.incAttr)] && n.down === ATTRS[String(raw.decAttr)] && n.up !== undefined)?.name
@@ -45,10 +51,15 @@ export function parseIqdoohEntry(raw: Record<string, unknown>): BoxPokemon | nul
     return cell?.index ?? null
   }) as BoxPokemon['ingredientSlots']
   const id = raw.id == null ? '' : String(raw.id)
+  const satiety = raw.satiety
+  const ribbonHours = typeof satiety === 'number' || (typeof satiety === 'string' && satiety.trim()) ? Number(satiety) : NaN
+  const skillLevel = parseImportedSkillLevel(raw.skillLevel ?? raw.skilllevel ?? raw.mainSkillLevel)
+    ?? (defaultMaxSkillLevel ? skillMaxFor(resolveMemberSkill(poke, {}).name) : defaultSkillLevel(poke.id))
   return {
-    uid: id ? `iqdooh-${id}` : `iqdooh-${newUid()}`, pokeId: poke.id, level,
-    nature: nature ?? NEUTRAL_NATURE, subskills, ingredientSlots, skillLevel: 1,
+    uid: id ? `iqdooh-${id}` : `iqdooh-${newUid()}`, pokeId: poke.id, level: level ?? 1,
+    nature: nature ?? NEUTRAL_NATURE, subskills, ingredientSlots, skillLevel,
     name: String(raw.nickname ?? raw.name ?? ''), napping: false,
+    ...(Number.isFinite(ribbonHours) && ribbonHours >= 0 ? { tune: { ...defaultTune(), ribbonHours } } : {}),
     ...(raw.shiny === true ? { shiny: true } : {}), ocrMissing: missing,
   }
 }

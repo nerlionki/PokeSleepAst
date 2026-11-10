@@ -139,9 +139,8 @@ export function ingredientYield(settings: Settings, input: ProduceInput, ingredi
   const poke = pokeById(input.pokeId)!
   const helpingBonus = compareHelpingBonus(input.level, input.subskills, 0)
   const result = produce(settings, input, helpingBonus, undefined, { naturalOnly: true })
-  const name = poke.ingredients.find(item => item.id === ingredientId)?.name
-  if (!name) return { input, total: 0, ordinary: 0, skill: 0 }
-  const ordinary = result.ingredients[name] ?? 0
+  if (!poke.ingredients.some(item => item.id === ingredientId)) return { input, total: 0, ordinary: 0, skill: 0 }
+  const ordinary = result.ingredients[ingredientId] ?? 0
   const selected = resolveMemberSkill(poke, input)
   const skillRate = Math.min(1, findingRate(selected.rate, input.nature, 'skill', input.subskills.slice(0, 4), 'skillS', 'skillM')
     * exEffects(settings, poke.berry, poke.specialty).skillMultiplier)

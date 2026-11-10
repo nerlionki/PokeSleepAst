@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import { defineConfig } from '@tarojs/cli'
 import { WeappTailwindcss } from 'weapp-tailwindcss/webpack'
 import { NativeImageLoaderPlugin } from './native-image-loader.cjs'
+import { NativeWxmlPlugin } from './native-wxml.cjs'
 
 export default defineConfig({
   projectName: 'pokesleep-wxapp',
@@ -14,7 +15,7 @@ export default defineConfig({
   framework: 'vue3',
   compiler: 'webpack5',
   // Keep Chinese fallback text in UTF-8 to fit the main package budget.
-  terser: { config: { output: { ascii_only: false } } },
+  terser: { config: { compress: { passes: 3 }, output: { ascii_only: false } } },
   plugins: ['@tarojs/plugin-html'],
   alias: {
     '#platform': path.resolve(__dirname, '../src/platform'),
@@ -45,10 +46,12 @@ export default defineConfig({
       // Image indexes are large plain JSON too. Preserve their values while
       // keeping the resource update feature within the existing main-pack limit.
       chain.module.rule('compressed-core-data').include
+        .add(path.resolve(__dirname, '../../core/src/ui/gameLabels.json'))
         .add(path.resolve(__dirname, '../src/platform/image-map.json'))
         .add(path.resolve(__dirname, '../src/platform/image-manifest.json'))
       chain.externals({ '#image-loader': 'commonjs ./image-loader.js' })
       chain.plugin('native-image-loader-paths').use(NativeImageLoaderPlugin)
+      chain.plugin('native-wxml').use(NativeWxmlPlugin)
       chain.plugin('weapp-tailwindcss').use(WeappTailwindcss, [{
         tailwindcssBasedir: path.resolve(__dirname, '..'),
         cssEntries: [path.resolve(__dirname, '../src/tailwind.css')],

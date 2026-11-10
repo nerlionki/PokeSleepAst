@@ -22,8 +22,14 @@ export interface MemberDraft extends ProduceInput {
 }
 
 /** User default: one base skill level plus the current species' evolution depth. */
-export function defaultSkillLevel(pokeId: number): number {
-  return Math.min(skillMaxFor(pokeById(pokeId)?.mainSkill ?? ''), evolutionDepth(pokeId) + 1)
+export function defaultSkillLevel(pokeId: number, evolutions = evolutionDepth(pokeId)): number {
+  return Math.min(skillMaxFor(pokeById(pokeId)?.mainSkill ?? ''), evolutions + 1)
+}
+
+export function parseImportedSkillLevel(value: unknown): number | undefined {
+  if (typeof value !== 'number' && typeof value !== 'string') return
+  const level = Number(value)
+  return Number.isSafeInteger(level) && level > 0 ? level : undefined
 }
 
 export function defaultTune(pokeId?: number): MemberTune {

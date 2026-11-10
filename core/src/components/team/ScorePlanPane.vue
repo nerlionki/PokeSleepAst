@@ -16,6 +16,7 @@ import { loadJson, saveJson } from '../../storage'
 import { useBoxStore } from '../../stores/box'
 import { useSettingsStore } from '../../stores/settings'
 import { INGREDIENTS, islandById } from '../../calc/data'
+import { ingredientLabel, ingredientRow, recipeById } from '../../calc/catalogIds'
 import { boxLabel } from '../../calc/boxFilter'
 import { defaultScoreOptions, normalizeScoreOptions, scoreBounds, scoreCandidates, scoreTime, validateScoreOptions, type ScoreOptions } from '../../calc/scorePlan'
 import PokeSprite from '../shared/PokeSprite.vue'
@@ -27,19 +28,29 @@ const box = useBoxStore(), settings = useSettingsStore()
 const options = ref(defaultScoreOptions(settings.settings))
 const ready = ref(components_team_ScorePlanPane_config_clientDefaults["readyInitial"]), advanced = ref(components_team_ScorePlanPane_config_clientDefaults["advancedInitial"]), inventory = ref(components_team_ScorePlanPane_config_clientDefaults["inventoryInitial"]), selected = ref(components_team_ScorePlanPane_config_clientDefaults["selectedInitial"]), showActions = ref(components_team_ScorePlanPane_config_clientDefaults["showActionsInitial"]), actionDay = ref(components_team_ScorePlanPane_config_clientDefaults["actionDayInitial"])
 const loadError = ref('')
+const optionsStorageKey = 'score-options-v2'
 const request = () => ({ settings: { ...settings.settings, mealCategory: options.value.category }, box: box.pokemon, options: options.value })
 const { busy, error, notice, result, progress, dirty, calculate, cancel, restore } = useScorePlan(request)
 const inputError = computed(() => loadError.value || validateScoreOptions(options.value, settings.settings))
 const foodCount = computed(() => Object.values(options.value.bag).reduce((sum, n) => sum + (Number(n) || 0), 0))
-const unknownFoods = computed(() => Object.keys(options.value.bag).filter(name => !INGREDIENTS.some(ingredient => ingredient.name === name)))
-const environment = computed(() => `${islandById(settings.settings.island)?.name ?? ''} · 岛屿加成 ${Math.round(settings.settings.areaBonus * 100)}% · ${settings.settings.goodCamp ? '已开露营券' : '未开露营券'}`)
+const unresolvedFoods = computed(() => Object.entries(options.value.unresolvedBag ?? {}))
+const unknownFoods = computed(() => Object.keys(options.value.bag).filter(key => !ingredientRow(key)))
+function removeUnresolvedFood(key: string) { if (options.value.unresolvedBag) delete options.value.unresolvedBag[key] }
+const environment = computed(() => [
+  translateUi('{island} · 岛屿加成 {bonus}%', {
+    island: gameText(islandById(settings.settings.island)?.name ?? ''),
+    bonus: Math.round(settings.settings.areaBonus * 100),
+  }),
+  translateUi(settings.settings.goodCamp ? '已开露营券' : '未开露营券'),
+].join(' · '))
 const solution = computed(() => result.value?.solutions[selected.value])
 const percent = computed(() => Math.min(100, Math.floor(progress.value.completed / Math.max(1, progress.value.total) * 100)))
-const boundLabel = computed(() => { const b = scoreBounds(options.value); return `${scoreTime(b.start)} — ${b.end === 10320 ? '下周一 03:59' : scoreTime(b.end)}` })
+const displayTime = (minute: number) => scoreTime(minute, translateUi)
+const boundLabel = computed(() => { const b = scoreBounds(options.value); return `${displayTime(b.start)} — ${b.end === 10320 ? translateUi('下周一 03:59') : displayTime(b.end)}` })
 const name = (uid: string) => { const p = box.pokemon.find(p => p.uid === uid); return p ? boxLabel(p) : uid }
 const pokemon = (uid: string) => box.pokemon.find(p => p.uid === uid)
 const number = (value: number) => Math.round(value).toLocaleString('zh-CN')
-const foods = (bag: Record<string, number>) => Object.entries(bag).filter(([, count]) => count > 0).map(([name, count]) => `${name} ×${count}`).join('、') || '无'
+const foods = (bag: Record<string, number>) => Object.entries(bag).filter(([, count]) => count > 0).map(([key, count]) => `${gameText(ingredientLabel(key))} ×${count}`).join('、') || translateUi('无')
 const actions = computed(() => solution.value?.trace.actions.filter(a => Math.floor((a.minute - 240) / 1440) === actionDay.value) ?? [])
 const daySegments = computed(() => solution.value?.trace.segments.filter(s => s.start < (actionDay.value + 1) * 1440 + 240 && s.end > actionDay.value * 1440 + 240) ?? [])
 const sensitive = computed(() => solution.value?.sensitivity.some(s => Math.abs(s.mean - solution.value!.mean) > solution.value!.mean * 0.05))
@@ -50,7 +61,12 @@ const advancedChanged = computed(() => {
 })
 onMounted(async () => {
   try {
-    options.value = normalizeScoreOptions(await loadJson<Partial<ScoreOptions>>('score-options-v1', {}), settings.settings)
+    const current = await loadJson<Partial<ScoreOptions> | null>(optionsStorageKey, null)
+    const legacy = current ? null : await loadJson<Partial<ScoreOptions> | null>('score-options-v1', null)
+    options.value = normalizeScoreOptions(current ?? legacy ?? undefined, settings.settings)
+    if (legacy || current && JSON.stringify([current.bag, current.unresolvedBag]) !== JSON.stringify([options.value.bag, options.value.unresolvedBag])) {
+      await saveJson(optionsStorageKey, options.value)
+    }
     // 先完成配置恢复引起的 watcher，避免它误取消刚恢复的微信任务。
     await nextTick()
     restore()
@@ -60,19 +76,19 @@ onMounted(async () => {
     ready.value = true
   }
 })
-watch(options, value => { if (ready.value && !loadError.value) void saveJson('score-options-v1', value); if (busy.value) cancel() }, { deep: true })
+watch(options, value => { if (ready.value && !loadError.value) void saveJson(optionsStorageKey, value); if (busy.value) cancel() }, { deep: true })
 watch(() => JSON.stringify({ settings: settings.settings, box: box.pokemon }), () => { if (busy.value) cancel() })
 watch(result, () => { selected.value = 0; actionDay.value = options.value.startDay })
 function reset() {
   loadError.value = ''
-  options.value = { ...defaultScoreOptions(settings.settings), bag: { ...options.value.bag }, initialStrength: options.value.initialStrength }
+  options.value = { ...defaultScoreOptions(settings.settings), bag: { ...options.value.bag }, unresolvedBag: { ...options.value.unresolvedBag }, initialStrength: options.value.initialStrength }
 }
-function updateFood(name: string, event: Event) {
+function updateFood(id: number, event: Event) {
   const input = event.target as HTMLInputElement
   const value = input.value
-  if (input.validity?.badInput) options.value.bag[name] = Number.NaN
-  else if (value === '') delete options.value.bag[name]
-  else options.value.bag[name] = Number(value)
+  if (input.validity?.badInput) options.value.bag[id] = Number.NaN
+  else if (value === '') delete options.value.bag[id]
+  else options.value.bag[id] = Number(value)
 }
 function start() {
   if (busy.value || !ready.value) return
@@ -107,8 +123,12 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
         <div class="score-foods">
           <div v-for="ingredient in INGREDIENTS" :key="ingredient.id" class="field">
             <label :for="`score-food-${ingredient.id}`"><IngredientIcon :id="ingredient.id" :name="ingredient.name" small /> {{ gameText(ingredient.name) }}</label>
-            <input :id="`score-food-${ingredient.id}`" :value="options.bag[ingredient.name]" type="number" :min="INPUT_LIMITS.options_bag_ingredient_name.min" :max="INPUT_LIMITS.options_bag_ingredient_name.max" :step="INPUT_LIMITS.options_bag_ingredient_name.step" inputmode="numeric" @input="updateFood(ingredient.name, $event)">
+            <input :id="`score-food-${ingredient.id}`" :value="options.bag[ingredient.id]" type="number" :min="INPUT_LIMITS.options_bag_ingredient_name.min" :max="INPUT_LIMITS.options_bag_ingredient_name.max" :step="INPUT_LIMITS.options_bag_ingredient_name.step" inputmode="numeric" @input="updateFood(ingredient.id, $event)">
           </div>
+        </div>
+        <div v-for="[key, amount] in unresolvedFoods" :key="key" class="row">
+          <span class="amber">{{ key }} ×{{ amount }} · {{ translateUi('旧库存未匹配或冲突') }}</span>
+          <button class="btn ghost" type="button" @click="removeUnresolvedFood(key)">{{ translateUi('删除') }}</button>
         </div>
         <div v-for="name in unknownFoods" :key="name" class="row">
           <span class="amber">{{ name }} · {{ translateUi("当前资料未收录") }}</span>
@@ -120,7 +140,7 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
       <div v-if="advanced" class="stack score-details">
         <h4>{{ translateUi("规划周期与操作") }}</h4>
         <div class="row">
-          <div class="field"><label for="score-day">{{ translateUi("开始星期") }}</label><select id="score-day" v-model.number="options.startDay" @change="options.days = Math.min(options.days, INPUT_LIMITS.score_days.max - options.startDay)"><option v-for="(day, i) in ['周一','周二','周三','周四','周五','周六','周日']" :key="day" :value="i">{{ day }}</option></select></div>
+          <div class="field"><label for="score-day">{{ translateUi("开始星期") }}</label><select id="score-day" v-model.number="options.startDay" @change="options.days = Math.min(options.days, INPUT_LIMITS.score_days.max - options.startDay)"><option v-for="(day, i) in ['周一','周二','周三','周四','周五','周六','周日']" :key="day" :value="i">{{ translateUi(day) }}</option></select></div>
           <div class="field"><label for="score-time">{{ translateUi("开始时刻") }}</label><TimeField id="score-time" v-model="options.startTime" /></div>
           <div class="field"><label for="score-days">{{ translateUi("覆盖天数") }}</label><input id="score-days" v-model.number="options.days" type="number" :min="INPUT_LIMITS.score_days.min" :max="7 - options.startDay"></div>
         </div>
@@ -160,7 +180,7 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
       <p v-if="!box.pokemon.length" class="muted">{{ translateUi("请先在 Box 添加宝可梦，再开始规划。") }}</p>
       <div class="row"><button class="btn" type="button" :disabled="busy || !ready" @click="start">{{ busy ? translateUi("正在规划 {arg1}%", { arg1: String(percent) }) : translateUi("开始规划") }}</button></div>
       <ProgressDialog :open="busy" :title="translateUi('正在计算冲分规划')" :progress="percent" stage="比较队伍与料理策略" :notice="notice"
-        :detail="'已比较 ' + progress.completed + ' / ' + progress.total" cancellable cancel-text="取消规划" @cancel="cancel" />
+        :detail="translateUi('已比较 {done} / {total}', { done: progress.completed, total: progress.total })" cancellable cancel-text="取消规划" @cancel="cancel" />
       <p v-if="notice" role="status" class="muted">{{ translateUi(notice) }}</p><p v-if="error" role="alert" class="amber">{{ translateUi(error) }}</p>
     </article>
     <template v-if="result && solution">
@@ -173,11 +193,11 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
         <p class="muted">{{ translateUi("比较") }} {{ result.compared }} {{ translateUi("个方案，共") }} {{ result.simulations }} {{ translateUi("次模拟，用时") }} {{ (result.elapsedMs / 1000).toFixed(1) }} {{ translateUi("秒。") }}</p>
         <div class="field"><label for="score-solution">{{ translateUi("比较其他方案") }}</label><select id="score-solution" v-model.number="selected"><option v-for="(s, i) in result.solutions" :key="i" :value="i">{{ translateUi("方案") }} {{ i + 1 }} {{ translateUi("· 平均新增") }} {{ number(s.mean) }}</option></select></div>
         <p v-if="sensitive" class="amber">{{ translateUi("该方案对换队保底回退假设敏感，请对照复核收益。") }}</p>
-        <p class="muted">{{ translateUi("回退复核：") }}{{ solution.sensitivity.map(s => `${s.rollback} 次：${number(s.mean)}`).join('；') }}</p>
+        <p class="muted">{{ translateUi("回退复核：") }}{{ solution.sensitivity.map(s => translateUi('{count} 次：{mean}', { count: s.rollback, mean: number(s.mean) })).join('；') }}</p>
       </article>
       <article class="card stack">
         <h3>{{ translateUi("推荐队伍与料理策略") }}</h3>
-        <p>{{ translateUi("优先") }} {{ gameText(solution.policy.recipe || '当前可用料理') }}{{ translateUi("；预留") }} {{ solution.policy.reserveMeals }} {{ translateUi("餐食材，白天至少间隔") }} {{ solution.policy.rotateMinutes }} {{ translateUi("分钟考虑轮换。") }}</p>
+        <p>{{ translateUi("优先") }} {{ gameText(recipeById(solution.policy.recipeId)?.name ?? '当前可用料理') }}{{ translateUi("；预留") }} {{ solution.policy.reserveMeals }} {{ translateUi("餐食材，白天至少间隔") }} {{ solution.policy.rotateMinutes }} {{ translateUi("分钟考虑轮换。") }}</p>
         <div v-for="(uids, i) in [...solution.policy.day, ...solution.policy.sleep.slice(0, result.options.splitSleep ? 2 : 1), ...(result.options.device ? solution.policy.settle.slice(0, result.options.splitSleep ? 2 : 1) : [])]" :key="i" class="stack score-team">
           <p><strong>{{ i < 2 ? i === 0 ? translateUi("白天树果／技能阶段") : translateUi("白天食材阶段") : i < 2 + (result.options.splitSleep ? 2 : 1) ? translateUi("睡眠生产队 {arg1}", { arg1: String(i - 1) }) : translateUi("外设结算队 {arg1}", { arg1: String(i - 1 - (result.options.splitSleep ? 2 : 1)) }) }}</strong></p>
           <div class="score-roster"><div v-for="uid in uids" :key="uid" class="score-pokemon"><PokeSprite :id="pokemon(uid)?.pokeId ?? 0" :name="name(uid)" :shiny="pokemon(uid)?.shiny" :ribbon-hours="pokemon(uid)?.tune?.ribbonHours" /><span>{{ name(uid) }}</span></div></div>
@@ -195,8 +215,8 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
         <button class="btn ghost" type="button" :aria-expanded="showActions" @click="showActions = !showActions">{{ showActions ? translateUi("收起操作时间表") : translateUi("查看操作时间表") }}</button>
         <div v-if="showActions" class="stack">
           <div class="field"><label for="score-action-day">{{ translateUi("查看日期") }}</label><select id="score-action-day" v-model.number="actionDay"><option v-for="(day, i) in ['周一','周二','周三','周四','周五','周六','周日','下周一结算']" :key="day" :value="i">{{ day }}</option></select></div>
-          <div v-for="(segment, i) in daySegments" :key="`segment-${i}`" class="score-action"><p><strong>{{ scoreTime(Math.max(segment.start, actionDay * 1440 + 240)) }} — {{ scoreTime(Math.min(segment.end, (actionDay + 1) * 1440 + 240)) }}</strong> · {{ segment.purpose }}</p><p class="muted">{{ segment.members.map(name).join('、') }}</p></div>
-          <div v-for="(action, i) in actions" :key="i" class="score-action"><p><strong>{{ scoreTime(action.minute) }}</strong> · {{ translateUi(action.text) }}<span v-if="action.energy != null"> · {{ number(action.energy) }} {{ translateUi("能量") }}</span></p><p v-if="action.members" class="muted">{{ action.members.map(name).join('、') }}</p><p v-if="action.foods && Object.values(action.foods).some(n => n > 0)" class="muted">{{ foods(action.foods) }}</p></div>
+          <div v-for="(segment, i) in daySegments" :key="`segment-${i}`" class="score-action"><p><strong>{{ displayTime(Math.max(segment.start, actionDay * 1440 + 240)) }} — {{ displayTime(Math.min(segment.end, (actionDay + 1) * 1440 + 240)) }}</strong> · {{ translateUi(segment.purpose) }}</p><p class="muted">{{ segment.members.map(name).join('、') }}</p></div>
+          <div v-for="(action, i) in actions" :key="i" class="score-action"><p><strong>{{ displayTime(action.minute) }}</strong> · {{ translateUi(action.text) }}<span v-if="action.energy != null"> · {{ number(action.energy) }} {{ translateUi("能量") }}</span></p><p v-if="action.members" class="muted">{{ action.members.map(name).join('、') }}</p><p v-if="action.foods && Object.values(action.foods).some(n => n > 0)" class="muted">{{ foods(action.foods) }}</p></div>
           <p v-if="!actions.length" class="muted">{{ translateUi("这一天没有安排操作。") }}</p>
         </div>
       </article>

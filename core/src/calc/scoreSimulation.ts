@@ -1,6 +1,6 @@
 import { resetSkillModelState } from './skillModel'
 import { itemById, ITEM_ROLES } from './itemCatalog'
-import { assertKnownIngredientEnergy, ingredientEnergyValue } from './activityIngredients'
+import { ingredientEnergyValue } from './activityIngredients'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
@@ -13,7 +13,8 @@ import { berryUnitEnergy } from './berry'
 import { mealRecover, sleepRecoveredEnergy } from './energy'
 import { instantInterval } from './helpSpeed'
 import { exEffects } from './exEffects'
-import { slotDrop, unlockedIngredientSlots } from './ingredients'
+import { berriesPerHelp, findingChance, selectedIngredientDrops } from './ingredients'
+import { addIngredient as add, recipeById } from './catalogIds'
 import { resolveMemberSkill } from './mew'
 import { effectiveSkillLevel, unlockedSubskills } from './member'
 import { skillMaxFor } from './mainSkills'
@@ -21,7 +22,7 @@ import { natureStatFactor, withEffectiveNature } from './natureLabels'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { carryLimit, teamHelpingBonus } from './timeline'
 import { FULL_INVENTORY_SKILL_HELPS, skillStorageLimit } from './specialty'
-import { recipeLevelOf, recipeEnergy } from './cook'
+import { allocateIngredients, canCookRecipe, mealEnergy, recipeLevelOf, recipeEnergy, takeRecipeIngredients } from './cook'
 import { teamRestrictionError } from './teamRestrictions'
 import { scoreSkill, type ScoreActor } from './scoreSkills'
 import { hm, scoreBounds, scoreCandidates, scoreSleeps, seededRandom, validateScoreOptions,
@@ -44,13 +45,12 @@ const scoreSimulation_cook_ruleParameters = ruleParameters.modules.scoreSimulati
 interface Actor extends ScoreActor {
   activity: ActivityValues
   pokemon: BoxPokemon, input: ProduceInput, poke: NonNullable<ReturnType<typeof pokeById>>
-  subs: string[], carry: number, drops: { name: string, amount: number }[], ingredientRate: number, berryCount: number
+  subs: string[], carry: number, drops: { id: number, amount: number }[], ingredientRate: number, berryCount: number
   unit: number, next: number, decay: number, heldBerries: number, heldFood: Record<string, number>, stock: number
   failures: number, syncHelps: number, pity: number, fullSkillHelps: number, hours: number, dailyHours: number[], exp: number
 }
 export const SCORE_ASSUMPTIONS = cloneData(scoreSimulation_config_extracted0.SCORE_ASSUMPTIONS)
 const sumBag = (bag: Record<string, number>) => Object.values(bag).reduce((a, b) => a + b, 0)
-const add = (bag: Record<string, number>, name: string, amount: number) => { bag[name] = (bag[name] ?? 0) + amount }
 const foodEnergy = (name: string) => ingredientEnergyValue(name) ?? 0
 
 /** 始终按事件顺序推进，成员状态以 UID 保存。结束边界不领取携带物。 */
@@ -72,14 +72,14 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     const ex = exEffects(settings, poke.berry, poke.specialty)
     const ribbon = ribbonBonus(pokemon.tune?.ribbonHours ?? 0, stagesLeft(poke.id))
     const input: ProduceInput = { ...pokemon, ribbonHours: pokemon.tune?.ribbonHours ?? 0 }
-    const drops = pokemon.ingredientSlots.slice(0, unlockedIngredientSlots(pokemon.level))
-      .map((index, slot) => index == null ? null : slotDrop(poke.ingredients, slot, index)).filter((drop): drop is NonNullable<typeof drop> => Boolean(drop))
+    const drops = selectedIngredientDrops(poke.ingredients, pokemon.ingredientSlots, pokemon.level)
     actors.set(pokemon.uid, { activity: activityValues(settings.activity, settings.island, poke, start), uid: pokemon.uid, pokemon, input, poke, subs, pokeId: poke.id, berry: poke.berry, skill: selected.name,
       skillLevel: Math.min(skillMaxFor(selected.name), effectiveSkillLevel(pokemon.level, pokemon.skillLevel, pokemon.subskills, selected.name) + ex.skillLevels),
       rate: selected.rate * natureStatFactor(pokemon.nature, 'skill') * (1 + (subs.includes('skillS') ? scoreSimulation_simulateScore_ruleParameters.findingS : 0) + (subs.includes('skillM') ? scoreSimulation_simulateScore_ruleParameters.findingM : 0)) * ex.skillMultiplier,
       energy: (scoreSimulation_simulateScore_runtimeParameters.p003 as 100), factor: natureStatFactor(pokemon.nature, 'energy'), disguise: o.initialDisguise[pokemon.uid] ?? true, stockpile: 0,
-      firstFood: drops[0]?.name ?? '', drops, ingredientRate: Math.min(1, poke.ingredientRate * natureStatFactor(pokemon.nature, 'ingredient') * (1 + (subs.includes('ingS') ? scoreSimulation_simulateScore_ruleParameters.findingS : 0) + (subs.includes('ingM') ? scoreSimulation_simulateScore_ruleParameters.findingM : 0))),
-      carry: carryLimit(poke.carry, subs, settings.goodCamp, 'preset', ribbon.carry, ex.carryExtra + activityValues(settings.activity, settings.island, poke, start).carryCapacityBonus, activityValues(settings.activity, settings.island, poke, start).carryCapacityMultiplier), berryCount: (scoreSimulation_config_ruleCatalogs.simulateScoreList0.values.includes(poke.specialty) ? ruleParameters.modules.scoreSimulation.berryCount.specialist : ruleParameters.modules.scoreSimulation.berryCount.normal) + Number(subs.includes('berryS')) * ruleParameters.modules.scoreSimulation.berryCount.berryS,
+      firstFood: drops.length ? String(drops[0]!.id) : '', drops, ingredientRate: Math.min(1, findingChance(poke.ingredientRate, pokemon.nature, 'ingredient',
+        subs.includes('ingS'), subs.includes('ingM'), scoreSimulation_simulateScore_ruleParameters.findingS, scoreSimulation_simulateScore_ruleParameters.findingM)),
+      carry: carryLimit(poke.carry, subs, settings.goodCamp, 'preset', ribbon.carry, ex.carryExtra + activityValues(settings.activity, settings.island, poke, start).carryCapacityBonus, activityValues(settings.activity, settings.island, poke, start).carryCapacityMultiplier), berryCount: berriesPerHelp(poke.specialty, subs, ruleParameters.modules.scoreSimulation.berryCount.berryS),
       unit: berryUnitEnergy(poke.berry, pokemon.level, settings.areaBonus, ex.berryMultiplier), next: Infinity, decay: start,
       heldBerries: 0, heldFood: {}, stock: 0, failures: 0, syncHelps: 0, fullSkillHelps: 0,
       pity: scoreSimulation_config_ruleCatalogs.simulateScoreList1.values.includes(poke.specialty) ? Math.ceil(scoreSimulation_simulateScore_ruleParameters.skillSpecialistPitySeconds / poke.interval) : scoreSimulation_simulateScore_ruleParameters.otherPityHelps,
@@ -102,7 +102,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
   const sessions = scoreSleeps(o, settings)
   const settled = new Set<SleepSession>()
   const dayScores = new Map<number, number>()
-  const configuredTargetRecipe = RECIPES.find(r => !r.mix && r.name === policy.recipe)
+  const configuredTargetRecipe = recipeById(policy.recipeId)
   let targetRecipe = configuredTargetRecipe
   const note = (action: ScoreAction) => { if (record) actions.push(action) }
   const select = (uids: string[]) => {
@@ -143,7 +143,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     berry += base
     if (m.poke.berryType === '超能') zoneEnergy += base * zone
   }
-  const reserve = (name: string) => (targetRecipe?.ingredients.find(i => i.name === name)?.count ?? 0) * policy.reserveMeals
+  const reserve = (name: string) => (targetRecipe?.ingredients.find(i => String(i.id) === name)?.count ?? 0) * policy.reserveMeals
   function sellFor(amount: number) {
     let shortage = Math.max(0, sumBag(bag) + amount - scoreSimulation_sellFor_ruleParameters.bagCapacity)
     const sales: Record<string, number> = {}
@@ -176,8 +176,8 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       const ex = exEffects(settings, m.berry, m.poke.specialty)
       const bonus = !extra && ex.ingredientExtra ? 1 + Number(ex.ingredientExtra > 1 && random() < scoreSimulation_help_ruleParameters.fractionalExExtraChance) : 0
       const count = extra ? drop.amount : Math.min(drop.amount + bonus + m.activity.ingredientCountBonus, Math.max(0, m.carry - m.heldBerries - sumBag(m.heldFood)))
-      if (extra) creditFood(drop.name, count); else {
-        add(m.heldFood, drop.name, count)
+      if (extra) creditFood(String(drop.id), count); else {
+        add(m.heldFood, drop.id, count)
         for (const [name, bonus] of Object.entries(m.activity.fixedIngredientDrops)) add(m.heldFood, name, Math.min(bonus, Math.max(0, m.carry - m.heldBerries - sumBag(m.heldFood))))
       }
     } else if (extra) creditBerries(m, m.berryCount)
@@ -250,7 +250,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
   }
   function daytime() {
     if (policy.day.length === 1) return select(policy.day[0]!)
-    const stocked = !targetRecipe || targetRecipe.ingredients.every(i => (bag[i.name] ?? 0) >= i.count * Math.max(1, policy.reserveMeals))
+    const stocked = !targetRecipe || canCookRecipe(targetRecipe, bag, Infinity, Math.max(1, policy.reserveMeals))
     return select(policy.day[stocked ? 0 : 1]!)
   }
   function settle(session: SleepSession, afterEnd = false) {
@@ -278,37 +278,32 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     const activity = activityValues(settings.activity, settings.island, undefined, currentMinute)
     const sunday = Math.floor((currentMinute - (scoreSimulation_cook_runtimeParameters.p001 as 240)) / 1440) === (scoreSimulation_cook_runtimeParameters.p002 as 6)
     const pot = Math.ceil(((settings.potSize + activity.potCapacityBonus) * (sunday ? scoreSimulation_cook_ruleParameters.normalCritMultiplier : 1) + extraPot) * (settings.goodCamp ? scoreSimulation_cook_ruleParameters.campPotMultiplier : 1) * activity.potSizeMultiplier)
-    const can = (r: typeof RECIPES[number]) => r.pot <= pot && r.ingredients.every(i => (bag[i.name] ?? 0) >= i.count)
+    const can = (r: typeof RECIPES[number]) => canCookRecipe(r, bag, pot)
     const ranked = RECIPES.filter(r => !r.mix && activityRecipeCategories(activity, o.category).includes(r.category)).filter(can).sort((a, b) => recipeEnergy(b, settings, activity.recipeEnergyModifiers) - recipeEnergy(a, settings, activity.recipeEnergyModifiers))
     const chosen = targetRecipe && activityRecipeCategories(activity, o.category).includes(targetRecipe.category) && can(targetRecipe) ? targetRecipe : ranked[0]
     const remainingMeals = Math.floor((end - currentMinute) / 1440) * 3 + o.meals.filter(m => hm(m) > currentMinute % 1440).length
     // 搜索保留策略：还有餐次时，可跳过低价值餐以等待目标食谱。
-    if ((!chosen || targetRecipe && chosen.name !== targetRecipe.name && policy.reserveMeals > 0) && remainingMeals > 0) {
-      note({ minute: currentMinute, kind: 'skip', text: `跳餐：为${policy.recipe || '后续料理'}保留食材、扩锅 ${extraPot} 与技能暴击 ${(crit * 100).toFixed(0)}%` }); return
+    if ((!chosen || targetRecipe && chosen.id !== targetRecipe.id && policy.reserveMeals > 0) && remainingMeals > 0) {
+      note({ minute: currentMinute, kind: 'skip', text: `跳餐：为${configuredTargetRecipe?.name ?? '后续料理'}保留食材、扩锅 ${extraPot} 与技能暴击 ${(crit * 100).toFixed(0)}%` }); return
     }
     if (!sumBag(bag)) { note({ minute: currentMinute, kind: 'skip', text: '跳餐：没有可用食材' }); return }
-    if (!chosen || policy.fill) assertKnownIngredientEnergy(bag, pot)
-    const foods: Record<string, number> = {}
-    let used = 0, raw = 0
-    if (chosen) {
-      raw = recipeEnergy(chosen, settings, activity.recipeEnergyModifiers)
-      for (const i of chosen.ingredients) { bag[i.name]! -= i.count; add(foods, i.name, i.count); used += i.count }
-    }
-    const names = Object.keys(bag).sort((a, b) => foodEnergy(b) - foodEnergy(a))
-    for (const name of names) {
-      const keep = remainingMeals > 0 && policy.reserveMeals > 0 ? reserve(name) : 0
-      const count = Math.min(pot - used, Math.max(0, (bag[name] ?? 0) - keep))
-      if (!count || chosen && !policy.fill) continue
-      bag[name]! -= count; used += count; raw += count * foodEnergy(name) * (activity.extraIngredientEnergyMultipliers[name] ?? 1); add(foods, name, count)
-    }
+    const required = takeRecipeIngredients(chosen, bag)
+    const requiredCount = sumBag(required.consumed)
+    const filler = allocateIngredients(required.remain, !chosen || policy.fill ? pot - requiredCount : 0,
+      0, activity.extraIngredientEnergyMultipliers, { reserve: key => remainingMeals > 0 && policy.reserveMeals > 0 ? reserve(key) : 0 })
+    const foods = required.consumed
+    for (const [key, count] of Object.entries(filler.consumed)) add(foods, key, count)
+    const used = requiredCount + filler.used
+    const raw = (chosen ? recipeEnergy(chosen, settings, activity.recipeEnergyModifiers) : 0) + filler.energy
+    Object.assign(bag, filler.remain)
     if (!used) { note({ minute: currentMinute, kind: 'skip', text: '跳餐：保留下一餐所需食材' }); return }
     const chance = Math.min(1, (sunday ? scoreSimulation_cook_ruleParameters.sundayCritChance : scoreSimulation_cook_ruleParameters.normalCritChance) + crit + activity.cookingCritBonus)
     const hit = chance >= 1 || random() < chance
-    const energy = Math.round(raw * (1 + settings.areaBonus) * (hit ? (sunday ? scoreSimulation_cook_ruleParameters.sundayCritMultiplier : scoreSimulation_cook_ruleParameters.normalCritMultiplier) * activity.cookingCritMultiplier : 1) * activity.cookingEnergyMultiplier)
+    const energy = mealEnergy(raw, settings.areaBonus, (hit ? (sunday ? scoreSimulation_cook_ruleParameters.sundayCritMultiplier : scoreSimulation_cook_ruleParameters.normalCritMultiplier) * activity.cookingCritMultiplier : 1) * activity.cookingEnergyMultiplier)
     cooking += energy; extraPot = 0; if (hit) crit = 0
     for (const [name, amount] of Object.entries(foods)) add(consumed, name, amount)
     for (const m of active) { m.energy = Math.min(scoreSimulation_cook_ruleParameters.energyCap, m.energy + mealRecover(m.energy, activity.mealRecoveryBonus, activity.mealRecoveryMultiplier)); m.decay = currentMinute }
-    note({ minute: currentMinute, kind: 'cook', text: `${chosen?.name ?? '拌拌料理'}${chosen ? ` Lv.${recipeLevelOf(settings, chosen.name)}` : ''} · ${used}/${pot} 个食材 · 暴击率 ${(chance * 100).toFixed(0)}%${hit ? ' · 暴击' : ''}`, foods, energy })
+    note({ minute: currentMinute, kind: 'cook', text: `${chosen?.name ?? '拌拌料理'}${chosen ? ` Lv.${recipeLevelOf(settings, chosen.id)}` : ''} · ${used}/${pot} 个食材 · 暴击率 ${(chance * 100).toFixed(0)}%${hit ? ' · 暴击' : ''}`, foods, energy })
   }
   const initialSleep = sessions.find(s => start >= s.start && start < s.end)
   refreshActivities(start)

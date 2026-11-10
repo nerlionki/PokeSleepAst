@@ -14,7 +14,7 @@ import { storeToRefs } from 'pinia'
 import { BABY_POKEMON_IDS, BABY_POKEMON_NAMES, babyEfficiencyPokemonName, babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { ISLANDS, POKEDEX } from '../../calc/data'
 import { familyOf } from '../../calc/candyPlan'
-import { EVENT_BONUSES } from '../../calc/sleep'
+import { EVENT_BONUSES, sleepDiscoveryOptions } from '../../calc/sleep'
 import { useBabyEfficiency } from '../../composables/useBabyEfficiency'
 import { usePlanStore } from '../../stores/plans'
 import PokePicker from '../shared/PokePicker.vue'
@@ -30,7 +30,7 @@ const otherTypes = computed({
   get: () => mixMode.value !== 'off',
   set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' },
 })
-const simulationOptions = computed(() => ({ ...options.value, activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), activity: activity.context.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, undefined, activity.context.value))
 const sleepTypes = EFFICIENCY_SLEEP_TYPES
 watch(islands, () => {
@@ -78,7 +78,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
       <BabyEfficiencyResult :key="`${JSON.stringify(result.options)}-candy`" :title="translateUi('家族糖果最多')" unit="颗" :optimum="result.candy" :precision="result.options.precision" />
     </template>
     <ProgressDialog :open="busy" :title="translateUi('正在计算宝宝效率')" :progress="percent" :stage="progress.island || '准备候选方案'" :notice="notice"
-      :detail="'已模拟 ' + progress.evaluatedStates.toLocaleString('zh-CN') + ' 个抽取状态'" cancellable cancel-text="取消计算" @cancel="cancel" />
+      :detail="translateUi('已模拟 {count} 个抽取状态', { count: progress.evaluatedStates.toLocaleString('zh-CN') })" cancellable cancel-text="取消计算" @cancel="cancel" />
   </div>
 </template>
 

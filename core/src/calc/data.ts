@@ -1,5 +1,6 @@
 import berries from '../data/berries.resource'
 import clientDefaults from '../data/client-defaults.resource'
+import compatibility from '../data/compatibility-maps.resource'
 import candyDrops from '../data/candy-drops.resource'
 import encounterBands from '../data/encounter-bands.resource'
 import fallbacks from '../data/fallbacks.resource'
@@ -16,11 +17,12 @@ import subskills from '../data/subskills.resource'
 import subskillDraw from '../data/subskill-draw.resource'
 import xp from '../data/xp.resource'
 import type { IslandId } from '../types'
+import { resolveRecipeReferences } from '../resources/catalogReferences'
 import { foldText } from './text'
 
 export const BERRIES = berries
 export const INGREDIENTS = ingredients
-export const RECIPES = recipes
+export const RECIPES = resolveRecipeReferences(recipes, ingredients, compatibility.modules.raeImage.MEAL_ID)
 export interface PokeRow {
   id: number
   name: string

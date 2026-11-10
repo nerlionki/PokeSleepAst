@@ -100,15 +100,15 @@ function setRemaining(row: CandyRow, raw: string) {
 function statusOf(index: number) {
   const row = active.value.results[index]
   if (!row || row.error) return row?.error ?? '待计算'
-  if (row.missing) return `缺糖 ${row.missing.toLocaleString('zh-CN')} 颗`
-  if (row.unused) return `${row.unused.toLocaleString('zh-CN')} 颗未用完`
+  if (row.missing) return translateUi('缺糖 {count} 颗', { count: row.missing.toLocaleString('zh-CN') })
+  if (row.unused) return translateUi('{count} 颗未用完', { count: row.unused.toLocaleString('zh-CN') })
   return '充足'
 }
 
 function missingOf(index: number) {
   const result = active.value.results[index]
   if (!result || result.error) return statusOf(index)
-  return `缺糖 ${result.missing.toLocaleString('zh-CN')} 颗`
+  return translateUi('缺糖 {count} 颗', { count: result.missing.toLocaleString('zh-CN') })
 }
 
 const presets = CANDY_PRESETS

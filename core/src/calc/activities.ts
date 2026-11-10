@@ -6,6 +6,7 @@ import parameters from '../data/event-parameters.resource'
 import mythical from '../data/mythical.resource'
 import { skillByPokedexName } from './mainSkills'
 import { foldText } from './text'
+import { ingredientKey, migrateCatalogCounts, recipeKey } from './catalogIds'
 import type { SleepStyleRow } from './data'
 import { NUMERIC_ACTIVITY_EFFECTS, validateActivityCatalog, validateActivityEffects, type NumericActivityField, type ActivityValues, type ActivityOverrides, type ActivityTarget, type ActivityRule, type RecipeEnergyModifier, type ActivityFeature, type ActivityDomain } from '../resources/activityModel'
 export type { NumericActivityField, ActivityValues, ActivityOverrides, ActivityTarget, ActivityRule, RecipeEnergyModifier, ActivityFeature, ActivityDomain } from '../resources/activityModel'
@@ -71,6 +72,21 @@ export function activeActivities(context: ActivityContext, minute = activities_a
   const date = activityDate(context, minute)
   return context.catalog.activities.filter(event => active(event, date) && (!context.tutorial || event.tutorialEligible === true)).sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id))
 }
+
+function appliesToResearch(rule: ActivityRule, context: ActivityContext, weekday: number, session: number) {
+  return !(rule.firstResearchOnly && session > 0)
+    && (!rule.conditions?.weekdays || rule.conditions.weekdays.includes(weekday))
+    && (!rule.conditions?.teamPokemonIdsAny || rule.conditions.teamPokemonIdsAny.some(id => context.teamPokemonIds?.includes(id)))
+}
+
+/** Boolean rules from older snapshots represent the original generic event UP. */
+export function hasLegacyShinyUp(event: Activity, context: ActivityContext, island: string, pokemon: ActivityPokemon | undefined, session: number) {
+  const date = activityDate(context, 240)
+  const weekday = new Date(date).getUTCDay()
+  return [event, ...(event.phases ?? []).filter(phase => active(phase, date))].some(phase =>
+    phase.rules.some(rule => rule.effects.shinyUp === true && matches(rule.target, island, pokemon)
+      && appliesToResearch(rule, context, weekday, session)))
+}
 const valueCache = new WeakMap<ActivityContext, Map<string, ActivityValues>>()
 /** User-selected planning convention: any applicable encounter UP enables the
  * special-encounter default. This is a default, not proof of an actual encounter.
@@ -81,6 +97,20 @@ export function activityHasPokemonUp(context: ActivityContext, island: string): 
     [event, ...(event.phases ?? []).filter(phase => active(phase, date))].some(phase =>
       phase.rules.some(rule => (rule.effects.encounterWeightMultiplier ?? 1) > 1
         && (!rule.target?.islands || rule.target.islands.includes(island)))))
+}
+
+function activityIngredientMap(input: Readonly<Record<string, number>>) {
+  const { counts, unresolved } = migrateCatalogCounts(input, ingredientKey)
+  if (Object.keys(unresolved).length) throw new Error(`活动食材引用无法解析或冲突：${Object.keys(unresolved).join('、')}`)
+  return counts
+}
+
+function resolvedRecipeModifier(rule: RecipeEnergyModifier): RecipeEnergyModifier {
+  return {
+    ...rule,
+    ...(rule.ingredientNames ? { ingredientNames: rule.ingredientNames.map(name => ingredientKey(name) ?? name) } : {}),
+    ...(rule.recipeNames ? { recipeNames: rule.recipeNames.map(name => recipeKey(name) ?? name) } : {}),
+  }
 }
 
 export function activityValues(context: ActivityContext, island: string, pokemon?: ActivityPokemon, minute = activities_activityValues_runtimeParameters.p001, fallback?: ActivityOverrides, researchSession = 0): ActivityValues {
@@ -100,9 +130,7 @@ export function activityValues(context: ActivityContext, island: string, pokemon
   for (const event of activeActivities(context, minute)) {
     for (const phase of [event, ...(event.phases ?? []).filter(p => active(p, date))]) {
       for (const rule of phase.rules) {
-        if (!matches(rule.target, island, pokemon) || (rule.firstResearchOnly && researchSession > 0)
-          || rule.conditions?.weekdays && !rule.conditions.weekdays.includes(weekday)
-          || rule.conditions?.teamPokemonIdsAny && !rule.conditions.teamPokemonIdsAny.some(id => context.teamPokemonIds?.includes(id))) continue
+        if (!matches(rule.target, island, pokemon) || !appliesToResearch(rule, context, weekday, researchSession)) continue
         for (const key of fields) if (rule.effects[key] != null) {
           const n = rule.effects[key]!
           if (event.stacking === 'max') maximum[key] = maximum[key] == null ? n : key === 'helpIntervalMultiplier' ? Math.min(maximum[key]!, n) : Math.max(maximum[key]!, n)
@@ -110,13 +138,16 @@ export function activityValues(context: ActivityContext, island: string, pokemon
           touched.add(key)
         }
         for (const key of ['fixedIngredientDrops', 'extraIngredientEnergyMultipliers'] as const) {
-          for (const [name, number] of Object.entries(rule.effects[key] ?? {})) {
+          const ingredientMap = rule.effects[key]
+          if (!ingredientMap) continue
+          for (const [name, number] of Object.entries(activityIngredientMap(ingredientMap))) {
             if (event.stacking === 'max') maps[key]![name] = Math.max(maps[key]![name] ?? number, number)
             else values[key][name] = key === 'fixedIngredientDrops' ? (values[key][name] ?? 0) + number : (values[key][name] ?? 1) * number
           }
-          if (rule.effects[key]) touched.add(key)
+          touched.add(key)
         }
-        for (const modifier of rule.effects.recipeEnergyModifiers ?? []) {
+        for (const rawModifier of rule.effects.recipeEnergyModifiers ?? []) {
+          const modifier = resolvedRecipeModifier(rawModifier)
           const previous = values.recipeEnergyModifiers.find(row => row.id === modifier.id)
           if (previous) {
             const selector = (row: RecipeEnergyModifier) => JSON.stringify([row.ingredientNames, row.recipeNames, row.categories])
@@ -125,7 +156,11 @@ export function activityValues(context: ActivityContext, island: string, pokemon
           } else values.recipeEnergyModifiers.push({ ...modifier })
           touched.add('recipeEnergyModifiers')
         }
-        for (const key of ['eventMix', 'shinyUp', 'allRecipeCategories', 'availableRecipeCategories', 'favoredBerries'] as const) if (rule.effects[key] != null) {
+        if (rule.effects.shinyUp != null) {
+          values.shinyUp ||= rule.effects.shinyUp
+          touched.add('shinyUp')
+        }
+        for (const key of ['eventMix', 'allRecipeCategories', 'availableRecipeCategories', 'favoredBerries'] as const) if (rule.effects[key] != null) {
           const previous = categorical.get(key)
           if (previous?.priority === event.priority && previous.id !== event.id && JSON.stringify(values[key]) !== JSON.stringify(rule.effects[key])) throw new Error(`活动 ${key} 存在同优先级冲突，请调整配置`)
           Object.assign(values, { [key]: rule.effects[key] }); touched.add(key); categorical.set(key, { priority: event.priority, id: event.id })
@@ -142,9 +177,8 @@ export function activityValues(context: ActivityContext, island: string, pokemon
   values.allRecipeCategories = values.availableRecipeCategories.length === 3
   for (const key of fields) if (!Number.isFinite(values[key])) throw new Error(`活动叠加后的 ${key} 无效`)
   // Detach structured overrides from caller-owned settings before caching.
-  values.fixedIngredientDrops = Object.freeze({ ...values.fixedIngredientDrops })
-  values.extraIngredientEnergyMultipliers = Object.freeze({ ...values.extraIngredientEnergyMultipliers })
-  values.recipeEnergyModifiers = values.recipeEnergyModifiers.map(row => Object.freeze({ ...row }))
+  for (const key of ['fixedIngredientDrops', 'extraIngredientEnergyMultipliers'] as const) values[key] = Object.freeze(activityIngredientMap(values[key]))
+  values.recipeEnergyModifiers = values.recipeEnergyModifiers.map(row => Object.freeze(resolvedRecipeModifier(row)))
   values.availableRecipeCategories = [...values.availableRecipeCategories]
   values.favoredBerries = [...values.favoredBerries]
   Object.freeze(values.availableRecipeCategories); Object.freeze(values.favoredBerries); Object.freeze(values.recipeEnergyModifiers)
@@ -154,6 +188,10 @@ export function activityValues(context: ActivityContext, island: string, pokemon
 
 export function activityFeatures(context: ActivityContext, domain?: ActivityDomain, minute = 240, island?: string) {
   return activeActivities(context, minute).flatMap(event => (event.features ?? []).filter(feature => (!domain || feature.domains.includes(domain)) && (!feature.islands || island != null && feature.islands.includes(island))))
+}
+export function activityFeatureDescription(feature: ActivityFeature) {
+  const description = feature.parameters?.simulationDescription
+  return typeof description === 'string' ? description : feature.description
 }
 export function assertActivitySupported(context: ActivityContext, domain: ActivityDomain, minute = 240, island?: string, researchSession = 0) {
   const pending = activityFeatures(context, domain, minute, island).filter(feature => {

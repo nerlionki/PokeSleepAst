@@ -2,6 +2,7 @@ import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import { activityBerrySettings, activityValues, snapshotActivity, activityRecipeCategories } from './activities'
 import { RECIPES, pokeById } from './data'
+import { addIngredient } from './catalogIds'
 import { produce } from './produce'
 import { resolveMemberSkill } from './mew'
 import { recipeLevelMult, recipeLevelOf } from './cook'
@@ -41,7 +42,7 @@ export function scoreCandidateProduction(request: ScoreRequest, pokemon: ScoreRe
     const weight = (next - minute) / (end - start)
     total.berryEnergy += result.berryEnergy * weight
     total.skillEnergy += result.skillEnergy * weight
-    for (const [name, amount] of Object.entries(result.ingredients)) total.ingredients[name] = (total.ingredients[name] ?? 0) + amount * weight
+    for (const [name, amount] of Object.entries(result.ingredients)) addIngredient(total.ingredients, name, amount * weight)
     minute = next
   }
   return total
@@ -63,7 +64,7 @@ function policyPool(request: ScoreRequest): ScorePolicy[] {
     if (activityRecipeCategories(activityValues(snapshot.activity, settings.island, undefined, minute), o.category).some(category => category !== o.category)) allCategories = true
   }
   const recipes = RECIPES.filter(r => (allCategories || r.category === o.category) && !r.mix)
-    .sort((a, b) => b.baseEnergy * recipeLevelMult(recipeLevelOf(settings, b.name)) - a.baseEnergy * recipeLevelMult(recipeLevelOf(settings, a.name)))
+    .sort((a, b) => b.baseEnergy * recipeLevelMult(recipeLevelOf(settings, b.id)) - a.baseEnergy * recipeLevelMult(recipeLevelOf(settings, a.id)))
   const team = (scores: { uid: string, pokeId: number, score: number }[]) => {
     let special: SpecialTeamState = 'none'
     const selected: string[] = []
@@ -82,7 +83,7 @@ function policyPool(request: ScoreRequest): ScorePolicy[] {
     const noise = index < (scoreSearch_policyPool_runtimeParameters.p007 as 6) ? 0 : index < (scoreSearch_policyPool_runtimeParameters.p008 as 24) ? (scoreSearch_policyPool_runtimeParameters.p009 as 0.45) : (scoreSearch_policyPool_runtimeParameters.p010 as 1.2)
     const scores = (kind: 'berry' | 'food' | 'sleep' | 'settle') => ranked.map(r => {
       const heal = /活力|治愈|治癒|树果汁|樹果汁/.test(r.skill)
-      const needed = recipe?.ingredients.reduce((sum, ing) => sum + Math.min(3, (r.result.ingredients[ing.name] ?? 0) / ing.count), 0) ?? 0
+      const needed = recipe?.ingredients.reduce((sum, ing) => sum + Math.min(3, (r.result.ingredients[ing.id] ?? 0) / ing.count), 0) ?? 0
       const berry = r.result.berryEnergy + r.result.skillEnergy
       const support = (heal ? (scoreSearch_policyPool_runtimeParameters.p011 as 14000) : 0) + (unlockedSubskills(r.pokemon.level, r.pokemon.subskills).includes('helpingBonus') ? (scoreSearch_policyPool_runtimeParameters.p012 as 6000) : 0)
       const value = kind === 'settle' ? (unlockedSubskills(r.pokemon.level, r.pokemon.subskills).includes('sleepExp') ? (scoreSearch_policyPool_runtimeParameters.p013 as 30000) : 0) + berry * (scoreSearch_policyPool_runtimeParameters.p014 as 0.2)
@@ -92,7 +93,7 @@ function policyPool(request: ScoreRequest): ScorePolicy[] {
     })
     const berryTeam = team(scores('berry')), foodTeam = team(scores('food'))
     policies.push({ day: [berryTeam, foodTeam], sleep: [team(scores('sleep')), team(scores('sleep'))],
-      settle: [team(scores('settle')), team(scores('settle'))], recipe: recipe?.name ?? '',
+      settle: [team(scores('settle')), team(scores('settle'))], recipeId: recipe?.id ?? null,
       reserveMeals: scoreSearch_config_ruleCatalogs.policyPoolList0.values[Math.floor(index / (scoreSearch_policyPool_runtimeParameters.p019 as 6)) % (scoreSearch_policyPool_runtimeParameters.p020 as 4)]!, rotateMinutes: scoreSearch_config_ruleCatalogs.policyPoolList1.values[index % (scoreSearch_policyPool_runtimeParameters.p021 as 4)]!, fill: index % 3 !== 0, juiceAt: scoreSearch_config_ruleCatalogs.policyPoolList2.values[index % (scoreSearch_policyPool_runtimeParameters.p022 as 4)]! })
   }
   return policies

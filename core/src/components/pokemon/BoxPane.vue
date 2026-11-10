@@ -118,7 +118,9 @@ async function pickShots() {
     if (!result) { ocrMsg.value = ''; return }
     const imported = result.accepted.map((pokemon) => box.create(pokemon))
     completionQueue.value = imported.filter((pokemon) => normalizeOcrMissing(pokemon.ocrMissing).length).map((pokemon) => pokemon.uid)
-    ocrMsg.value = `写入 ${result.accepted.length} 只，跳过 ${result.skipped} 只，丢弃 ${result.discarded} 只`
+    ocrMsg.value = translateUi('写入 {accepted} 只，跳过 {skipped} 只，丢弃 {discarded} 只', {
+      accepted: result.accepted.length, skipped: result.skipped, discarded: result.discarded,
+    })
   }
   catch (cause) {
     ocrMsg.value = cause instanceof Error ? cause.message : '模型没有加载成功'
@@ -174,7 +176,7 @@ const advancedCount = computed(() => Number(query.ingredients.length > 0) + Numb
 
 <template>
   <ProgressDialog :open="ocrBusy" :title="translateUi('正在导入 Box 截图')" :progress="ocrProgress.total ? ocrProgress.percent : null" :stage="ocrProgress.stage"
-    :detail="ocrProgress.total ? '已处理 ' + ocrProgress.completed + ' / ' + ocrProgress.total + ' 张' : ''"
+    :detail="ocrProgress.total ? translateUi('已处理 {done} / {total} 张', { done: ocrProgress.completed, total: ocrProgress.total }) : ''"
     hint="导入完成后可切换页面，请保持当前页面。" />
   <BoxOverview v-if="overviewOpen" @back="closeOverview" @complete="completeFromOverview" />
   <div v-else class="stack" :inert="ocrBusy">
@@ -239,7 +241,7 @@ const advancedCount = computed(() => Number(query.ingredients.length > 0) + Numb
       </div>
     </section>
     <p class="muted">{{ filtered.length }} / {{ box.pokemon.length }} {{ translateUi("只") }}{{ activeFilters ? translateUi("· 已启用 {arg1} 项筛选", { arg1: String(activeFilters) }) : '' }}</p>
-    <p v-if="ocrMsg" class="amber">{{ ocrMsg }}</p>
+    <p v-if="ocrMsg" class="amber">{{ translateUi(ocrMsg) }}</p>
     <div v-if="pendingOcr.length" class="card row">
       <span class="muted">{{ pendingOcr.length }} {{ translateUi("只宝可梦有待补全字段") }}</span>
       <button class="btn ghost" type="button" @click="resumeCompletion()">{{ translateUi("继续补全") }}</button>

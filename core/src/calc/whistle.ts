@@ -11,9 +11,10 @@ import { berryUnitEnergy as unitEnergy } from './berry'
 import { exEffects } from './exEffects'
 import { activityBerrySettings, createActivityContext } from './activities'
 import { energyMultiplier, levelInterval } from './helpSpeed'
-import { berryCount, slotDrop } from './ingredients'
+import { berriesPerHelp, findingChance, selectedIngredientDrops } from './ingredients'
+import { addIngredient } from './catalogIds'
 import { unlockedSubskills } from './member'
-import { natureStatFactor, effectiveNature } from './natureLabels'
+import { effectiveNature } from './natureLabels'
 import { normalizeOcrMissing } from './ocrCompletion'
 import { ribbonBonus, stagesLeft } from './ribbon'
 import { POKEMON_LEVEL_MAX } from './xp'
@@ -79,19 +80,14 @@ export function whistleMember(settings: Settings, pokemon: BoxPokemon, helpingBo
   // Use the displayed team interval, then maximum-energy efficiency. No camp or EX speed modifier.
   const interval = levelInterval(poke.interval, pokemon.level, effectiveNature(pokemon), subs, helpingBonus, ribbon.speedCut)
   const helps = whistle_whistleMember_ruleParameters.rewardSeconds / (interval * energyMultiplier((whistle_whistleMember_runtimeParameters.p001 as 100)))
-  const unlocked = unlockedIngredientSlots(pokemon.level)
-  const slots = pokemon.ingredientSlots.slice(0, unlocked).flatMap((index, slot) => {
-    if (index == null) return []
-    const drop = slotDrop(poke.ingredients, slot, index)
-    return drop ? [drop] : []
-  })
-  const ingredientRate = slots.length ? Math.min(1, poke.ingredientRate * natureStatFactor(effectiveNature(pokemon), 'ingredient')
-    * (1 + (subs.includes('ingS') ? whistle_whistleMember_ruleParameters.findingS : 0) + (subs.includes('ingM') ? whistle_whistleMember_ruleParameters.findingM : 0))) : 0
-  const berries = Math.round(helps * (1 - ingredientRate) * (berryCount(poke.specialty) + (subs.includes('berryS') ? ruleParameters.modules.whistle.berryCount.berryS : 0)))
+  const slots = selectedIngredientDrops(poke.ingredients, pokemon.ingredientSlots, pokemon.level)
+  const ingredientRate = slots.length ? Math.min(1, findingChance(poke.ingredientRate, effectiveNature(pokemon), 'ingredient',
+    subs.includes('ingS'), subs.includes('ingM'), whistle_whistleMember_ruleParameters.findingS, whistle_whistleMember_ruleParameters.findingM)) : 0
+  const berries = Math.round(helps * (1 - ingredientRate) * berriesPerHelp(poke.specialty, subs, ruleParameters.modules.whistle.berryCount.berryS))
   const ingredients: Record<string, number> = {}
   for (const slot of slots) {
     const quantity = Math.round(helps * ingredientRate / slots.length * slot.amount)
-    ingredients[slot.name] = (ingredients[slot.name] ?? 0) + quantity
+    addIngredient(ingredients, slot.id, quantity)
   }
   // Berry energy has a linear lower bound at low levels; round area bonus before the favorite multiplier.
   // https://wikiwiki.jp/poke_sleep/きのみ
@@ -114,7 +110,7 @@ function invalidMember(pokemon: BoxPokemon): string | null {
 }
 
 function addIngredients(target: Record<string, number>, source: Record<string, number>) {
-  for (const [name, quantity] of Object.entries(source)) target[name] = (target[name] ?? 0) + quantity
+  for (const [name, quantity] of Object.entries(source)) addIngredient(target, name, quantity)
 }
 
 /** 固定帮手奖励人数后，收益独立可加；按人数、奖励人数和特殊宝可梦状态

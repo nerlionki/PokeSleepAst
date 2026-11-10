@@ -15,7 +15,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { boxLabel, speciesName } from '../../calc/boxFilter'
-import { NEUTRAL_NATURE, ingredientByName } from '../../calc/data'
+import { NEUTRAL_NATURE } from '../../calc/data'
 import { compareHelpingBonus, defaultTune, type MemberDraft } from '../../calc/member'
 import { cloneMemberDraft, memberDraftFromBox, memberDraftToBox } from '../../calc/memberDraft'
 import LevelSelector from '../shared/LevelSelector.vue'
@@ -183,7 +183,7 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
 
 function strength(row: CompareRow) {
   if (Object.entries(row.r.ingredients).some(([name, count]) => count > 0 && ingredientEnergyValue(name) == null)) return Number.NaN
-  const ingredients = Object.entries(row.r.ingredients).reduce((sum, [name, count]) => sum + count * (ingredientByName(name)?.energy ?? 0), 0)
+  const ingredients = Object.entries(row.r.ingredients).reduce((sum, [name, count]) => sum + count * (ingredientEnergyValue(name) ?? 0), 0)
   return row.r.berryEnergy + (row.r.cooking?.energy ?? ingredients) + row.r.skillEnergy
 }
 

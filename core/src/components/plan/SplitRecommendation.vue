@@ -25,7 +25,12 @@ const groups = computed(() => {
 })
 const mainValue = computed(() => {
   const metric = props.metricIndex == null ? null : props.result.metrics[props.metricIndex]
-  return metric ? `${metric.kind === 'probability' ? '' : '期望 '}${format(props.optimum.value * (metric.kind === 'probability' ? 100 : 1))} ${metric.kind === 'probability' ? '% / 天' : metric.kind === 'count' ? '只 / 天' : '颗 / 天'}` : `${format(props.optimum.value * 100)} 分 · 综合评分`
+  const value = format(props.optimum.value * (!metric || metric.kind === 'probability' ? 100 : 1))
+  if (!metric) return translateUi('{value} 分 · 综合评分', { value })
+  if (metric.kind === 'probability') return translateUi('{value}% / 天', { value })
+  return metric.kind === 'count'
+    ? translateUi('期望 {value} 只 / 天', { value })
+    : translateUi('期望 {value} 颗 / 天', { value })
 })
 </script>
 

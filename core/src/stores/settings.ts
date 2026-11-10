@@ -1,3 +1,4 @@
+import { RECIPE_LEVEL_MAX } from '../calc/cook'
 import { clampAreaBonus } from '../calc/areaBonus'
 
 import clientDefaults from '../data/client-defaults.resource'
@@ -6,6 +7,7 @@ import { computed, ref, watch } from 'vue'
 import { canPickBerries, defaultSettings, EX_MAIN, helpMaxSettings, idealSettings, mergeSettings, normalizeEx2Berries, work18Settings } from '../calc/defaults'
 import { BERRIES, ISLANDS } from '../calc/data'
 import { loadJson, saveJson } from '../storage'
+import { gameText, t } from '../ui/i18n'
 import type { Settings } from '../types'
 const stores_settings_config_clientDefaults = clientDefaults.modules.stores_settings
 
@@ -72,6 +74,13 @@ export const useSettingsStore = defineStore('settings', () => {
     if (patch.exWeeklyBonus != null) settings.value.exWeeklyBonus = patch.exWeeklyBonus
   }
 
+  function setRecipeLevel(id: number, value: number) {
+    settings.value.recipeLevels = { ...settings.value.recipeLevels, [id]: Math.min(RECIPE_LEVEL_MAX, Math.max(1, Math.trunc(value) || 1)) }
+  }
+  function removeUnresolvedRecipeLevel(key: string) {
+    if (settings.value.unresolvedRecipeLevels) delete settings.value.unresolvedRecipeLevels[key]
+  }
+
   function reset() {
     settings.value = defaultSettings()
   }
@@ -95,14 +104,19 @@ export const useSettingsStore = defineStore('settings', () => {
       exWeeklyBonus: settings.value.exWeeklyBonus,
       mealCategory: settings.value.mealCategory,
       potSize: settings.value.potSize,
+      recipeLevels: { ...settings.value.recipeLevels },
+      unresolvedRecipeLevels: { ...settings.value.unresolvedRecipeLevels },
     }
   }
 
   const summary = computed(() => {
     const s = settings.value
     const name = ISLANDS.find((i) => i.id === s.island)?.name ?? s.island
-    return `${name} · 营地 ${Math.round(s.areaBonus * 100)}% · ${s.sleepStart}–${s.sleepEnd} / ${s.sleepScore}分 · 三餐${s.meals ? '开' : '关'}`
+    return t('{island} · 营地 {bonus}% · {start}–{end} / {score}分 · 三餐{meals}', {
+      island: gameText(name), bonus: Math.round(s.areaBonus * 100),
+      start: s.sleepStart, end: s.sleepEnd, score: s.sleepScore, meals: s.meals ? t('开') : t('关'),
+    })
   })
 
-  return { settings, ready, hydrate, applyIsland, setEx2MainBerry, toggleBerry, reset, applyPreset, summary, islandBonus, setIslandBonus, setEnvironment }
+  return { settings, ready, hydrate, setRecipeLevel, removeUnresolvedRecipeLevel, applyIsland, setEx2MainBerry, toggleBerry, reset, applyPreset, summary, islandBonus, setIslandBonus, setEnvironment }
 })

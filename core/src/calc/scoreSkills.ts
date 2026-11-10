@@ -64,11 +64,11 @@ export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkil
             const bonus = modelAmount(effect.roundingBonus, model)
             const amount = effect.roundingBonus ? Math.floor((value() + bonus) * modifiers.ingredient) - Math.floor(bonus * modifiers.ingredient) : Math.floor(value() * modifiers.ingredient)
             const pool = effect.pool ? INGREDIENTS.filter(item => effect.pool!.includes(item.id)) : INGREDIENTS
-            if (effect.pool) { ctx.ingredient(pick(pool).name, amount); break }
+            if (effect.pool) { ctx.ingredient(String(pick(pool).id), amount); break }
             const available = [...pool], draws = effect.draws!
             for (let i = 0; i < Math.min(draws, pool.length); i++) {
               const index = Math.floor(ctx.random() * available.length), item = available.splice(index, 1)[0]!
-              ctx.ingredient(item.name, Math.floor(amount / draws) + Number(i < amount % draws))
+              ctx.ingredient(String(item.id), Math.floor(amount / draws) + Number(i < amount % draws))
             }
             break
           }

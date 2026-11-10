@@ -37,7 +37,7 @@ const skills = computed(() => SUBSKILL_GATES.map((level, index) => ({
       <div class="muted">Lv.{{ pokemon.level }} · {{ gameText(pokemon.nature) }}{{ pokemon.natureMinted ? " " + translateUi("· 净白薄荷") : '' }}{{ pokemon.napping ? " " + translateUi("· 午睡岛") : '' }}</div>
       <span v-if="pokemon.ocrMissing?.length" class="amber">{{ pokemon.ocrMissing.length }} {{ translateUi("项待补全") }}</span>
       <div class="preview-ingredients" :aria-label="translateUi('食材组合')">
-        <div v-for="item in ingredients" :key="item.level" class="preview-ingredient" :class="{ locked: item.locked }" :title="`Lv.${item.level}${item.locked ? ' · 未解锁' : ''}`">
+        <div v-for="item in ingredients" :key="item.level" class="preview-ingredient" :class="{ locked: item.locked }" :title="`Lv.${item.level}${item.locked ? ' · ' + translateUi('未解锁') : ''}`">
           <span class="muted preview-level">Lv.{{ item.level }}</span>
           <IngredientIcon v-if="item.drop" :id="item.drop.id" :name="item.drop.name" small />
           <span v-if="item.drop">×{{ item.drop.amount }}</span>
@@ -45,7 +45,7 @@ const skills = computed(() => SUBSKILL_GATES.map((level, index) => ({
         </div>
       </div>
       <div class="preview-subskills" :aria-label="translateUi('副技能组合')">
-        <div v-for="item in skills" :key="item.level" class="preview-subskill" :title="`Lv.${item.level} · ${item.skill?.name ?? '未选择'}${item.locked ? ' · 未解锁' : ''}`">
+        <div v-for="item in skills" :key="item.level" class="preview-subskill" :title="`Lv.${item.level} · ${item.skill ? gameText(item.skill.name) : translateUi('未选择')}${item.locked ? ' · ' + translateUi('未解锁') : ''}`">
           <span class="muted preview-level">{{ item.level }}</span>
           <SubskillIcon v-if="item.skill" :id="item.skill.id" :locked="item.locked" />
           <span v-else class="muted">—</span>

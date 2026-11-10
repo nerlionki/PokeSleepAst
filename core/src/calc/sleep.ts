@@ -3,7 +3,7 @@ import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
-import { ACTIVITY_CATALOG, EVENT_PARAMETERS, activitySleepStyles, activityValues, createActivityContext, assertActivitySupported, type ActivitySelection } from './activities'
+import { ACTIVITY_CATALOG, EVENT_PARAMETERS, activeActivities, activitySleepStyles, activityValues, createActivityContext, assertActivitySupported, hasLegacyShinyUp, type ActivityContext, type ActivitySelection } from './activities'
 import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix, type PokemonUps } from './sleepRules'
 import { selectSleepStyle } from './sleepSelection'
 import { isLastRollExcluded } from './sleepLastRoll'
@@ -26,9 +26,42 @@ const sleep_sleepExpect_ruleParameters = ruleParameters.modules.sleep.sleepExpec
 
 type BandKey = keyof typeof ENCOUNTER_BANDS
 
-export const SHINY_BASE = EVENT_PARAMETERS.sleep.shinyBase
+export const SHINY_BASE = EVENT_PARAMETERS.sleep.shinySimulationBase ?? 0.008
+export const SHINY_NEW_MOON = EVENT_PARAMETERS.sleep.shinyNewMoon ?? 0.015
 export const SHINY_EVENT = EVENT_PARAMETERS.sleep.shinyEvent
 export const UNDISCOVERED_WEIGHT = EVENT_PARAMETERS.sleep.undiscoveredWeight
+
+export interface SleepDiscoveryOptions { discovered?: string[]; undiscoveredBoost?: boolean }
+
+export function sleepDiscoveryOptions(selection: SleepdexSelection, context: ActivityContext, preference?: boolean): SleepDiscoveryOptions {
+  const undiscoveredBoost = prefersUndiscovered(context, preference)
+  return { undiscoveredBoost, discovered: undiscoveredBoost ? resolvedSleepdex(selection) : undefined }
+}
+
+export function prefersUndiscovered(context: ActivityContext, preference?: boolean): boolean {
+  return preference ?? activeActivities(context, 240).some(event => event.id.startsWith('good-sleep-day-'))
+}
+
+/** Rates represent full per-encounter simulation estimates. Event overlap
+ * takes the highest rate applicable to the encountered species. The official
+ * Expert Mode announcement gives no numeric EX/activity combination rule. */
+export function sleepShinyRate(context: ActivityContext, shinyUp = false, island = '', pokeId?: number, session = 0): number {
+  let rate = Math.max(SHINY_BASE, (context.overrides?.shinyUp ?? shinyUp) ? SHINY_EVENT : 0)
+  const pokemon = pokeId === undefined ? undefined : pokeById(pokeId)
+  for (const event of activeActivities(context, 240)) {
+    const bonuses = event.features?.filter(feature => feature.id === 'shiny-boost' && feature.parameters?.rate !== undefined) ?? []
+    // Published snapshots before the numeric declaration still get New Moon UP.
+    if (!bonuses.length && event.id.startsWith('new-moon-day-')) rate = Math.max(rate, SHINY_NEW_MOON)
+    for (const bonus of bonuses) {
+      const { rate: eventRate, pokemonIds } = bonus.parameters!
+      if (bonus.islands && !bonus.islands.includes(island)) continue
+      if (pokemonIds !== undefined && (!Array.isArray(pokemonIds) || !pokemonIds.includes(pokeId))) continue
+      if (typeof eventRate === 'number' && Number.isFinite(eventRate) && eventRate >= 0 && eventRate <= 1) rate = Math.max(rate, eventRate)
+    }
+    if (hasLegacyShinyUp(event, context, island, pokemon, session)) rate = Math.max(rate, SHINY_EVENT)
+  }
+  return rate
+}
 
 /** RAE 地图页 snorlaxData：每岛 35 档评级的能量门槛，和每条睡姿的最低评级（下标）。 */
 const SNORLAX = snorlaxRanks as Record<IslandId, { energy: number[], unlock: Record<string, number> }>
@@ -172,12 +205,15 @@ export interface DrawOpts extends ResearchBonuses {
   /** Reused immutable metadata during a simulation batch. */
   preparedPool?: PreparedStyle[]
   preparedOpenPool?: PreparedStyle[]
+  preparedWeights?: Map<number, number>
   rank?: string
   mode?: 'normal' | 'map'
   discovered?: string[]
   undiscoveredBoost?: boolean
   rare?: boolean
   shinyUp?: boolean
+  /** Shared only across draws in the same research batch. */
+  preparedShinyRates?: Map<number, number>
   /** 活动期间，一部分遭遇可以是其他睡眠类型。 */
   eventMix?: EventMix | boolean
   eventMult?: number
@@ -308,14 +344,34 @@ export function sleepDraw(
   if (!opts.activityResolved) {
     const activity = createActivityContext('research', { ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt })
     assertActivitySupported(activity, 'research', 240, island, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
-    const effects = activityValues(activity, island, undefined, (sleep_sleepDraw_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix), shinyUp: opts.shinyUp ?? false }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
+    const effects = activityValues(activity, island, undefined, (sleep_sleepDraw_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix) }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
     if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier
-    opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix, shinyUp: effects.shinyUp }
+    opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
   }
+  const context = createActivityContext('research', opts.activity)
   const n = encounterCount(island, dp)
   const discovered = new Set(opts.discovered ?? [])
-  const boost = opts.undiscoveredBoost ?? true
-  const shinyRate = opts.shinyUp ? SHINY_EVENT : SHINY_BASE
+  const boost = opts.undiscoveredBoost ?? prefersUndiscovered(context)
+  const shinyRates = opts.preparedShinyRates ?? new Map<number, number>()
+  const session = opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0)
+  const rollShiny = (pokeId: number) => {
+    let rate = shinyRates.get(pokeId)
+    if (rate === undefined) {
+      rate = sleepShinyRate(context, opts.shinyUp, island, pokeId, session)
+      shinyRates.set(pokeId, rate)
+    }
+    return rng() < rate
+  }
+  const hasActivityWeights = context.catalog.activities.length > 0 || context.overrides?.encounterWeightMultiplier != null
+  const weights = opts.preparedWeights ?? new Map<number, number>()
+  const speciesWeight = (pokeId: number) => {
+    const cached = weights.get(pokeId)
+    if (cached != null) return cached
+    const weight = pokemonSleepWeight(pokeId, opts.eventMult, opts.pokemonUps)
+      * (hasActivityWeights ? activityValues(context, island, pokeById(pokeId)).encounterWeightMultiplier : 1)
+    weights.set(pokeId, weight)
+    return weight
+  }
   const allowRare = opts.rare ?? true
   const eventMix = normalizeEventMix(opts.eventMix) !== 'off' && sleepType !== '没有特征' && (opts.mode ?? mode) !== 'map'
   const typed = [...(opts.preparedPool ?? prepareStyles(island, opts.pool ?? unlockedStyles(island, sleepType, Infinity, opts.rank ?? rank, opts.mode ?? mode, opts.activity)))]
@@ -352,10 +408,10 @@ export function sleepDraw(
     let picked: DrawnStyle | undefined
     const item = selectSleepStyle(usable, remaining, i === n - 1, rng, (s) => {
       const missing = boost && !discovered.has(styleKey(s.pokeId, s.stars, s.styleId))
-      return (missing ? UNDISCOVERED_WEIGHT : 1) * pokemonSleepWeight(s.pokeId, opts.eventMult, opts.pokemonUps) * (!opts.activity?.catalog?.activities.length && opts.activity?.overrides?.encounterWeightMultiplier == null ? 1 : activityValues(createActivityContext('research', { ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt }), island, pokeById(s.pokeId)).encounterWeightMultiplier)
+      return (missing ? UNDISCOVERED_WEIGHT : 1) * speciesWeight(s.pokeId)
     })
     if (item) {
-      const missing = boost && !discovered.has(styleKey(item.pokeId, item.stars, item.styleId))
+      const missing = !discovered.has(styleKey(item.pokeId, item.stars, item.styleId))
       const rare = SPECIAL_POKEMON.has(item.pokeId)
       picked = { ...item, undiscovered: missing, rare }
       if (rare) specialGot = true
@@ -363,13 +419,13 @@ export function sleepDraw(
       remaining = Math.max(0, remaining - item.dpr)
     }
     if (!picked) picked = fallbackStyle(island, i < otherSlots ? '没有特征' : sleepType)
-    picked.shiny = rng() < shinyRate
+    picked.shiny = rollShiny(picked.pokeId)
     got.push(picked)
   }
   if (opts.campTicket) {
     const item = campPool[Math.min(campPool.length - 1, Math.floor(rng() * campPool.length))]
     const picked: DrawnStyle = item ? { ...item, rare: SPECIAL_POKEMON.has(item.pokeId), undiscovered: !discovered.has(styleKey(item.pokeId, item.stars, item.styleId)) } : fallbackStyle(island, sleepType)
-    picked.shiny = rng() < shinyRate
+    picked.shiny = rollShiny(picked.pokeId)
     got.push(picked)
   }
   return got
@@ -389,9 +445,11 @@ export function* sleepExpectSteps(
 ) {
   const activity = createActivityContext('research', { ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt })
   assertActivitySupported(activity, 'research', 240, island, opts.researchSession ?? 0)
-  const effects = activityValues(activity, island, undefined, (sleep_sleepExpectSteps_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix), shinyUp: opts.shinyUp ?? false }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
+  const effects = activityValues(activity, island, undefined, (sleep_sleepExpectSteps_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix) }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
   if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier
-  opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix, shinyUp: effects.shinyUp }
+  opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
+  opts.undiscoveredBoost = prefersUndiscovered(activity, opts.undiscoveredBoost)
+  const preparedShinyRates = new Map<number, number>()
   const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()
   for (const row of checkpoint?.rows ?? []) freq.set(`${row.pokeId}-${row.stars}-${row.rare ? 'r' : 'n'}`, { ...row })
   const rank = opts.rank ?? '大师1'
@@ -399,6 +457,7 @@ export function* sleepExpectSteps(
   const openPool = normalizeEventMix(opts.eventMix) !== 'off' ? unlockedStyles(island, '没有特征', Infinity, rank, 'normal', activity) : pool
   const preparedPool = prepareStyles(island, pool)
   const preparedOpenPool = openPool === pool ? preparedPool : prepareStyles(island, openPool)
+  const preparedWeights = new Map<number, number>()
   let randomState = (checkpoint?.randomState ?? opts.seed ?? 0) >>> 0
   const rng = () => {
     randomState = (randomState + 0x6D2B79F5) >>> 0
@@ -408,7 +467,7 @@ export function* sleepExpectSteps(
     return ((x ^ (x >>> 14)) >>> 0) / 0x100000000
   }
   for (let i = checkpoint?.completed ?? 0; i < n; i++) {
-    const draw = sleepDraw(island, sleepType, dp, rank, mode, rng, { ...opts, pool, openPool, preparedPool, preparedOpenPool })
+    const draw = sleepDraw(island, sleepType, dp, rank, mode, rng, { ...opts, pool, openPool, preparedPool, preparedOpenPool, preparedWeights, preparedShinyRates })
     for (const [index, s] of draw.entries()) {
       const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
       const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
@@ -469,5 +528,5 @@ export function expectSpecies(rows: { pokeId: number, name: string, count: numbe
 }
 
 export function shinyRateLabel(up: boolean) {
-  return up ? '活动 3/40（Serebii 分母）' : '基础 3/1000（Serebii 硬编码 3/1000）'
+  return `${((up ? SHINY_EVENT : SHINY_BASE) * 100).toFixed(2)}%`
 }

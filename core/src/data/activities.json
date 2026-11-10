@@ -13,6 +13,14 @@
       "rules": [],
       "features": [
         {
+          "id": "undiscovered-sleep-styles",
+          "name": "未发现睡姿出现概率提升",
+          "status": "informational",
+          "domains": ["research"],
+          "description": "好眠日期间，睡姿抽选默认优先未发现睡姿。",
+          "source": "https://www.pokemonsleep.net/zh/news/343532363635313734343730343236363331/"
+        },
+        {
           "id": "special-encounter",
           "name": "好眠日特别出没",
           "status": "informational",
@@ -1643,6 +1651,15 @@
       "endsOn": "2026-11-11",
       "rules": [],
       "features": [
+        {
+          "id": "shiny-boost",
+          "name": "闪光出现概率提升",
+          "status": "informational",
+          "domains": ["research"],
+          "description": "新月日三天，项目使用 1.5% 作为每只宝可梦的模拟估计。",
+          "parameters": { "rate": 0.015 },
+          "source": "https://www.pokemonsleep.net/zh/news/343537333337383034343630393136373338/"
+        },
         {
           "id": "special-encounter",
           "name": "新月日特别出没",

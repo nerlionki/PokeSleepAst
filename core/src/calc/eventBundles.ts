@@ -1,5 +1,7 @@
 import { activeSnapshot } from '../resources/runtime'
-import { textHit } from './text'
+import type { Activity } from './activities'
+import { ITEM_CATALOG, itemById, type PokemonItemId } from './itemCatalog'
+import { foldText, textHit } from './text'
 
 export interface BundleValuation {
   schemaVersion: 1
@@ -9,45 +11,77 @@ export interface BundleValuation {
   total: string | null
   excluded: string[]
 }
+export interface EventBundleItem {
+  name: string
+  quantity: number
+  itemId?: number
+  pokemonItemId?: PokemonItemId
+  unmapped?: true
+  pokemonIncense?: { pokemonId: number; typeId: number }
+}
 export interface EventBundle {
   id: string
   name: string
   eventName: string
-  announcedOn: string
+  eventId?: string
+  announcedOn: string | null
   eventEndsOn: string
   saleStartsAt: string
   saleEndsAt: string
   price: { amount: number; unit: string }
   purchaseLimit: number
   valuation?: BundleValuation
-  items: { name: string; quantity: number; itemId?: number }[]
-  sources: { kind: 'official' | 'rae'; url: string }[]
+  items: EventBundleItem[]
+  sources: { kind: 'official' | 'rae' | 'wiki'; url: string }[]
 }
 export interface EventBundleCatalog { schemaVersion: 1; bundles: EventBundle[] }
 
 /** Only the downloaded SleepAstCore snapshot contains bundle content. */
-export function eventBundleCatalog(): EventBundleCatalog | null {
-  const meta = activeSnapshot()?.data['meta.json'] as { eventBundles?: unknown } | undefined
+export function eventBundleCatalog(includeArchive = false): EventBundleCatalog | null {
+  const meta = activeSnapshot()?.data['meta.json'] as { eventBundles?: unknown; archivedEventBundles?: unknown } | undefined
   if (meta?.eventBundles == null) return null
-  return parseEventBundles(meta.eventBundles)
+  const catalog = parseEventBundles(meta.eventBundles)
+  if (!includeArchive || meta.archivedEventBundles == null) return catalog
+  return { ...catalog, bundles: [...catalog.bundles, ...parseEventBundles(meta.archivedEventBundles, true).bundles] }
 }
-export function parseEventBundles(value: unknown): EventBundleCatalog {
+export function parseEventBundles(value: unknown, archive = false): EventBundleCatalog {
   const data = value as EventBundleCatalog | null
   const date = (value: string) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
   const text = (value: unknown) => typeof value === 'string' && value.trim().length > 0
+  const dateTime = (value: string) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value) && Number.isFinite(Date.parse(value))
   const ids = new Set<string>()
   if (!data || data.schemaVersion !== 1 || !Array.isArray(data.bundles) || !data.bundles.every(row => {
     if (!row || !text(row.id) || ids.has(row.id)) return false
     ids.add(row.id)
-    return text(row.name) && text(row.eventName) && date(row.announcedOn) && date(row.eventEndsOn) && row.announcedOn <= row.eventEndsOn
-      && text(row.saleStartsAt) && text(row.saleEndsAt) && Number.isFinite(Date.parse(row.saleStartsAt)) && Date.parse(row.saleStartsAt) < Date.parse(row.saleEndsAt)
+    return text(row.name) && text(row.eventName) && (!archive || text(row.eventId)) && date(row.eventEndsOn)
+      && (archive && row.announcedOn === null || row.announcedOn !== null && date(row.announcedOn) && row.announcedOn <= row.eventEndsOn)
+      && (archive && date(row.saleStartsAt) && date(row.saleEndsAt) && row.saleStartsAt <= row.saleEndsAt
+        || dateTime(row.saleStartsAt) && dateTime(row.saleEndsAt) && row.saleStartsAt < row.saleEndsAt)
       && row.price && text(row.price.unit) && Number.isSafeInteger(row.price.amount) && row.price.amount >= 0 && Number.isSafeInteger(row.purchaseLimit) && row.purchaseLimit > 0
       && Array.isArray(row.items) && row.items.length > 0 && row.items.every(item => item && text(item.name) && Number.isSafeInteger(item.quantity) && item.quantity > 0
-        && (item.itemId === undefined || Number.isSafeInteger(item.itemId) && item.itemId > 0))
+        && (item.itemId === undefined || Number.isSafeInteger(item.itemId) && item.itemId > 0)
+        && (item.pokemonItemId === undefined || item.itemId === undefined && typeof item.pokemonItemId === 'string'
+          && /^(?:Candy|Incense)-[1-9]\d*$/.test(item.pokemonItemId))
+        && (item.unmapped === undefined || item.unmapped === true && item.itemId === undefined && item.pokemonItemId === undefined)
+        && (item.pokemonIncense === undefined || !!item.pokemonIncense && item.itemId === undefined
+          && Number.isSafeInteger(item.pokemonIncense.pokemonId) && item.pokemonIncense.pokemonId > 0
+          && Number.isSafeInteger(item.pokemonIncense.typeId) && item.pokemonIncense.typeId >= 1 && item.pokemonIncense.typeId <= 18))
       && (row.valuation === undefined || validBundleValuation(row.valuation, row.items.map(item => item.name)))
-      && Array.isArray(row.sources) && row.sources.length > 0 && row.sources.every(source => source && typeof source.url === 'string' && (source.kind === 'official' ? /^https:\/\/www\.pokemonsleep\.net\// : source.kind === 'rae' ? /^https:\/\/pks\.raenonx\.cc\// : /$^/).test(source.url))
+      && Array.isArray(row.sources) && row.sources.length > 0 && row.sources.every(source => source && typeof source.url === 'string'
+        && (source.kind === 'official' && /^https:\/\/www\.pokemonsleep\.net\//.test(source.url)
+          || source.kind === 'rae' && /^https:\/\/pks\.raenonx\.cc\//.test(source.url)
+          || archive && source.kind === 'wiki' && /^https:\/\/bulbapedia\.bulbagarden\.net\/wiki\//.test(source.url)))
   })) throw Error('活动礼包资料格式无效，请更新资料后重试')
   return data
+}
+export function bundleItem(item: EventBundleItem) {
+  if (item.unmapped) return undefined
+  const id = item.pokemonItemId ?? item.itemId
+  if (id !== undefined) return itemById(id)
+  // Existing online snapshots can omit an ID. Resolve only unambiguous legacy aliases.
+  const name = foldText(item.name)
+  const matches = ITEM_CATALOG.filter(row => [row.name, ...(row.aliases ?? [])].some(alias => foldText(alias) === name))
+  return matches.length === 1 ? matches[0] : undefined
 }
 export function calendarDate(now: Date): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -55,11 +89,20 @@ export function calendarDate(now: Date): string {
 /** Calendar-day display window is intentionally separate from sales/game-day times. */
 export function visibleEventBundles(catalog: EventBundleCatalog, now: Date, query = ''): EventBundle[] {
   const day = calendarDate(now)
-  return catalog.bundles.filter(row => row.announcedOn <= day && day <= row.eventEndsOn
+  return catalog.bundles.filter(row => row.announcedOn !== null && row.announcedOn <= day && day <= row.eventEndsOn
     && textHit([row.name, row.eventName, ...row.items.map(item => item.name)].join(' '), query))
     // Preserve SleepAstCore's editorial order within the same announcement day
     // (S, M, L, then training bundles); price is not a display-order criterion.
-    .sort((a, b) => b.announcedOn.localeCompare(a.announcedOn))
+    .sort((a, b) => (b.announcedOn ?? '').localeCompare(a.announcedOn ?? ''))
+}
+
+export function bundlesForActivity(catalog: EventBundleCatalog, event: Activity): EventBundle[] {
+  const name = foldText(event.name)
+  return catalog.bundles.filter(bundle =>
+    bundle.eventId ? bundle.eventId === event.id
+      : foldText(bundle.eventName) === name && bundle.announcedOn !== null
+        && bundle.announcedOn < event.endsOn && bundle.eventEndsOn >= event.startsOn,
+  )
 }
 
 /** Validate display fields without recalculating their server-owned meaning. */

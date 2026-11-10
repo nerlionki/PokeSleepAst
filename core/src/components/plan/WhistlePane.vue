@@ -8,7 +8,8 @@ const INPUT_LIMITS = INPUT_RANGES.WhistlePane
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { boxLabel } from '../../calc/boxFilter'
-import { ingredientByName, islandById } from '../../calc/data'
+import { islandById } from '../../calc/data'
+import { ingredientImageId, ingredientLabel } from '../../calc/catalogIds'
 import { planWhistle } from '../../calc/whistle'
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
@@ -28,12 +29,12 @@ const calculation = computed(() => {
   catch (error) { return { result: null, error: error instanceof Error ? error.message : '计算失败' } }
 })
 const result = computed(() => calculation.value.result)
-const environment = computed(() => `${islandById(settings.value.island)?.name ?? settings.value.island} · 岛屿加成 ${Math.round(settings.value.areaBonus * 100)}%`)
+const environment = computed(() => translateUi('{island} · 岛屿加成 {bonus}%', { island: gameText(islandById(settings.value.island)?.name ?? settings.value.island), bonus: Math.round(settings.value.areaBonus * 100) }))
 const foods = computed(() => Object.entries(result.value?.ingredients ?? {}).filter(([, amount]) => amount > 0)
-  .map(([name, amount]) => ({ name, amount, id: ingredientByName(name)?.id ?? 0, total: result.value?.totalIngredients[name] ?? 0 })))
+  .map(([key, amount]) => ({ key, name: ingredientLabel(key), amount, id: ingredientImageId(key), total: result.value?.totalIngredients[key] ?? 0 })))
 const foodCount = computed(() => foods.value.reduce((sum, food) => sum + food.amount, 0))
 const number = (value: number) => value.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
-const interval = (seconds: number) => `${Math.floor(seconds / 60)}分${seconds % 60}秒`
+const interval = (seconds: number) => translateUi('{minutes}分{seconds}秒', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 })
 </script>
 
 <template>
@@ -80,7 +81,7 @@ const interval = (seconds: number) => `${Math.floor(seconds / 60)}分${seconds %
       </article>
       <article v-if="foods.length" class="card stack">
         <h3>{{ translateUi("附带食材") }}</h3>
-        <div v-for="food in foods" :key="food.name" class="row">
+        <div v-for="food in foods" :key="food.key" class="row">
           <IngredientIcon :id="food.id" :name="food.name" small />
           <span>{{ gameText(food.name) }} {{ translateUi("· 每哨") }} {{ food.amount }} {{ translateUi("个") }}<span v-if="result.whistles != null"> {{ translateUi("· 目标所需合计") }} {{ number(food.total) }} {{ translateUi("个") }}</span></span>
         </div>
@@ -88,7 +89,7 @@ const interval = (seconds: number) => `${Math.floor(seconds / 60)}分${seconds %
       </article>
       <article v-if="result.excluded.length" class="card stack">
         <h3>{{ translateUi("未参与计算 ·") }} {{ result.excluded.length }} {{ translateUi("只") }}</h3>
-        <p v-for="(item, index) in result.excluded" :key="index" class="muted">{{ item.name }}：{{ item.reason }}</p>
+        <p v-for="(item, index) in result.excluded" :key="index" class="muted">{{ item.name }}：{{ translateUi(item.reason) }}</p>
       </article>
     </template>
   </div>

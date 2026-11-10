@@ -78,7 +78,7 @@ export function calculateBoxOverview(pokemon: readonly BoxPokemon[], bonuses: Ov
   const sort = (rows: OverviewRank[]) => rows.sort((a, b) => b.amount - a.amount || a.pokemon.uid.localeCompare(b.pokemon.uid))
   return {
     berries: BERRIES.map((berry) => ({ ...berry, rows: sort(berryRanks.get(berry.name) ?? []).slice(0, 3) })),
-    ingredients: INGREDIENTS.map((ingredient) => ({ ...ingredient, rows: sort(ingredientRanks.get(ingredient.name) ?? []) })),
+    ingredients: INGREDIENTS.map((ingredient) => ({ ...ingredient, rows: sort(ingredientRanks.get(String(ingredient.id)) ?? []) })),
     excludedBerries, excludedIngredients,
   }
 }

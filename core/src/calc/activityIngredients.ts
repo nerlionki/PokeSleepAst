@@ -1,11 +1,13 @@
 import { ANNOUNCED } from './announcedContent'
-import { INGREDIENTS } from './data'
+import { ingredientKey, ingredientLabel, ingredientRow } from './catalogIds'
 
-export function ingredientEnergyValue(name: string): number | undefined {
-  return INGREDIENTS.find(row => row.name === name)?.energy ?? ANNOUNCED.ingredients.find(row => row.name === name)?.baseEnergy ?? undefined
+export function ingredientEnergyValue(key: string): number | undefined {
+  const id = ingredientKey(key)
+  return (id ? ingredientRow(id)?.energy : undefined)
+    ?? ANNOUNCED.ingredients.find(row => `announced:${row.key}` === id)?.baseEnergy ?? undefined
 }
 export function assertKnownIngredientEnergy(bag: Readonly<Record<string, number>>, capacity: number) {
   if (capacity <= 0) return
-  const unknown = Object.keys(bag).filter(name => Math.floor(bag[name] ?? 0) > 0 && ANNOUNCED.ingredients.some(row => row.name === name) && ingredientEnergyValue(name) == null)
-  if (unknown.length) throw new Error(`${unknown.join('、')}能量还未公布，暂无法计算包含这些食材的料理及总收益`)
+  const unknown = Object.keys(bag).filter(key => Math.floor(bag[key] ?? 0) > 0 && ingredientEnergyValue(key) == null)
+  if (unknown.length) throw new Error(`${unknown.map(ingredientLabel).join('、')}能量还未公布，暂无法计算包含这些食材的料理及总收益`)
 }
