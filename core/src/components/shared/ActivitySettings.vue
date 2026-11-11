@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ingredientLabel } from '../../calc/catalogIds'
-import { t as translateUi } from '../../ui/i18n'
+import { catalogText, t as translateUi } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
@@ -19,7 +19,7 @@ const fields = Object.keys(ACTIVITY_FIELDS) as NumericActivityField[]
 const controls = Object.fromEntries(fields.map(key => [key, activity.field(key, key === 'drowsyPowerMultiplier' ? () => settings.value.eventMult : undefined)]))
 const features = computed(() => activityFeatures(activity.context.value, undefined, 240, settings.value.island))
 const fixedDrops = computed(() => Object.keys(activityValues(activity.context.value, settings.value.island).fixedIngredientDrops).map(ingredientLabel))
-const names = computed(() => activeActivities(activity.context.value).map(event => event.name).join('、'))
+const names = computed(() => activeActivities(activity.context.value).map(event => catalogText('活动标题', event.id, event.name)).join('、'))
 function edit(key: NumericActivityField, value: string) {
   if (value === '') { activity.reset(key); return }
   const n = Number(value)

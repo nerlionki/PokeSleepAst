@@ -69,6 +69,12 @@ export function gameText(name = ''): string {
   return t(gameLabel(name))
 }
 
+export function catalogText(kind: '活动标题' | '活动礼包', id: string | undefined, name: string): string {
+  const key = kind + '#' + id
+  const localized = id ? t(key) : key
+  return localized === key ? gameText(name) : localized
+}
+
 export function sleepStyleText(style: { styleName: string; pokeId: number; stars: number }): string {
   return translate(gameLabel(style.styleName), undefined, `${style.pokeId}-${style.stars}`)
 }

@@ -34,7 +34,7 @@ export function decodeSnapshot(manifest: unknown, payload: string, context?: Res
   validateCatalogReferences(data)
   validateSkillResources(data)
   const { activityArchive } = data['meta.json'] as { activityArchive?: unknown }
-  if (activityArchive !== undefined) validateActivityArchive(activityArchive)
+  if (activityArchive !== undefined) validateActivityArchive(activityArchive, data)
   return { manifest, data }
 }
 export async function initializeResources(transport: ResourceTransport, budget = 8000, onProgress: (progress: LoadingProgress) => void = () => {}, context?: ResourceContext): Promise<'remote' | 'cache' | 'bundled'> {

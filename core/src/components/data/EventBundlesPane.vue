@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { gameText, t as translateUi } from '../../ui/i18n'
+import { catalogText, gameText, t as translateUi } from '../../ui/i18n'
 import { localImage, publicImage } from '#platform/images'
 import { pokemonIconUrl } from '../../calc/raeImage'
+import { pokeById } from '../../calc/data'
 import FallbackImage from '../shared/FallbackImage.vue'
 
 
@@ -42,12 +43,15 @@ const displayRows = computed(() => rows.value.map(bundle => ({
   contents: bundle.items.map(entry => {
     const item = bundleItem(entry)
     const incense = item?.pokemonItem?.kind === 'incense' ? item.pokemonItem : entry.pokemonIncense
-    const icon = (item ? publicImage(item.imageFile) : '')
+    const seedPokemon = entry.pokemonSeedId === undefined ? undefined : pokeById(entry.pokemonSeedId)
+    const pokemonId = incense?.pokemonId ?? seedPokemon?.id
+    const icon = (seedPokemon ? publicImage('items/32.webp') : item ? publicImage(item.imageFile) : '')
       || (incense ? localImage(`incense/pokemon/${incense.typeId}.webp`) : '')
     return {
       entry, item,
-      avatar: incense ? pokemonIconUrl(incense.pokemonId) : '',
+      avatar: pokemonId ? pokemonIconUrl(pokemonId) : '',
       icon,
+      seedPokemon,
     }
   }),
 })))
@@ -63,7 +67,7 @@ const time = (value: string) => value.replace('T', ' ').slice(0, 16)
     <article v-for="bundle in displayRows" :key="bundle.id" class="card stack">
       <div class="bundle-heading">
         <div class="bundle-copy stack">
-          <h3>{{ gameText(bundle.name) }}</h3>
+          <h3>{{ catalogText('活动礼包', bundle.id, bundle.name) }}</h3>
           <p>{{ bundle.price.amount.toLocaleString('zh-CN') }} {{ translateUi(bundle.price.unit) }} {{ translateUi("· 限购") }} {{ bundle.purchaseLimit }} {{ translateUi("次") }}</p>
         </div>
         <div class="bundle-value" :aria-label="translateUi('礼包性价比')">
@@ -72,17 +76,17 @@ const time = (value: string) => value.replace('T', ' ').slice(0, 16)
         </div>
       </div>
       <p v-if="!bundle.valuation" class="muted">{{ translateUi("当前资料包未提供性价比，请更新网络资料后查看。") }}</p>
-      <p class="muted">{{ gameText(bundle.eventName) }}</p>
+      <p class="muted">{{ catalogText('活动标题', event?.id ?? bundle.eventId, bundle.eventName) }}</p>
       <p class="muted">
         {{ translateUi(bundle.saleStartsAt.length > 10 ? '销售：' : '销售日期：') }}{{ time(bundle.saleStartsAt) }} ～ {{ time(bundle.saleEndsAt) }}
         <span v-if="bundle.saleStartsAt.length > 10">{{ translateUi('（当地时间）') }}</span>
       </p>
-      <div v-for="({ entry, item, avatar, icon }, index) in bundle.contents" :key="index" class="bundle-item">
+      <div v-for="({ entry, item, avatar, icon, seedPokemon }, index) in bundle.contents" :key="index" class="bundle-item">
         <FallbackImage v-if="avatar" class="bundle-avatar" :src="avatar" alt=""><template #fallback><span /></template></FallbackImage>
         <FallbackImage v-if="icon" class="bundle-item-icon" :src="icon" alt=""><template #fallback><span /></template></FallbackImage>
         <p>
-          {{ gameText(item?.name ?? entry.name) }} ×{{ entry.quantity }}
-          <span v-if="!item && !entry.pokemonIncense" class="muted bundle-excluded">{{ translateUi('（道具目录未匹配）') }}</span>
+          {{ seedPokemon ? translateUi('主技能种子（{pokemon}）', { pokemon: gameText(seedPokemon.name) }) : gameText(item?.name ?? entry.name) }} ×{{ entry.quantity }}
+          <span v-if="!item && !entry.pokemonIncense && !seedPokemon" class="muted bundle-excluded">{{ translateUi('（道具目录未匹配）') }}</span>
           <span v-else-if="bundle.valuation?.excluded.includes(entry.name)" class="muted bundle-excluded">{{ translateUi('（无单买价，未计入）') }}</span>
         </p>
       </div>

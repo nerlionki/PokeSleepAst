@@ -18,6 +18,7 @@ export interface EventBundleItem {
   pokemonItemId?: PokemonItemId
   unmapped?: true
   pokemonIncense?: { pokemonId: number; typeId: number }
+  pokemonSeedId?: number
 }
 export interface EventBundle {
   id: string
@@ -63,6 +64,8 @@ export function parseEventBundles(value: unknown, archive = false): EventBundleC
         && (item.pokemonItemId === undefined || item.itemId === undefined && typeof item.pokemonItemId === 'string'
           && /^(?:Candy|Incense)-[1-9]\d*$/.test(item.pokemonItemId))
         && (item.unmapped === undefined || item.unmapped === true && item.itemId === undefined && item.pokemonItemId === undefined)
+        && (item.pokemonSeedId === undefined || Number.isSafeInteger(item.pokemonSeedId) && item.pokemonSeedId > 0
+          && item.itemId === undefined && item.pokemonItemId === undefined && item.pokemonIncense === undefined)
         && (item.pokemonIncense === undefined || !!item.pokemonIncense && item.itemId === undefined
           && Number.isSafeInteger(item.pokemonIncense.pokemonId) && item.pokemonIncense.pokemonId > 0
           && Number.isSafeInteger(item.pokemonIncense.typeId) && item.pokemonIncense.typeId >= 1 && item.pokemonIncense.typeId <= 18))

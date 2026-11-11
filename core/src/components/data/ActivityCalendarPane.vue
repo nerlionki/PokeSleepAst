@@ -5,14 +5,18 @@ import { ACTIVITY_CATALOG, localActivityDate, offsetActivityDate, type Activity 
 import { activityNow, retainActivityClock } from '../../composables/activityClock'
 import { activeSnapshot } from '../../resources/runtime'
 import type { ActivityArchive } from '../../resources/activityArchive'
-import { gameText, t } from '../../ui/i18n'
+import { catalogText, t } from '../../ui/i18n'
 import DrawerSheet from '../shared/DrawerSheet.vue'
 import ActivityDetailPane from './ActivityDetailPane.vue'
 
 type CalendarEvent = Activity & { announcedOn?: string | null }
-const currentEvents = ACTIVITY_CATALOG.activities
+const eventTitle = (event: CalendarEvent) => catalogText('活动标题', event.id, event.name)
 const meta = activeSnapshot()?.data['meta.json'] as { activityArchive?: ActivityArchive } | undefined
-const archivedEvents = (meta?.activityArchive?.events ?? [])
+const archive = meta?.activityArchive?.events ?? []
+const currentEvents = ACTIVITY_CATALOG.activities.map(event => ({
+  ...event, announcedOn: archive.find(row => row.id === event.id || row.source === event.source)?.announcedOn,
+}))
+const archivedEvents = archive
   .filter(row => !currentEvents.some(event => event.id === row.id || event.source === row.source))
   .map(row => ({ ...row, priority: 0, rules: [] }))
 const events: CalendarEvent[] = [...currentEvents, ...archivedEvents].sort((a, b) => a.startsOn.localeCompare(b.startsOn))
@@ -96,7 +100,7 @@ function eventTone(event: Activity) {
       <HorizontalStrip v-if="highlights.length" class="calendar-strip">
         <div class="calendar-highlights">
           <button v-for="event in highlights" :key="event.id" class="calendar-highlight" :class="eventTone(event)" type="button" @click="openEvent(event)">
-            <strong>{{ gameText(event.name) }}</strong>
+            <strong>{{ eventTitle(event) }}</strong>
             <span class="muted">{{ event.startsOn }} – {{ offsetActivityDate(event.endsOn, -1) }}</span>
             <span class="highlight-status">{{ occursOn(event, today) ? t('进行中') : t('即将开始') }}</span>
           </button>
@@ -119,7 +123,7 @@ function eventTone(event: Activity) {
           <button v-for="(day, column) in week.days" :key="day.date" class="calendar-day"
             :class="{ outside: !day.date.startsWith(month), today: day.date === today }"
             :style="{ gridColumn: column + 1 }" type="button" :disabled="!day.events.length"
-            :aria-label="[day.date, ...day.events.map(event => gameText(event.name))].join(' · ')"
+            :aria-label="[day.date, ...day.events.map(eventTitle)].join(' · ')"
             @click="openDay(day.events)">
             <span>{{ Number(day.date.slice(8)) }}</span>
           </button>
@@ -127,18 +131,18 @@ function eventTone(event: Activity) {
             class="calendar-bar" :class="eventTone(bar.event)"
             :style="{ gridColumn: `${bar.start + 1} / ${bar.end + 1}`, gridRow: bar.lane + 2 }"
             @click="openEvent(bar.event)">
-            {{ gameText(bar.event.name) }}
+            {{ eventTitle(bar.event) }}
           </button>
         </div>
       </div>
       <p class="muted calendar-footnote">{{ t('活动日期按当地时间 04:00 切换。') }}</p>
     </section>
 
-    <DrawerSheet v-if="selected" :title="gameText(selected.name)" @close="selected = null">
+    <DrawerSheet v-if="selected" :title="eventTitle(selected)" @close="selected = null">
       <ActivityDetailPane :key="selected.id" :event="selected" :announced-on="selected.announcedOn" />
     </DrawerSheet>
     <DrawerSheet v-else-if="dayEvents.length" :title="t('当天活动')" @close="dayEvents = []">
-      <button v-for="event in dayEvents" :key="event.id" class="btn" type="button" @click="openEvent(event)">{{ gameText(event.name) }}</button>
+      <button v-for="event in dayEvents" :key="event.id" class="btn" type="button" @click="openEvent(event)">{{ eventTitle(event) }}</button>
     </DrawerSheet>
   </section>
 </template>

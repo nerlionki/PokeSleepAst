@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
 import { ACTIVITY_FIELDS, activityFeatureDescription, offsetActivityDate, type Activity, type ActivityOverrides, type ActivityRule, type NumericActivityField } from '../../calc/activities'
-import { ISLANDS, pokeById } from '../../calc/data'
+import { ISLANDS, POKEDEX } from '../../calc/data'
 import { MAIN_SKILLS } from '../../calc/mainSkills'
 import { gameText, t } from '../../ui/i18n'
 import SegmentedControl from '../shared/SegmentedControl.vue'
 import EventBundlesPane from './EventBundlesPane.vue'
+import ActivityPokemonIcons from './ActivityPokemonIcons.vue'
+import { activeSnapshot } from '../../resources/runtime'
+import type { ActivityArchive } from '../../resources/activityArchive'
 
 const props = defineProps<{ event: Activity; announcedOn?: string | null }>()
+const meta = activeSnapshot()?.data['meta.json'] as { activityArchive?: ActivityArchive } | undefined
+const bonusSections = computed(() => meta?.activityArchive?.events.find(event => event.id === props.event.id)?.bonusSections ?? [])
+const encounterUps = computed(() => meta?.activityArchive?.encounterUps?.[props.event.id] ?? [])
+const tierNames = { large: '大 UP', medium: '中 UP', small: '小 UP', special: '特别 UP' }
+const features = computed(() => props.event.features?.filter(feature => feature.id !== 'announced-encounter-tier') ?? [])
 const tabs = [{ id: 'bonuses', label: '活动加成' }, { id: 'bundles', label: '活动礼包' }] as const
 const tab = shallowRef<'bonuses' | 'bundles'>('bonuses')
 const dayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
@@ -15,7 +23,6 @@ const categoryNames: Record<string, string> = { curry: '咖喱／浓汤', salad:
 const mixNames = { off: '关闭', some: '部分其他睡眠类型', all: '所有睡眠类型' }
 const list = (names: string[]) => names.map(gameText).join('、')
 const weekText = (days?: number[]) => days?.map(day => t(dayNames[day])).join('、')
-const pokemon = (id: number) => pokeById(id)?.name ?? `#${id}`
 const island = (id: string) => ISLANDS.find(row => row.id === id)?.name ?? id
 const dateRange = (phase: Pick<Activity, 'startsOn' | 'endsOn'>) => `${phase.startsOn} – ${offsetActivityDate(phase.endsOn, -1)}`
 
@@ -23,13 +30,10 @@ function ruleScope(rule: ActivityRule) {
   const { target, conditions } = rule
   return [
     target?.islands && list(target.islands.map(island)),
-    target?.pokemonIds && list(target.pokemonIds.map(pokemon)),
-    target?.pokemonNames && list(target.pokemonNames),
     target?.types && list(target.types),
     target?.specialties && list(target.specialties),
     target?.skillIds && list(target.skillIds.map(id => MAIN_SKILLS.find(skill => skill.id === id)?.name ?? `#${id}`)),
     target?.skillFamilies && list(target.skillFamilies),
-    conditions?.teamPokemonIdsAny && t('队伍包含其中任意一只：{names}', { names: list(conditions.teamPokemonIdsAny.map(pokemon)) }),
     weekText(conditions?.weekdays),
     rule.firstResearchOnly && t('仅每日首次睡眠研究'),
   ].filter(Boolean).join(' · ')
@@ -37,7 +41,7 @@ function ruleScope(rule: ActivityRule) {
 
 function effectRows(effects: ActivityOverrides) {
   const rows = (Object.entries(effects) as [NumericActivityField, unknown][]).flatMap(([key, value]) => {
-    if (typeof value !== 'number' || !Object.hasOwn(ACTIVITY_FIELDS, key)) return []
+    if (key === 'encounterWeightMultiplier' || typeof value !== 'number' || !Object.hasOwn(ACTIVITY_FIELDS, key)) return []
     const field = ACTIVITY_FIELDS[key]
     const display = key === 'cookingCritBonus' ? `+${Number((value * 100).toFixed(4))}%`
       : field.kind === 'multiply' ? `×${value}` : `+${value}`
@@ -66,7 +70,11 @@ function effectRows(effects: ActivityOverrides) {
 }
 
 const sections = computed(() => [props.event, ...(props.event.phases ?? [])].flatMap((phase, index) => {
-  const rules = phase.rules.map(rule => ({ scope: ruleScope(rule), rows: effectRows(rule.effects) }))
+  const rules = phase.rules.map(rule => ({
+    scope: ruleScope(rule), rows: effectRows(rule.effects),
+    pokemonIds: [...(rule.target?.pokemonIds ?? []), ...POKEDEX.filter(poke => rule.target?.pokemonNames?.includes(poke.name)).map(poke => poke.id)],
+    teamPokemonIds: rule.conditions?.teamPokemonIdsAny ?? [],
+  }))
     .filter(rule => rule.rows.length)
   return rules.length ? [{ title: index === 0 ? t('活动期间') : dateRange(phase), weekdays: weekText(phase.weekdays), rules }] : []
 }))
@@ -82,34 +90,51 @@ const sections = computed(() => [props.event, ...(props.event.phases ?? [])].fla
         <p v-if="announcedOn" class="muted">{{ t('公告日期') }} {{ announcedOn }}</p>
         <p class="announcement-source">{{ event.source }}</p>
       </section>
-      <section v-for="(section, index) in sections" :key="index" class="card stack">
+      <section v-for="(section, index) in bonusSections" :key="'announcement-' + index" class="card stack">
+        <h3>{{ gameText(section.title) }}</h3>
+        <p v-for="line in section.lines" :key="line">{{ gameText(line) }}</p>
+      </section>
+      <section v-for="(section, index) in bonusSections.length ? [] : sections" :key="index" class="card stack">
         <h3>{{ section.title }}</h3>
         <p v-if="section.weekdays" class="muted">{{ section.weekdays }}</p>
         <div v-for="(rule, ruleIndex) in section.rules" :key="ruleIndex" class="bonus-rule">
           <p v-if="rule.scope" class="muted bonus-scope">{{ rule.scope }}</p>
+          <ActivityPokemonIcons v-if="rule.pokemonIds.length" :ids="rule.pokemonIds" />
+          <p v-if="rule.teamPokemonIds.length" class="muted">{{ t('队伍包含其中任意一只') }}</p>
+          <ActivityPokemonIcons v-if="rule.teamPokemonIds.length" :ids="rule.teamPokemonIds" />
           <div v-for="(row, rowIndex) in rule.rows" :key="rowIndex" class="bonus-row">
             <span>{{ row.label }}</span><strong>{{ row.value }}</strong>
           </div>
         </div>
       </section>
-      <section v-if="event.miniCandyBoost" class="card stack">
+      <section v-if="encounterUps.length" class="card stack">
+        <h3>{{ t('出没提升') }}</h3>
+        <div v-for="(group, index) in encounterUps" :key="index" class="bonus-rule">
+          <div v-if="group.tier || group.label" class="bonus-row">
+            <strong v-if="group.tier">{{ t(tierNames[group.tier]) }}</strong><span v-if="group.label" class="muted">{{ gameText(group.label) }}</span>
+          </div>
+          <p v-if="group.islands?.length" class="muted bonus-scope">{{ list(group.islands.map(island)) }}</p>
+          <ActivityPokemonIcons :ids="group.pokemonIds" />
+        </div>
+      </section>
+      <section v-if="!bonusSections.length && event.miniCandyBoost" class="card stack">
         <h3>{{ t('迷你糖果增强') }}</h3>
         <div class="bonus-row"><span>{{ t('糖果经验') }}</span><strong>×{{ event.miniCandyBoost.exp }}</strong></div>
         <div class="bonus-row"><span>{{ t('梦之碎片消耗') }}</span><strong>×{{ event.miniCandyBoost.shards }}</strong></div>
         <div class="bonus-row"><span>{{ t('每日糖果额度') }}</span><strong>{{ event.miniCandyBoost.dailyLimit }}</strong></div>
       </section>
-      <section v-if="event.favoriteBerries && Object.keys(event.favoriteBerries).length" class="card stack">
+      <section v-if="!bonusSections.length && event.favoriteBerries && Object.keys(event.favoriteBerries).length" class="card stack">
         <h3>{{ t('喜好树果') }}</h3>
         <div v-for="(berry, id) in event.favoriteBerries" :key="id" class="bonus-row">
           <span>{{ gameText(island(id)) }}</span><strong>{{ gameText(berry) }}</strong>
         </div>
       </section>
-      <section v-for="feature in event.features" :key="feature.id" class="card stack">
+      <section v-for="feature in bonusSections.length ? [] : features" :key="feature.id" class="card stack">
         <h3>{{ gameText(feature.name) }}</h3>
         <p v-if="feature.islands" class="muted">{{ list(feature.islands.map(island)) }}</p>
         <p>{{ gameText(activityFeatureDescription(feature)) }}</p>
       </section>
-      <p v-if="!sections.length && !event.miniCandyBoost && !Object.keys(event.favoriteBerries ?? {}).length && !event.features?.length" class="muted">
+      <p v-if="!bonusSections.length && !sections.length && !encounterUps.length && !event.miniCandyBoost && !Object.keys(event.favoriteBerries ?? {}).length && !features.length" class="muted">
         {{ t('该活动暂无已收录的加成。') }}
       </p>
     </div>

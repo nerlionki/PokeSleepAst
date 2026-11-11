@@ -39,12 +39,7 @@ for (const file of [...walk(path.resolve(root, '../core/src/data')).filter(file 
 ]) {
   const source = fs.readFileSync(file, 'utf8')
   const module = { exports: {} }
-  runInNewContext(compressedJson(source), { module, require, Uint8Array, wx: {
-    base64ToArrayBuffer(value) {
-      const bytes = Buffer.from(value, 'base64')
-      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
-    },
-  } }, { filename: file })
+  runInNewContext(compressedJson(source), { module, require }, { filename: file })
   if (JSON.stringify(module.exports) !== JSON.stringify(JSON.parse(source))) throw Error(`Compressed JSON changed data: ${file}`)
 }
 console.log('Verified lossless synchronous decompression of shared data, fallback labels and both image indexes.')
