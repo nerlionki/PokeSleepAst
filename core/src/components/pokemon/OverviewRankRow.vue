@@ -1,49 +1,147 @@
 <script setup lang="ts">
-import { t as translateUi, gameText } from '../../ui/i18n'
-import { computed } from 'vue'
-import type { OverviewRank } from '../../calc/boxOverview'
-import { formatOverviewAmount } from '../../calc/boxOverview'
-import { boxLabel } from '../../calc/boxFilter'
-import { pokeById, SUBSKILLS } from '../../calc/data'
-import { slotDrop, unlockedIngredientSlots } from '../../calc/ingredients'
-import { SUBSKILL_GATES } from '../../calc/member'
-import PokeSprite from '../shared/PokeSprite.vue'
-import IngredientIcon from '../shared/IngredientIcon.vue'
-const props = defineProps<{ row: OverviewRank; rank: number; unit: string; ingredients?: boolean }>()
-const mon = computed(() => props.row.pokemon)
-const species = computed(() => pokeById(mon.value.pokeId))
-const skills = computed(() => mon.value.subskills.flatMap((id, index) => mon.value.level >= (SUBSKILL_GATES[index] ?? Infinity) ? [SUBSKILLS.find((s) => s.id === id)?.name].filter(Boolean) : []).join(' / '))
-const slots = computed(() => mon.value.ingredientSlots.slice(0, unlockedIngredientSlots(mon.value.level)).flatMap((index, slot) => {
-  const drop = index == null || !species.value ? null : slotDrop(species.value.ingredients, slot, index)
-  return drop ? [{ ...drop, slot }] : []
-}))
-const amount = computed(() => formatOverviewAmount(props.row.amount, props.ingredients ? 2 : 0))
+  import { t as translateUi, gameText, individualName } from '../../ui/i18n';
+  import { computed } from 'vue';
+  import type { OverviewRank } from '../../calc/boxOverview';
+  import { formatOverviewAmount } from '../../calc/boxOverview';
+  import { boxLabel } from '../../calc/boxFilter';
+  import { pokeById, SUBSKILLS } from '../../calc/data';
+  import { slotDrop, unlockedIngredientSlots } from '../../calc/ingredients';
+  import { SUBSKILL_GATES } from '../../calc/member';
+  import PokeSprite from '../shared/PokeSprite.vue';
+  import IngredientIcon from '../shared/IngredientIcon.vue';
+  const props = defineProps<{
+    row: OverviewRank;
+    rank: number;
+    unit: string;
+    ingredients?: boolean;
+  }>();
+  const mon = computed(() => props.row.pokemon);
+  const species = computed(() => pokeById(mon.value.pokeId));
+  const skills = computed(() =>
+    mon.value.subskills
+      .flatMap((id, index) =>
+        mon.value.level >= (SUBSKILL_GATES[index] ?? Infinity)
+          ? [SUBSKILLS.find(s => s.id === id)?.name].filter(Boolean)
+          : []
+      )
+      .map(name => gameText(name!))
+      .join(' / ')
+  );
+  const slots = computed(() =>
+    mon.value.ingredientSlots
+      .slice(0, unlockedIngredientSlots(mon.value.level))
+      .flatMap((index, slot) => {
+        const drop =
+          index == null || !species.value
+            ? null
+            : slotDrop(species.value.ingredients, slot, index);
+        return drop ? [{ ...drop, slot }] : [];
+      })
+  );
+  const amount = computed(() =>
+    formatOverviewAmount(props.row.amount, props.ingredients ? 2 : 0)
+  );
 </script>
 <template>
   <div class="overview-rank">
-    <span class="rank-position" :class="{ leading: rank === 1 }">{{ rank }}</span>
-    <div class="rank-portrait"><PokeSprite :id="mon.pokeId" :name="boxLabel(mon)" :shiny="mon.shiny" :ribbon-hours="mon.tune?.ribbonHours" /></div>
+    <span class="rank-position" :class="{ leading: rank === 1 }">{{
+      rank
+    }}</span>
+    <div class="rank-portrait">
+      <PokeSprite
+        :id="mon.pokeId"
+        :name="boxLabel(mon)"
+        :shiny="mon.shiny"
+        :ribbon-hours="mon.tune?.ribbonHours"
+      />
+    </div>
     <div class="rank-details">
-      <strong>{{ boxLabel(mon) }}</strong>
-      <p class="muted">{{ gameText(species?.name) }} · Lv.{{ mon.level }} · {{ gameText(mon.nature) }}</p>
-      <div v-if="ingredients" class="rank-slots"><span v-for="slot in slots" :key="slot.slot" class="row"><IngredientIcon :id="slot.id" :name="slot.name" small /><span>×{{ slot.amount }}</span></span></div>
+      <strong>{{ individualName(boxLabel(mon), species?.name) }}</strong>
+      <p class="muted">
+        {{ gameText(species?.name) }} · Lv.{{ mon.level }} ·
+        {{ gameText(mon.nature) }}
+      </p>
+      <div v-if="ingredients" class="rank-slots">
+        <span v-for="slot in slots" :key="slot.slot" class="row"
+          ><IngredientIcon :id="slot.id" :name="slot.name" small /><span
+            >×{{ slot.amount }}</span
+          ></span
+        >
+      </div>
       <p v-if="skills" class="muted rank-skills">{{ skills }}</p>
     </div>
-    <div class="rank-amount"><strong>{{ amount }}</strong><span class="muted">{{ unit }}{{ translateUi("/日") }}</span></div>
+    <div class="rank-amount">
+      <strong>{{ amount }}</strong
+      ><span class="muted">{{ unit }}{{ translateUi('/日') }}</span>
+    </div>
   </div>
 </template>
 <style scoped>
-.overview-rank { display: grid; grid-template-columns: 20px 48px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 16px 0; border-top: 1px solid var(--line); }
-.rank-portrait :deep(.sprite), .rank-portrait :deep(.fallback-sprite) { width: 48px; height: 48px; }
-.rank-position { color: var(--muted); font-variant-numeric: tabular-nums; }
-.rank-position.leading { color: var(--amber); }
-.rank-details { min-width: 0; }
-.rank-details strong { overflow-wrap: anywhere; }
-.rank-details p { margin: 4px 0 0; font-size: var(--font-12); line-height: 1.6; }
-.rank-slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: var(--font-12); }
-.rank-slots .row { gap: 3px; }
-.rank-amount { text-align: right; font-variant-numeric: tabular-nums; }
-.rank-amount strong { display: block; color: var(--sage); font-size: var(--font-20); }
-.rank-amount span { font-size: var(--font-11); }
-@media (max-width: 400px) { .overview-rank { grid-template-columns: 16px 36px minmax(0, 1fr) auto; gap: 7px; } .rank-amount strong { font-size: var(--font-17); } .rank-portrait :deep(.sprite), .rank-portrait :deep(.fallback-sprite) { width: 36px; height: 36px; } }
+  .overview-rank {
+    display: grid;
+    grid-template-columns: 20px 48px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+  }
+  .rank-portrait :deep(.sprite),
+  .rank-portrait :deep(.fallback-sprite) {
+    width: 48px;
+    height: 48px;
+  }
+  .rank-position {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .rank-position.leading {
+    color: var(--amber);
+  }
+  .rank-details {
+    min-width: 0;
+  }
+  .rank-details strong {
+    overflow-wrap: anywhere;
+  }
+  .rank-details p {
+    margin: 4px 0 0;
+    font-size: var(--font-12);
+    line-height: 1.6;
+  }
+  .rank-slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: var(--font-12);
+  }
+  .rank-slots .row {
+    gap: 3px;
+  }
+  .rank-amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .rank-amount strong {
+    display: block;
+    color: var(--sage);
+    font-size: var(--font-20);
+  }
+  .rank-amount span {
+    font-size: var(--font-11);
+  }
+  @media (max-width: 400px) {
+    .overview-rank {
+      grid-template-columns: 16px 36px minmax(0, 1fr) auto;
+      gap: 7px;
+    }
+    .rank-amount strong {
+      font-size: var(--font-17);
+    }
+    .rank-portrait :deep(.sprite),
+    .rank-portrait :deep(.fallback-sprite) {
+      width: 36px;
+      height: 36px;
+    }
+  }
 </style>

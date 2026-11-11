@@ -27,8 +27,8 @@ export interface EventBundle {
   eventId?: string
   announcedOn: string | null
   eventEndsOn: string
-  saleStartsAt: string
-  saleEndsAt: string
+  saleStartsAt: string | null
+  saleEndsAt: string | null
   price: { amount: number; unit: string }
   purchaseLimit: number
   valuation?: BundleValuation
@@ -56,8 +56,9 @@ export function parseEventBundles(value: unknown, archive = false): EventBundleC
     ids.add(row.id)
     return text(row.name) && text(row.eventName) && (!archive || text(row.eventId)) && date(row.eventEndsOn)
       && (archive && row.announcedOn === null || row.announcedOn !== null && date(row.announcedOn) && row.announcedOn <= row.eventEndsOn)
-      && (archive && date(row.saleStartsAt) && date(row.saleEndsAt) && row.saleStartsAt <= row.saleEndsAt
-        || dateTime(row.saleStartsAt) && dateTime(row.saleEndsAt) && row.saleStartsAt < row.saleEndsAt)
+      && (archive && row.saleStartsAt === null && row.saleEndsAt === null
+        || archive && typeof row.saleStartsAt === 'string' && typeof row.saleEndsAt === 'string' && date(row.saleStartsAt) && date(row.saleEndsAt) && row.saleStartsAt <= row.saleEndsAt
+        || typeof row.saleStartsAt === 'string' && typeof row.saleEndsAt === 'string' && dateTime(row.saleStartsAt) && dateTime(row.saleEndsAt) && row.saleStartsAt < row.saleEndsAt)
       && row.price && text(row.price.unit) && Number.isSafeInteger(row.price.amount) && row.price.amount >= 0 && Number.isSafeInteger(row.purchaseLimit) && row.purchaseLimit > 0
       && Array.isArray(row.items) && row.items.length > 0 && row.items.every(item => item && text(item.name) && Number.isSafeInteger(item.quantity) && item.quantity > 0
         && (item.itemId === undefined || Number.isSafeInteger(item.itemId) && item.itemId > 0)

@@ -77,10 +77,11 @@ const time = (value: string) => value.replace('T', ' ').slice(0, 16)
       </div>
       <p v-if="!bundle.valuation" class="muted">{{ translateUi("当前资料包未提供性价比，请更新网络资料后查看。") }}</p>
       <p class="muted">{{ catalogText('活动标题', event?.id ?? bundle.eventId, bundle.eventName) }}</p>
-      <p class="muted">
+      <p v-if="bundle.saleStartsAt && bundle.saleEndsAt" class="muted">
         {{ translateUi(bundle.saleStartsAt.length > 10 ? '销售：' : '销售日期：') }}{{ time(bundle.saleStartsAt) }} ～ {{ time(bundle.saleEndsAt) }}
         <span v-if="bundle.saleStartsAt.length > 10">{{ translateUi('（当地时间）') }}</span>
       </p>
+      <p v-else class="muted">{{ translateUi('销售时间未确认') }}</p>
       <div v-for="({ entry, item, avatar, icon, seedPokemon }, index) in bundle.contents" :key="index" class="bundle-item">
         <FallbackImage v-if="avatar" class="bundle-avatar" :src="avatar" alt=""><template #fallback><span /></template></FallbackImage>
         <FallbackImage v-if="icon" class="bundle-item-icon" :src="icon" alt=""><template #fallback><span /></template></FallbackImage>

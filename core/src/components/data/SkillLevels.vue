@@ -1,8 +1,10 @@
 <script setup lang="ts">
-defineProps<{
-  columns: string[]
-  levels: string[][]
-}>()
+  import { gameText } from '../../ui/i18n';
+
+  defineProps<{
+    columns: string[];
+    levels: string[][];
+  }>();
 </script>
 
 <template>
@@ -11,8 +13,8 @@ defineProps<{
       <b>Lv.{{ index + 1 }}</b>
       <div class="skill-level-cells">
         <p v-for="(cell, cellIndex) in line" :key="cellIndex">
-          <span>{{ columns[cellIndex] }}</span>
-          <b>{{ cell }}</b>
+          <span>{{ gameText(columns[cellIndex] ?? '') }}</span>
+          <b>{{ gameText(cell) }}</b>
         </p>
       </div>
     </article>

@@ -4,6 +4,7 @@ import type { IslandId } from '../types'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES } from './data'
 import { activitySleepStyles, createActivityContext, type ActivitySelection } from './activities'
 import { mythicalAppear } from './specialty'
+import { gameText, language, t } from '../ui/i18n'
 const islandMeta_config_extracted0 = extracted0.modules.islandMeta
 export const RANDOM_BERRY_DESCRIPTION = islandMeta_config_extracted0.randomBerryDescription
 export const RANDOM_BERRY_COUNT = islandMeta_config_extracted0.randomBerryCount
@@ -33,8 +34,9 @@ export function islandPokemon(islandId: IslandId, activity?: ActivitySelection) 
 
 export function homeText(pokeId: number, activity?: ActivitySelection): string {
   const appear = mythicalAppear(pokeId)
-  if (appear) return appear
-  return islandsOf(pokeId, activity).map((island) => island.name).join('、') || '仅限活动'
+  if (appear) return t(appear)
+  const sep = language.value.startsWith('zh') ? '、' : ', '
+  return islandsOf(pokeId, activity).map((island) => gameText(island.name)).join(sep) || t('仅限活动')
 }
 
 export const ISLAND_UNLOCK: Record<IslandId, string> = (cloneData(islandMeta_config_extracted0.ISLAND_UNLOCK) as unknown as Record<IslandId, string>)

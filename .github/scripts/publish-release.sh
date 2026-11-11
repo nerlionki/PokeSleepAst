@@ -6,6 +6,10 @@ shift
 version="${tag#v}"
 version="${version%_hotfix}"
 repo="${REPOSITORY:?}"
+title="$tag"
+if test "$tag" = v2.0.3; then
+  title=2.0.3_release
+fi
 
 if ! gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
   # Reviewed release notes travel with the annotated tag, not a tracked Markdown file.
@@ -17,7 +21,7 @@ if ! gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
   test -s "$notes_file" || { echo 'Reviewed release notes are empty'; exit 1; }
   # Both platform workflows can arrive here together; accept the other's draft.
   gh release create "$tag" --repo "$repo" --verify-tag --draft --notes-file "$notes_file" \
-    --title "$tag" || gh release view "$tag" --repo "$repo" >/dev/null
+    --title "$title" || gh release view "$tag" --repo "$repo" >/dev/null
   rm -f "$notes_file"
 fi
 if test "$(gh release view "$tag" --repo "$repo" --json isDraft --jq .isDraft)" != true; then

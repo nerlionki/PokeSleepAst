@@ -16,6 +16,10 @@ permissions:
 
 jobs:
   build:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.ref != 'refs/tags/v2.0.3' &&
+      !contains(github.event.head_commit.message, '[skip wechat]'))
     runs-on: ubuntu-latest
     defaults:
       run:

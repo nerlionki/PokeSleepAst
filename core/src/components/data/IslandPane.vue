@@ -1,57 +1,92 @@
 <script setup lang="ts">
-import { gameText, t as translateUi } from '../../ui/i18n'
+  import { gameText, t as translateUi } from '../../ui/i18n';
 
+  import { INPUT_RANGES } from '../../calc/inputRanges';
+  const INPUT_LIMITS = INPUT_RANGES.IslandPane;
 
-import { INPUT_RANGES } from '../../calc/inputRanges'
-const INPUT_LIMITS = INPUT_RANGES.IslandPane
+  import { AREA_BONUS_MAX, AREA_BONUS_MAX_PERCENT } from '../../calc/areaBonus';
+  import clientDefaults from '../../data/client-defaults.resource';
+  import { cloneData } from '../../calc/dataClone';
 
-import { AREA_BONUS_MAX, AREA_BONUS_MAX_PERCENT } from '../../calc/areaBonus'
-import clientDefaults from '../../data/client-defaults.resource'
-import { cloneData } from '../../calc/dataClone'
+  import { computed, ref, shallowRef } from 'vue';
+  import { ISLANDS, type PokeRow } from '../../calc/data';
+  import {
+    formatDp,
+    islandBands,
+    islandPokemon,
+    islandUnlock,
+    islandBerrySelection,
+    RANDOM_BERRY_DESCRIPTION,
+    RANDOM_BERRY_COUNT
+  } from '../../calc/islandMeta';
+  import { useSettingsStore } from '../../stores/settings';
+  import { useActivities } from '../../composables/useActivities';
+  import { textHit } from '../../calc/text';
+  import type { IslandId } from '../../types';
+  import BerryIcon from '../shared/BerryIcon.vue';
+  import DataRow from '../shared/DataRow.vue';
+  import PokeSprite from '../shared/PokeSprite.vue';
+  const components_data_IslandPane_config_clientDefaults =
+    clientDefaults.modules.components_data_IslandPane;
 
-import { computed, ref, shallowRef } from 'vue'
-import { ISLANDS, type PokeRow } from '../../calc/data'
-import { formatDp, islandBands, islandPokemon, islandUnlock, islandBerrySelection, RANDOM_BERRY_DESCRIPTION, RANDOM_BERRY_COUNT } from '../../calc/islandMeta'
-import { useSettingsStore } from '../../stores/settings'
-import { useActivities } from '../../composables/useActivities'
-import { textHit } from '../../calc/text'
-import type { IslandId } from '../../types'
-import BerryIcon from '../shared/BerryIcon.vue'
-import DataRow from '../shared/DataRow.vue'
-import PokeSprite from '../shared/PokeSprite.vue'
-const components_data_IslandPane_config_clientDefaults = clientDefaults.modules.components_data_IslandPane
+  const store = useSettingsStore();
+  const activity = useActivities(
+    computed(() => store.settings),
+    () => store.settings.island
+  );
+  const props = defineProps<{ q: string }>();
+  const openId = shallowRef<IslandId | ''>(
+    components_data_IslandPane_config_clientDefaults[
+      'openIdInitial'
+    ] as unknown as IslandId | ''
+  );
+  const view = shallowRef<'band' | 'spread'>(
+    components_data_IslandPane_config_clientDefaults[
+      'viewInitial'
+    ] as unknown as 'band' | 'spread'
+  );
+  const folded = ref(new Set<string>());
 
-
-const store = useSettingsStore()
-const activity = useActivities(computed(() => store.settings), () => store.settings.island)
-const props = defineProps<{ q: string }>()
-const openId = shallowRef<IslandId | ''>((components_data_IslandPane_config_clientDefaults["openIdInitial"] as unknown as IslandId | ''))
-const view = shallowRef<'band' | 'spread'>((components_data_IslandPane_config_clientDefaults["viewInitial"] as unknown as 'band' | 'spread'))
-const folded = ref(new Set<string>())
-
-function toggleSleep(sleep: string) {
-  if (folded.value.has(sleep)) folded.value.delete(sleep)
-  else folded.value.add(sleep)
-}
-
-const SLEEP_ORDER = cloneData(components_data_IslandPane_config_clientDefaults["SLEEP_ORDER"])
-
-const islands = computed(() => ISLANDS.filter((i) => textHit(`${i.name} ${islandUnlock(i.id as IslandId)}`, props.q)))
-const pokemonOf = computed(() => new Map(ISLANDS.map((i) => [i.id, islandPokemon(i.id as IslandId, activity.context.value)])))
-
-function groups(id: string) {
-  const buckets = new Map<string, PokeRow[]>()
-  for (const poke of pokemonOf.value.get(id) ?? []) {
-    const list = buckets.get(poke.sleepType) ?? []
-    list.push(poke)
-    buckets.set(poke.sleepType, list)
+  function toggleSleep(sleep: string) {
+    if (folded.value.has(sleep)) folded.value.delete(sleep);
+    else folded.value.add(sleep);
   }
-  return [...buckets.entries()].sort((a, b) => {
-    const ia = SLEEP_ORDER.indexOf(a[0])
-    const ib = SLEEP_ORDER.indexOf(b[0])
-    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
-  })
-}
+
+  const SLEEP_ORDER = cloneData(
+    components_data_IslandPane_config_clientDefaults['SLEEP_ORDER']
+  );
+
+  const islands = computed(() =>
+    ISLANDS.filter(i =>
+      textHit(
+        `${i.name} ${gameText(i.name)} ${islandUnlock(i.id as IslandId)} ${translateUi(islandUnlock(i.id as IslandId))}`,
+        props.q
+      )
+    )
+  );
+  const pokemonOf = computed(
+    () =>
+      new Map(
+        ISLANDS.map(i => [
+          i.id,
+          islandPokemon(i.id as IslandId, activity.context.value)
+        ])
+      )
+  );
+
+  function groups(id: string) {
+    const buckets = new Map<string, PokeRow[]>();
+    for (const poke of pokemonOf.value.get(id) ?? []) {
+      const list = buckets.get(poke.sleepType) ?? [];
+      list.push(poke);
+      buckets.set(poke.sleepType, list);
+    }
+    return [...buckets.entries()].sort((a, b) => {
+      const ia = SLEEP_ORDER.indexOf(a[0]);
+      const ib = SLEEP_ORDER.indexOf(b[0]);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+  }
 </script>
 
 <template>
@@ -59,13 +94,24 @@ function groups(id: string) {
     <article v-for="i in islands" :key="i.id" class="acc">
       <DataRow
         :title="i.name"
-        :subtitle="translateUi('{arg1} · {arg2} 种', { arg1: String(islandUnlock(i.id as IslandId)), arg2: String(pokemonOf.get(i.id)?.length ?? 0) })"
+        :subtitle="
+          translateUi('{arg1} · {arg2} 种', {
+            arg1: translateUi(islandUnlock(i.id as IslandId)),
+            arg2: String(pokemonOf.get(i.id)?.length ?? 0)
+          })
+        "
         @click="openId = openId === i.id ? '' : (i.id as IslandId)"
       >
         <template #lead>
           <span class="row" style="gap: 2px">
             <BerryIcon v-for="b in i.berries" :key="b" :name="b" />
-            <template v-if="!i.berries.length"><BerryIcon v-for="n in RANDOM_BERRY_COUNT" :key="`random-${n}`" name="随机喜好树果" random /></template>
+            <template v-if="!i.berries.length"
+              ><BerryIcon
+                v-for="n in RANDOM_BERRY_COUNT"
+                :key="`random-${n}`"
+                name="随机喜好树果"
+                random
+            /></template>
           </span>
         </template>
         <template #trail>
@@ -73,43 +119,112 @@ function groups(id: string) {
         </template>
       </DataRow>
       <div v-if="openId === i.id" class="acc-body plain">
-        <label class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop>
-          <span>{{ translateUi("营地加成") }} {{ Math.round(store.islandBonus(i.id as IslandId) * 100) }}{{ translateUi("%（上限") }} {{ AREA_BONUS_MAX_PERCENT }}%）{{ store.settings.island === i.id ? " " + translateUi("· 当前营地") : '' }}</span>
-          <input type="range" :min="INPUT_LIMITS.store_islandBonus_i_id_as_IslandId.min" :max="AREA_BONUS_MAX" :step="INPUT_LIMITS.store_islandBonus_i_id_as_IslandId.step" :value="store.islandBonus(i.id as IslandId)" @change="store.setIslandBonus(i.id as IslandId, Number(($event.target as HTMLInputElement).value))">
+        <label
+          class="field"
+          data-swipe-ignore
+          @touchstart.stop
+          @touchend.stop
+          @touchcancel.stop
+        >
+          <span
+            >{{ translateUi('营地加成') }}
+            {{ Math.round(store.islandBonus(i.id as IslandId) * 100)
+            }}{{ translateUi('%（上限') }} {{ AREA_BONUS_MAX_PERCENT }}%）{{
+              store.settings.island === i.id
+                ? ' ' + translateUi('· 当前营地')
+                : ''
+            }}</span
+          >
+          <input
+            type="range"
+            :min="INPUT_LIMITS.store_islandBonus_i_id_as_IslandId.min"
+            :max="AREA_BONUS_MAX"
+            :step="INPUT_LIMITS.store_islandBonus_i_id_as_IslandId.step"
+            :value="store.islandBonus(i.id as IslandId)"
+            @change="
+              store.setIslandBonus(
+                i.id as IslandId,
+                Number(($event.target as HTMLInputElement).value)
+              )
+            "
+          />
         </label>
         <p class="muted berry-inline">
-          {{ islandUnlock(i.id as IslandId) }} · {{ islandBerrySelection(i.id)?.label ?? translateUi("喜好") }}
+          {{ translateUi(islandUnlock(i.id as IslandId)) }} ·
+          {{ translateUi(islandBerrySelection(i.id)?.label ?? '喜好') }}
           <template v-if="i.berries.length">
-            <span v-for="b in i.berries" :key="b" class="berry-name"><BerryIcon :name="b" small />{{ gameText(b) }}</span>
+            <span v-for="b in i.berries" :key="b" class="berry-name"
+              ><BerryIcon :name="b" small />{{ gameText(b) }}</span
+            >
           </template>
-          <template v-else><BerryIcon v-for="n in RANDOM_BERRY_COUNT" :key="`random-${n}`" name="随机喜好树果" random small />{{ translateUi(RANDOM_BERRY_DESCRIPTION) }}</template>
+          <template v-else
+            ><BerryIcon
+              v-for="n in RANDOM_BERRY_COUNT"
+              :key="`random-${n}`"
+              name="随机喜好树果"
+              random
+              small
+            />{{ translateUi(RANDOM_BERRY_DESCRIPTION) }}</template
+          >
         </p>
-        <p v-if="islandBerrySelection(i.id)?.detail" class="muted">{{ islandBerrySelection(i.id)?.detail }}</p>
+        <p v-if="islandBerrySelection(i.id)?.detail" class="muted">
+          {{ translateUi(islandBerrySelection(i.id)?.detail) }}
+        </p>
         <div class="seg">
-          <button type="button" :class="{ on: view === 'band' }" @click="view = 'band'">{{ translateUi("只数") }}</button>
-          <button type="button" :class="{ on: view === 'spread' }" @click="view = 'spread'">{{ translateUi("分布") }}</button>
+          <button
+            type="button"
+            :class="{ on: view === 'band' }"
+            @click="view = 'band'"
+          >
+            {{ translateUi('只数') }}
+          </button>
+          <button
+            type="button"
+            :class="{ on: view === 'spread' }"
+            @click="view = 'spread'"
+          >
+            {{ translateUi('分布') }}
+          </button>
         </div>
-        <div><template v-if="view === 'band'">
-          <p v-for="b in islandBands(i.id as IslandId)" :key="b.count">
-            {{ b.count }} {{ translateUi("只 · 卡比兽能量") }} {{ formatDp(b.min) }}{{ b.max == null ? " " + translateUi("及以上") : ` – ${formatDp(b.max)}` }}
-          </p>
-        </template>
-        <template v-else>
-          <section v-for="[sleep, list] in groups(i.id)" :key="sleep" class="sleep-group">
-            <h3>
-              <button type="button" class="sleep-group-head" :aria-expanded="!folded.has(sleep)" @click="toggleSleep(sleep)">
-                <span>{{ gameText(sleep) }} · {{ list.length }}</span>
-                <span class="data-row-chev">{{ folded.has(sleep) ? '›' : '⌃' }}</span>
-              </button>
-            </h3>
-            <div v-if="!folded.has(sleep)" class="poke-wall">
-              <div v-for="p in list" :key="p.id" class="poke-wall-cell">
-                <PokeSprite :id="p.id" :name="p.name" />
-                <span>{{ gameText(p.name) }}</span>
+        <div>
+          <template v-if="view === 'band'">
+            <p v-for="b in islandBands(i.id as IslandId)" :key="b.count">
+              {{ b.count }} {{ translateUi('只 · 卡比兽能量') }}
+              {{ formatDp(b.min)
+              }}{{
+                b.max == null
+                  ? ' ' + translateUi('及以上')
+                  : ` – ${formatDp(b.max)}`
+              }}
+            </p>
+          </template>
+          <template v-else>
+            <section
+              v-for="[sleep, list] in groups(i.id)"
+              :key="sleep"
+              class="sleep-group"
+            >
+              <h3>
+                <button
+                  type="button"
+                  class="sleep-group-head"
+                  :aria-expanded="!folded.has(sleep)"
+                  @click="toggleSleep(sleep)"
+                >
+                  <span>{{ gameText(sleep) }} · {{ list.length }}</span>
+                  <span class="data-row-chev">{{
+                    folded.has(sleep) ? '›' : '⌃'
+                  }}</span>
+                </button>
+              </h3>
+              <div v-if="!folded.has(sleep)" class="poke-wall">
+                <div v-for="p in list" :key="p.id" class="poke-wall-cell">
+                  <PokeSprite :id="p.id" :name="p.name" />
+                  <span>{{ gameText(p.name) }}</span>
+                </div>
               </div>
-            </div>
-          </section>
-        </template>
+            </section>
+          </template>
         </div>
       </div>
     </article>

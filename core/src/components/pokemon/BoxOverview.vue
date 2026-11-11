@@ -1,153 +1,547 @@
 <script setup lang="ts">
-import { gameText, t as translateUi } from '../../ui/i18n'
+  import { gameText, t as translateUi } from '../../ui/i18n';
 
+  import { INPUT_RANGES } from '../../calc/inputRanges';
+  const INPUT_LIMITS = INPUT_RANGES.BoxOverview;
 
-import { INPUT_RANGES } from '../../calc/inputRanges'
-const INPUT_LIMITS = INPUT_RANGES.BoxOverview
+  import {
+    AREA_BONUS_MAX,
+    AREA_BONUS_MAX_PERCENT,
+    clampAreaBonus
+  } from '../../calc/areaBonus';
+  import clientDefaults from '../../data/client-defaults.resource';
 
-import { AREA_BONUS_MAX, AREA_BONUS_MAX_PERCENT, clampAreaBonus } from '../../calc/areaBonus'
-import clientDefaults from '../../data/client-defaults.resource'
+  import { computed, reactive, shallowRef, onMounted, watch } from 'vue';
+  import {
+    calculateBoxOverview,
+    defaultOverviewBonuses,
+    formatOverviewAmount,
+    type OverviewBonuses
+  } from '../../calc/boxOverview';
+  import { loadJson, saveJson } from '../../storage';
+  import { normalizeEx2Berries, canPickBerries } from '../../calc/defaults';
+  import type { Settings } from '../../types';
+  import EnvironmentFields from '../shared/EnvironmentFields.vue';
+  import { BERRIES, ISLANDS } from '../../calc/data';
+  import { useBoxStore } from '../../stores/box';
+  import { useSettingsStore } from '../../stores/settings';
+  import { useProductionActivity } from '../../composables/useProductionActivity';
+  import BerryIcon from '../shared/BerryIcon.vue';
+  import IngredientIcon from '../shared/IngredientIcon.vue';
+  import Segmented from '../shared/Segmented.vue';
+  import ToggleField from '../shared/ToggleField.vue';
+  import OverviewRankRow from './OverviewRankRow.vue';
+  const components_pokemon_BoxOverview_config_clientDefaults =
+    clientDefaults.modules.components_pokemon_BoxOverview;
 
-import { computed, reactive, shallowRef, onMounted, watch } from 'vue'
-import { calculateBoxOverview, defaultOverviewBonuses, formatOverviewAmount, type OverviewBonuses } from '../../calc/boxOverview'
-import { loadJson, saveJson } from '../../storage'
-import { normalizeEx2Berries, canPickBerries } from '../../calc/defaults'
-import type { Settings } from '../../types'
-import EnvironmentFields from '../shared/EnvironmentFields.vue'
-import { BERRIES, ISLANDS } from '../../calc/data'
-import { useBoxStore } from '../../stores/box'
-import { useSettingsStore } from '../../stores/settings'
-import { useProductionActivity } from '../../composables/useProductionActivity'
-import BerryIcon from '../shared/BerryIcon.vue'
-import IngredientIcon from '../shared/IngredientIcon.vue'
-import Segmented from '../shared/Segmented.vue'
-import ToggleField from '../shared/ToggleField.vue'
-import OverviewRankRow from './OverviewRankRow.vue'
-const components_pokemon_BoxOverview_config_clientDefaults = clientDefaults.modules.components_pokemon_BoxOverview
-
-const emit = defineEmits<{ back: []; complete: [uids: string[]] }>()
-const box = useBoxStore()
-const tab = shallowRef<'berries' | 'ingredients'>((components_pokemon_BoxOverview_config_clientDefaults["tabInitial"] as unknown as 'berries' | 'ingredients'))
-const bonuses = reactive(defaultOverviewBonuses())
-const settingsStore = useSettingsStore()
-const sourceSettings = computed(() => ({ ...settingsStore.settings, island: bonuses.island ?? 'greengrass', period: 'day' as const }))
-const { enabled: activityEnabled, settings: calculationSettings } = useProductionActivity('box', sourceSettings)
-const loaded = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["loadedInitial"])
-onMounted(async () => {
-  const saved = await loadJson<Partial<OverviewBonuses>>('boxOverviewBonuses', {})
-  Object.assign(bonuses, defaultOverviewBonuses(), saved)
-  if (!ISLANDS.some(island => island.id === bonuses.island)) bonuses.island = 'greengrass'
-  bonuses.helpingBonus = Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0)))
-  bonuses.areaBonus = clampAreaBonus(bonuses.areaBonus)
-  bonuses.favoredBerries = [...new Set(Array.isArray(bonuses.favoredBerries) ? bonuses.favoredBerries.filter(name => BERRIES.some(berry => berry.name === name)) : [])].slice(0, 3)
-  if (bonuses.island === 'cyanex') bonuses.favoredBerries = normalizeEx2Berries(bonuses.favoredBerries)
-  loaded.value = true
-})
-watch(bonuses, value => { if (loaded.value) void saveJson('boxOverviewBonuses', value) }, { deep: true })
-const environment = computed(() => ({ island: bonuses.island ?? 'greengrass', berries: bonuses.favoredBerries, helpingBonus: bonuses.helpingBonus, exBuff: bonuses.exBuff, exDebuff: bonuses.exDebuff, exWeeklyBonus: bonuses.exWeeklyBonus }))
-function setEnvironment(patch: Partial<Pick<Settings, 'island' | 'berries' | 'helpingBonus' | 'exBuff' | 'exDebuff' | 'exWeeklyBonus'>>) {
-  if (patch.island) {
-    bonuses.island = patch.island
-    if (!canPickBerries(patch.island)) bonuses.favoredBerries = [...(ISLANDS.find(island => island.id === patch.island)?.berries ?? [])]
-    if (patch.island === 'cyanex') bonuses.favoredBerries = normalizeEx2Berries(bonuses.favoredBerries)
-    if (patch.island === 'greenex' && !bonuses.favoredBerries.length) bonuses.favoredBerries = [BERRIES[0]!.name]
+  const emit = defineEmits<{ back: []; complete: [uids: string[]] }>();
+  const box = useBoxStore();
+  const tab = shallowRef<'berries' | 'ingredients'>(
+    components_pokemon_BoxOverview_config_clientDefaults[
+      'tabInitial'
+    ] as unknown as 'berries' | 'ingredients'
+  );
+  const bonuses = reactive(defaultOverviewBonuses());
+  const settingsStore = useSettingsStore();
+  const sourceSettings = computed(() => ({
+    ...settingsStore.settings,
+    island: bonuses.island ?? 'greengrass',
+    period: 'day' as const
+  }));
+  const { enabled: activityEnabled, settings: calculationSettings } =
+    useProductionActivity('box', sourceSettings);
+  const loaded = shallowRef(
+    components_pokemon_BoxOverview_config_clientDefaults['loadedInitial']
+  );
+  onMounted(async () => {
+    const saved = await loadJson<Partial<OverviewBonuses>>(
+      'boxOverviewBonuses',
+      {}
+    );
+    Object.assign(bonuses, defaultOverviewBonuses(), saved);
+    if (!ISLANDS.some(island => island.id === bonuses.island))
+      bonuses.island = 'greengrass';
+    bonuses.helpingBonus = Math.min(
+      5,
+      Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0))
+    );
+    bonuses.areaBonus = clampAreaBonus(bonuses.areaBonus);
+    bonuses.favoredBerries = [
+      ...new Set(
+        Array.isArray(bonuses.favoredBerries)
+          ? bonuses.favoredBerries.filter(name =>
+              BERRIES.some(berry => berry.name === name)
+            )
+          : []
+      )
+    ].slice(0, 3);
+    if (bonuses.island === 'cyanex')
+      bonuses.favoredBerries = normalizeEx2Berries(bonuses.favoredBerries);
+    loaded.value = true;
+  });
+  watch(
+    bonuses,
+    value => {
+      if (loaded.value) void saveJson('boxOverviewBonuses', value);
+    },
+    { deep: true }
+  );
+  const environment = computed(() => ({
+    island: bonuses.island ?? 'greengrass',
+    berries: bonuses.favoredBerries,
+    helpingBonus: bonuses.helpingBonus,
+    exBuff: bonuses.exBuff,
+    exDebuff: bonuses.exDebuff,
+    exWeeklyBonus: bonuses.exWeeklyBonus
+  }));
+  function setEnvironment(
+    patch: Partial<
+      Pick<
+        Settings,
+        | 'island'
+        | 'berries'
+        | 'helpingBonus'
+        | 'exBuff'
+        | 'exDebuff'
+        | 'exWeeklyBonus'
+      >
+    >
+  ) {
+    if (patch.island) {
+      bonuses.island = patch.island;
+      if (!canPickBerries(patch.island))
+        bonuses.favoredBerries = [
+          ...(ISLANDS.find(island => island.id === patch.island)?.berries ?? [])
+        ];
+      if (patch.island === 'cyanex')
+        bonuses.favoredBerries = normalizeEx2Berries(bonuses.favoredBerries);
+      if (patch.island === 'greenex' && !bonuses.favoredBerries.length)
+        bonuses.favoredBerries = [BERRIES[0]!.name];
+    }
+    if (patch.berries) bonuses.favoredBerries = patch.berries;
+    if (patch.helpingBonus != null) bonuses.helpingBonus = patch.helpingBonus;
+    if (patch.exBuff != null) bonuses.exBuff = patch.exBuff;
+    if (patch.exDebuff != null) bonuses.exDebuff = patch.exDebuff;
+    if (patch.exWeeklyBonus != null)
+      bonuses.exWeeklyBonus = patch.exWeeklyBonus;
   }
-  if (patch.berries) bonuses.favoredBerries = patch.berries
-  if (patch.helpingBonus != null) bonuses.helpingBonus = patch.helpingBonus
-  if (patch.exBuff != null) bonuses.exBuff = patch.exBuff
-  if (patch.exDebuff != null) bonuses.exDebuff = patch.exDebuff
-  if (patch.exWeeklyBonus != null) bonuses.exWeeklyBonus = patch.exWeeklyBonus
-}
-const adjusting = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["adjustingInitial"])
-const ingredientId = shallowRef<number | null>((components_pokemon_BoxOverview_config_clientDefaults["ingredientIdInitial"] as unknown as number | null))
-const visibleRanks = shallowRef(components_pokemon_BoxOverview_config_clientDefaults["visibleRanksInitial"])
-const overview = computed(() => calculateBoxOverview(box.pokemon, bonuses, calculationSettings.value.activity))
-const excluded = computed(() => tab.value === 'berries' ? overview.value.excludedBerries : overview.value.excludedIngredients)
-const selected = computed(() => overview.value.ingredients.find((ingredient) => ingredient.id === ingredientId.value))
-const rankedBerries = computed(() => overview.value.berries.filter((berry) => berry.rows.length))
-const emptyBerryCount = computed(() => overview.value.berries.length - rankedBerries.value.length)
-const customized = computed(() => bonuses.island !== 'greengrass' || bonuses.areaBonus > 0 || bonuses.goodCamp || bonuses.helpingBonus > 0 || bonuses.favoredBerries.length > 0)
-function openIngredient(id: number) { ingredientId.value = id; visibleRanks.value = 20 }
-function resetBonuses() { Object.assign(bonuses, defaultOverviewBonuses()) }
+  const adjusting = shallowRef(
+    components_pokemon_BoxOverview_config_clientDefaults['adjustingInitial']
+  );
+  const ingredientId = shallowRef<number | null>(
+    components_pokemon_BoxOverview_config_clientDefaults[
+      'ingredientIdInitial'
+    ] as unknown as number | null
+  );
+  const visibleRanks = shallowRef(
+    components_pokemon_BoxOverview_config_clientDefaults['visibleRanksInitial']
+  );
+  const overview = computed(() =>
+    calculateBoxOverview(
+      box.pokemon,
+      bonuses,
+      calculationSettings.value.activity
+    )
+  );
+  const excluded = computed(() =>
+    tab.value === 'berries'
+      ? overview.value.excludedBerries
+      : overview.value.excludedIngredients
+  );
+  const selected = computed(() =>
+    overview.value.ingredients.find(
+      ingredient => ingredient.id === ingredientId.value
+    )
+  );
+  const rankedBerries = computed(() =>
+    overview.value.berries.filter(berry => berry.rows.length)
+  );
+  const emptyBerryCount = computed(
+    () => overview.value.berries.length - rankedBerries.value.length
+  );
+  const customized = computed(
+    () =>
+      bonuses.island !== 'greengrass' ||
+      bonuses.areaBonus > 0 ||
+      bonuses.goodCamp ||
+      bonuses.helpingBonus > 0 ||
+      bonuses.favoredBerries.length > 0
+  );
+  function openIngredient(id: number) {
+    ingredientId.value = id;
+    visibleRanks.value = 20;
+  }
+  function resetBonuses() {
+    Object.assign(bonuses, defaultOverviewBonuses());
+  }
 </script>
 <template>
   <div class="stack box-overview">
     <div class="overview-heading">
-      <button class="btn ghost" type="button" @click="emit('back')">{{ translateUi("返回 Box") }}</button>
-      <h2>{{ translateUi("Box 概览") }}</h2>
-      <button class="btn ghost" type="button" :class="{ on: customized }" :disabled="!loaded" :aria-expanded="adjusting" @click="adjusting = !adjusting">{{ translateUi("调整加成") }}</button>
+      <button class="btn ghost" type="button" @click="emit('back')">
+        {{ translateUi('返回 Box') }}
+      </button>
+      <h2>{{ translateUi('Box 概览') }}</h2>
+      <button
+        class="btn ghost"
+        type="button"
+        :class="{ on: customized }"
+        :disabled="!loaded"
+        :aria-expanded="adjusting"
+        @click="adjusting = !adjusting"
+      >
+        {{ translateUi('调整加成') }}
+      </button>
     </div>
-    <p class="muted">{{ translateUi("当前培养状态 · 全天满活 ·") }} {{ box.pokemon.length }} {{ translateUi("只宝可梦") }}</p>
-    <ToggleField v-model="activityEnabled" :label="translateUi('计入活动加成')" />
-    <section v-if="adjusting" class="card stack" :aria-label="translateUi('概览计算加成')">
+    <p class="muted">
+      {{ translateUi('当前培养状态 · 全天满活 ·') }} {{ box.pokemon.length }}
+      {{ translateUi('只宝可梦') }}
+    </p>
+    <ToggleField
+      v-model="activityEnabled"
+      :label="translateUi('计入活动加成')"
+    />
+    <section
+      v-if="adjusting"
+      class="card stack"
+      :aria-label="translateUi('概览计算加成')"
+    >
       <div class="bonus-fields">
-        <div class="field" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop><label for="overview-area">{{ translateUi("营地加成（%）") }}</label><input id="overview-area" v-model.number="bonuses.areaBonus" type="range" :min="INPUT_LIMITS.overview_area.min" :max="AREA_BONUS_MAX" :step="INPUT_LIMITS.overview_area.step"><span class="muted">{{ Math.round(bonuses.areaBonus * 100) }}{{ translateUi("%（上限") }} {{ AREA_BONUS_MAX_PERCENT }}%）</span></div>
+        <div
+          class="field"
+          data-swipe-ignore
+          @touchstart.stop
+          @touchend.stop
+          @touchcancel.stop
+        >
+          <label for="overview-area">{{ translateUi('营地加成（%）') }}</label
+          ><input
+            id="overview-area"
+            v-model.number="bonuses.areaBonus"
+            type="range"
+            :min="INPUT_LIMITS.overview_area.min"
+            :max="AREA_BONUS_MAX"
+            :step="INPUT_LIMITS.overview_area.step"
+          /><span class="muted"
+            >{{ Math.round(bonuses.areaBonus * 100)
+            }}{{ translateUi('%（上限') }} {{ AREA_BONUS_MAX_PERCENT }}%）</span
+          >
+        </div>
       </div>
-      <label class="row"><input v-model="bonuses.goodCamp" type="checkbox">{{ translateUi("优质露营券") }}</label>
-      <p class="muted">{{ translateUi("保留个体自身的帮手奖励和缎带；帮手奖励最多叠加 5 层。加成仅用于本页。") }}</p>
-      <EnvironmentFields :value="environment" :activity-selection="calculationSettings.activity" @change="setEnvironment" />
-      <button class="btn ghost" type="button" @click="resetBonuses">{{ translateUi("恢复基础口径") }}</button>
+      <label class="row"
+        ><input v-model="bonuses.goodCamp" type="checkbox" />{{
+          translateUi('优质露营券')
+        }}</label
+      >
+      <p class="muted">
+        {{
+          translateUi(
+            '保留个体自身的帮手奖励和缎带；帮手奖励最多叠加 5 层。加成仅用于本页。'
+          )
+        }}
+      </p>
+      <EnvironmentFields
+        :value="environment"
+        :activity-selection="calculationSettings.activity"
+        @change="setEnvironment"
+      />
+      <button class="btn ghost" type="button" @click="resetBonuses">
+        {{ translateUi('恢复基础口径') }}
+      </button>
     </section>
-    <p v-if="customized" class="muted">{{ translateUi("营地加成") }} {{ Math.round(clampAreaBonus(bonuses.areaBonus) * 100) }}{{ translateUi("% · 其他队员帮手奖励") }} {{ Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0))) }} {{ translateUi("层") }}{{ bonuses.goodCamp ? " " + translateUi("· 优质露营券") : '' }}{{ bonuses.favoredBerries.length ? " " + translateUi("· 已设置喜好树果") : '' }}</p>
-    <Segmented v-model="tab" :options="[{ id: 'berries', label: '树果产量' }, { id: 'ingredients', label: '食材产量' }]" />
+    <p v-if="customized" class="muted">
+      {{ translateUi('营地加成') }}
+      {{ Math.round(clampAreaBonus(bonuses.areaBonus) * 100)
+      }}{{ translateUi('% · 其他队员帮手奖励') }}
+      {{
+        Math.min(5, Math.max(0, Math.floor(Number(bonuses.helpingBonus) || 0)))
+      }}
+      {{ translateUi('层')
+      }}{{ bonuses.goodCamp ? ' ' + translateUi('· 优质露营券') : ''
+      }}{{
+        bonuses.favoredBerries.length
+          ? ' ' + translateUi('· 已设置喜好树果')
+          : ''
+      }}
+    </p>
+    <Segmented
+      v-model="tab"
+      :options="[
+        { id: 'berries', label: '树果产量' },
+        { id: 'ingredients', label: '食材产量' }
+      ]"
+    />
     <div v-if="excluded.length" class="overview-warning">
-      <p>{{ excluded.length }} {{ translateUi("只个体缺少本项计算所需字段，暂未参与排名。") }}</p>
-      <button class="btn ghost" type="button" @click="emit('complete', excluded.map((pokemon) => pokemon.uid))">{{ translateUi("去补全") }}</button>
+      <p>
+        {{ excluded.length }}
+        {{ translateUi('只个体缺少本项计算所需字段，暂未参与排名。') }}
+      </p>
+      <button
+        class="btn ghost"
+        type="button"
+        @click="
+          emit(
+            'complete',
+            excluded.map(pokemon => pokemon.uid)
+          )
+        "
+      >
+        {{ translateUi('去补全') }}
+      </button>
     </div>
-    <p v-if="!box.pokemon.length" class="card muted">{{ translateUi("Box 还没有宝可梦，返回 Box 后新增或导入即可查看产量。") }}</p>
+    <p v-if="!box.pokemon.length" class="card muted">
+      {{ translateUi('Box 还没有宝可梦，返回 Box 后新增或导入即可查看产量。') }}
+    </p>
     <template v-else-if="tab === 'berries'">
-      <p class="muted">{{ translateUi("24 小时全时满包 · 每种树果按能量取前 3 名 · 不计主技能能量") }}</p>
+      <p class="muted">
+        {{
+          translateUi(
+            '24 小时全时满包 · 每种树果按能量取前 3 名 · 不计主技能能量'
+          )
+        }}
+      </p>
       <div v-if="rankedBerries.length" class="berry-rank-grid">
-        <section v-for="berry in rankedBerries" :key="berry.name" class="card berry-group">
-          <div class="berry-heading"><BerryIcon :name="berry.name" /><h3>{{ gameText(berry.name) }}</h3><span class="muted">{{ berry.type }}</span></div>
-          <OverviewRankRow v-for="(row, index) in berry.rows" :key="row.pokemon.uid" :row="row" :rank="index + 1" unit="能量" />
+        <section
+          v-for="berry in rankedBerries"
+          :key="berry.name"
+          class="card berry-group"
+        >
+          <div class="berry-heading">
+            <BerryIcon :name="berry.name" />
+            <h3>{{ gameText(berry.name) }}</h3>
+            <span class="muted">{{ gameText(berry.type) }}</span>
+          </div>
+          <OverviewRankRow
+            v-for="(row, index) in berry.rows"
+            :key="row.pokemon.uid"
+            :row="row"
+            :rank="index + 1"
+            unit="能量"
+          />
         </section>
       </div>
-      <p v-else class="card muted">{{ translateUi("暂无可计算树果能量的个体，请先补全关键字段。") }}</p>
-      <p v-if="emptyBerryCount" class="muted">{{ translateUi("其余") }} {{ emptyBerryCount }} {{ translateUi("种树果暂无可参与排名的个体。") }}</p>
+      <p v-else class="card muted">
+        {{ translateUi('暂无可计算树果能量的个体，请先补全关键字段。') }}
+      </p>
+      <p v-if="emptyBerryCount" class="muted">
+        {{ translateUi('其余') }} {{ emptyBerryCount }}
+        {{ translateUi('种树果暂无可参与排名的个体。') }}
+      </p>
     </template>
     <template v-else>
-      <p class="muted">{{ translateUi("24 小时无持有上限 · 仅普通帮忙食材 · 点击查看全部个体排名") }}</p>
+      <p class="muted">
+        {{
+          translateUi(
+            '24 小时无持有上限 · 仅普通帮忙食材 · 点击查看全部个体排名'
+          )
+        }}
+      </p>
       <div class="ingredient-grid">
-        <button v-for="ingredient in overview.ingredients" :key="ingredient.id" class="ingredient-tile" type="button" :disabled="!ingredient.rows.length" :aria-label="ingredient.name + (ingredient.rows.length ? '产量排名' : '暂无产出')" @click="openIngredient(ingredient.id)">
+        <button
+          v-for="ingredient in overview.ingredients"
+          :key="ingredient.id"
+          class="ingredient-tile"
+          type="button"
+          :disabled="!ingredient.rows.length"
+          :aria-label="
+            ingredient.name + (ingredient.rows.length ? '产量排名' : '暂无产出')
+          "
+          @click="openIngredient(ingredient.id)"
+        >
           <IngredientIcon :id="ingredient.id" :name="ingredient.name" />
           <span>{{ gameText(ingredient.name) }}</span>
-          <strong>{{ formatOverviewAmount(ingredient.rows[0]?.amount) }}<small v-if="ingredient.rows.length"> {{ translateUi("/日") }}</small></strong>
-          <span class="muted">{{ ingredient.rows.length ? translateUi('最高单只 · {count} 只产出', { count: ingredient.rows.length }) : translateUi("暂无产出") }}</span>
+          <strong
+            >{{ formatOverviewAmount(ingredient.rows[0]?.amount)
+            }}<small v-if="ingredient.rows.length">
+              {{ translateUi('/日') }}</small
+            ></strong
+          >
+          <span class="muted">{{
+            ingredient.rows.length
+              ? translateUi('最高单只 · {count} 只产出', {
+                  count: ingredient.rows.length
+                })
+              : translateUi('暂无产出')
+          }}</span>
         </button>
       </div>
     </template>
-    <div v-if="selected" v-back="() => { ingredientId = null }" class="overlay" role="dialog" aria-modal="true" aria-labelledby="ingredient-ranking-title" @click.self="ingredientId = null" @keydown.esc="ingredientId = null">
+    <div
+      v-if="selected"
+      v-back="
+        () => {
+          ingredientId = null;
+        }
+      "
+      class="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ingredient-ranking-title"
+      @click.self="ingredientId = null"
+      @keydown.esc="ingredientId = null"
+    >
       <section class="sheet stack ingredient-ranking">
-        <div class="row"><IngredientIcon :id="selected.id" :name="selected.name" /><h3 id="ingredient-ranking-title">{{ gameText(selected.name) }}{{ translateUi("产量排名") }}</h3><button class="btn ghost" type="button" @click="ingredientId = null">{{ translateUi("关闭") }}</button></div>
-        <p class="muted">{{ translateUi("当前等级 · 全天满活 · 无持有上限 ·") }} {{ selected.rows.length }} {{ translateUi("只个体") }}</p>
-        <OverviewRankRow v-for="(row, index) in selected.rows.slice(0, visibleRanks)" :key="row.pokemon.uid" :row="row" :rank="index + 1" unit="个" ingredients />
-        <button v-if="selected.rows.length > visibleRanks" class="btn ghost" type="button" @click="visibleRanks += 20">{{ translateUi("加载更多（还有") }} {{ selected.rows.length - visibleRanks }} {{ translateUi("只）") }}</button>
+        <div class="row">
+          <IngredientIcon :id="selected.id" :name="selected.name" />
+          <h3 id="ingredient-ranking-title">
+            {{ gameText(selected.name) }}{{ translateUi('产量排名') }}
+          </h3>
+          <button class="btn ghost" type="button" @click="ingredientId = null">
+            {{ translateUi('关闭') }}
+          </button>
+        </div>
+        <p class="muted">
+          {{ translateUi('当前等级 · 全天满活 · 无持有上限 ·') }}
+          {{ selected.rows.length }} {{ translateUi('只个体') }}
+        </p>
+        <OverviewRankRow
+          v-for="(row, index) in selected.rows.slice(0, visibleRanks)"
+          :key="row.pokemon.uid"
+          :row="row"
+          :rank="index + 1"
+          unit="个"
+          ingredients
+        />
+        <button
+          v-if="selected.rows.length > visibleRanks"
+          class="btn ghost"
+          type="button"
+          @click="visibleRanks += 20"
+        >
+          {{ translateUi('加载更多（还有') }}
+          {{ selected.rows.length - visibleRanks }} {{ translateUi('只）') }}
+        </button>
       </section>
     </div>
   </div>
 </template>
 <style scoped>
-.overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.overview-heading .btn { flex-shrink: 0; width: auto; margin: 0; white-space: nowrap; }
-.overview-heading h2 { margin: 0; font-size: var(--font-22); }
-.bonus-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-.favored-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.favored-choice { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: transparent; padding: 8px; color: var(--text); border-radius: 8px; }
-.favored-choice.on { background: var(--sage); color: var(--on-sage); }
-.overview-warning { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--amber); }
-.overview-warning .btn { flex-shrink: 0; white-space: nowrap; }
-.berry-rank-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-.berry-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.berry-heading h3 { margin: 0; }
-.berry-heading > span { margin-left: auto; }
-.ingredient-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.ingredient-tile { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 10px; background: var(--card); border: 1px solid var(--line); color: var(--text); border-radius: 12px; text-align: center; }
-.ingredient-tile strong { font-size: var(--font-24); font-variant-numeric: tabular-nums; color: var(--sage); }
-.ingredient-tile small { font-size: var(--font-12); font-weight: 400; color: var(--muted); }
-.ingredient-tile > .muted { font-size: var(--font-12); }
-.ingredient-tile:disabled { opacity: 0.6; }
-.ingredient-ranking .row h3 { flex: 1; min-width: 0; margin: 0; }
-@media (max-width: 760px) { .berry-rank-grid { grid-template-columns: 1fr; } .ingredient-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 400px) { .overview-heading { flex-wrap: wrap; } .overview-heading h2 { font-size: var(--font-19); } .bonus-fields { grid-template-columns: 1fr; } .favored-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .overview-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .overview-heading .btn {
+    flex-shrink: 0;
+    width: auto;
+    margin: 0;
+    white-space: nowrap;
+  }
+  .overview-heading h2 {
+    margin: 0;
+    font-size: var(--font-22);
+  }
+  .bonus-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .favored-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .favored-choice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: transparent;
+    padding: 8px;
+    color: var(--text);
+    border-radius: 8px;
+  }
+  .favored-choice.on {
+    background: var(--sage);
+    color: var(--on-sage);
+  }
+  .overview-warning {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--amber);
+  }
+  .overview-warning .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .berry-rank-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .berry-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .berry-heading h3 {
+    margin: 0;
+  }
+  .berry-heading > span {
+    margin-left: auto;
+  }
+  .ingredient-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .ingredient-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 10px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 12px;
+    text-align: center;
+  }
+  .ingredient-tile strong {
+    font-size: var(--font-24);
+    font-variant-numeric: tabular-nums;
+    color: var(--sage);
+  }
+  .ingredient-tile small {
+    font-size: var(--font-12);
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .ingredient-tile > .muted {
+    font-size: var(--font-12);
+  }
+  .ingredient-tile:disabled {
+    opacity: 0.6;
+  }
+  .ingredient-ranking .row h3 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+  @media (max-width: 760px) {
+    .berry-rank-grid {
+      grid-template-columns: 1fr;
+    }
+    .ingredient-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 400px) {
+    .overview-heading {
+      flex-wrap: wrap;
+    }
+    .overview-heading h2 {
+      font-size: var(--font-19);
+    }
+    .bonus-fields {
+      grid-template-columns: 1fr;
+    }
+    .favored-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
 </style>
