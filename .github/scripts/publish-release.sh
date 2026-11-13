@@ -7,8 +7,8 @@ version="${tag#v}"
 version="${version%_hotfix}"
 repo="${REPOSITORY:?}"
 title="$tag"
-if test "$tag" = v2.0.3; then
-  title=2.0.3_release
+if test "$tag" = v2.0.3 || test "$tag" = v2.0.4; then
+  title="${version}_release"
 fi
 
 if ! gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
