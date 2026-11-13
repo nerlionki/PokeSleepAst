@@ -9,17 +9,29 @@ export interface AnnouncedIngredient {
   baseEnergy: number | null;
 }
 export interface AnnouncedPokemon {
+  availableFrom?: string;
+  timeBasis?: string;
   nationalDex?: number;
   imageId?: number;
   name: string;
   runtimeId: number | null;
   type: string;
   sleepType: string;
+  berry?: string | null;
+  carry?: number | null;
+  friendship?: number | null;
+  medalGroup?: number | null;
+  islands?: string[];
+  canGatherIngredientKey?: string;
+
 }
 export interface AnnouncedRecipe {
   imageFile?: string;
   imageId?: number;
   baseEnergy: number | null;
+  /** 与既有食谱详情相同的等级：1、10、20、30、40、50、60、70。 */
+  levelEnergy?: Record<string, number>;
+  bonus?: number | null;
   ingredientQuantities: Record<string, number> | null;
   key: string;
   name: string | null;
@@ -59,9 +71,14 @@ interface Announcements {
 const content = (meta as unknown as { announcedContent?: Announcements })
   .announcedContent;
 // Image IDs are declared by the resource; names never infer Pokemon/ingredient artwork.
-export const ANNOUNCED = content?.schemaVersion === 1
-  ? { ...content, ingredients: content.ingredients.map(row => ({ ...row })), pokemon: content.pokemon.map(row => ({ ...row })) }
-  : { ingredients: [], pokemon: [], recipes: [], activities: [] };
+export const ANNOUNCED =
+  content?.schemaVersion === 1
+    ? {
+        ...content,
+        ingredients: content.ingredients.map(row => ({ ...row })),
+        pokemon: content.pokemon.map(row => ({ ...row }))
+      }
+    : { ingredients: [], pokemon: [], recipes: [], activities: [] };
 export const NUT = ANNOUNCED.ingredients.find(
   row => row.key === 'bite-size-nut'
 );

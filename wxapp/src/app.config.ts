@@ -147,6 +147,13 @@ export default defineAppConfig({
       "pages": [
         "index"
       ]
+    },
+    {
+      "name": "i18n-pack",
+      "root": "i18n-pack",
+      "pages": [
+        "index"
+      ]
     }
   ],
   "workers": {

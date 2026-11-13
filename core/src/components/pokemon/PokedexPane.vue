@@ -8,7 +8,7 @@
   import { useRouter } from 'vue-router';
   import { skillByPokedexName } from '../../calc/mainSkills';
   import { storeToRefs } from 'pinia';
-  import { BERRIES, POKEDEX } from '../../calc/data';
+  import { BERRIES, ISLANDS, POKEDEX } from '../../calc/data';
   import {
     selectionList,
     toggleChoice,
@@ -37,6 +37,8 @@
   import VirtualPokedex from './VirtualPokedex.vue';
   import DrawerSheet from '../shared/DrawerSheet.vue';
   import IngredientIcon from '../shared/IngredientIcon.vue';
+  import { DISPLAY_ITEMS } from '../../calc/items';
+  import FallbackImage from '../shared/FallbackImage.vue';
   import PokeSprite from '../shared/PokeSprite.vue';
   const components_pokemon_PokedexPane_config_clientDefaults =
     clientDefaults.modules.components_pokemon_PokedexPane;
@@ -92,7 +94,7 @@
   ]);
   const skills = computed(() => [
     '全部',
-    ...new Set(POKEDEX.map(p => p.mainSkill))
+    ...new Set(POKEDEX.map(p => p.mainSkill).filter(Boolean))
   ]);
 
   const knownList = computed(() =>
@@ -107,14 +109,14 @@
       if (!matchesChoice(berry.value, p.berry)) return false;
       if (!matchesChoice(skill.value, p.mainSkill)) return false;
       return true;
-    }).sort(compareDex)
+    }).map(p => ({ ...p, unknownPlaceholder: !p.mainSkill || !p.ingredients?.length })).sort(compareDex)
   );
 
   const announced = computed(() =>
     ANNOUNCED.pokemon
       .flatMap(p =>
         (p.nationalDex ?? p.imageId) != null
-          ? [{ ...p, id: (p.nationalDex ?? p.imageId)! }]
+          ? [{ ...p, id: (p.nationalDex ?? p.imageId)!, unknownPlaceholder: true }]
           : []
       )
       .filter(
@@ -135,24 +137,33 @@
     () =>
       ANNOUNCED.pokemon.find(
         p =>
-          (p.nationalDex ?? p.imageId) === selected.value &&
-          !POKEDEX.some(
-            known => known.id === selected.value || known.name === p.name
-          )
+          (p.nationalDex ?? p.imageId) === selected.value
       ) ?? null
   );
   const detail = computed(
     () => POKEDEX.find(p => p.id === selected.value) ?? null
   );
-  const board = computed(() =>
-    detail.value ? ingredientColumns(detail.value.ingredients) : []
-  );
-  const medals = computed(() => friendTiers(detail.value?.medalGroup));
+  const detailImageId = computed(() => detail.value?.id ?? announcedDetail.value?.imageId);
+  const incomplete = computed(() => !detail.value?.mainSkill || !detail.value?.ingredients?.length);
+  const detailBerry = computed(() => detail.value?.berry ?? announcedDetail.value?.berry);
+  const announcedIngredient = computed(() => ANNOUNCED.ingredients.find(
+    row => row.key === announcedDetail.value?.canGatherIngredientKey
+  ));
+  const board = computed(() => ingredientColumns(detail.value?.ingredients ?? []));
+  const rate = (value?: number) => typeof value === 'number' && Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : '？';
+  const speciesItems = computed(() => DISPLAY_ITEMS.filter(item =>
+    selected.value !== null && item.compatiblePokemonIds?.includes(selected.value)
+  ));
+  const medals = computed(() => friendTiers(detail.value?.medalGroup ?? announcedDetail.value?.medalGroup));
   const stages = computed(() =>
     detail.value ? evolutionStages(detail.value.id) : []
   );
   const homes = computed(() => {
     const poke = detail.value;
+    if (incomplete.value && announcedDetail.value?.islands?.length) {
+      return announcedDetail.value.islands.map(id => gameText(ISLANDS.find(row => row.id === id)?.name ?? id)).join('、');
+    }
+    if (incomplete.value) return '？';
     if (!poke) return translateUi('资料未列');
     return homeText(poke.id, activity.context.value);
   });
@@ -263,67 +274,70 @@
     <p class="muted dex-fixed">{{ list.length }} {{ translateUi('只') }}</p>
     <VirtualPokedex :items="list" @pick="selected = $event" />
     <DrawerSheet
-      v-if="announcedDetail"
-      :title="gameText(announcedDetail.name)"
-      @close="selected = null"
-    >
-      <PokeSprite
-        v-if="announcedDetail.imageId"
-        :id="announcedDetail.imageId"
-        :name="announcedDetail.name"
-        large
-      />
-      <p>{{ translateUi('还未公布') }}</p>
-    </DrawerSheet>
-    <DrawerSheet
-      v-if="detail"
-      :title="gameText(detail.name)"
+      v-if="detail || announcedDetail"
+      :title="gameText(detail?.name ?? announcedDetail?.name)"
       @close="selected = null"
     >
       <div class="row">
-        <PokeSprite :id="detail.id" :name="detail.name" large />
+        <PokeSprite
+          v-if="detailImageId !== undefined"
+          :id="detailImageId"
+          :name="detail?.name ?? announcedDetail?.name"
+          :unknown-placeholder="incomplete"
+          large
+        />
+        <span v-else class="big">？</span>
         <div>
           <p class="muted">
-            #{{ detail.id }} · {{ gameText(specialtyLabel(detail.specialty)) }} ·
-            {{ gameText(detail.sleepType) }}
+            #{{ selected }} · {{ detail?.specialty ? gameText(specialtyLabel(detail.specialty)) : '？' }} ·
+            {{ gameText(detail?.sleepType ?? announcedDetail?.sleepType) || '？' }}
           </p>
-          <span v-if="favored(detail.berry)" class="chip"
-            ><BerryIcon :name="detail.berry" small />{{ translateUi('适正') }}
-            {{ gameText(detail.berry) }}</span
+          <span v-if="detailBerry && favored(detailBerry)" class="chip"
+            ><BerryIcon :name="detailBerry" small />{{ translateUi('适正') }}
+            {{ gameText(detailBerry) }}</span
           >
-          <span v-else class="chip"
-            ><BerryIcon :name="detail.berry" small />{{
-              gameText(detail.berry)
+          <span v-else-if="detailBerry" class="chip"
+            ><BerryIcon :name="detailBerry" small />{{
+              gameText(detailBerry)
             }}</span
           >
         </div>
       </div>
       <p>
-        {{ translateUi('间隔') }} {{ detail.interval
-        }}{{ translateUi('s · 持有') }} {{ detail.carry }}
-        {{ translateUi('· 食材') }} {{ (detail.ingredientRate * 100).toFixed(1)
-        }}{{ translateUi('% · 技能') }}
-        {{ (detail.skillRate * 100).toFixed(1) }}%
+        {{ translateUi('间隔') }} {{ detail?.interval ?? '？'
+        }}{{ translateUi('s · 持有') }} {{ detail?.carry ?? announcedDetail?.carry ?? '？' }}
+        {{ translateUi('· 食材') }} {{ rate(detail?.ingredientRate)
+        }}{{ translateUi('% · 技能').replace(/^%/, '') }}
+        {{ rate(detail?.skillRate) }}
       </p>
       <button
         type="button"
-        class="btn ghost"
+        class="btn ghost dex-skill-button"
+        v-if="detail?.mainSkill"
         @click="showSkill(detail.mainSkill)"
       >
         <MainSkillIcon :name="detail.mainSkill" decorative />
-        {{ gameText(detail.mainSkill) }} ›
+        <span>{{ gameText(detail.mainSkill) }} ›</span>
       </button>
-      <div class="berry-drop">
-        <BerryIcon :name="detail.berry" large />
+      <p v-else>{{ translateUi('主技能') }} ？</p>
+      <div v-if="detailBerry" class="berry-drop">
+        <BerryIcon :name="detailBerry" large />
         <strong
-          >{{ gameText(detail.berry) }} ×
-          {{ berryCount(detail.specialty) }}</strong
+          >{{ gameText(detailBerry) }} ×
+          {{ detail?.specialty ? berryCount(detail.specialty) : '？' }}</strong
         >
       </div>
+      <p v-else>{{ translateUi('树果') }} ？</p>
+      <p v-if="incomplete && announcedIngredient" class="row">
+        <span>{{ translateUi('已知可收集的食材') }}</span>
+        <IngredientIcon v-if="announcedIngredient.imageId" :id="announcedIngredient.imageId" :name="announcedIngredient.name" :image-file="announcedIngredient.imageFile" />
+        {{ gameText(announcedIngredient.name) }}
+      </p>
       <div class="ing-board">
         <section v-for="(col, i) in board" :key="i" class="ing-col">
           <h3>LV {{ INGREDIENT_GATES[i] }}</h3>
           <div class="ing-col-items">
+            <span v-if="!col.length && !detail?.ingredients?.length" class="ing-token">？</span>
             <div
               v-for="cell in col"
               :key="`${cell.letter}-${cell.id}`"
@@ -339,6 +353,12 @@
           </div>
         </section>
       </div>
+      <div v-if="speciesItems.length" class="stack">
+        <div v-for="item in speciesItems" :key="item.id" class="row">
+          <FallbackImage v-if="item.icon" :src="item.icon" :alt="gameText(item.name)" style="width: 2rem; height: 2rem" />
+          <span>{{ gameText(item.name) }}</span>
+        </div>
+      </div>
       <section class="evo-chain">
         <h3>{{ translateUi('进化') }}</h3>
         <div v-if="stages.length > 1" class="evo-stages">
@@ -350,7 +370,7 @@
                 :key="node.id"
                 type="button"
                 class="evo-node"
-                :class="{ on: node.id === detail.id }"
+                :class="{ on: node.id === selected }"
                 @click="selected = node.id"
               >
                 <PokeSprite :id="node.id" :name="node.name" />
@@ -362,12 +382,12 @@
             </div>
           </template>
         </div>
-        <p v-else class="muted">{{ translateUi('不会进化') }}</p>
+        <p v-else class="muted">{{ !incomplete ? translateUi('不会进化') : '？' }}</p>
       </section>
       <div class="friend-block">
         <p>
           {{ translateUi('友好度') }}
-          <span class="rose">♥ {{ detail.friendship }}</span>
+          <span class="rose">♥ {{ detail?.friendship ?? announcedDetail?.friendship ?? '？' }}</span>
         </p>
         <div v-if="medals.length" class="friend-tiers">
           <span
@@ -380,12 +400,12 @@
             <em>{{ translateUi(tier.label) }}</em>
           </span>
         </div>
-        <p v-else class="muted">
+        <p v-else-if="detail?.medalGroup === null" class="muted">
           {{ translateUi('没有友情徽章，捕捉不会锁定金色副技能。') }}
         </p>
       </div>
       <p class="muted">{{ translateUi('出现：') }}{{ homes }}</p>
-      <p v-if="mythicalSeed(detail.id)">
+      <p v-if="detail && mythicalSeed(detail.id)">
         {{ translateUi('捕捉后获得') }}
         <span class="chip">{{ mythicalSeed(detail.id) }}</span>
       </p>
@@ -394,6 +414,21 @@
 </template>
 
 <style scoped>
+  .dex-skill-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    line-height: 1.35;
+    white-space: normal;
+  }
+  .dex-skill-button > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
   .dex-pane {
     flex: 1;
     min-height: 0;

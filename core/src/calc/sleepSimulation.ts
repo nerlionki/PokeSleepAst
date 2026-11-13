@@ -1,7 +1,8 @@
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
-import { activityValues, createActivityContext, type ActivityContext } from './activities'
+import { activityValues, researchActivity, sameResearchAvailability, type ResearchActivityContext } from './activities'
+import { pendingResearchPokemon } from './researchAvailability'
 import { normalizeEventMix } from './sleepRules'
 import type { IslandId, SleepType } from '../types'
 import { encounterCount, sleepExpect, sleepExpectSteps, type SleepExpectCheckpoint, type DrawOpts } from './sleep'
@@ -20,13 +21,13 @@ export interface SleepSimulationRequest {
   seed: number
   options: Pick<DrawOpts, 'campTicket' | 'activity' | 'researchedBefore' | 'researchSession' | 'researchLimit' | 'firstResearchExtras' | 'rank' | 'discovered' | 'undiscoveredBoost' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps' | 'researchExpBonus' | 'shardBonus' | 'focusIncense' | 'luckIncense'> & { incenseSession?: 0 | 1 }
 }
-export interface SleepSimulationCheckpoint { version: 6, activity?: ActivityContext, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint }
+export interface SleepSimulationCheckpoint { version: 6, activity?: ResearchActivityContext, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint }
 export type SleepSimulationRows = ReturnType<typeof sleepExpect>
 export type SleepSimulationMessage = { type: 'progress', completed: number, total: number }
   | { type: 'checkpoint', checkpoint: SleepSimulationCheckpoint }
   | { type: 'result', result: SleepSimulationRows } | { type: 'error', message: string }
 function prepareActivityRequest(request: SleepSimulationRequest): SleepSimulationRequest {
-  const activity = createActivityContext('research', request.checkpoint?.activity ?? request.options.activity)
+  const activity = researchActivity(request.checkpoint?.activity ?? request.options.activity, pendingResearchPokemon())
   const effects = activityValues(activity, request.island, undefined, (sleepSimulation_prepareActivityRequest_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: request.options.eventMult ?? 1, eventMix: normalizeEventMix(request.options.eventMix) })
   const changed = effects.drowsyPowerMultiplier !== (request.options.eventMult ?? 1)
   return { ...request, powers: changed ? request.powers.map(power => power / (request.options.eventMult ?? 1) * effects.drowsyPowerMultiplier) : request.powers,
@@ -70,16 +71,16 @@ export function* sleepSimulationSteps(request: SleepSimulationRequest): Generato
   request = prepareActivityRequest(request)
   if (!validResearchOptions(request) || !Number.isInteger(request.iterations) || request.iterations < 1 || request.iterations > sleepSimulation_sleepSimulationSteps_ruleParameters.maxIterations
     || !request.powers.length || request.powers.length > 2 || request.powers.some((power) => !Number.isFinite(power) || power < 0)) throw new Error('模拟参数无效，请重新设置')
-  const checkpoint = request.checkpoint
-  if (checkpoint && checkpoint.version !== 6) throw new Error('睡姿抽选规则已更新，请重新计算')
+  if (request.checkpoint && request.checkpoint.version !== 6) throw new Error('睡姿抽选规则已更新，请重新计算')
+  const checkpoint = sameResearchAvailability(request.checkpoint?.activity, request.options.activity) ? request.checkpoint : undefined
   const result = [...(checkpoint?.result ?? [])]
   for (let index = checkpoint?.powerIndex ?? 0; index < request.powers.length; index++) {
     const steps = sleepExpectSteps(request.island, request.sleepType, request.powers[index]!, request.iterations, 'normal',
       researchOptions(request, index), undefined, index === checkpoint?.powerIndex ? checkpoint.session : undefined)
     let next = steps.next()
-    while (!next.done) { yield { version: 6, activity: request.options.activity as ActivityContext, powerIndex: index, result, session: next.value }; next = steps.next() }
+    while (!next.done) { yield { version: 6, activity: request.options.activity as ResearchActivityContext, powerIndex: index, result, session: next.value }; next = steps.next() }
     result.push(...next.value)
-    yield { version: 6, activity: request.options.activity as ActivityContext, powerIndex: index + 1, result }
+    yield { version: 6, activity: request.options.activity as ResearchActivityContext, powerIndex: index + 1, result }
   }
   return result
 }

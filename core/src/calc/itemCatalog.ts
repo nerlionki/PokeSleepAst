@@ -7,6 +7,11 @@ export interface GameItem<Id extends number | PokemonItemId = number> {
   name: string
   category: string
   imageFile: string
+  sharedImageId?: number
+  usage?: string
+  /** Index 0 corresponds to research rank 1. */
+  dreamShardsByResearchRank?: number[]
+  compatiblePokemonIds?: number[]
   pokemonItem?: { kind: 'incense'; pokemonId: number; typeId: number } | { kind: 'candy'; pokemonId: number }
   /** 常驻商店按单件折算的钻石售价；缺省表示无单买价资料。 */
   diamondPrice?: number
@@ -19,7 +24,7 @@ export interface GameItem<Id extends number | PokemonItemId = number> {
   useEffect?: { op: 'heal'; amount: number; energyCap: number; ignoreNegativeNature: boolean }
 }
 export const ITEM_CATALOG = tables.modules.items.catalog as unknown as GameItem[]
-const { pokemonCatalog = [] } = tables.modules.items as unknown as { pokemonCatalog?: GameItem<PokemonItemId>[] }
+export const { pokemonCatalog = [] } = tables.modules.items as unknown as { pokemonCatalog?: GameItem<PokemonItemId>[] }
 export const ITEM_ROLES = tables.modules.items.roles
 export function itemById(id: number | PokemonItemId) {
   return typeof id === 'number' ? ITEM_CATALOG.find(item => item.id === id) : pokemonCatalog.find(item => item.id === id)

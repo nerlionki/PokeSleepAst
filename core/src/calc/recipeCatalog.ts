@@ -31,7 +31,7 @@ export const RECIPE_CATALOG: RecipeDisplayRow[] = [
       category: categoryIds[row.category] ?? row.category,
       pot: row.totalIngredientCount,
       baseEnergy: row.baseEnergy,
-      bonus: null,
+      bonus: typeof row.bonus === 'number' ? row.bonus : null,
       mix: false,
       ingredients: row.ingredients.map(name => ({
         id:

@@ -5,7 +5,7 @@ import { cloneData } from './dataClone'
 import { ISLANDS, POKEDEX, SLEEP_STYLES, pokeById } from './data'
 import { familyOf } from './candyPlan'
 import { styleKey } from './sleep'
-import { activitySleepStyles, activityValues, createActivityContext, type ActivitySelection } from './activities'
+import { researchActivity, researchSleepStyles, activityValues, type ResearchActivitySelection } from './activities'
 import type { IslandId } from '../types'
 const catch_config_extracted0 = extracted0.modules.catch
 const catch_config_extracted1 = extracted1.modules.catch
@@ -76,10 +76,10 @@ export function recommendIslands(
   goals: CatchGoal[],
   weights: { catch?: number, candy?: number } = {},
   discovered: readonly string[] = [],
-  activity?: ActivitySelection,
+  activity?: ResearchActivitySelection,
 ): CatchIslandPick[] {
-  const context = createActivityContext('research', activity)
-  const styles = activitySleepStyles(SLEEP_STYLES, context)
+  const context = researchActivity(activity)
+  const styles = researchSleepStyles(SLEEP_STYLES, context)
   const starsOnIsland = new Map<string, Map<number, number[]>>()
   for (const style of styles) {
     if (style.stars < 1 || style.stars > (catch_module_runtimeParameters.p001 as 4)) continue
@@ -88,7 +88,8 @@ export function recommendIslands(
     map.set(style.pokeId, [...new Set([...(map.get(style.pokeId) ?? []), style.stars])])
   }
   const found = new Set(discovered)
-  const targets = mergeGoals(goals)
+  const eligibleIds = new Set(styles.map(style => style.pokeId))
+  const targets = mergeGoals(goals.filter(goal => eligibleIds.has(goal.pokeId)))
   const picks: CatchIslandPick[] = []
 
   for (const island of ISLANDS) {
@@ -154,7 +155,7 @@ export function recommendIslands(
   })
 }
 
-export function recommendThree(goals: CatchGoal[], discovered: readonly string[] = [], modes: readonly string[] = CATCH_MODES.map((mode) => mode.id), activity?: ActivitySelection) {
+export function recommendThree(goals: CatchGoal[], discovered: readonly string[] = [], modes: readonly string[] = CATCH_MODES.map((mode) => mode.id), activity?: ResearchActivitySelection) {
   return CATCH_MODES.filter((mode) => modes.includes(mode.id)).map((mode) => ({
     id: mode.id,
     name: mode.name,

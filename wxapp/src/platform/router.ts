@@ -23,6 +23,11 @@ export function activatePage(page: string) {
   route.query = queries.get(page) ?? {}
   void restorePageScroll()
 }
+export function commitPageQuery(page: string, query: Record<string, string>) {
+  const next = { ...query }
+  queries.set(page, next)
+  if (route.name === page) route.query = next
+}
 export function useRoute() { return route }
 export function useRouter() {
   async function navigate(target: { path?: string; name?: string; query?: Record<string, string> }) {

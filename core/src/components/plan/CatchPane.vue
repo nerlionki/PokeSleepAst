@@ -12,7 +12,10 @@ import { CATCH_MODES, recommendThree, type CatchGoal, type CatchPurpose } from '
 import { resolvedSleepdex, sleepdexState } from '../../calc/sleep'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
+import { useEncounterActivity } from '../../composables/useEncounterAvailability'
 import { useActivities } from '../../composables/useActivities'
+import { researchSleepStyles } from '../../calc/activities'
+import { SLEEP_STYLES } from '../../calc/data'
 import PokePicker from '../shared/PokePicker.vue'
 const components_plan_CatchPane_config_clientDefaults = clientDefaults.modules.components_plan_CatchPane
 
@@ -21,6 +24,8 @@ const planStore = usePlanStore()
 const { plan } = storeToRefs(planStore)
 const { settings } = storeToRefs(useSettingsStore())
 const activity = useActivities(settings, () => settings.value.island)
+const research = useEncounterActivity(activity.context)
+const eligibleIds = computed(() => [...new Set(researchSleepStyles(SLEEP_STYLES, research.value).map(style => style.pokeId))])
 const columns = shallowRef<ReturnType<typeof recommendThree> | null>((components_plan_CatchPane_config_clientDefaults["columnsInitial"] as unknown as ReturnType<typeof recommendThree> | null))
 const stamped = shallowRef(components_plan_CatchPane_config_clientDefaults["stampedInitial"])
 const selectedMode = shallowRef(components_plan_CatchPane_config_clientDefaults["selectedModeInitial"])
@@ -32,7 +37,7 @@ const fingerprint = computed(() => JSON.stringify({
   mode: plan.value.sleepdexMode,
   dex: plan.value.sleepdex,
   excluded: plan.value.sleepdexExcluded,
-  activity: activity.context.value,
+  activity: research.value,
 }))
 const dirty = computed(() => stamped.value !== '' && stamped.value !== fingerprint.value)
 
@@ -71,7 +76,7 @@ function coverage(pokeId: number) {
 }
 
 function generate() {
-  columns.value = recommendThree(plan.value.catchGoals, discovered.value, [selectedMode.value], activity.context.value)
+  columns.value = recommendThree(plan.value.catchGoals, discovered.value, [selectedMode.value], research.value)
   stamped.value = fingerprint.value
 }
 
@@ -93,13 +98,14 @@ function purposeLabel(purpose: CatchPurpose) {
     </div>
     <div class="row">
       <button class="btn" type="button" @click="addGoal">{{ translateUi("新增目标") }}</button>
-      <button class="btn sage" type="button" :disabled="!plan.catchGoals.length" @click="generate">{{ translateUi("生成推荐") }}</button>
+      <button class="btn sage" type="button" :disabled="!plan.catchGoals.some(goal => eligibleIds.includes(goal.pokeId))" @click="generate">{{ translateUi("生成推荐") }}</button>
     </div>
     <p v-if="columns && dirty" class="amber">{{ translateUi("目标或推荐类型已修改，请重新生成") }}</p>
     <article v-for="(goal, index) in plan.catchGoals" :key="goal.id" class="card plan-goal">
       <div class="plan-goal-top">
         <span class="muted">{{ index + 1 }}</span>
-        <PokePicker v-model="goal.pokeId" />
+        <PokePicker v-model="goal.pokeId" :allowed-ids="eligibleIds" />
+        <p v-if="!eligibleIds.includes(goal.pokeId)" class="muted">{{ translateUi("此目标暂不可参与抽选") }}</p>
         <select v-model="goal.purpose" :aria-label="translateUi('用途')">
           <option value="catch">{{ translateUi("捕捉") }}</option>
           <option value="sleep">{{ translateUi("睡姿") }}</option>

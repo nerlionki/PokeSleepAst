@@ -8,6 +8,7 @@ import { skillByPokedexName } from './mainSkills'
 import { foldText } from './text'
 import { ingredientKey, migrateCatalogCounts, recipeKey } from './catalogIds'
 import type { SleepStyleRow } from './data'
+import { hasResearchDpr, pendingResearchPokemon } from './researchAvailability'
 import { NUMERIC_ACTIVITY_EFFECTS, validateActivityCatalog, validateActivityEffects, type NumericActivityField, type ActivityValues, type ActivityOverrides, type ActivityTarget, type ActivityRule, type RecipeEnergyModifier, type ActivityFeature, type ActivityDomain } from '../resources/activityModel'
 export type { NumericActivityField, ActivityValues, ActivityOverrides, ActivityTarget, ActivityRule, RecipeEnergyModifier, ActivityFeature, ActivityDomain } from '../resources/activityModel'
 const activities_localActivityDate_runtimeParameters = runtimeParameters.modules.activities.localActivityDate.values
@@ -25,6 +26,31 @@ export interface Activity extends ActivityPhase { id: string, name: string, sour
 export interface ActivityCatalog { schemaVersion: 1 | 2, modelVersion?: number, requiredCapabilities?: string[], version: string, activities: Activity[] }
 export interface ActivitySelection { startDate?: string, overrides?: ActivityOverrides, catalog?: ActivityCatalog, teamPokemonIds?: number[], tutorial?: boolean, measurementStartedAt?: string }
 export interface ActivityContext extends ActivitySelection { startDate: string, catalog: ActivityCatalog }
+export interface ResearchActivitySelection extends ActivitySelection {
+  includeUnreleasedPokemon?: boolean
+  pendingPokemon?: number[]
+}
+export type ResearchActivityContext = ActivityContext & ResearchActivitySelection
+
+export function researchActivity(selection?: ResearchActivitySelection, pending = selection?.pendingPokemon ?? pendingResearchPokemon()): ResearchActivityContext {
+  const context = createActivityContext('research', selection)
+  if (selection?.pendingPokemon === pending && context === selection) return context
+  return {
+    ...context,
+    includeUnreleasedPokemon: selection?.includeUnreleasedPokemon === true,
+    pendingPokemon: pending,
+  }
+}
+
+export function researchSleepStyles(base: readonly SleepStyleRow[], context: ResearchActivityContext) {
+  const excluded = new Set(context.includeUnreleasedPokemon ? [] : context.pendingPokemon ?? pendingResearchPokemon())
+  return activitySleepStyles(base, context).filter(style => hasResearchDpr(style) && !excluded.has(style.pokeId))
+}
+
+export function sameResearchAvailability(left?: ResearchActivitySelection, right?: ResearchActivitySelection) {
+  return left?.includeUnreleasedPokemon === right?.includeUnreleasedPokemon
+    && JSON.stringify(left?.pendingPokemon) === JSON.stringify(right?.pendingPokemon)
+}
 export interface ActivityPokemon { id: number, berryType: string, specialty: string, name?: string, mainSkill?: string }
 const fields = Object.keys(NUMERIC_ACTIVITY_EFFECTS) as NumericActivityField[]
 function validDate(value: unknown): value is string { return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value }

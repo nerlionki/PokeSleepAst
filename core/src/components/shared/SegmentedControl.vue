@@ -12,7 +12,7 @@ const model = defineModel<T>({ required: true })
 <template>
   <div :id="guideId" class="seg" role="group" :style="{ gridTemplateColumns: `repeat(${Math.max(1, Math.min(options.length, 4))}, minmax(0, 1fr))` }">
     <button v-for="opt in options" :key="opt.id" :id="guideId ? `${guideId}-${opt.id}` : undefined" type="button" :disabled="disabled || opt.disabled" :aria-pressed="model === opt.id" :class="{ on: model === opt.id }" @click="model = opt.id">
-      {{ translateUi(opt.label) }}
+      <span>{{ translateUi(opt.label) }}</span>
     </button>
   </div>
 </template>

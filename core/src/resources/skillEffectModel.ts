@@ -26,6 +26,15 @@ export function validateMainSkillModels(data: Record<string, unknown>) {
   for (const item of items.catalog) {
     valid(positiveInt(item.id) && !itemIds.has(item.id) && typeof item.name === 'string' && item.name.trim()
       && typeof item.category === 'string' && item.imageFile === `items/${item.id}.webp`, '道具 ID 或图片无效')
+    if (item.usage !== undefined) valid(typeof item.usage === 'string' && item.usage.trim(), '道具用途无效')
+    if (item.compatiblePokemonIds !== undefined) valid(Array.isArray(item.compatiblePokemonIds)
+      && item.compatiblePokemonIds.every(positiveInt) && new Set(item.compatiblePokemonIds).size === item.compatiblePokemonIds.length, '适用宝可梦 ID 无效')
+    if (item.sharedImageId !== undefined) valid(positiveInt(item.sharedImageId) && item.sharedImageId !== item.id
+      && items.catalog.some((source: any) => source.id === item.sharedImageId && source.sharedImageId === undefined), '道具共用图片无效')
+    if (item.dreamShardsByResearchRank !== undefined) {
+      const yields = item.dreamShardsByResearchRank
+      valid(Array.isArray(yields) && yields.length === 70 && yields.every(positiveInt), '梦之块兑换表无效')
+    }
     itemIds.add(item.id)
     if (item.maxHeld != null) valid(positiveInt(item.maxHeld), '道具持有上限无效')
     if (item.useEffect != null) valid(item.useEffect.op === 'heal' && finite(item.useEffect.amount) && item.useEffect.amount >= 0

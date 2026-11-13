@@ -85,8 +85,8 @@ export const usePlanStore = defineStore('plans', () => {
       candyStocks: migrateCandyStocks(saved.candyStocks ?? {}),
       whistle: normalizeWhistleOptions(saved.whistle),
       splitSleep: normalizeSplitOptions(saved.splitSleep),
-      babyEfficiency: validateBabyEfficiency(babyEfficiency) ? { ...DEFAULT_BABY_EFFICIENCY } : babyEfficiency,
-      completionEfficiency: validateBabyEfficiency(completionEfficiency) ? { ...DEFAULT_COMPLETION_EFFICIENCY, selectionMode } : completionEfficiency,
+      babyEfficiency: validateBabyEfficiency(babyEfficiency, false) ? { ...DEFAULT_BABY_EFFICIENCY } : babyEfficiency,
+      completionEfficiency: validateBabyEfficiency(completionEfficiency, false) ? { ...DEFAULT_COMPLETION_EFFICIENCY, selectionMode } : completionEfficiency,
     }
     ready.value = true
   }

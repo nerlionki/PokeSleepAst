@@ -5,7 +5,7 @@ import { localImage } from '#platform/images'
 import { pokeById } from '../../calc/data'
 import { ribbonStage } from '../../calc/ribbon'
 import { pokemonIconUrl, pokemonPortraitUrl, pokemonShinyIconUrl, pokemonShinyPortraitUrl } from '../../calc/raeImage'
-const props = defineProps<{ id: number; name?: string; large?: boolean; shiny?: boolean; ribbonHours?: number }>()
+const props = defineProps<{ id: number; name?: string; large?: boolean; shiny?: boolean; ribbonHours?: number; unknownPlaceholder?: boolean }>()
 const ribbon = computed(() => ribbonStage(props.ribbonHours ?? 0))
 const ribbonSrc = computed(() => ribbon.value ? localImage(`ribbon/${ribbon.value}.webp`) : '')
 const ribbonLabel = computed(() => translateUi('{hours} 小时睡饱饱勋章', { hours: ribbon.value }))
@@ -29,7 +29,7 @@ function onError() {
 <template>
   <div class="sprite sprite-frame" :class="{ lg: large }">
     <img v-if="src && !failed" class="sprite-image" loading="lazy" decoding="async" :src="src" :alt="label" @error="onError">
-    <span v-else class="sprite-label">{{ label }}</span>
+    <span v-else class="sprite-label" :class="{ 'sprite-unknown': unknownPlaceholder }">{{ unknownPlaceholder ? '？' : label }}</span>
     <span v-if="showShinyMark" class="sprite-shiny" :aria-label="translateUi('闪光')">{{ translateUi("闪") }}</span>
     <img v-if="ribbonSrc" class="sprite-ribbon" :src="ribbonSrc" :alt="ribbonLabel" :title="ribbonLabel" decoding="async">
   </div>
@@ -39,5 +39,6 @@ function onError() {
 .sprite-image { width: 100%; height: 100%; object-fit: contain; }
 .sprite-ribbon { position: absolute; top: -2px; right: -2px; width: 44%; height: 44%; object-fit: contain; pointer-events: none; z-index: 1; }
 .sprite-label { font-size: 12px; text-align: center; overflow-wrap: anywhere; }
+.sprite-unknown { font-size: 1.5em; }
 .sprite-shiny { position: absolute; top: 0; right: 0; font-size: 11px; line-height: 16px; padding: 0 3px; border-radius: 4px; color: var(--on-sage); background: var(--sage); }
 </style>

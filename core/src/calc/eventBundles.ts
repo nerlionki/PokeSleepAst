@@ -50,6 +50,11 @@ export function parseEventBundles(value: unknown, archive = false): EventBundleC
   const date = (value: string) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
   const text = (value: unknown) => typeof value === 'string' && value.trim().length > 0
   const dateTime = (value: string) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value) && Number.isFinite(Date.parse(value))
+  const officialSourceUrl = (url: string) => {
+    if (/^https:\/\/www\.pokemonsleep\.net\//.test(url)) return true
+    const wrapped = url.match(/^https:\/\/web\.archive\.org\/web\/\d+(?:id_)?\/(https:\/\/www\.pokemonsleep\.net\/.*)$/)
+    return wrapped != null && /^https:\/\/www\.pokemonsleep\.net\//.test(wrapped[1])
+  }
   const ids = new Set<string>()
   if (!data || data.schemaVersion !== 1 || !Array.isArray(data.bundles) || !data.bundles.every(row => {
     if (!row || !text(row.id) || ids.has(row.id)) return false
@@ -72,7 +77,7 @@ export function parseEventBundles(value: unknown, archive = false): EventBundleC
           && Number.isSafeInteger(item.pokemonIncense.typeId) && item.pokemonIncense.typeId >= 1 && item.pokemonIncense.typeId <= 18))
       && (row.valuation === undefined || validBundleValuation(row.valuation, row.items.map(item => item.name)))
       && Array.isArray(row.sources) && row.sources.length > 0 && row.sources.every(source => source && typeof source.url === 'string'
-        && (source.kind === 'official' && /^https:\/\/www\.pokemonsleep\.net\//.test(source.url)
+        && (source.kind === 'official' && officialSourceUrl(source.url)
           || source.kind === 'rae' && /^https:\/\/pks\.raenonx\.cc\//.test(source.url)
           || archive && source.kind === 'wiki' && /^https:\/\/bulbapedia\.bulbagarden\.net\/wiki\//.test(source.url)))
   })) throw Error('活动礼包资料格式无效，请更新资料后重试')

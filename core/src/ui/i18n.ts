@@ -2,6 +2,11 @@ import { readonly, shallowRef } from 'vue';
 import { activeSnapshot } from '../resources/runtime';
 import { loadJson, saveJson } from '../storage';
 import { gameLabel } from './gameLabels';
+import {
+  hasInterfaceTranslations as catalogHasInterfaceTranslations,
+  readCatalog,
+  translate as catalogTranslate
+} from './i18nLookup';
 
 export const languages = [
   { id: 'zh-CN', label: '简体中文' },
@@ -36,62 +41,15 @@ export async function setLanguage(next: Language) {
 type Values = Readonly<Record<string, string | number>>;
 
 function catalog() {
-  const meta = activeSnapshot()?.data['meta.json'] as
-    | {
-        i18n?: {
-          schemaVersion?: number;
-          aliases?: Record<string, string>;
-          locales?: Record<string, { messages?: Record<string, unknown> }>;
-        };
-      }
-    | undefined;
-  return meta?.i18n?.schemaVersion === 1 ? meta.i18n : undefined;
+  return readCatalog(activeSnapshot()?.data['meta.json']);
 }
 
 export function hasInterfaceTranslations(next: Language): boolean {
-  if (next === 'zh-CN') return true;
-  const label = catalog()?.locales?.[next]?.messages?.['界面语言'];
-  return typeof label === 'string' && !!label.trim();
+  return catalogHasInterfaceTranslations(catalog(), next);
 }
 
-const catalogKey = /^(?:活动标题|活动礼包)#/;
-
-function fill(result: string, values?: Values): string {
-  return values
-    ? result.replace(/\{(\w+)\}/g, (token, name: string) =>
-        Object.hasOwn(values, name) ? String(values[name]) : token
-      )
-    : result;
-}
-
-function translate(key: string, values?: Values, scope?: string): string {
-  const data = catalog();
-  const aliases = data?.aliases;
-  const alias =
-    aliases && Object.hasOwn(aliases, key) ? aliases[key] : undefined;
-  let source = typeof alias === 'string' ? alias : key;
-  const messages =
-    selected.value !== 'zh-CN'
-      ? data?.locales?.[selected.value]?.messages
-      : undefined;
-  // A display string can alias back to 活动标题#… / 活动礼包#…. Follow that only when
-  // the locale actually has a translation; otherwise the raw key would replace the text.
-  if (catalogKey.test(source) && !catalogKey.test(key)) {
-    const via = messages?.[source];
-    return fill(typeof via === 'string' && via.trim() ? via : key, values);
-  }
-  const lookup = source.includes('\n')
-    ? source.replace(/\s+/g, ' ').trim()
-    : source;
-  const scopedKey = scope ? lookup + '#' + scope : lookup;
-  const entry =
-    messages && Object.hasOwn(messages, scopedKey)
-      ? messages[scopedKey]
-      : messages && Object.hasOwn(messages, lookup)
-        ? messages[lookup]
-        : undefined;
-  const result = typeof entry === 'string' && entry.trim() ? entry : source;
-  return fill(result, values);
+function translate(key = '', values?: Values, scope?: string): string {
+  return catalogTranslate(catalog(), selected.value, key, values, scope);
 }
 
 export function t(key = '', values?: Values): string {

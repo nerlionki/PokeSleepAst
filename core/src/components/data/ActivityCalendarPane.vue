@@ -3,15 +3,16 @@ import { computed, onActivated, onDeactivated, onMounted, onUnmounted, shallowRe
 import HorizontalStrip from '#platform/HorizontalStrip.vue'
 import { ACTIVITY_CATALOG, localActivityDate, offsetActivityDate, type Activity } from '../../calc/activities'
 import { activityNow, retainActivityClock } from '../../composables/activityClock'
-import { activeSnapshot } from '../../resources/runtime'
+import resourceMeta from '../../data/meta.resource'
 import type { ActivityArchive } from '../../resources/activityArchive'
-import { catalogText, t } from '../../ui/i18n'
+import { catalogText, gameText, t } from '../../ui/i18n'
 import DrawerSheet from '../shared/DrawerSheet.vue'
 import ActivityDetailPane from './ActivityDetailPane.vue'
 
 type CalendarEvent = Activity & { announcedOn?: string | null }
+const props = defineProps<{ q?: string }>()
 const eventTitle = (event: CalendarEvent) => catalogText('活动标题', event.id, event.name)
-const meta = activeSnapshot()?.data['meta.json'] as { activityArchive?: ActivityArchive } | undefined
+const meta: { activityArchive?: ActivityArchive } = resourceMeta as { activityArchive?: ActivityArchive }
 const archive = meta?.activityArchive?.events ?? []
 const currentEvents = ACTIVITY_CATALOG.activities.map(event => ({
   ...event, announcedOn: archive.find(row => row.id === event.id || row.source === event.source)?.announcedOn,
@@ -48,6 +49,14 @@ function occursOn(event: Activity, day: string) {
     && (!event.weekdays || event.weekdays.includes(new Date(day).getUTCDay()))
 }
 
+const query = computed(() => props.q?.trim().toLowerCase() ?? '')
+const matchingEvents = computed(() => {
+  if (!query.value) return events
+  return events.filter(event =>
+    [eventTitle(event), gameText(event.name), event.name]
+      .some(title => title.toLowerCase().includes(query.value))
+  )
+})
 const highlights = computed(() => currentEvents.filter(event => event.endsOn > today.value)
   .sort((a, b) => Number(occursOn(b, today.value)) - Number(occursOn(a, today.value)) || a.startsOn.localeCompare(b.startsOn)))
 const weeks = computed(() => {
@@ -56,7 +65,7 @@ const weeks = computed(() => {
   const result = []
   for (let start = monday; start.slice(0, 7) <= month.value; start = offsetActivityDate(start, 7)) {
     const dates = Array.from({ length: 7 }, (_, index) => offsetActivityDate(start, index))
-    const days = dates.map(date => ({ date, events: events.filter(event => occursOn(event, date)) }))
+    const days = dates.map(date => ({ date, events: matchingEvents.value.filter(event => occursOn(event, date)) }))
     const bars: { event: CalendarEvent; start: number; end: number; lane: number }[] = []
     const laneEnds: number[] = []
     for (let column = 0; column < days.length; column++) {
@@ -95,7 +104,14 @@ function eventTone(event: Activity) {
 <template>
   <section class="stack calendar-pane">
     <h3>{{ t('活动日历') }}</h3>
-    <section class="card stack calendar-summary">
+    <section v-if="query" class="card stack calendar-summary">
+      <button v-for="event in matchingEvents" :key="event.id" class="btn ghost calendar-search-result" type="button" @click="openEvent(event)">
+        <strong>{{ eventTitle(event) }}</strong>
+        <span class="muted">{{ event.startsOn }} – {{ offsetActivityDate(event.endsOn, -1) }}</span>
+      </button>
+      <p v-if="!matchingEvents.length" class="muted">{{ t('没有匹配的活动。') }}</p>
+    </section>
+    <section v-else class="card stack calendar-summary">
       <h3>{{ t('正在进行 / 即将开始') }}</h3>
       <HorizontalStrip v-if="highlights.length" class="calendar-strip">
         <div class="calendar-highlights">
@@ -149,6 +165,7 @@ function eventTone(event: Activity) {
 
 <style scoped>
 .calendar-pane, .calendar-summary { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.calendar-search-result { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .calendar-strip, .calendar-panel { min-width: 0; max-width: 100%; }
 .calendar-highlights { display: flex; width: max-content; gap: 8px; }
 .calendar-highlight {

@@ -3,7 +3,8 @@ import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
-import { ACTIVITY_CATALOG, EVENT_PARAMETERS, activeActivities, activitySleepStyles, activityValues, createActivityContext, assertActivitySupported, hasLegacyShinyUp, type ActivityContext, type ActivitySelection } from './activities'
+import { ACTIVITY_CATALOG, EVENT_PARAMETERS, activeActivities, researchActivity, researchSleepStyles, activityValues, assertActivitySupported, hasLegacyShinyUp, type ActivityContext, type ResearchActivitySelection } from './activities'
+import { hasBaseResearchDpr, hasResearchDpr } from './researchAvailability'
 import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix, type PokemonUps } from './sleepRules'
 import { selectSleepStyle } from './sleepSelection'
 import { isLastRollExcluded } from './sleepLastRoll'
@@ -192,7 +193,7 @@ function prepareStyles(island: IslandId, pool: SleepStyleRow[]): PreparedStyle[]
 
 export interface DrawOpts extends ResearchBonuses {
   campTicket?: boolean
-  activity?: ActivitySelection
+  activity?: ResearchActivitySelection
   activityResolved?: boolean
   teamPokemonIds?: number[]
   tutorial?: boolean
@@ -296,9 +297,9 @@ export function sleepdexState(pokeId: number, discovered: readonly string[]) {
 }
 
 /** 该岛 RAE 地图上的睡姿（含进化型），按评级和睡意之力过滤。 */
-export function unlockedStyles(island: IslandId, sleepType: SleepType, dp: number, rank: string, mode: 'normal' | 'map', activity?: ActivitySelection) {
+export function unlockedStyles(island: IslandId, sleepType: SleepType, dp: number, rank: string, mode: 'normal' | 'map', activity?: ResearchActivitySelection) {
   const need = rankIndex(rank)
-  return activitySleepStyles(SLEEP_STYLES, createActivityContext('research', activity)).filter((s) => {
+  return researchSleepStyles(SLEEP_STYLES, researchActivity(activity)).filter((s) => {
     if (s.limited || s.island !== island) return false
     if (mode === 'normal' && sleepType !== '没有特征' && s.sleepType !== sleepType) return false
     if (styleUnlockIndex(island, s) > need) return false
@@ -313,7 +314,7 @@ export function favoredOnIsland(island: IslandId, berries: string[]) {
     .filter((p): p is NonNullable<typeof p> => !!p && berries.includes(p.berry))
 }
 
-export function fallbackStyle(island: IslandId, sleepType: SleepType): DrawnStyle {
+export function fallbackStyle(island: IslandId, sleepType: SleepType, activity?: ResearchActivitySelection): DrawnStyle {
   const allowed = islandById(island)?.species ?? []
   const species = new Set(allowed)
   const fb = FALLBACKS[island] as Record<string, string> | undefined
@@ -322,7 +323,9 @@ export function fallbackStyle(island: IslandId, sleepType: SleepType): DrawnStyl
       : sleepType === '安然入睡' ? 'snoozing'
         : 'slumbering'
   const named = POKEDEX.find((poke) => foldText(poke.name) === foldText(fb?.[key] ?? '') && species.has(poke.id))
-  const poke = named ?? pokeById(allowed[0] ?? 0)
+  const pending = activity?.pendingPokemon ?? researchActivity(activity).pendingPokemon
+  const eligible = (id: number) => (activity?.includeUnreleasedPokemon || !pending?.includes(id)) && hasBaseResearchDpr(id)
+  const poke = named && eligible(named.id) ? named : pokeById(allowed.find(eligible) ?? 0)
   return {
     pokeId: poke?.id ?? 0,
     name: poke?.name ?? '未知',
@@ -342,13 +345,13 @@ export function sleepDraw(
   opts: DrawOpts = {},
 ): DrawnStyle[] {
   if (!opts.activityResolved) {
-    const activity = createActivityContext('research', { ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt })
+    const activity = researchActivity({ ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt })
     assertActivitySupported(activity, 'research', 240, island, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
     const effects = activityValues(activity, island, undefined, (sleep_sleepDraw_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix) }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
     if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier
     opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
   }
-  const context = createActivityContext('research', opts.activity)
+  const context = researchActivity(opts.activity)
   const n = encounterCount(island, dp)
   const discovered = new Set(opts.discovered ?? [])
   const boost = opts.undiscoveredBoost ?? prefersUndiscovered(context)
@@ -374,7 +377,9 @@ export function sleepDraw(
   }
   const allowRare = opts.rare ?? true
   const eventMix = normalizeEventMix(opts.eventMix) !== 'off' && sleepType !== '没有特征' && (opts.mode ?? mode) !== 'map'
-  const typed = [...(opts.preparedPool ?? prepareStyles(island, opts.pool ?? unlockedStyles(island, sleepType, Infinity, opts.rank ?? rank, opts.mode ?? mode, opts.activity)))]
+  const eligible = (style: SleepStyleRow) => !style.limited && hasResearchDpr(style)
+    && (context.includeUnreleasedPokemon || !context.pendingPokemon?.includes(style.pokeId))
+  const typed = [...(opts.preparedPool ?? prepareStyles(island, opts.pool?.filter(eligible) ?? unlockedStyles(island, sleepType, Infinity, opts.rank ?? rank, opts.mode ?? mode, context)))]
   // User-confirmed model (2026-10-29): camp rolls uniformly over the island's
   // rank-unlocked styles affordable from the INITIAL DPR, independently of the
   // normal draws. No undiscovered/event weighting and no deduction from DPR.
@@ -382,7 +387,7 @@ export function sleepDraw(
   // https://wikiwiki.jp/poke_sleep/どうぐ/いいキャンプチケット
   const campPool = opts.campTicket ? typed.filter(style => style.dpr <= Math.max(0, dp) && (allowRare || !SPECIAL_POKEMON.has(style.pokeId))) : []
   const open = eventMix
-    ? [...(opts.preparedOpenPool ?? prepareStyles(island, opts.openPool ?? unlockedStyles(island, '没有特征', Infinity, opts.rank ?? rank, 'normal', opts.activity)))]
+    ? [...(opts.preparedOpenPool ?? prepareStyles(island, opts.openPool?.filter(eligible) ?? unlockedStyles(island, '没有特征', Infinity, opts.rank ?? rank, 'normal', context)))]
     : typed
   const otherSlots = eventMix ? openSleepSlots(n, opts.eventMix) : 0
   const pools = [...new Set([typed, open])]
@@ -418,13 +423,13 @@ export function sleepDraw(
       if (item.styleName.includes('大肚')) bellyGot = true
       remaining = Math.max(0, remaining - item.dpr)
     }
-    if (!picked) picked = fallbackStyle(island, i < otherSlots ? '没有特征' : sleepType)
+    if (!picked) picked = fallbackStyle(island, i < otherSlots ? '没有特征' : sleepType, context)
     picked.shiny = rollShiny(picked.pokeId)
     got.push(picked)
   }
   if (opts.campTicket) {
     const item = campPool[Math.min(campPool.length - 1, Math.floor(rng() * campPool.length))]
-    const picked: DrawnStyle = item ? { ...item, rare: SPECIAL_POKEMON.has(item.pokeId), undiscovered: !discovered.has(styleKey(item.pokeId, item.stars, item.styleId)) } : fallbackStyle(island, sleepType)
+    const picked: DrawnStyle = item ? { ...item, rare: SPECIAL_POKEMON.has(item.pokeId), undiscovered: !discovered.has(styleKey(item.pokeId, item.stars, item.styleId)) } : fallbackStyle(island, sleepType, context)
     picked.shiny = rollShiny(picked.pokeId)
     got.push(picked)
   }
@@ -443,7 +448,7 @@ export function* sleepExpectSteps(
   onProgress?: (completed: number) => void,
   checkpoint?: SleepExpectCheckpoint,
 ) {
-  const activity = createActivityContext('research', { ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt })
+  const activity = researchActivity({ ...opts.activity, teamPokemonIds: opts.teamPokemonIds ?? opts.activity?.teamPokemonIds, tutorial: opts.tutorial ?? opts.activity?.tutorial, measurementStartedAt: opts.measurementStartedAt ?? opts.activity?.measurementStartedAt })
   assertActivitySupported(activity, 'research', 240, island, opts.researchSession ?? 0)
   const effects = activityValues(activity, island, undefined, (sleep_sleepExpectSteps_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix) }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
   if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier

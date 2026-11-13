@@ -17,7 +17,7 @@ exports.nativePokePickerScroll = function nativePokePickerScroll(source) {
   const end = template.loc.start.offset + body.loc.end.offset
   const content = source.slice(start, end)
   return source.slice(0, start)
-    + '<view class="picker-scroll-viewport"><scroll-view :key="resultsRevision" :scroll-y="true" class="picker-scroll">'
+    + '<view class="picker-scroll-viewport"><scroll-view :scroll-y="true" class="picker-scroll" @touchmove.stop>'
     + content + '</scroll-view></view>' + source.slice(end)
     + `\n<style scoped>
 .picker-scroll-viewport { flex: 1; height: 0; min-height: 0; min-width: 0; position: relative; overflow: hidden; }

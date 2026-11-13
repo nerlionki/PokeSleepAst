@@ -341,12 +341,34 @@ h3 {
   flex: none;
   min-width: 0;
 }
+.page-tab-strip button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
 .seg.plan-tabs button {
   min-height: 44px;
   white-space: normal;
   font-size: var(--font-13);
   line-height: 1.25;
   padding: 6px 4px;
+}
+.fixed-tab-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.fixed-tab-view > .page-tab-strip { position: static; }
+.fixed-tab-view > .picker-search,
+.fixed-tab-view > .btn { flex-shrink: 0; }
+.fixed-tab-view > .tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 .seg button {
   width: 100%;
@@ -429,8 +451,8 @@ h3 {
   background: var(--ink-2);
   border-top: 1px solid var(--line);
   border-radius: 24px 24px 0 0;
-  padding: 16px calc(16px + var(--safe-right)) calc(28px + var(--safe-bottom))
-    calc(16px + var(--safe-left));
+  padding: 16px calc(16px + var(--safe-right, 0px)) calc(28px + var(--safe-bottom, 0px))
+    calc(16px + var(--safe-left, 0px));
   max-height: calc(92dvh - var(--safe-top));
   overflow-x: clip;
   overflow-y: auto;
@@ -444,8 +466,7 @@ h3 {
   height: 100dvh;
   max-height: 100dvh;
   border-radius: 0;
-  padding: var(--safe-top) calc(16px + var(--safe-right))
-    calc(20px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  padding: var(--safe-top, 0px) 0 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
@@ -455,7 +476,8 @@ h3 {
   grid-template-columns: 42px minmax(0, 1fr) 42px;
   align-items: center;
   min-width: 0;
-  padding: 8px 0;
+  padding: 8px calc(16px + var(--safe-right, 0px)) 8px
+    calc(16px + var(--safe-left, 0px));
   background: var(--ink-2);
 }
 .drawer-bar h3 {
@@ -475,9 +497,13 @@ h3 {
   color: var(--text);
 }
 .drawer-body {
+  align-content: start;
+  grid-auto-rows: max-content;
+  grid-template-columns: minmax(0, 1fr);
   overflow-x: clip;
   overflow-y: auto;
-  padding-bottom: 24px;
+  padding: 8px calc(16px + var(--safe-right, 0px))
+    calc(24px + var(--safe-bottom, 0px)) calc(16px + var(--safe-left, 0px));
 }
 
 .sprite {
@@ -516,15 +542,15 @@ h3 {
   z-index: 30;
   align-items: stretch;
   grid-template-rows: minmax(0, 1fr);
+  padding-top: var(--safe-top, 0px);
+  overflow: hidden;
 }
 .picker-sheet {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100vh;
-  height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
+  height: 100%;
+  max-height: 100%;
   min-height: 0;
   overflow: hidden;
 }
@@ -567,7 +593,10 @@ h3 {
   overflow-y: auto;
   overscroll-behavior-y: contain;
 }
-.picker-body > .horizontal-strip {
+.picker-body > .picker-search,
+.picker-body > .picker-filters,
+.picker-body > .horizontal-strip,
+.picker-body > .muted {
   flex: none;
 }
 .picker-body .picker-opts {

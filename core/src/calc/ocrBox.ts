@@ -107,6 +107,8 @@ function nameWord(words: OcrWord[]): OcrWord | null {
 
 export function subskillId(text: string): string {
   let key = ocrFold(text)
+  // 字库会把金色副技能末尾的「獎勵」合并识别成「厅」。
+  if (key === ocrFold('睡眠EXP厅') || key === ocrFold('夢之碎片厅')) key = key.slice(0, -1) + '奖励'
   for (const [pattern, replacement] of compatibilityMaps.modules.ocrMatching.subskillCorrections) key = key.replace(new RegExp(pattern!), replacement!)
   const recurring = compatibilityMaps.modules.ocrMatching.subskillAliases as Record<string, string>
   if (recurring[key] && SUBSKILLS.some(item => item.id === recurring[key])) return recurring[key]
@@ -482,7 +484,8 @@ export interface SpeciesEvidence {
  * 主技能唯一确定家族时，按用户确认的顺序跳过食材筛选；头像仍须确认具体物种。
  */
 export function speciesCandidates(evidence: SpeciesEvidence): number[] {
-  let fitting = POKEDEX
+  // 公告预览可能先有图鉴条目，尚未公布可供 OCR 核对的食材资料。
+  let fitting = POKEDEX.filter(poke => Array.isArray(poke.ingredients) && poke.ingredients.length > 0)
   if (evidence.skill) {
     const skillFitting = fitting.filter(poke => skillBase(poke.mainSkill) === skillBase(evidence.skill!))
     // 未读到主技能或没有匹配家族时，继续用食材、持有和头像。

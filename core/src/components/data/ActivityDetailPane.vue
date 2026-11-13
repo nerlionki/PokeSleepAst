@@ -2,12 +2,7 @@
   import { computed, shallowRef } from 'vue';
   import { offsetActivityDate, type Activity } from '../../calc/activities';
   import { ANNOUNCED } from '../../calc/announcedContent';
-  import {
-    BERRIES,
-    ISLANDS,
-    ingredientById,
-    pokeById
-  } from '../../calc/data';
+  import { BERRIES, ISLANDS, ingredientById, pokeById } from '../../calc/data';
   import { MAIN_SKILLS } from '../../calc/mainSkills';
   import { gameText, t } from '../../ui/i18n';
   import SegmentedControl from '../shared/SegmentedControl.vue';
@@ -15,7 +10,7 @@
   import IngredientIcon from '../shared/IngredientIcon.vue';
   import EventBundlesPane from './EventBundlesPane.vue';
   import ActivityPokemonIcons from './ActivityPokemonIcons.vue';
-  import { activeSnapshot } from '../../resources/runtime';
+  import resourceMeta from '../../data/meta.resource';
   import type {
     ActivityArchive,
     ActivityBonusGroup,
@@ -25,21 +20,14 @@
   } from '../../resources/activityArchive';
 
   const props = defineProps<{ event: Activity; announcedOn?: string | null }>();
-  const meta = activeSnapshot()?.data['meta.json'] as
-    | { activityArchive?: ActivityArchive }
-    | undefined;
+  const meta: { activityArchive?: ActivityArchive } = resourceMeta as { activityArchive?: ActivityArchive };
   const record = computed(() =>
     meta?.activityArchive?.events.find(
-      event => event.id === props.event.id || event.source === props.event.source
+      event =>
+        event.id === props.event.id || event.source === props.event.source
     )
   );
   const areas = computed(() => record.value?.bonusGroups ?? []);
-  const usesStructuredBonuses = computed(
-    () => record.value?.bonusGroups !== undefined
-  );
-  const legacySections = computed(() =>
-    usesStructuredBonuses.value ? [] : (record.value?.bonusSections ?? [])
-  );
   const berries = computed(() => record.value?.berryGroup?.items ?? []);
   const notes = computed(() => record.value?.notes ?? []);
   const encounterUps = computed(() => {
@@ -173,12 +161,14 @@
     ) {
       const value = numberText(typeof part.value === 'number' ? part.value : 0);
       const label = part.text ? t(part.text) : '';
-      if (part.kind === 'multiply') return label ? `${value}x ${label}` : `${value}x`;
-      if (part.kind === 'add') return label ? `+${value} ${label}` : `+${value}`;
+      if (part.kind === 'multiply')
+        return label ? `${value}x ${label}` : `${value}x`;
+      if (part.kind === 'add')
+        return label ? `+${value} ${label}` : `+${value}`;
       return label ? `${label}MAX ${value}` : `MAX ${value}`;
     }
-    if (part.kind === 'text') return t(String(part.value ?? ''));
-    if (part.kind === 'mix') return t(part.value === 'all' ? '全部' : '部分');
+    if (part.kind === 'text') return part.value === '特别出没' ? '' : t(String(part.value ?? ''));
+    if (part.kind === 'mix') return t(part.value === 'all' ? '全部' : '可以遇见全部类型的宝可梦');
     if (part.kind === 'category')
       return t(categoryNames[String(part.value)] ?? String(part.value));
     return '';
@@ -205,7 +195,6 @@
       areas.value.some(area => area.groups.length) ||
       berries.value.length > 0 ||
       notes.value.length > 0 ||
-      legacySections.value.length > 0 ||
       encounterUps.value.length > 0
   );
 </script>
@@ -221,18 +210,6 @@
           {{ t('公告日期') }} {{ announcedOn }}
         </p>
         <p class="announcement-source">{{ event.source }}</p>
-      </section>
-      <section
-        v-for="(section, index) in legacySections"
-        :key="'announcement-' + index"
-        class="card stack"
-      >
-        <h3>{{ section.title }}</h3>
-        <div class="bonus-tags">
-          <span v-for="line in section.lines" :key="line" class="chip">{{
-            line
-          }}</span>
-        </div>
       </section>
       <section
         v-for="(area, areaIndex) in orderedAreas"
@@ -268,18 +245,14 @@
                 />
                 <span>{{ refText(item.ref) }}</span>
               </span>
-              <strong>{{ partsText(item.parts) }}</strong>
+              <strong v-if="partsText(item.parts)">{{ partsText(item.parts) }}</strong>
             </div>
           </div>
         </div>
       </section>
       <section v-if="berries.length" class="card stack">
         <h3>{{ t('喜好树果') }}</h3>
-        <div
-          v-for="(item, index) in berries"
-          :key="index"
-          class="bonus-rule"
-        >
+        <div v-for="(item, index) in berries" :key="index" class="bonus-rule">
           <div class="bonus-row">
             <span>{{ gameText(island(item.island)) }}</span>
             <span class="bonus-berries">
@@ -333,19 +306,6 @@
   }
   .announcement-source {
     overflow-wrap: anywhere;
-  }
-  .bonus-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    min-width: 0;
-  }
-  .bonus-tags .chip {
-    max-width: 100%;
-    height: auto;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    line-height: 1.45;
   }
   .bonus-group h4 {
     margin: 10px 0 2px;

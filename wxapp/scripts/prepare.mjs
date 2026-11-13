@@ -75,10 +75,33 @@ for (const file of walk(core)) {
   const template = require('@vue/compiler-sfc').parse(text).descriptor.template;
   if (template) {
     const edits = [];
+    let needsOverlayPortal = false;
     const hasImage = node =>
       /^(?:\w*Icon|PokeSprite|img)$/.test(node.tag ?? '') ||
       (node.children ?? []).some(hasImage);
     const visit = node => {
+      // Keep fixed dialogs above the native tab content scroll-view.
+      const overlay = node.props?.some(
+        prop => prop.type === 6 && prop.name === 'class' && prop.value?.content.split(/\s+/).includes('overlay')
+      );
+      if (overlay && node.props.some(prop => prop.type === 7 && prop.name === 'back')) {
+        needsOverlayPortal = true;
+        const condition = node.props.find(prop => prop.type === 7 && prop.name === 'if');
+        edits.push({
+          start: node.loc.start.offset,
+          length: 0,
+          value: condition ? `<OverlayPortal ${condition.loc.source}>` : '<OverlayPortal>'
+        }, {
+          start: node.loc.end.offset,
+          length: 0,
+          value: '</OverlayPortal>'
+        });
+        if (condition) edits.push({
+          start: condition.loc.start.offset,
+          length: condition.loc.source.length,
+          value: ''
+        });
+      }
       if (['span', 'em'].includes(node.tag) && hasImage(node)) {
         edits.push({
           start: node.loc.start.offset + 1,
@@ -124,6 +147,9 @@ for (const file of walk(core)) {
       text.slice(0, template.loc.start.offset) +
       content +
       text.slice(template.loc.end.offset);
+    if (needsOverlayPortal) {
+      text = text.replace(/(<script setup[^>]*>)/, "$1\nimport OverlayPortal from '#platform/OverlayPortal.vue'");
+    }
   }
   const tags = [
     ['input', 'WxInput'],
@@ -378,6 +404,7 @@ for (const name of ['det', 'rec']) {
     });
   }
 }
+subPackages.push({ name: 'i18n-pack', root: 'i18n-pack', pages: ['index'] });
 const modelLoaders = subPackages
   .filter(item => item.name.startsWith('ocr-'))
   .map(
@@ -404,6 +431,22 @@ for (const item of subPackages) {
     'export default {}\n'
   );
 }
+await require('esbuild').build({
+  stdin: {
+    contents: `export { gameLabel } from './core/src/ui/gameLabels.ts';
+export { translate, hasInterfaceTranslations } from './core/src/ui/i18nLookup.ts';
+`,
+    resolveDir: root,
+    sourcefile: 'i18n-pack-entry.ts'
+  },
+  outfile: path.join(wxRoot, 'src/i18n-pack/i18n.js'),
+  bundle: true,
+  platform: 'neutral',
+  format: 'cjs',
+  target: 'es2020',
+  minify: true,
+  charset: 'utf8'
+});
 const pages = ['pokemon', 'plan', 'team', 'data', 'profile'];
 const labels = ['宝可梦', '规划', '配队', '资料', '我的'];
 const tabBarItems =

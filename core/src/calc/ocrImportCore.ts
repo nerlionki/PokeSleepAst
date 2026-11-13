@@ -1,4 +1,4 @@
-import { INGREDIENTS, POKEDEX, pokeById } from './data'
+import { INGREDIENTS, pokeById } from './data'
 import { recognize, OcrInferenceError, type OcrSessions, type PixelImage } from './ocrPipeline'
 import { avatarBox, chooseSimilar, headerTextInfo, ingredientQuantityMarks, ingredientRowMarks, matchIngredientSlot, parseCard, planImports, readCarry, readMainSkill, speciesCandidates, splitCards, type OcrWord, type SpeciesEvidence } from './ocrBox'
 import { bestPortraitVariant, crop, diskCrop, ingredientIconCrop, ingredientIconOccluded, ingredientSpriteScores, matchIngredientSprite, portraitScores, resizeRgba, speciesScores, trimOpaque } from './ocrVision'
@@ -38,18 +38,26 @@ async function bestIngredient(shot: PixelImage, urls: { id: number, url: string 
   return matchIngredientSprite(shot, refs)
 }
 
-const portraitCache: { id: number, shiny: boolean, image: PixelImage }[] = []
+type PortraitTemplate = { id: number, shiny: boolean, image: PixelImage }
+const portraitCache = new Map<number, PortraitTemplate[]>()
 
-async function portraitTemplates(): Promise<{ id: number, shiny: boolean, image: PixelImage }[]> {
-  if (portraitCache.length) return portraitCache
-  for (const poke of POKEDEX) {
-    const image = await loadUrl(pokemonPortraitUrl(poke.id))
-    if (image) portraitCache.push({ id: poke.id, shiny: false, image: trimOpaque(image) })
-    if (isAllRounder(poke)) continue
-    const shiny = await loadUrl(pokemonShinyPortraitUrl(poke.id))
-    if (shiny) portraitCache.push({ id: poke.id, shiny: true, image: trimOpaque(shiny) })
+async function portraitTemplates(allowed: Set<number>): Promise<PortraitTemplate[]> {
+  const templates: PortraitTemplate[] = []
+  for (const id of allowed) {
+    let cached = portraitCache.get(id)
+    if (!cached) {
+      cached = []
+      const normalUrl = pokemonPortraitUrl(id)
+      const normal = normalUrl ? await loadUrl(normalUrl) : null
+      if (normal) cached.push({ id, shiny: false, image: trimOpaque(normal) })
+      const shinyUrl = isAllRounder(pokeById(id)) ? '' : pokemonShinyPortraitUrl(id)
+      const shiny = shinyUrl ? await loadUrl(shinyUrl) : null
+      if (shiny) cached.push({ id, shiny: true, image: trimOpaque(shiny) })
+      portraitCache.set(id, cached)
+    }
+    templates.push(...cached)
   }
-  return portraitCache
+  return templates
 }
 
 async function readSpeciesEvidence(image: PixelImage, words: OcrWord[]): Promise<SpeciesEvidence> {
@@ -111,7 +119,7 @@ async function matchPortrait(image: PixelImage, words: OcrWord[]): Promise<{ id:
   if (!box) return null
   const region = crop(image, box.x, box.y, box.size, box.size)
   const shot = diskCrop(region)
-  const templates = (await portraitTemplates()).filter(template => allowed.has(template.id))
+  const templates = await portraitTemplates(allowed)
   const variants = portraitScores(shot, templates)
   const scores = speciesScores(variants)
   const best = scores[0]

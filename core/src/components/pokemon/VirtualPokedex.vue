@@ -6,7 +6,7 @@ import { computed, onMounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import { useListScroll } from '../../composables/useListScroll'
 import { virtualRowHeight, virtualViewportHeight, watchVirtualViewport } from '#platform/virtualGrid'
-const props = defineProps<{ items: readonly { id: number; name: string }[] }>()
+const props = defineProps<{ items: readonly { id: number; name: string; unknownPlaceholder?: boolean }[] }>()
 const emit = defineEmits<{ pick: [id: number] }>()
 const { restoreTop, trackListScroll, resetListScroll } = useListScroll('pokedex')
 const scrollTop = shallowRef(restoreTop.value)
@@ -30,7 +30,7 @@ watch(() => props.items, () => { resetListScroll(); scrollTop.value = 0; revisio
     <div :style="{ height: `${start * ROW_HEIGHT}px` }" aria-hidden="true"></div>
     <div class="poke-wall virtual-dex-grid">
       <button v-for="p in visible" :key="p.id + p.name" type="button" class="poke-wall-cell" @click="emit('pick', p.id)">
-        <PokeSprite :id="p.id" :name="p.name" />
+        <PokeSprite :id="p.id" :name="p.name" :unknown-placeholder="p.unknownPlaceholder" />
         <span>{{ gameText(p.name) }}</span>
       </button>
     </div>

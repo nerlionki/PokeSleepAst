@@ -15,8 +15,11 @@ import TrainPane from '../components/plan/TrainPane.vue'
 import SplitSleepPane from '../components/plan/SplitSleepPane.vue'
 import Segmented from '../components/shared/Segmented.vue'
 import SpPane from '../components/plan/SpPane.vue'
+import { provideEncounterAvailability } from '../composables/useEncounterAvailability'
+import TabContent from '#platform/TabContent.vue'
 
 const tab = usePageTab(['encounter', 'sleep', 'split', 'candy', 'train', 'whistle', 'sp'] as const, 'sleep')
+const { visible: showUnreleasedToggle, includeUnreleasedPokemon } = provideEncounterAvailability(computed(() => tab.value === 'encounter'))
 const route = useRoute()
 const router = useRouter()
 const legacy = computed(() => route.query.encounterVersion === 'legacy' || ['catch', 'baby', 'completion'].includes(String(route.query.tab)))
@@ -29,7 +32,7 @@ const swipe = useTabSwipe(tab, () => (['encounter', 'sleep', 'split', 'candy', '
 </script>
 
 <template>
-  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack plan-view">
+  <div @touchstart.stop="swipe.touchStart" @touchend.stop="swipe.touchEnd" @touchcancel.stop="swipe.touchCancel" class="stack fixed-tab-view">
     <GuideEntry page="plan" :show-trigger="false" />
     <Segmented
       page-tabs
@@ -37,25 +40,31 @@ const swipe = useTabSwipe(tab, () => (['encounter', 'sleep', 'split', 'candy', '
       v-model="tab"
       class="plan-tabs"
       :options="[
-        { id: 'encounter', label: '遇见\n规划' },
-        { id: 'sleep', label: '睡眠\n规划' },
-        { id: 'split', label: '目标\n拆觉' },
-        { id: 'candy', label: '糖果\n增强' },
-        { id: 'train', label: '培养\n规划' },
-        { id: 'whistle', label: '吹哨\n规划' },
-        { id: 'sp', label: 'SP\n计算' },
+        { id: 'encounter', label: '遇见规划' },
+        { id: 'sleep', label: '睡眠规划' },
+        { id: 'split', label: '目标拆觉' },
+        { id: 'candy', label: '糖果增强' },
+        { id: 'train', label: '培养规划' },
+        { id: 'whistle', label: '吹哨规划' },
+        { id: 'sp', label: 'SP 计算' },
       ]"
     />
-    <section v-if="tab === 'encounter'" class="stack">
-      <button class="btn ghost" type="button" @click="switchVersion">{{ legacy ? translateUi("切换至新版") : translateUi("切换至旧版") }}</button>
-      <LegacyEncounterPane v-if="legacy" />
-      <EncounterPane v-else />
-    </section>
-    <SleepPane v-else-if="tab === 'sleep'" />
-    <SplitSleepPane v-else-if="tab === 'split'" />
-    <CandyPane v-else-if="tab === 'candy'" />
-    <WhistlePane v-else-if="tab === 'whistle'" />
-    <TrainPane v-else-if="tab === 'train'" />
-    <SpPane v-else-if="tab === 'sp'" />
+    <CandyPane v-if="tab === 'candy'" />
+    <TabContent v-else :reset-on="legacy ? tab + ':legacy' : tab">
+      <section v-if="tab === 'encounter'" class="stack">
+        <button class="btn ghost" type="button" @click="switchVersion">{{ legacy ? translateUi("切换至新版") : translateUi("切换至旧版") }}</button>
+        <label v-if="showUnreleasedToggle" class="row">
+          <input v-model="includeUnreleasedPokemon" type="checkbox" role="switch">
+          {{ translateUi('未发布宝可梦是否加入抽选') }}
+        </label>
+        <LegacyEncounterPane v-if="legacy" />
+        <EncounterPane v-else />
+      </section>
+      <SleepPane v-else-if="tab === 'sleep'" />
+      <SplitSleepPane v-else-if="tab === 'split'" />
+      <WhistlePane v-else-if="tab === 'whistle'" />
+      <TrainPane v-else-if="tab === 'train'" />
+      <SpPane v-else-if="tab === 'sp'" />
+    </TabContent>
   </div>
 </template>

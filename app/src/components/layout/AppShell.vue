@@ -17,7 +17,6 @@ import { useUpdateStore } from '../../stores/update'
 
 const route = useRoute()
 const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
-const planTab = usePageTab(['encounter', 'catch', 'sleep', 'split', 'baby', 'completion', 'candy', 'train', 'whistle'] as const, 'sleep')
 const settings = useSettingsStore()
 const updater = useUpdateStore()
 const appearance = useAppearanceStore()
@@ -40,7 +39,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'dex-shell': route.name === 'pokemon' && pokemonTab === 'dex', 'candy-shell': route.name === 'plan' && planTab === 'candy' }">
+  <div class="app-shell" :class="{ 'dex-shell': route.name === 'pokemon' && pokemonTab === 'dex', 'fixed-tabs-shell': route.name === 'plan' || route.name === 'data' || route.name === 'team' }">
     <main class="page">
       <RouterView />
     </main>

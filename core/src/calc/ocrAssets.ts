@@ -3,9 +3,10 @@ import { ingredientImageUrl, pokemonPortraitUrl, pokemonShinyPortraitUrl } from 
 import type { ImportAssets } from './ocrWorker'
 import { bundledImage } from '#platform/images'
 export function importAssets(): ImportAssets {
+  const preferred = (url: string) => bundledImage(url) || url
   return {
-    ingredients: Object.fromEntries(INGREDIENTS.map(item => [item.id, bundledImage(ingredientImageUrl(item.id))])),
-    portraits: Object.fromEntries(POKEDEX.map(poke => [poke.id, bundledImage(pokemonPortraitUrl(poke.id))])),
-    shiny: Object.fromEntries(POKEDEX.map(poke => [poke.id, bundledImage(pokemonShinyPortraitUrl(poke.id))])),
+    ingredients: Object.fromEntries(INGREDIENTS.map(item => [item.id, preferred(ingredientImageUrl(item.id))])),
+    portraits: Object.fromEntries(POKEDEX.map(poke => [poke.id, preferred(pokemonPortraitUrl(poke.id))])),
+    shiny: Object.fromEntries(POKEDEX.map(poke => [poke.id, pokemonShinyPortraitUrl(poke.id)])),
   }
 }

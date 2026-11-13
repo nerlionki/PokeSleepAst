@@ -8,7 +8,7 @@
   import clientDefaults from '../../data/client-defaults.resource';
 
   import { useActivities } from '../../composables/useActivities';
-  import { activitySleepStyles } from '../../calc/activities';
+  import { researchActivity, researchSleepStyles } from '../../calc/activities';
   import { computed, ref, watch } from 'vue';
   import { storeToRefs } from 'pinia';
   import { usePlanStore } from '../../stores/plans';
@@ -116,7 +116,7 @@
       components_plan_SplitSleepPane_config_clientDefaults['formErrorInitial']
     );
   const currentStyles = computed(() =>
-    activitySleepStyles(SLEEP_STYLES, activity.context.value)
+    researchSleepStyles(SLEEP_STYLES, researchActivity(activity.context.value))
   );
   const allowedIds = computed(() =>
     kind.value === 'baby'

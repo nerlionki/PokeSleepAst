@@ -3,7 +3,8 @@ import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
-import { ACTIVITY_CATALOG, activitySleepStyles, activityValues, createActivityContext, type ActivitySelection } from './activities'
+import { ACTIVITY_CATALOG, researchActivity, researchSleepStyles, activityValues, type ResearchActivitySelection } from './activities'
+import { pendingResearchPokemon } from './researchAvailability'
 import { activityEfficiencyIsland } from './babyEfficiency'
 import type { IslandId, SleepType } from '../types'
 import { ISLANDS, SLEEP_STYLES } from './data'
@@ -28,7 +29,7 @@ export interface SplitTarget {
 }
 export interface SplitOptions extends SleepDiscoveryOptions {
   campTicket?: boolean
-  activity?: ActivitySelection
+  activity?: ResearchActivitySelection
   island: IslandId
   strength: number
   targets: SplitTarget[]
@@ -42,8 +43,8 @@ export function defaultSplitOptions(): SplitOptions {
   return (cloneData(factory_splitSleep_config_clientFactoryDefaults["defaultSplitOptions"]) as unknown as SplitOptions)
 }
 export const splitTargetKey = (target: SplitTarget) => target.kind === 'baby' ? `baby:${normalizeBabyEfficiencyPokemonId(target.pokeId)}` : `style:${target.style}`
-export function splitTargetStatus(target: SplitTarget, island: IslandId, strength: number, activity?: ActivitySelection) {
-  const style = activitySleepStyles(SLEEP_STYLES, createActivityContext('research', activity)).find(row => row.island === island && row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
+export function splitTargetStatus(target: SplitTarget, island: IslandId, strength: number, activity?: ResearchActivitySelection) {
+  const style = researchSleepStyles(SLEEP_STYLES, researchActivity(activity)).find(row => row.island === island && row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
   const available = target.kind === 'baby' ? babyEfficiencyIslands(target.pokeId, undefined, activity).some(row => row.id === island) : !!style
   const unlockStrength = style ? rankStrength(island, RANK_ORDER[styleUnlockIndex(island, style)]!) : null
   const unlocked = available && (target.kind === 'baby' || (unlockStrength != null && strength >= unlockStrength))
@@ -114,7 +115,7 @@ export interface SplitResult {
   individual: SplitOptimum[]
 }
 interface Session { count: number, probability: number, candies: number[], camp?: Session }
-export interface SplitCheckpoint { version: 2, signature: string, completed: number, sessions: Session[][] }
+export interface SplitCheckpoint { version: 2, signature: string, pendingPokemon?: number[], completed: number, sessions: Session[][] }
 export interface SplitRequest { splitOptions: SplitOptions, checkpoint?: SplitCheckpoint }
 export type SplitMessage = { type: 'checkpoint', checkpoint: SplitCheckpoint } | { type: 'progress', completed: number, total: number } | { type: 'result', result: SplitResult } | { type: 'error', message: string }
 export function splitScore(values: number[], maxima: number[], metrics: SplitMetric[]): number | null {
@@ -143,14 +144,15 @@ function fixedPool(island: EfficiencyIsland, strength: number, mult: number) {
 }
 /** User-approved 100-score search; DPR/rewards stay in the existing shared model. */
 export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoint, SplitResult> {
-  const context = createActivityContext('research', request.splitOptions.activity)
+  const context = researchActivity(request.splitOptions.activity, pendingResearchPokemon())
   const effects = activityValues(context, request.splitOptions.island, undefined, (splitSleep_splitSleepSteps_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: request.splitOptions.eventMult, eventMix: normalizeEventMix(request.splitOptions.eventMix) })
   const options: SplitOptions = { ...JSON.parse(JSON.stringify(request.splitOptions)), activity: context, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
   const error = validateSplitOptions(options)
   if (error) throw new Error(error)
-  const signature = JSON.stringify(options) + (options.campTicket ? ":camp-v1" : "")
-  const checkpoint = request.checkpoint
+  const signature = JSON.stringify({ ...options, activity: { ...context, pendingPokemon: undefined } }) + (options.campTicket ? ":camp-v1" : "")
+  let checkpoint = request.checkpoint
   if (checkpoint && (checkpoint.version !== 2 || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
+  if (checkpoint && JSON.stringify(checkpoint.pendingPokemon) !== JSON.stringify(context.pendingPokemon)) checkpoint = undefined
   const types = options.sleepType === 'all' ? EFFICIENCY_SLEEP_TYPES : [options.sleepType]
   const total = options.targets.length * 100 * types.length
   if (checkpoint && (!Number.isInteger(checkpoint.completed) || checkpoint.completed < 0 || checkpoint.completed > total || checkpoint.sessions.length !== options.targets.length)) throw new Error('拆觉检查点无效，请重新计算')
@@ -198,7 +200,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
         sessions[targetIndex]![offset] = session
         completed++
       }
-      yield { version: 2, signature, completed, sessions }
+      yield { version: 2, signature, pendingPokemon: context.pendingPokemon, completed, sessions }
     }
   }
   const metrics = splitMetrics(options), candidates: SplitCandidate[] = []

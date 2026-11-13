@@ -29,7 +29,7 @@ export function normalizeEncounterGoals(saved: unknown): EncounterGoal[] {
     // Empty/unavailable style selections must remain editable rather than dropping the goal.
     const probe = { ...options, pokeId: DEFAULT_BABY_EFFICIENCY.pokeId }
     delete probe.completionTarget
-    const safeOptions = validateBabyEfficiency(probe) ? { ...defaults, pokeId: options.pokeId, completionTarget: options.completionTarget } : options
+    const safeOptions = validateBabyEfficiency(probe, false) ? { ...defaults, pokeId: options.pokeId, completionTarget: options.completionTarget } : options
     const id = typeof row.id === 'string' && row.id && !ids.has(row.id) ? row.id : newUid()
     ids.add(id)
     return [{ id, purpose: row.purpose, selectionMode: row.selectionMode === 'free' ? 'free' : 'sleepdex', options: safeOptions }]

@@ -2,6 +2,8 @@ import { withResources, resourceRevision, compatibleCheckpoint } from '../../../
 import { requireWorkerSupport } from './compatibility'
 import { workerErrorMessage } from './workerError'
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
+import { researchActivity, sameResearchAvailability } from '../../../core/src/calc/activities'
+import { pendingResearchPokemon } from '../../../core/src/calc/researchAvailability'
 import { validateBabyEfficiency, type BabyEfficiencyCheckpoint, type BabyEfficiencyOptions, type BabyEfficiencyResult, type EfficiencyProgress } from '../../../core/src/calc/babyEfficiency'
 import type { BabyEfficiencyMessage } from '../../../core/src/calc/babyEfficiencyMessages'
 interface SavedTask { resourceRevision?: string; options: BabyEfficiencyOptions, checkpoint?: BabyEfficiencyCheckpoint, progress: EfficiencyProgress }
@@ -32,6 +34,12 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?:
   function cancel() { stop(); notice.value = '已取消计算' }
   async function launch() {
     if (!task || worker || disposed) return
+    const availability = researchActivity(task.options.activity, pendingResearchPokemon())
+    if (!sameResearchAvailability(task.options.activity, availability)) {
+      task.options = { ...task.options, activity: availability }
+      task.checkpoint = undefined
+      progress.value = { percent: 0, island: '', evaluatedStates: 0 }
+    }
     const snapshot = task, active = ++generation
     busy.value = true
     try {
@@ -83,6 +91,7 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?:
   try {
     const saved = wx.getStorageSync?.(STORAGE_KEY) as SavedTask | undefined
     if (saved?.options && compatibleCheckpoint(saved) && !validateBabyEfficiency(saved.options)
+      && Boolean(saved.options.activity?.includeUnreleasedPokemon) === Boolean(options.value.activity?.includeUnreleasedPokemon)
       && saved.options.objective === options.value.objective
       && (options.value.completionTarget == null || saved.options.completionTarget === options.value.completionTarget)) {
       task = saved; progress.value = saved.progress ?? { percent: 0, island: '', evaluatedStates: 0 }; notice.value = '正在恢复上次未完成的计算'; void launch()

@@ -11,7 +11,8 @@
   import { storeToRefs } from 'pinia';
   import { usePlanStore } from '../../stores/plans';
   import { useSettingsStore } from '../../stores/settings';
-  import { useActivities } from '../../composables/useActivities';
+  import { useEncounterActivity } from '../../composables/useEncounterAvailability'
+import { useActivities } from '../../composables/useActivities';
   import {
     newEncounterGoal,
     type EncounterGoal
@@ -22,7 +23,7 @@
     type CatchPurpose
   } from '../../calc/catch';
   import { resolvedSleepdex, styleKey } from '../../calc/sleep';
-  import { activitySleepStyles } from '../../calc/activities';
+  import { researchSleepStyles } from '../../calc/activities';
   import { POKEDEX, SLEEP_STYLES } from '../../calc/data';
   import { BABY_POKEMON_NAMES } from '../../calc/babyEfficiency';
   import EncounterTargetPane from './EncounterTargetPane.vue';
@@ -30,6 +31,7 @@
   const { plan } = storeToRefs(usePlanStore());
   const { settings } = storeToRefs(useSettingsStore());
   const activity = useActivities(settings, () => settings.value.island);
+  const research = useEncounterActivity(activity.context)
   const goals = computed(() => plan.value.encounterGoals);
   const selectedId = shallowRef('');
   const selected = computed(() =>
@@ -42,7 +44,7 @@
   );
   const stamp = shallowRef('');
   const styles = computed(() =>
-    activitySleepStyles(SLEEP_STYLES, activity.context.value)
+    researchSleepStyles(SLEEP_STYLES, research.value)
   );
   const purposeNames: Record<CatchPurpose, string> = {
     catch: '捕捉',
@@ -69,7 +71,7 @@
       goals: catchGoals.value,
       mode: recommendationMode.value,
       dex: resolvedSleepdex(plan.value),
-      activity: activity.context.value
+      activity: research.value
     })
   );
 
@@ -116,7 +118,7 @@
       catchGoals.value,
       resolvedSleepdex(plan.value),
       [recommendationMode.value],
-      activity.context.value
+      research.value
     );
     stamp.value = fingerprint.value;
   }

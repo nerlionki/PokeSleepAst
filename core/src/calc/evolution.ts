@@ -86,6 +86,14 @@ function entry(id: number): EvoEntry | undefined {
   return EVOLUTION[String(id)];
 }
 
+export function pokemonUsingEvolutionItem(itemId: number): number[] {
+  return Object.entries(EVOLUTION)
+    .filter(([, entry]) => entry.next.some(([, conditions]) =>
+      conditions.some(condition => condition[0] === 'item' && condition[1] === itemId)
+    ))
+    .map(([id]) => Number(id));
+}
+
 function rootOf(id: number): number {
   let current = id;
   const seen = new Set<number>();
