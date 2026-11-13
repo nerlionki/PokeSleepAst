@@ -133,6 +133,9 @@
   const list = computed(() =>
     [...knownList.value, ...announced.value].sort(compareDex)
   );
+  const scrollResetKey = computed(() =>
+    JSON.stringify([q.value, spec.value, sleep.value, berry.value, skill.value])
+  );
   const announcedDetail = computed(
     () =>
       ANNOUNCED.pokemon.find(
@@ -272,7 +275,7 @@
       </button>
     </div>
     <p class="muted dex-fixed">{{ list.length }} {{ translateUi('只') }}</p>
-    <VirtualPokedex :items="list" @pick="selected = $event" />
+    <VirtualPokedex :items="list" :scroll-reset-key="scrollResetKey" @pick="selected = $event" />
     <DrawerSheet
       v-if="detail || announcedDetail"
       :title="gameText(detail?.name ?? announcedDetail?.name)"

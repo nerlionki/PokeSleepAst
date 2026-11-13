@@ -6,7 +6,10 @@ import { computed, onMounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import { useListScroll } from '../../composables/useListScroll'
 import { virtualRowHeight, virtualViewportHeight, watchVirtualViewport } from '#platform/virtualGrid'
-const props = defineProps<{ items: readonly { id: number; name: string; unknownPlaceholder?: boolean }[] }>()
+const props = defineProps<{
+  items: readonly { id: number; name: string; unknownPlaceholder?: boolean }[]
+  scrollResetKey: string
+}>()
 const emit = defineEmits<{ pick: [id: number] }>()
 const { restoreTop, trackListScroll, resetListScroll } = useListScroll('pokedex')
 const scrollTop = shallowRef(restoreTop.value)
@@ -23,7 +26,7 @@ const bottom = computed(() => Math.max(0, Math.ceil(props.items.length / 3) - en
 function scroll(event: Event | { detail: { scrollTop: number } }) {
   scrollTop.value = trackListScroll(event)
 }
-watch(() => props.items, () => { resetListScroll(); scrollTop.value = 0; revision.value++ })
+watch(() => props.scrollResetKey, () => { resetListScroll(); scrollTop.value = 0; revision.value++ })
 </script>
 <template>
   <div ref="scrollArea" :key="revision" class="virtual-dex" tabindex="0" :aria-label="translateUi('宝可梦图鉴，滚动查看更多')" @scroll="scroll">

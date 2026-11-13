@@ -3,7 +3,7 @@ import HorizontalStrip from '#platform/HorizontalStrip.vue'
 import { t as translateUi, gameText } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { BERRIES, INGREDIENTS, POKEDEX } from '../../calc/data'
 import { selectionList, toggleChoice, matchesChoice } from '../../calc/multiChoice'
 import { pokeHit } from '../../calc/pokeSearch'
@@ -34,17 +34,22 @@ const sleeps = computed(() => [...new Set(POKEDEX.map((p) => p.sleepType))])
 
 const current = computed(() => POKEDEX.find((p) => p.id === model.value) ?? POKEDEX[0]!)
 
-const list = computed(() => POKEDEX.filter((p) => {
-  if (allowed.value && !allowed.value.has(p.id)) return false
-  if (spec.value.length && !spec.value.some(value => specialtyHit(p.specialty, value))) return false
-  if (!matchesChoice(type.value, p.berryType)) return false
-  if (!matchesChoice(sleep.value, p.sleepType)) return false
-  if (!matchesChoice(berry.value, p.berry) || !matchesChoice(skill.value, p.mainSkill)) return false
-  const ingredients = p.ingredients ?? []
-  if (ing.value.length && !ingredients.some((x) => ing.value.includes(x.name))) return false
-  const extra = [p.berryType, p.berry, p.specialty, p.sleepType, ...ingredients.map((x) => x.name)].join(' ')
-  return pokeHit(p, q.value, extra)
-}).sort(compareDex))
+const list = computed((previous) => {
+  const results = POKEDEX.filter((p) => {
+    if (allowed.value && !allowed.value.has(p.id)) return false
+    if (spec.value.length && !spec.value.some(value => specialtyHit(p.specialty, value))) return false
+    if (!matchesChoice(type.value, p.berryType)) return false
+    if (!matchesChoice(sleep.value, p.sleepType)) return false
+    if (!matchesChoice(berry.value, p.berry) || !matchesChoice(skill.value, p.mainSkill)) return false
+    const ingredients = p.ingredients ?? []
+    if (ing.value.length && !ingredients.some((x) => ing.value.includes(x.name))) return false
+    const extra = [p.berryType, p.berry, p.specialty, p.sleepType, ...ingredients.map((x) => x.name)].join(' ')
+    return pokeHit(p, q.value, extra)
+  }).sort(compareDex)
+  return previous?.length === results.length && results.every((poke, index) => poke === previous[index])
+    ? previous
+    : results
+})
 
 function pick(id: number) {
   model.value = id
@@ -66,6 +71,9 @@ function clearFilters() {
   panel.value = 'none'
 }
 
+const resultsRevision = shallowRef(0)
+// Keep the scroll container mounted when the parent refreshes eligible Pokémon.
+watch([q, spec, type, sleep, ing, berry, skill], () => { resultsRevision.value++ }, { deep: true })
 const filterOn = computed(() => Boolean(spec.value.length || type.value.length || sleep.value.length || ing.value.length || berry.value.length || skill.value.length))
 </script>
 
@@ -120,12 +128,14 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
               <button v-for="item in skills" :key="item" type="button" :class="{ on: skill.includes(item) }" @click="toggleChoice(skill, item, skills)">{{ gameText(item) }}</button>
             </div></HorizontalStrip>
             <p class="muted">{{ list.length }} {{ translateUi("只宝可梦") }}{{ filterOn ? " " + translateUi("· 已筛选") : " " + translateUi("· 食材按可携带种类筛选") }}</p>
-            <div class="picker-results">
+            <div :key="resultsRevision" class="picker-results">
             <div class="poke-grid">
               <button v-for="p in list" :key="p.id + p.name" type="button" class="poke-cell" :class="{ on: p.id === model }" @click="pick(p.id)">
                 <PokeSprite :id="p.id" :name="p.name" />
-                <span>{{ props.nameOverrides?.[p.id] ?? gameText(p.name) }}</span>
-                <em class="berry-name"><BerryIcon :name="p.berry" small />{{ gameText(p.berryType) }}</em>
+                <div class="poke-cell-details">
+                  <span class="poke-cell-name">{{ props.nameOverrides?.[p.id] ?? gameText(p.name) }}</span>
+                  <div class="berry-name poke-cell-berry"><BerryIcon :name="p.berry" small />{{ gameText(p.berryType) }}</div>
+                </div>
               </button>
             </div>
             <p class="muted">{{ translateUi("超梦等部分种类若缺定位/食材，对应筛选不会命中。") }}</p>
