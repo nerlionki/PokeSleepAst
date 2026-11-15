@@ -1,5 +1,5 @@
 import { activeSnapshot } from '../resources/runtime'
-import type { Activity } from './activities'
+import { ACTIVITY_CATALOG, localActivityDate, type Activity } from './activities'
 import { ITEM_CATALOG, itemById, type PokemonItemId } from './itemCatalog'
 import { foldText, textHit } from './text'
 
@@ -98,20 +98,29 @@ export function calendarDate(now: Date): string {
 /** Calendar-day display window is intentionally separate from sales/game-day times. */
 export function visibleEventBundles(catalog: EventBundleCatalog, now: Date, query = ''): EventBundle[] {
   const day = calendarDate(now)
+  const gameDay = localActivityDate(now)
   return catalog.bundles.filter(row => row.announcedOn !== null && row.announcedOn <= day && day <= row.eventEndsOn
     && textHit([row.name, row.eventName, ...row.items.map(item => item.name)].join(' '), query))
-    // Preserve SleepAstCore's editorial order within the same announcement day
-    // (S, M, L, then training bundles); price is not a display-order criterion.
-    .sort((a, b) => (b.announcedOn ?? '').localeCompare(a.announcedOn ?? ''))
+    .map(bundle => {
+      const event = ACTIVITY_CATALOG.activities.find(activity => matchesBundleActivity(bundle, activity))
+      const startsOn = event?.startsOn ?? bundle.saleStartsAt?.slice(0, 10) ?? bundle.eventEndsOn
+      const endsOn = event?.endsOn ?? bundle.saleEndsAt?.slice(0, 10) ?? bundle.eventEndsOn
+      const order = gameDay < startsOn ? 1 : gameDay < endsOn ? 0 : 2
+      return { bundle, startsOn, order }
+    })
+    // Stable sort preserves the catalog's package order on the same start date.
+    .sort((a, b) => a.order - b.order || a.startsOn.localeCompare(b.startsOn))
+    .map(({ bundle }) => bundle)
+}
+
+function matchesBundleActivity(bundle: EventBundle, event: Activity): boolean {
+  return bundle.eventId ? bundle.eventId === event.id
+    : foldText(bundle.eventName) === foldText(event.name) && bundle.announcedOn !== null
+      && bundle.announcedOn < event.endsOn && bundle.eventEndsOn >= event.startsOn
 }
 
 export function bundlesForActivity(catalog: EventBundleCatalog, event: Activity): EventBundle[] {
-  const name = foldText(event.name)
-  return catalog.bundles.filter(bundle =>
-    bundle.eventId ? bundle.eventId === event.id
-      : foldText(bundle.eventName) === name && bundle.announcedOn !== null
-        && bundle.announcedOn < event.endsOn && bundle.eventEndsOn >= event.startsOn,
-  )
+  return catalog.bundles.filter(bundle => matchesBundleActivity(bundle, event))
 }
 
 /** Validate display fields without recalculating their server-owned meaning. */

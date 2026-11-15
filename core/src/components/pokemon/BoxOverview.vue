@@ -128,10 +128,10 @@
   const adjusting = shallowRef(
     components_pokemon_BoxOverview_config_clientDefaults['adjustingInitial']
   );
-  const ingredientId = shallowRef<number | null>(
+  const selectedIngredientKey = shallowRef<string | null>(
     components_pokemon_BoxOverview_config_clientDefaults[
       'ingredientIdInitial'
-    ] as unknown as number | null
+    ] as unknown as string | null
   );
   const visibleRanks = shallowRef(
     components_pokemon_BoxOverview_config_clientDefaults['visibleRanksInitial']
@@ -150,7 +150,7 @@
   );
   const selected = computed(() =>
     overview.value.ingredients.find(
-      ingredient => ingredient.id === ingredientId.value
+      ingredient => ingredient.key === selectedIngredientKey.value
     )
   );
   const rankedBerries = computed(() =>
@@ -167,8 +167,8 @@
       bonuses.helpingBonus > 0 ||
       bonuses.favoredBerries.length > 0
   );
-  function openIngredient(id: number) {
-    ingredientId.value = id;
+  function openIngredient(key: string) {
+    selectedIngredientKey.value = key;
     visibleRanks.value = 20;
   }
   function resetBonuses() {
@@ -339,16 +339,16 @@
       <div class="ingredient-grid">
         <button
           v-for="ingredient in overview.ingredients"
-          :key="ingredient.id"
+          :key="ingredient.key"
           class="ingredient-tile"
           type="button"
           :disabled="!ingredient.rows.length"
           :aria-label="
             ingredient.name + (ingredient.rows.length ? '产量排名' : '暂无产出')
           "
-          @click="openIngredient(ingredient.id)"
+          @click="openIngredient(ingredient.key)"
         >
-          <IngredientIcon :id="ingredient.id" :name="ingredient.name" />
+          <IngredientIcon :id="ingredient.imageId" :name="ingredient.name" :image-file="ingredient.imageFile" />
           <span>{{ gameText(ingredient.name) }}</span>
           <strong
             >{{ formatOverviewAmount(ingredient.rows[0]?.amount)
@@ -370,23 +370,23 @@
       v-if="selected"
       v-back="
         () => {
-          ingredientId = null;
+          selectedIngredientKey = null;
         }
       "
       class="overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="ingredient-ranking-title"
-      @click.self="ingredientId = null"
-      @keydown.esc="ingredientId = null"
+      @click.self="selectedIngredientKey = null"
+      @keydown.esc="selectedIngredientKey = null"
     >
       <section class="sheet stack ingredient-ranking">
         <div class="row">
-          <IngredientIcon :id="selected.id" :name="selected.name" />
+          <IngredientIcon :id="selected.imageId" :name="selected.name" :image-file="selected.imageFile" />
           <h3 id="ingredient-ranking-title">
             {{ gameText(selected.name) }}{{ translateUi('产量排名') }}
           </h3>
-          <button class="btn ghost" type="button" @click="ingredientId = null">
+          <button class="btn ghost" type="button" @click="selectedIngredientKey = null">
             {{ translateUi('关闭') }}
           </button>
         </div>

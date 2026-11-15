@@ -34,7 +34,7 @@ const sleeps = computed(() => [...new Set(POKEDEX.map((p) => p.sleepType))])
 
 const current = computed(() => POKEDEX.find((p) => p.id === model.value) ?? POKEDEX[0]!)
 
-const list = computed((previous) => {
+const list = computed<(typeof POKEDEX)[number][]>((previous) => {
   const results = POKEDEX.filter((p) => {
     if (allowed.value && !allowed.value.has(p.id)) return false
     if (spec.value.length && !spec.value.some(value => specialtyHit(p.specialty, value))) return false

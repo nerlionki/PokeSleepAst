@@ -80,6 +80,32 @@ for (const file of walk(core)) {
       /^(?:\w*Icon|PokeSprite|img)$/.test(node.tag ?? '') ||
       (node.children ?? []).some(hasImage);
     const visit = node => {
+      if (node.tag === 'section' && node.props.some(
+        prop => prop.type === 6 && prop.name === 'class' && prop.value?.content.split(/\s+/).includes('member-editor-sheet')
+      )) {
+        edits.push({
+          start: node.loc.start.offset + node.loc.source.indexOf('>') + 1,
+          length: 0,
+          value: '<scroll-view :scroll-y="true" class="member-editor-scroll"><custom-wrapper><view class="stack member-editor-content">'
+        }, {
+          start: node.loc.end.offset - '</section>'.length,
+          length: 0,
+          value: '</view></custom-wrapper></scroll-view>'
+        });
+      }
+      if (rel === 'components/shared/SpeciesSheet.vue' && node.props?.some(
+        prop => prop.type === 6 && prop.name === 'class' && prop.value?.content === 'poke-wall'
+      )) {
+        edits.push({
+          start: node.loc.start.offset,
+          length: 0,
+          value: '<view class="species-list-viewport"><scroll-view :scroll-y="true" class="species-list-scroll"><custom-wrapper>'
+        }, {
+          start: node.loc.end.offset,
+          length: 0,
+          value: '</custom-wrapper></scroll-view></view>'
+        });
+      }
       // Keep fixed dialogs above the native tab content scroll-view.
       const overlay = node.props?.some(
         prop => prop.type === 6 && prop.name === 'class' && prop.value?.content.split(/\s+/).includes('overlay')
@@ -613,6 +639,15 @@ let css = stripWebCheckboxStyles(
 write(
   path.join(wxRoot, 'src/app.css'),
   css +
+    `
+.sheet.member-editor-sheet { display: block; height: 82vh; max-height: none; padding: 0; overflow: hidden; }
+.member-editor-scroll { height: 100%; width: 100%; }
+.member-editor-content { padding: 16px 16px 28px; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+.member-editor-content .btn { padding: 10px 12px; border-radius: 12px; }
+.sheet.species-sheet { display: flex; flex-direction: column; height: 82vh; max-height: none; overflow: hidden; }
+.species-list-viewport { flex: 1; height: 0; min-height: 0; min-width: 0; position: relative; overflow: hidden; }
+.species-list-scroll { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+` +
     '\npage{padding:0;box-sizing:border-box;font-size:var(--font-16);min-height:100vh;background:var(--ink);background-image:none} view,text,button,input,picker,textarea{box-sizing:border-box} .page{width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding-left:16px;padding-right:16px;padding-bottom:12px} .wx-control{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:var(--font-16);color:var(--text)} .wx-input{height:44px;line-height:24px;padding:10px 12px} .wx-select{padding:10px 12px;min-height:44px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere} .wx-inline{display:inline-flex;align-items:center;gap:4px;min-width:0} .wx-sub-ico{background:transparent;mask-image:none;-webkit-mask-image:none} .wx-textarea{padding:10px 12px} image{display:inline-block} button{line-height:1.5;margin:0} textarea{width:100%;min-height:100px} .source-link{color:var(--sage);margin-right:12px} .wx-settings{margin-bottom:14px}\n'
 );
 console.log(

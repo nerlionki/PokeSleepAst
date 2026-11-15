@@ -147,15 +147,14 @@ const presets = CANDY_PRESETS
     </div>
     </div>
     <div ref="scrollArea" class="stack candy-list" @scroll="candyScroll.trackListScroll" :aria-label="translateUi('糖果增强宝可梦列表')" tabindex="0">
-    <p class="muted">{{ translateUi("同一进化家族共用当前糖果，按行顺序扣。普通培养经验 ×") }}{{ CANDY_BOOSTS.normal.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.normal.shards }}{{ translateUi("，无增强额度限制。大型增强经验 ×") }}{{ CANDY_BOOSTS.christmas.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.christmas.shards }}{{ translateUi("、额度") }} {{ CANDY_BOOSTS.christmas.quota.toLocaleString('zh-CN') }}{{ translateUi("。迷你增强经验 ×") }}{{ CANDY_BOOSTS.mini.exp }}{{ translateUi("、梦碎 ×") }}{{ CANDY_BOOSTS.mini.shards }}{{ translateUi("、额度") }} {{ CANDY_BOOSTS.mini.quota.toLocaleString('zh-CN') }}{{ translateUi("。随时可规划，不受活动日期限制，不含睡眠经验。") }}</p>
-    <article v-for="(row, index) in plan.candyRows" :key="row.id" class="card stack">
+    <article v-for="(row, index) in plan.candyRows" :key="row.id" class="card stack" :class="{ 'candy-row-collapsed': !expandedRows.has(row.id) }">
       <div class="candy-row-top">
         <template v-if="expandedRows.has(row.id)">
           <span class="muted">{{ index + 1 }}</span>
           <PokePicker v-model="row.pokeId" class="candy-row-picker" />
         </template>
         <template v-else>
-          <PokeSprite :id="row.pokeId" :name="pokeById(row.pokeId)?.name" large />
+          <PokeSprite :id="row.pokeId" :name="pokeById(row.pokeId)?.name" />
           <strong class="candy-missing" :class="{ amber: active.results[index]?.missing || active.results[index]?.error }">{{ missingOf(index) }}</strong>
         </template>
         <button
@@ -252,6 +251,7 @@ const presets = CANDY_PRESETS
 .candy-boost-stats { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 10px; min-width: 0; }
 .candy-boost-stat { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; gap: 4px; padding: 10px; font-size: var(--font-12); overflow-wrap: anywhere; }
 .candy-boost-stat p { margin: 0; }
+.candy-row-collapsed { min-height: var(--pokedex-item-height); padding: 8px 14px; align-items: center; }
 .candy-row-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .candy-row-picker, .candy-missing { flex: 1; min-width: 0; }
 .candy-info-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-width: 44px; height: 44px; margin: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: var(--font-12); line-height: 1; white-space: nowrap; }
