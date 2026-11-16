@@ -19,8 +19,8 @@ const list = computed(() => POKEDEX.filter((poke) => pokeHit(poke, q.value)).sor
 
 <template>
   <div v-back="() => emit('close')" class="overlay" @click.self="emit('close')">
-    <section class="sheet stack">
-      <div class="row">
+    <section class="sheet stack species-sheet">
+      <div class="row species-sheet-header">
         <h3>{{ translateUi("添加宝可梦") }}</h3>
         <button class="btn ghost" type="button" @click="emit('close')">{{ translateUi("关闭") }}</button>
       </div>
@@ -35,3 +35,7 @@ const list = computed(() => POKEDEX.filter((poke) => pokeHit(poke, q.value)).sor
     </section>
   </div>
 </template>
+
+<style scoped>
+.species-sheet-header { justify-content: space-between; align-items: center; }
+</style>

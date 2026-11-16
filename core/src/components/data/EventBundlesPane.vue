@@ -134,53 +134,55 @@
       }}
     </p>
     <article v-for="bundle in displayRows" :key="bundle.id" class="card stack">
-      <div class="bundle-heading">
-        <div class="bundle-copy stack">
-          <h3>{{ catalogText('活动礼包', bundle.id, bundle.name) }}</h3>
-          <p>
-            {{ bundle.price.amount.toLocaleString('zh-CN') }}
-            {{ translateUi(bundle.price.unit) }} {{ translateUi('· 限购') }}
-            {{ bundle.purchaseLimit }} {{ translateUi('次') }}
-          </p>
+      <div class="bundle-summary stack">
+        <div class="bundle-heading">
+          <div class="bundle-copy stack">
+            <h3>{{ catalogText('活动礼包', bundle.id, bundle.name) }}</h3>
+            <p>
+              {{ bundle.price.amount.toLocaleString('zh-CN') }}
+              {{ translateUi(bundle.price.unit) }} {{ translateUi('· 限购') }}
+              {{ bundle.purchaseLimit }} {{ translateUi('次') }}
+            </p>
+            <p class="muted">
+              {{
+                catalogText('活动标题', event?.id ?? bundle.eventId, bundle.eventName)
+              }}
+            </p>
+          </div>
+          <div class="bundle-value" :aria-label="translateUi('礼包性价比')">
+            <p>
+              <span class="muted">{{ translateUi('纯球') }} </span
+              ><strong>{{
+                bundle.valuation?.biscuits == null
+                  ? '—'
+                  : `${bundle.valuation.biscuits}×`
+              }}</strong>
+            </p>
+            <p>
+              <span class="muted">{{ translateUi('含道具') }} </span
+              ><strong>{{
+                bundle.valuation?.total == null
+                  ? '—'
+                  : `${bundle.valuation.total}×`
+              }}</strong>
+            </p>
+          </div>
         </div>
-        <div class="bundle-value" :aria-label="translateUi('礼包性价比')">
-          <p>
-            <span class="muted">{{ translateUi('纯球') }} </span
-            ><strong>{{
-              bundle.valuation?.biscuits == null
-                ? '—'
-                : `${bundle.valuation.biscuits}×`
-            }}</strong>
-          </p>
-          <p>
-            <span class="muted">{{ translateUi('含道具') }} </span
-            ><strong>{{
-              bundle.valuation?.total == null
-                ? '—'
-                : `${bundle.valuation.total}×`
-            }}</strong>
-          </p>
-        </div>
+        <p v-if="bundle.saleStartsAt && bundle.saleEndsAt" class="muted">
+          {{
+            translateUi(
+              bundle.saleStartsAt.length > 10 ? '销售：' : '销售日期：'
+            )
+          }}{{ time(bundle.saleStartsAt) }} ～ {{ time(bundle.saleEndsAt) }}
+          <span v-if="bundle.saleStartsAt.length > 10">{{
+            translateUi('（当地时间）')
+          }}</span>
+        </p>
+        <p v-else class="muted">{{ translateUi('销售时间未确认') }}</p>
       </div>
       <p v-if="!bundle.valuation" class="muted">
         {{ translateUi('当前资料包未提供性价比，请更新网络资料后查看。') }}
       </p>
-      <p class="muted">
-        {{
-          catalogText('活动标题', event?.id ?? bundle.eventId, bundle.eventName)
-        }}
-      </p>
-      <p v-if="bundle.saleStartsAt && bundle.saleEndsAt" class="muted">
-        {{
-          translateUi(
-            bundle.saleStartsAt.length > 10 ? '销售：' : '销售日期：'
-          )
-        }}{{ time(bundle.saleStartsAt) }} ～ {{ time(bundle.saleEndsAt) }}
-        <span v-if="bundle.saleStartsAt.length > 10">{{
-          translateUi('（当地时间）')
-        }}</span>
-      </p>
-      <p v-else class="muted">{{ translateUi('销售时间未确认') }}</p>
       <div class="bundle-items">
         <div
           v-for="(
@@ -226,6 +228,13 @@
 </template>
 
 <style scoped>
+  .bundle-summary,
+  .bundle-copy {
+    gap: 4px;
+  }
+  .bundle-summary p {
+    margin: 0;
+  }
   .bundle-heading {
     display: flex;
     align-items: flex-start;
@@ -255,6 +264,7 @@
     font-size: 12px;
   }
   .bundle-items {
+    margin-top: 4px;
     display: grid;
     gap: 4px;
   }

@@ -39,7 +39,7 @@ function toggle(id: number) {
 <template>
   <div>
     <article v-for="i in announced" :key="i.key" class="acc">
-      <DataRow :title="gameText(i.name)" :subtitle="translateUi('能量与详情还未公布')">
+      <DataRow :title="gameText(i.name)" :subtitle="i.baseEnergy == null && i.shards == null ? translateUi('能量与详情还未公布') : translateUi('能量 {arg1} · 梦碎 {arg2}', { arg1: String(i.baseEnergy ?? '？'), arg2: String(i.shards ?? '？') })">
         <template #lead><IngredientIcon v-if="i.imageId != null" :id="i.imageId" :name="i.name" /></template>
         <template #trail><span /></template>
       </DataRow>

@@ -266,7 +266,7 @@ function saveCustomToBox() {
     <SpeciesSheet v-if="adding" @close="adding = false" @pick="addCustom" />
 
     <div v-if="editingPanel" v-back="() => { editing = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="editing = null">
-      <section class="sheet stack">
+      <section class="sheet stack member-editor-sheet">
         <div class="row">
           <h3>{{ customs.some((item) => item.uid === editing) ? translateUi("自定义面板") : translateUi("编辑个体") }}</h3>
         </div>

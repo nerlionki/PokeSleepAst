@@ -54,7 +54,6 @@
   >
     <GuideEntry page="data" :show-trigger="false" />
     <input
-      v-if="tab !== 'recipe'"
       v-model="q"
       class="picker-search"
       :placeholder="translateUi('搜索功能或名称')"
@@ -70,7 +69,7 @@
       <IslandPane v-if="tab === 'island'" :q="q" />
       <BerryPane v-else-if="tab === 'berry'" :q="q" />
       <IngredientPane v-else-if="tab === 'ing'" :q="q" />
-      <RecipePane v-else-if="tab === 'recipe'" />
+      <RecipePane v-else-if="tab === 'recipe'" :q="q" />
       <SkillPane v-else-if="tab === 'skill'" :q="q" />
       <NaturePane v-else-if="tab === 'nature'" :q="q" />
       <PotPane v-else-if="tab === 'pot'" :q="q" />

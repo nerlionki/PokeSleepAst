@@ -11,5 +11,13 @@ const appearance = useAppearanceStore()
 </template>
 
 <style>
-.portal-appearance { color: var(--text); font-family: var(--font-family, sans-serif); font-size: var(--font-16); }
+.portal-appearance {
+  --radius-control: 12px;
+  --control-padding: 10px 12px;
+  --rarity-gold: var(--amber);
+  --rarity-blue: var(--sage);
+  color: var(--text);
+  font-family: var(--font-family, sans-serif);
+  font-size: var(--font-16);
+}
 </style>

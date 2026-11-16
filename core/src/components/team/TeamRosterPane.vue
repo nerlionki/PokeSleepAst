@@ -505,7 +505,7 @@
       class="overlay"
       @click.self="editing = null"
     >
-      <section class="sheet stack">
+      <section class="sheet stack member-editor-sheet">
         <div class="row">
           <h3>
             {{

@@ -4,7 +4,9 @@ import ruleParameters from '../data/rule-parameters.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import type { BoxPokemon, OcrMissingField, IslandId, Settings } from '../types'
-import { BERRIES, INGREDIENTS, pokeById } from './data'
+import { BERRIES, pokeById } from './data'
+import { addIngredient, ingredientKey } from './catalogIds'
+import { INGREDIENT_CATALOG } from './ingredientCatalog'
 import { defaultSettings } from './defaults'
 import { SUBSKILL_GATES, unlockedSubskills } from './member'
 import { normalizeOcrMissing } from './ocrCompletion'
@@ -68,17 +70,27 @@ export function calculateBoxOverview(pokemon: readonly BoxPokemon[], bonuses: Ov
     else {
       const breakdown = breakdownProduceIngredients(output!)
       if (!breakdown) excludedIngredients.push(member)
-      else for (const [name, amount] of Object.entries(breakdown.natural)) {
-        const list = ingredientRanks.get(name) ?? []
-        list.push({ pokemon: member, amount })
-        ingredientRanks.set(name, list)
+      else {
+        const natural: Record<string, number> = {}
+        for (const [name, amount] of Object.entries(breakdown.natural)) {
+          const key = ingredientKey(name)
+          if (key) addIngredient(natural, key, amount)
+        }
+        for (const [key, amount] of Object.entries(natural)) {
+          const list = ingredientRanks.get(key) ?? []
+          list.push({ pokemon: member, amount })
+          ingredientRanks.set(key, list)
+        }
       }
     }
   }
   const sort = (rows: OverviewRank[]) => rows.sort((a, b) => b.amount - a.amount || a.pokemon.uid.localeCompare(b.pokemon.uid))
   return {
     berries: BERRIES.map((berry) => ({ ...berry, rows: sort(berryRanks.get(berry.name) ?? []).slice(0, 3) })),
-    ingredients: INGREDIENTS.map((ingredient) => ({ ...ingredient, rows: sort(ingredientRanks.get(String(ingredient.id)) ?? []) })),
+    ingredients: INGREDIENT_CATALOG.flatMap((ingredient) => {
+      const key = ingredientKey(ingredient.name)
+      return key ? [{ ...ingredient, key, rows: sort(ingredientRanks.get(key) ?? []) }] : []
+    }),
     excludedBerries, excludedIngredients,
   }
 }

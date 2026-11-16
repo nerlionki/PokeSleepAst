@@ -10,6 +10,7 @@
     matchesChoice
   } from '../../calc/multiChoice';
   import { specialtyHit } from '../../calc/specialty';
+  import { nationalDex } from '../../calc/pokedexOrder';
   import { pokeHit } from '../../calc/pokeSearch';
   import { storeToRefs } from 'pinia';
   import { BERRIES, ISLANDS, POKEDEX, SLEEP_STYLES } from '../../calc/data';
@@ -31,7 +32,7 @@
 
   const islandIds = new Set(ISLANDS.map(island => island.id));
   const pokeOf = new Map(POKEDEX.map(poke => [poke.id, poke]));
-  const island = ref<string[]>([settings.value.island]);
+  const island = ref<string[]>([]);
   const nameQuery = shallowRef(
     components_plan_SleepGallery_config_clientDefaults['nameQueryInitial']
   );
@@ -80,7 +81,7 @@
 
   const filtered = computed(() => {
     const found = foundKeys.value;
-    return [
+    const rows = [
       ...activitySleepStyles(SLEEP_STYLES, activity.context.value),
       ...SLEEP_STYLES.filter(style => style.limited)
     ].filter(style => {
@@ -108,6 +109,22 @@
       if (!matchesChoice(sleepType.value, style.sleepType)) return false;
       return true;
     });
+    const cards = new Map<string, { style: (typeof rows)[number]; islands: Set<string>; key: string }>();
+    for (const style of rows) {
+      const face = styleKey(style.pokeId, style.stars, style.styleId);
+      const key = island.value.length ? `${style.island}:${style.id}:${face}` : face;
+      const card = cards.get(key);
+      if (card) {
+        card.islands.add(style.island);
+        if (card.style.limited && !style.limited) card.style = style;
+      } else {
+        cards.set(key, { style, islands: new Set([style.island]), key });
+      }
+    }
+    return [...cards.values()].sort(({ style: a }, { style: b }) =>
+      nationalDex(a.pokeId) - nationalDex(b.pokeId) || a.pokeId - b.pokeId
+        || a.stars - b.stars || (a.styleId ?? 0) - (b.styleId ?? 0)
+    );
   });
 
   const pages = computed(() =>
@@ -118,8 +135,9 @@
     return filtered.value.slice(start, start + PAGE);
   });
 
-  function islandName(id: string) {
-    return gameText(ISLANDS.find(item => item.id === id)?.name ?? id);
+  function islandNames(ids: Set<string>) {
+    return ISLANDS.filter(item => ids.has(item.id))
+      .map(item => gameText(item.name)).join(' · ');
   }
 
   function found(style: { pokeId: number; stars: number; styleId?: number }) {
@@ -177,7 +195,7 @@
     berryType.value = [];
     specialty.value = [];
     sleepType.value = [];
-    island.value = [settings.value.island];
+    island.value = [];
     stars.value = [];
     view.value = 'all';
     panel.value = 'none';
@@ -364,8 +382,8 @@
     </p>
     <div class="style-wall">
       <button
-        v-for="style in slice"
-        :key="style.id"
+        v-for="{ style, islands, key } in slice"
+        :key="key"
         type="button"
         class="style-card"
         :class="{ on: view === 'missing' ? !found(style) : found(style) }"
@@ -389,7 +407,7 @@
         <em v-if="style.limited" class="amber">{{
           translateUi('活动限定睡姿')
         }}</em>
-        <em>{{ islandName(style.island) }}</em>
+        <em>{{ islandNames(islands) }}</em>
       </button>
     </div>
     <div class="row">

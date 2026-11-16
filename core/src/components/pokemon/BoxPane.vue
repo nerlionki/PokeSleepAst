@@ -596,7 +596,7 @@
       class="overlay"
       @click.self="editing = null"
     >
-      <section class="sheet stack">
+      <section class="sheet stack member-editor-sheet">
         <div class="row">
           <h3>
             {{ editing.uid ? translateUi('编辑个体') : translateUi('新建个体')

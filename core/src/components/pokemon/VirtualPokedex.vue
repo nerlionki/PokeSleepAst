@@ -42,5 +42,5 @@ watch(() => props.scrollResetKey, () => { resetListScroll(); scrollTop.value = 0
 </template>
 <style scoped>
 .virtual-dex { flex: 1; min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; }
-.virtual-dex-grid { grid-auto-rows: 86px; row-gap: 8px; padding-bottom: 8px; }
+.virtual-dex-grid { grid-auto-rows: var(--pokedex-item-height); row-gap: 8px; padding-bottom: 8px; }
 </style>

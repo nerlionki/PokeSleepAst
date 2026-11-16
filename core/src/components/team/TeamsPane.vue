@@ -58,7 +58,7 @@
   async function removeTeam(id: string) {
     if (!(await confirmRemoval('确认删除此队伍？'))) return;
     roster.deleteTeam(id);
-    navigate();
+    if (route.query.teamId === id) navigate();
   }
 </script>
 <template>
@@ -105,13 +105,18 @@
               : translateUi('点击计算本队产量')
           }}</span>
         </button>
-        <button
-          type="button"
-          class="btn ghost team-details"
-          @click="navigate('detail', item.id)"
-        >
-          {{ translateUi('详情') }}
-        </button>
+        <div class="stack team-entry-actions">
+          <button
+            type="button"
+            class="btn ghost"
+            @click="navigate('detail', item.id)"
+          >
+            {{ translateUi('详情') }}
+          </button>
+          <button type="button" class="btn ghost rose" @click="removeTeam(item.id)">
+            {{ translateUi('删除队伍') }}
+          </button>
+        </div>
       </article>
       <section
         v-if="teams.some(item => item.id === roster.activeTeamId)"
@@ -203,7 +208,7 @@
     font: inherit;
     text-align: left;
   }
-  .team-details {
+  .team-entry-actions {
     flex-shrink: 0;
   }
   .team-editor-header {

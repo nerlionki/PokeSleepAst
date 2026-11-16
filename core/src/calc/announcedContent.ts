@@ -7,6 +7,7 @@ export interface AnnouncedIngredient {
   runtimeId: number | null;
   imageId?: number;
   baseEnergy: number | null;
+  shards?: number | null;
 }
 export interface AnnouncedPokemon {
   availableFrom?: string;

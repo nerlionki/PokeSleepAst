@@ -9,6 +9,7 @@ import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, ref, shallowRef } from 'vue'
 import { MEAL_CATEGORIES } from '../../calc/recipes'
+import { textHit } from '../../calc/text'
 import { toggleChoice } from '../../calc/multiChoice'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import RecipeCard from './RecipeCard.vue'
@@ -20,8 +21,9 @@ const ingredientOptions = INGREDIENT_CATALOG.flatMap(ingredient => {
   const key = ingredientKey(ingredient.name)
   return key ? [{ ...ingredient, key }] : []
 })
+const props = defineProps<{ q?: string }>()
 const ingredients = ref<string[]>([])
-const showIngredients = shallowRef(true)
+const showIngredients = shallowRef(false)
 const category = shallowRef<(typeof MEAL_CATEGORIES)[number]['id']>((components_data_RecipePane_config_clientDefaults["categoryInitial"] as unknown as (typeof MEAL_CATEGORIES)[number]['id']))
 const sort = shallowRef<'energy' | 'pot'>('energy')
 const ascending = shallowRef(false)
@@ -29,9 +31,12 @@ const opened = shallowRef<RecipeDisplayRow | null>((components_data_RecipePane_c
 
 const list = computed(() => {
   const rows = RECIPE_CATALOG.filter((r) => {
-    return r.category === category.value
-      && (!ingredients.value.length || r.ingredients.some(ingredient =>
-        ingredients.value.includes(r.bonus === null ? ingredientKey(ingredient.name) ?? '' : String(ingredient.id))))
+    if (r.category !== category.value) return false
+    const query = props.q ?? ''
+    const matchesQuery = [r.name, ...r.ingredients.map(ingredient => ingredient.name)]
+      .some(name => textHit(name, query) || textHit(gameText(name), query))
+    return matchesQuery && (!ingredients.value.length || r.ingredients.some(ingredient =>
+      ingredients.value.includes(ingredientKey(ingredient.name) ?? String(ingredient.id))))
   })
   return rows.sort((a, b) => {
     const left = sort.value === 'pot' ? a.pot : a.baseEnergy
