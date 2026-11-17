@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import IngredientRankScroll from '#platform/IngredientRankScroll.vue';
   import { gameText, t as translateUi } from '../../ui/i18n';
 
   import { INPUT_RANGES } from '../../calc/inputRanges';
@@ -394,23 +395,25 @@
           {{ translateUi('当前等级 · 全天满活 · 无持有上限 ·') }}
           {{ selected.rows.length }} {{ translateUi('只个体') }}
         </p>
-        <OverviewRankRow
-          v-for="(row, index) in selected.rows.slice(0, visibleRanks)"
-          :key="row.pokemon.uid"
-          :row="row"
-          :rank="index + 1"
-          unit="个"
-          ingredients
-        />
-        <button
-          v-if="selected.rows.length > visibleRanks"
-          class="btn ghost"
-          type="button"
-          @click="visibleRanks += 20"
-        >
-          {{ translateUi('加载更多（还有') }}
-          {{ selected.rows.length - visibleRanks }} {{ translateUi('只）') }}
-        </button>
+        <IngredientRankScroll>
+          <OverviewRankRow
+            v-for="(row, index) in selected.rows.slice(0, visibleRanks)"
+            :key="row.pokemon.uid"
+            :row="row"
+            :rank="index + 1"
+            unit="个"
+            ingredients
+          />
+          <button
+            v-if="selected.rows.length > visibleRanks"
+            class="btn ghost"
+            type="button"
+            @click="visibleRanks += 20"
+          >
+            {{ translateUi('加载更多（还有') }}
+            {{ selected.rows.length - visibleRanks }} {{ translateUi('只）') }}
+          </button>
+        </IngredientRankScroll>
       </section>
     </div>
   </div>
