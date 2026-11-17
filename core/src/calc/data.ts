@@ -21,6 +21,8 @@ import { resolveRecipeReferences } from '../resources/catalogReferences'
 import { foldText } from './text'
 
 export const BERRIES = berries
+const berryIds = new Map(BERRIES.map(row => [row.name, row.id]))
+const berriesById = new Map(BERRIES.map(row => [row.id, row]))
 export const INGREDIENTS = ingredients
 export const RECIPES = resolveRecipeReferences(recipes, ingredients, compatibility.modules.raeImage.MEAL_ID)
 export interface PokeRow {
@@ -29,6 +31,7 @@ export interface PokeRow {
   specialty: string
   sleepType: string
   berry: string
+  berryId?: number
   berryType: string
   interval: number
   carry: number
@@ -41,7 +44,12 @@ export interface PokeRow {
   formKey: string
 }
 
-export const POKEDEX = pokedex as PokeRow[]
+export const POKEDEX = (pokedex as PokeRow[]).map(row => {
+  // Existing snapshots reference the berry by its catalog name.
+  const berryId = row.berryId ?? berryIds.get(row.berry)
+  const berry = berryId == null ? undefined : berriesById.get(berryId)
+  return { ...row, berryId, berry: berry?.name ?? row.berry, berryType: berry?.type ?? row.berryType }
+})
 export const ISLANDS = islands
 export const ENCOUNTER_BANDS = encounterBands
 export const FALLBACKS = fallbacks

@@ -3,7 +3,7 @@ import { ownedSelectionSkill } from './skillModel'
 import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import { applyMainSkill, applySkillModelEffects, type EffectActor, type EffectContext } from './skillEffects'
-import { activityBerrySettings, activityValues, snapshotActivity, assertActivitySupported, type ActivityValues } from './activities'
+import { activityBerrySettings, activityDate, activityValues, snapshotActivity, assertActivitySupported, type ActivityValues } from './activities'
 import { CookingSkillState } from './cookingSkillState'
 import { teamRestrictionError } from './teamRestrictions'
 import { resolveMemberSkill } from './mew'
@@ -462,9 +462,9 @@ export function simulateTeam(
 
     completeHelps(t, true)
     if (!opts.skipCooking && settings.meals && !asleep && [timeline_simulateTeam_ruleParameters.breakfastMinute,timeline_simulateTeam_ruleParameters.lunchMinute,timeline_simulateTeam_ruleParameters.dinnerMinute].includes(clock) && meals.length < timeline_simulateTeam_ruleParameters.weeklyMealLimit) {
-      const sunday = settings.period === 'week' && Math.floor(t / 1440) === timeline_simulateTeam_ruleParameters.sundayIndex
+      const sunday = new Date(activityDate(snapshot.activity, t)).getUTCDay() === 0
       const activity = activityValues(snapshot.activity, settings.island, undefined, t)
-      const pot = Math.ceil(cooking.potSize(settings.potSize + activity.potCapacityBonus, sunday || settings.sundayPot, settings.goodCamp) * activity.potSizeMultiplier)
+      const pot = Math.ceil(cooking.potSize(settings.potSize + activity.potCapacityBonus, sunday, settings.goodCamp) * activity.potSizeMultiplier)
       if (Object.values(bag).some(amount => amount >= 1)) {
         const crit = cooking.cook(sunday, activity.cookingCritBonus, activity.cookingCritMultiplier)
         const cooked = cookMeals(bag, settings, 1, sunday, { minute: t, pot, multiplier: crit.multiplier * activity.cookingEnergyMultiplier })

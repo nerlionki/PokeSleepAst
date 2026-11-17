@@ -18,8 +18,12 @@ export const RECIPE_LEVEL_MAX = (cook_config_extracted0.RECIPE_LEVEL_MAX as 70)
 /** 真实等级加成，来源：https://wikiwiki.jp/poke_sleep/料理 */
 const LEVEL_BONUS = cloneData(cook_config_extracted0.LEVEL_BONUS)
 
+export function normalizeRecipeLevel(level: number): number {
+  return Math.min(RECIPE_LEVEL_MAX, Math.max(1, Math.trunc(level) || 1))
+}
+
 export function recipeLevelOf(settings: CookSettings, id: number): number {
-  return Math.min(RECIPE_LEVEL_MAX, Math.max(1, settings.recipeLevels?.[id] || 1))
+  return normalizeRecipeLevel(settings.recipeLevels?.[id] ?? settings.defaultRecipeLevel ?? 1)
 }
 
 export function recipeLevelMult(level: number): number {
@@ -36,7 +40,7 @@ export function cookEnergy(recipeId: number | string, extra: number, sunday: boo
   return Math.round(raw * crit)
 }
 
-export type CookSettings = Readonly<Pick<Settings, 'goodCamp' | 'sundayPot' | 'potSize' | 'mealCategory' | 'areaBonus' | 'recipeLevels'> & Partial<Pick<Settings, 'activity' | 'island'>>>
+export type CookSettings = Readonly<Pick<Settings, 'goodCamp' | 'sundayPot' | 'potSize' | 'mealCategory' | 'areaBonus' | 'recipeLevels' | 'defaultRecipeLevel'> & Partial<Pick<Settings, 'activity' | 'island'>>>
 export type IngredientBag = Readonly<Record<string, number>>
 export interface CookOptions { minute?: number, pot?: number, multiplier?: number }
 export interface CookResult { meals: CookMeal[], remain: Record<string, number> }
@@ -87,7 +91,7 @@ function cookingContext(settings: CookSettings, sunday: boolean, options: CookOp
   const context = createActivityContext('research', settings.activity)
   assertActivitySupported(context, 'cooking', options.minute ?? 240, settings.island)
   const activity = activityValues(context, settings.island ?? '', undefined, options.minute ?? 240)
-  const potMul = (settings.goodCamp ? cook_cookingContext_ruleParameters.campPotMultiplier : 1) * (sunday || settings.sundayPot ? cook_cookingContext_ruleParameters.sundayPotMultiplier : 1)
+  const potMul = (settings.goodCamp ? cook_cookingContext_ruleParameters.campPotMultiplier : 1) * (sunday ? cook_cookingContext_ruleParameters.sundayPotMultiplier : 1)
   const pot = options.pot ?? Math.ceil((settings.potSize + activity.potCapacityBonus) * potMul * activity.potSizeMultiplier)
   const pool = RECIPES.filter(recipe => activityRecipeCategories(activity, settings.mealCategory).includes(recipe.category) && !recipe.mix)
     .sort((a, b) => recipeEnergy(b, settings, activity.recipeEnergyModifiers) - recipeEnergy(a, settings, activity.recipeEnergyModifiers))

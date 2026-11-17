@@ -389,12 +389,12 @@
         v-for="item in FILTER_CATALOG.berries"
         :key="item.name"
         type="button"
-        :class="{ on: query.berryType.includes(item.type) }"
+        :class="{ on: query.berryType.includes(String(item.id)) }"
         @click="
           toggleChoice(
             query.berryType,
-            item.type,
-            FILTER_CATALOG.berries.map(item => item.type)
+            String(item.id),
+            FILTER_CATALOG.berries.map(item => String(item.id))
           )
         "
       >
@@ -455,12 +455,12 @@
           v-for="item in FILTER_CATALOG.ingredients"
           :key="item.id"
           type="button"
-          :class="{ on: query.ingredients.includes(item.name) }"
+          :class="{ on: query.ingredients.includes(String(item.id)) }"
           @click="
             toggleChoice(
               query.ingredients,
-              item.name,
-              FILTER_CATALOG.ingredients.map(item => item.name)
+              String(item.id),
+              FILTER_CATALOG.ingredients.map(item => String(item.id))
             )
           "
         >

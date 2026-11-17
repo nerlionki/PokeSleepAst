@@ -5,8 +5,8 @@ import extracted0 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 import { ACTIVITY_CATALOG, EVENT_PARAMETERS, activeActivities, researchActivity, researchSleepStyles, activityValues, assertActivitySupported, hasLegacyShinyUp, type ActivityContext, type ResearchActivitySelection } from './activities'
 import { hasBaseResearchDpr, hasResearchDpr } from './researchAvailability'
-import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix, type PokemonUps } from './sleepRules'
-import { selectSleepStyle } from './sleepSelection'
+import { normalizeEventMix, openSleepSlots, sleepEncounterWeights, type EventMix, type PokemonUps } from './sleepRules'
+import { highestSleepUp, selectSleepStyle } from './sleepSelection'
 import { isLastRollExcluded } from './sleepLastRoll'
 import { foldText } from './text'
 import snorlaxRanks from '../data/snorlax-ranks.resource'
@@ -206,7 +206,7 @@ export interface DrawOpts extends ResearchBonuses {
   /** Reused immutable metadata during a simulation batch. */
   preparedPool?: PreparedStyle[]
   preparedOpenPool?: PreparedStyle[]
-  preparedWeights?: Map<number, number>
+  preparedWeights?: Map<number, { weight: number, upPriority: number }>
   rank?: string
   mode?: 'normal' | 'map'
   discovered?: string[]
@@ -366,26 +366,26 @@ export function sleepDraw(
     return rng() < rate
   }
   const hasActivityWeights = context.catalog.activities.length > 0 || context.overrides?.encounterWeightMultiplier != null
-  const weights = opts.preparedWeights ?? new Map<number, number>()
-  const speciesWeight = (pokeId: number) => {
+  const weights = opts.preparedWeights ?? new Map<number, { weight: number, upPriority: number }>()
+  const speciesWeights = (pokeId: number) => {
     const cached = weights.get(pokeId)
     if (cached != null) return cached
-    const weight = pokemonSleepWeight(pokeId, opts.eventMult, opts.pokemonUps)
-      * (hasActivityWeights ? activityValues(context, island, pokeById(pokeId)).encounterWeightMultiplier : 1)
-    weights.set(pokeId, weight)
-    return weight
+    const effects = hasActivityWeights ? activityValues(context, island, pokeById(pokeId)) : undefined
+    const values = sleepEncounterWeights(pokeId, opts.eventMult, opts.pokemonUps,
+      effects?.encounterWeightMultiplier, effects?.encounterUpPriority)
+    weights.set(pokeId, values)
+    return values
   }
+  const priority = (style: SleepStyleRow) => speciesWeights(style.pokeId).upPriority
   const allowRare = opts.rare ?? true
   const eventMix = normalizeEventMix(opts.eventMix) !== 'off' && sleepType !== '没有特征' && (opts.mode ?? mode) !== 'map'
   const eligible = (style: SleepStyleRow) => !style.limited && hasResearchDpr(style)
     && (context.includeUnreleasedPokemon || !context.pendingPokemon?.includes(style.pokeId))
   const typed = [...(opts.preparedPool ?? prepareStyles(island, opts.pool?.filter(eligible) ?? unlockedStyles(island, sleepType, Infinity, opts.rank ?? rank, opts.mode ?? mode, context)))]
-  // User-confirmed model (2026-10-29): camp rolls uniformly over the island's
-  // rank-unlocked styles affordable from the INITIAL DPR, independently of the
-  // normal draws. No undiscovered/event weighting and no deduction from DPR.
-  // Wiki confirms +1 encounter; this precise selection model is user specified:
-  // https://wikiwiki.jp/poke_sleep/どうぐ/いいキャンプチケット
-  const campPool = opts.campTicket ? typed.filter(style => style.dpr <= Math.max(0, dp) && (allowRare || !SPECIAL_POKEMON.has(style.pokeId))) : []
+  // Camp uses initial DPR and rolls uniformly within the highest eligible UP tier.
+  const campPool = opts.campTicket
+    ? highestSleepUp(typed.filter(style => style.dpr <= Math.max(0, dp) && (allowRare || !SPECIAL_POKEMON.has(style.pokeId))), priority)
+    : []
   const open = eventMix
     ? [...(opts.preparedOpenPool ?? prepareStyles(island, opts.openPool?.filter(eligible) ?? unlockedStyles(island, '没有特征', Infinity, opts.rank ?? rank, 'normal', context)))]
     : typed
@@ -413,8 +413,8 @@ export function sleepDraw(
     let picked: DrawnStyle | undefined
     const item = selectSleepStyle(usable, remaining, i === n - 1, rng, (s) => {
       const missing = boost && !discovered.has(styleKey(s.pokeId, s.stars, s.styleId))
-      return (missing ? UNDISCOVERED_WEIGHT : 1) * speciesWeight(s.pokeId)
-    })
+      return (missing ? UNDISCOVERED_WEIGHT : 1) * speciesWeights(s.pokeId).weight
+    }, false, priority)
     if (item) {
       const missing = !discovered.has(styleKey(item.pokeId, item.stars, item.styleId))
       const rare = SPECIAL_POKEMON.has(item.pokeId)
@@ -462,7 +462,7 @@ export function* sleepExpectSteps(
   const openPool = normalizeEventMix(opts.eventMix) !== 'off' ? unlockedStyles(island, '没有特征', Infinity, rank, 'normal', activity) : pool
   const preparedPool = prepareStyles(island, pool)
   const preparedOpenPool = openPool === pool ? preparedPool : prepareStyles(island, openPool)
-  const preparedWeights = new Map<number, number>()
+  const preparedWeights: NonNullable<DrawOpts['preparedWeights']> = new Map()
   let randomState = (checkpoint?.randomState ?? opts.seed ?? 0) >>> 0
   const rng = () => {
     randomState = (randomState + 0x6D2B79F5) >>> 0

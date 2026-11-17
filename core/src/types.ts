@@ -11,6 +11,7 @@ export type IslandId =
 
 export type SleepType = '淺淺入夢' | '安然入睡' | '深深入眠' | '没有特征'
 export type MealCategory = 'curry' | 'salad' | 'dessert'
+export type MealCategorySelection = 'all' | MealCategory
 export type Period = 'day' | 'week'
 export type Specialty = '树果型' | '食材型' | '技能型' | '全部'
 
@@ -33,11 +34,12 @@ export interface Settings {
   dailySkillHeal: number
   goodCamp: boolean
   helpingBonus: number
-  mealCategory: MealCategory
+  mealCategory: MealCategorySelection
   potSize: number
   period: Period
   eventMult: number
   sleepEventMix: import('./calc/sleepRules').EventMix
+  defaultRecipeLevel?: number
   recipeLevels: Record<string, number>
   unresolvedRecipeLevels?: Record<string, number>
   whistleHelps: number

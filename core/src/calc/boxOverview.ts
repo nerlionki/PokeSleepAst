@@ -49,24 +49,24 @@ function finiteClamp(value: number, min: number, max: number) { return Number.is
 export function calculateBoxOverview(pokemon: readonly BoxPokemon[], bonuses: OverviewBonuses = defaultOverviewBonuses(), activity?: ActivitySelection) {
   const settings = { ...defaultSettings(), activity, island: bonuses.island ?? 'greengrass', exBuff: bonuses.exBuff ?? true, exDebuff: bonuses.exDebuff ?? true, exWeeklyBonus: bonuses.exWeeklyBonus ?? 'none', berries: bonuses.favoredBerries, areaBonus: finiteClamp(bonuses.areaBonus, 0, AREA_BONUS_MAX), goodCamp: bonuses.goodCamp }
   const externalBonus = Math.floor(finiteClamp(bonuses.helpingBonus, 0, boxOverview_calculateBoxOverview_ruleParameters.helpingBonusCap))
-  const berryRanks = new Map<string, OverviewRank[]>(), ingredientRanks = new Map<string, OverviewRank[]>()
+  const berryRanks = new Map<number, OverviewRank[]>(), ingredientRanks = new Map<string, OverviewRank[]>()
   const excludedBerries: BoxPokemon[] = [], excludedIngredients: BoxPokemon[] = []
   for (const member of pokemon) {
-    if (!pokeById(member.pokeId)) { excludedBerries.push(member); excludedIngredients.push(member); continue }
+    const species = pokeById(member.pokeId)
+    if (!species) { excludedBerries.push(member); excludedIngredients.push(member); continue }
     const ownBonus = unlockedSubskills(member.level, member.subskills).includes('helpingBonus') ? 1 : 0
     const bonus = Math.min(boxOverview_calculateBoxOverview_ruleParameters.helpingBonusCap, externalBonus + ownBonus)
     const input = { ...member, wakeEnergy: boxOverview_calculateBoxOverview_ruleParameters.fixedComparisonEnergy, ribbonHours: member.tune?.ribbonHours ?? 0 }
     const missingBerries = criticalOverviewFields(member, 'berries').length > 0
     const missingIngredients = criticalOverviewFields(member, 'ingredients').length > 0
     const output = missingBerries && missingIngredients ? undefined : produce(settings, { ...input, carryMode: 'unlimited' }, bonus)
-    if (criticalOverviewFields(member, 'berries').length) excludedBerries.push(member)
+    if (missingBerries || species.berryId == null) excludedBerries.push(member)
     else {
-      const berry = pokeById(member.pokeId)!.berry
-      const list = berryRanks.get(berry) ?? []
+      const list = berryRanks.get(species.berryId) ?? []
       list.push({ pokemon: member, amount: output!.berryEnergy })
-      berryRanks.set(berry, list)
+      berryRanks.set(species.berryId, list)
     }
-    if (criticalOverviewFields(member, 'ingredients').length) excludedIngredients.push(member)
+    if (missingIngredients) excludedIngredients.push(member)
     else {
       const breakdown = breakdownProduceIngredients(output!)
       if (!breakdown) excludedIngredients.push(member)
@@ -86,11 +86,11 @@ export function calculateBoxOverview(pokemon: readonly BoxPokemon[], bonuses: Ov
   }
   const sort = (rows: OverviewRank[]) => rows.sort((a, b) => b.amount - a.amount || a.pokemon.uid.localeCompare(b.pokemon.uid))
   return {
-    berries: BERRIES.map((berry) => ({ ...berry, rows: sort(berryRanks.get(berry.name) ?? []).slice(0, 3) })),
-    ingredients: INGREDIENT_CATALOG.flatMap((ingredient) => {
-      const key = ingredientKey(ingredient.name)
-      return key ? [{ ...ingredient, key, rows: sort(ingredientRanks.get(key) ?? []) }] : []
-    }),
+    berries: BERRIES.map((berry) => ({ ...berry, rows: sort(berryRanks.get(berry.id) ?? []).slice(0, 3) })),
+    ingredients: INGREDIENT_CATALOG.map(ingredient => ({
+      ...ingredient,
+      rows: sort(ingredientRanks.get(ingredient.key) ?? [])
+    })),
     excludedBerries, excludedIngredients,
   }
 }

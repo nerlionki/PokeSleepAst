@@ -4,6 +4,7 @@ import clientDefaults from '../data/client-defaults.resource'
 import { cloneData } from '../calc/dataClone'
 
 import { shallowRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { canCheckAppUpdate } from '#platform/profile'
 import { usePageTab } from '../composables/usePageTab'
 import DataSourcePane from '../components/profile/DataSourcePane.vue'
@@ -12,13 +13,27 @@ import BackupPane from '../components/profile/BackupPane.vue'
 import AppearancePane from '../components/profile/AppearancePane.vue'
 import CreditsPane from '../components/profile/CreditsPane.vue'
 import SettingsPanel from '../components/layout/SettingsPanel.vue'
+import RecipeLevelsPane from '../components/profile/RecipeLevelsPane.vue'
 import UpdateSettings from '../components/update/UpdateSettings.vue'
 import GuideEntry from '../components/shared/GuideEntry.vue'
 const views_ProfileView_config_clientDefaults = clientDefaults.modules.views_ProfileView
 
-const tab = usePageTab(['home', 'backup', 'settings', 'appearance', 'credits', 'update', 'features'] as const, 'home')
+const tab = usePageTab(['home', 'backup', 'settings', 'recipe-levels', 'appearance', 'credits', 'update', 'features'] as const, 'home')
+const route = useRoute()
+const router = useRouter()
 const userInfo = shallowRef<{ name: string; avatar?: string } | null>((views_ProfileView_config_clientDefaults["userInfoInitial"] as unknown as { name: string; avatar?: string } | null))
-const titles = { ...cloneData(views_ProfileView_config_clientDefaults["titles"]), features: '功能开关' }
+const titles = { ...cloneData(views_ProfileView_config_clientDefaults["titles"]), features: '功能开关', 'recipe-levels': '食谱等级' }
+
+function goBack() {
+  if (tab.value !== 'recipe-levels') {
+    tab.value = 'home'
+    return
+  }
+  const previous = router.options?.history.state.back
+  const destination = typeof previous === 'string' ? router.resolve(previous) : null
+  if (destination?.path === route.path && destination.query.tab === 'settings') router.back()
+  else void router.replace({ path: route.path, query: { ...route.query, tab: 'settings' } })
+}
 </script>
 <template>
   <div class="stack">
@@ -35,11 +50,12 @@ const titles = { ...cloneData(views_ProfileView_config_clientDefaults["titles"])
       <slot name="app-tools" />
     </template>
     <template v-else>
-      <div class="row"><button class="btn ghost" type="button" @click="tab = 'home'">{{ translateUi("返回我的") }}</button><h2>{{ translateUi(titles[tab]) }}</h2></div>
+      <div class="row"><button class="btn ghost" type="button" @click="goBack">{{ translateUi(tab === 'recipe-levels' ? '返回' : '返回我的') }}</button><h2>{{ translateUi(titles[tab]) }}</h2></div>
       <FeaturesPane v-if="tab === 'features'" />
       <BackupPane v-else-if="tab === 'backup'" />
       <AppearancePane v-else-if="tab === 'appearance'" />
-      <SettingsPanel v-else-if="tab === 'settings'" embedded @close="tab = 'home'" />
+      <SettingsPanel v-else-if="tab === 'settings'" embedded @close="tab = 'home'" @recipes="tab = 'recipe-levels'" />
+      <RecipeLevelsPane v-else-if="tab === 'recipe-levels'" />
       <CreditsPane v-else-if="tab === 'credits'" />
       <section v-else-if="tab === 'update' && canCheckAppUpdate" class="card"><UpdateSettings /></section>
     </template>

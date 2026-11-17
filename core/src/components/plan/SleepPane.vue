@@ -1,4 +1,7 @@
 <script setup lang="ts">
+  import PlanCampTicket from './PlanCampTicket.vue';
+  import { usePlanCampTicket } from '../../composables/usePlanCampTicket';
+  import { EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency';
   import { formatSleepLength, gameText, t as translateUi } from '../../ui/i18n';
 
   import { INPUT_RANGES } from '../../calc/inputRanges';
@@ -67,6 +70,7 @@
     ] as unknown as 0 | 1
   );
   const { settings } = storeToRefs(settingsStore);
+  const { mode: campTicketMode, enabled: campTicket } = usePlanCampTicket('sleep');
   const { plan } = storeToRefs(planStore);
 
   const island = computed({
@@ -161,7 +165,7 @@
   const shown = computed(
     () =>
       caught.value +
-      (plan.value.campTicket && researchSession.value === 0 ? 1 : 0)
+      (campTicket.value && researchSession.value === 0 ? 1 : 0)
   );
   const nextCatch = computed(() =>
     strengthToNext(
@@ -221,7 +225,7 @@
     calculate: startSimulation,
     cancel,
     reset
-  } = useSleepSimulation();
+  } = useSleepSimulation(() => campTicket.value);
   watch(
     () => [
       researchBonuses.value,
@@ -266,7 +270,7 @@
       researchSession.value,
       specialEncountered.value,
       firstResearchExtras.value,
-      plan.value.campTicket
+      campTicket.value
     ],
     () => {
       reset();
@@ -278,7 +282,7 @@
     if (busy.value) return;
     drawSeed += 1;
     const opts = {
-      campTicket: plan.value.campTicket,
+      campTicket: campTicket.value,
       ...researchBonuses.value,
       focusIncense: focusIncense.value,
       luckIncense: luckIncense.value,
@@ -288,7 +292,7 @@
       researchLimit: specialEncountered.value ? (11 as const) : (10 as const),
       firstResearchExtras:
         Math.max(0, Math.floor(firstResearchExtras.value)) +
-        Number(plan.value.campTicket) +
+        Number(campTicket.value) +
         Number(specialEncountered.value),
       rank: rank.value,
       discovered: resolvedSleepdex(plan.value),
@@ -509,16 +513,12 @@
     <div class="field">
       <label>{{ translateUi('睡眠类型') }}</label>
       <select :disabled="busy" v-model="plan.sleepType">
-        <option value="淺淺入夢">{{ translateUi('浅浅入梦') }}</option>
-        <option value="安然入睡">{{ translateUi('安然入睡') }}</option>
-        <option value="深深入眠">{{ translateUi('深深入眠') }}</option>
-        <option value="没有特征">{{ translateUi('没有特征') }}</option>
+        <option v-for="type in EFFICIENCY_SLEEP_TYPES" :key="type" :value="type">
+          {{ gameText(type) }}
+        </option>
       </select>
     </div>
-    <label class="row"
-      ><input :disabled="busy" v-model="plan.campTicket" type="checkbox" />
-      {{ translateUi('露营券 +1（只加第一觉）') }}</label
-    >
+    <PlanCampTicket v-model="campTicketMode" :disabled="busy" />
     <label class="row"
       ><input :disabled="busy" v-model="focusIncense" type="checkbox" />
       {{ translateUi('专注薰香（研究 EXP ×2）') }}</label
@@ -657,7 +657,7 @@
         </div>
       </div>
       <p
-        v-if="seenTotal && plan.campTicket && researchSession === 0"
+        v-if="seenTotal && campTicket && researchSession === 0"
         class="muted"
       >
         {{ translateUi('已计入露营券额外抽选及奖励。') }}

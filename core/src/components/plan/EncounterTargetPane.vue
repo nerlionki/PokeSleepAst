@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PlanCampTicket from './PlanCampTicket.vue'
+import { usePlanCampTicket } from '../../composables/usePlanCampTicket'
 import { gameText, sleepStyleText, t as translateUi } from '../../ui/i18n'
 
 
@@ -19,7 +21,7 @@ import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
 import { ISLANDS, POKEDEX } from '../../calc/data'
 import { familyOf } from '../../calc/candyPlan'
-import PokePicker from '../shared/PokePicker.vue'
+import PokePicker from '#platform/PokePicker.vue'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import BabyEfficiencyResult from './BabyEfficiencyResult.vue'
 
@@ -31,6 +33,7 @@ const isCandy = computed(() => props.goal.purpose === 'candy')
 const title = computed(() => isStyle.value ? '睡姿补齐效率' : isCandy.value ? '家族刷糖效率' : '宝宝捕捉效率')
 const { plan } = storeToRefs(usePlanStore())
 const { settings } = storeToRefs(useSettingsStore())
+const { mode: campTicketMode, enabled: campTicket } = usePlanCampTicket('encounter')
 const activity = useActivities(options, () => options.value.island ?? 'all', () => settings.value.activity)
 const research = useEncounterActivity(activity.context)
 const babyIds = computed(() => availableBabyPokemonIds(research.value))
@@ -48,8 +51,9 @@ watch(pokeIds, ids => {
 const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId))
 const validStyle = computed(() => faces.value.some(style => styleKey(style.pokeId, style.stars, style.styleId) === options.value.completionTarget))
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, isStyle.value ? options.value.completionTarget : undefined, research.value))
-const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), objective: isStyle.value ? undefined : props.goal.purpose === 'candy' ? 'candy' as const : 'catch' as const, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), campTicket: campTicket.value, objective: isStyle.value ? undefined : props.goal.purpose === 'candy' ? 'candy' as const : 'catch' as const, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions, props.goal.id)
+watch(() => campTicket.value, () => { if (busy.value) cancel() })
 watch(busy, value => emit('busy', value), { immediate: true })
 onScopeDispose(() => emit('busy', false))
 watch(islands, available => { if (available.length && !available.some(island => island.id === options.value.island)) options.value.island = 'all' }, { immediate: true })
@@ -84,7 +88,7 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : babyIds.v
         <div class="field"><label for="encounter-island">{{ translateUi("岛屿") }}</label><select :disabled="busy" id="encounter-island" v-model="options.island"><option value="all">{{ translateUi("全部 · 自动择优") }}</option><option v-for="island in islands" :key="island.id" :value="island.id">{{ gameText(island.name) }}</option></select></div>
         <div class="field"><label for="encounter-sleep">{{ translateUi("睡眠类型") }}</label><select :disabled="busy" id="encounter-sleep" v-model="options.sleepType"><option value="all">{{ translateUi("全部 · 自动择优") }}</option><option v-for="type in EFFICIENCY_SLEEP_TYPES" :key="type" :value="type">{{ gameText(type) }}</option></select></div>
       </div>
-      <label class="row"><input :disabled="busy" v-model="options.campTicket" type="checkbox" role="switch"> {{ translateUi("露营券 +1（只加第一觉）") }}</label>
+      <PlanCampTicket v-model="campTicketMode" :disabled="busy" />
       <label class="row"><input :disabled="busy" v-model="options.splitSleep" type="checkbox" role="switch"> {{ isStyle ? translateUi("比较拆分睡眠") : translateUi("拆分睡眠") }}</label>
       <p class="muted">{{ !options.splitSleep ? translateUi("只计算一觉 100 分。") : isStyle ? translateUi("同时比较整觉 100 分和两觉合计 100 分。") : translateUi("只搜索两觉合计 100 分的最佳比例。") }} {{ translateUi("拆觉使用相同卡比兽能量；指定睡眠类型时，两觉均使用该类型。") }}</p>
       <div class="field"><label for="encounter-event">{{ translateUi("活动睡意之力倍率") }}</label><select :disabled="busy" id="encounter-event" v-model.number="eventMult"><option v-if="!EVENT_BONUSES.some(bonus => bonus.mult === eventMult)" :value="eventMult">{{ eventMult }}{{ translateUi("倍（活动）") }}</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ translateUi(bonus.label) }}</option></select></div>

@@ -1,4 +1,4 @@
-import { RECIPE_LEVEL_MAX } from '../calc/cook'
+import { normalizeRecipeLevel } from '../calc/cook'
 import { clampAreaBonus } from '../calc/areaBonus'
 
 import clientDefaults from '../data/client-defaults.resource'
@@ -75,7 +75,13 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function setRecipeLevel(id: number, value: number) {
-    settings.value.recipeLevels = { ...settings.value.recipeLevels, [id]: Math.min(RECIPE_LEVEL_MAX, Math.max(1, Math.trunc(value) || 1)) }
+    settings.value.recipeLevels = { ...settings.value.recipeLevels, [id]: normalizeRecipeLevel(value) }
+  }
+  function setDefaultRecipeLevel(value: number) {
+    settings.value.defaultRecipeLevel = normalizeRecipeLevel(value)
+  }
+  function clearRecipeLevel(id: number) {
+    delete settings.value.recipeLevels[id]
   }
   function removeUnresolvedRecipeLevel(key: string) {
     if (settings.value.unresolvedRecipeLevels) delete settings.value.unresolvedRecipeLevels[key]
@@ -104,6 +110,7 @@ export const useSettingsStore = defineStore('settings', () => {
       exWeeklyBonus: settings.value.exWeeklyBonus,
       mealCategory: settings.value.mealCategory,
       potSize: settings.value.potSize,
+      defaultRecipeLevel: settings.value.defaultRecipeLevel,
       recipeLevels: { ...settings.value.recipeLevels },
       unresolvedRecipeLevels: { ...settings.value.unresolvedRecipeLevels },
     }
@@ -112,11 +119,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const summary = computed(() => {
     const s = settings.value
     const name = ISLANDS.find((i) => i.id === s.island)?.name ?? s.island
-    return t('{island} · 营地 {bonus}% · {start}–{end} / {score}分 · 三餐{meals}', {
+    return t('{island} · 营地 {bonus}% · {start}–{end} / {score}分', {
       island: gameText(name), bonus: Math.round(s.areaBonus * 100),
-      start: s.sleepStart, end: s.sleepEnd, score: s.sleepScore, meals: s.meals ? t('开') : t('关'),
+      start: s.sleepStart, end: s.sleepEnd, score: s.sleepScore,
     })
   })
 
-  return { settings, ready, hydrate, setRecipeLevel, removeUnresolvedRecipeLevel, applyIsland, setEx2MainBerry, toggleBerry, reset, applyPreset, summary, islandBonus, setIslandBonus, setEnvironment }
+  return { settings, ready, hydrate, setRecipeLevel, setDefaultRecipeLevel, clearRecipeLevel, removeUnresolvedRecipeLevel, applyIsland, setEx2MainBerry, toggleBerry, reset, applyPreset, summary, islandBonus, setIslandBonus, setEnvironment }
 })

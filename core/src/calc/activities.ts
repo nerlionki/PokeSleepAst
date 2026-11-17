@@ -99,6 +99,17 @@ export function activeActivities(context: ActivityContext, minute = activities_a
   return context.catalog.activities.filter(event => active(event, date) && (!context.tutorial || event.tutorialEligible === true)).sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id))
 }
 
+export function hasSkillRateBoostActivity(context: ActivityContext, island: string, minute: number): boolean {
+  if ((context.overrides?.skillRateMultiplier ?? 1) > 1) return true
+  const date = activityDate(context, minute)
+  const weekday = new Date(date).getUTCDay()
+  return activeActivities(context, minute).some(event =>
+    [event, ...(event.phases ?? []).filter(phase => active(phase, date))].some(phase =>
+      phase.rules.some(rule => (rule.effects.skillRateMultiplier ?? 1) > 1 &&
+        (!rule.target?.islands || rule.target.islands.includes(island)) &&
+        (!rule.conditions?.weekdays || rule.conditions.weekdays.includes(weekday)))))
+}
+
 function appliesToResearch(rule: ActivityRule, context: ActivityContext, weekday: number, session: number) {
   return !(rule.firstResearchOnly && session > 0)
     && (!rule.conditions?.weekdays || rule.conditions.weekdays.includes(weekday))
@@ -113,7 +124,8 @@ export function hasLegacyShinyUp(event: Activity, context: ActivityContext, isla
     phase.rules.some(rule => rule.effects.shinyUp === true && matches(rule.target, island, pokemon)
       && appliesToResearch(rule, context, weekday, session)))
 }
-const valueCache = new WeakMap<ActivityContext, Map<string, ActivityValues>>()
+type ResolvedActivityValues = ActivityValues & { encounterUpPriority: number }
+const valueCache = new WeakMap<ActivityContext, Map<string, ResolvedActivityValues>>()
 /** User-selected planning convention: any applicable encounter UP enables the
  * special-encounter default. This is a default, not proof of an actual encounter.
  */
@@ -139,13 +151,14 @@ function resolvedRecipeModifier(rule: RecipeEnergyModifier): RecipeEnergyModifie
   }
 }
 
-export function activityValues(context: ActivityContext, island: string, pokemon?: ActivityPokemon, minute = activities_activityValues_runtimeParameters.p001, fallback?: ActivityOverrides, researchSession = 0): ActivityValues {
+export function activityValues(context: ActivityContext, island: string, pokemon?: ActivityPokemon, minute = activities_activityValues_runtimeParameters.p001, fallback?: ActivityOverrides, researchSession = 0): ResolvedActivityValues {
   let cache = valueCache.get(context)
   if (!cache) { cache = new Map(); valueCache.set(context, cache) }
   const cacheKey = JSON.stringify([activityDate(context, minute), island, pokemon ? [pokemon.id, pokemon.berryType, pokemon.specialty, pokemon.name, pokemon.mainSkill] : null, fallback, researchSession, context.teamPokemonIds ?? [], context.overrides, context.tutorial])
   const cached = cache.get(cacheKey)
   if (cached) return cached
-  const values = Object.fromEntries(fields.map(key => [key, NUMERIC_ACTIVITY_EFFECTS[key] === 'add' ? 0 : 1])) as unknown as ActivityValues
+  const values = Object.fromEntries(fields.map(key => [key, NUMERIC_ACTIVITY_EFFECTS[key] === 'add' ? 0 : 1])) as unknown as ResolvedActivityValues
+  values.encounterUpPriority = 1
   Object.assign(values, { eventMix: 'off', shinyUp: false, allRecipeCategories: false, fixedIngredientDrops: {}, extraIngredientEnergyMultipliers: {}, recipeEnergyModifiers: [], availableRecipeCategories: [], favoredBerries: [] })
   const touched = new Set<string>()
   const date = activityDate(context, minute)
@@ -157,6 +170,7 @@ export function activityValues(context: ActivityContext, island: string, pokemon
     for (const phase of [event, ...(event.phases ?? []).filter(p => active(p, date))]) {
       for (const rule of phase.rules) {
         if (!matches(rule.target, island, pokemon) || !appliesToResearch(rule, context, weekday, researchSession)) continue
+        values.encounterUpPriority = Math.max(values.encounterUpPriority, rule.effects.encounterWeightMultiplier ?? 1)
         for (const key of fields) if (rule.effects[key] != null) {
           const n = rule.effects[key]!
           if (event.stacking === 'max') maximum[key] = maximum[key] == null ? n : key === 'helpIntervalMultiplier' ? Math.min(maximum[key]!, n) : Math.max(maximum[key]!, n)
@@ -198,6 +212,8 @@ export function activityValues(context: ActivityContext, island: string, pokemon
   for (const key of ['fixedIngredientDrops', 'extraIngredientEnergyMultipliers'] as const) for (const [name, number] of Object.entries(maps[key]!)) values[key][name] = key === 'fixedIngredientDrops' ? (values[key][name] ?? 0) + number : (values[key][name] ?? 1) * number
   for (const [key, value] of Object.entries(fallback ?? {})) if (!touched.has(key)) Object.assign(values, { [key]: value })
   Object.assign(values, context.overrides)
+  values.encounterUpPriority = Math.max(1, context.overrides?.encounterWeightMultiplier
+    ?? (touched.has('encounterWeightMultiplier') ? values.encounterUpPriority : fallback?.encounterWeightMultiplier ?? 1))
   if (context.overrides?.allRecipeCategories === false) values.availableRecipeCategories = []
   else if (values.allRecipeCategories) values.availableRecipeCategories = ['curry', 'salad', 'dessert']
   values.allRecipeCategories = values.availableRecipeCategories.length === 3
@@ -227,7 +243,10 @@ export function assertActivitySupported(context: ActivityContext, domain: Activi
   })
   if (pending.length) throw new Error(pending.map(feature => `${feature.name}：${feature.description}`).join('；'))
 }
-export function activityRecipeCategories(values: ActivityValues, selected: string) { return values.availableRecipeCategories.length ? values.availableRecipeCategories : [selected] }
+export function activityRecipeCategories(values: ActivityValues, selected: string) {
+  if (values.availableRecipeCategories.length) return values.availableRecipeCategories
+  return selected === 'all' ? ['curry', 'salad', 'dessert'] : [selected]
+}
 
 /** Activity rows replace only their matching island/style; the bundled pool is never mutated. */
 export function activitySleepStyles(base: readonly SleepStyleRow[], context = createActivityContext('research')): SleepStyleRow[] {

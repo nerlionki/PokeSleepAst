@@ -4,7 +4,7 @@ import type { SleepSimulationCheckpoint, SleepSimulationMessage, SleepSimulation
 import { requireWorkerSupport } from './compatibility'
 import { workerErrorMessage } from './workerError'
 const STORAGE_KEY = 'sleep-simulation-checkpoint-v3'
-export function useSleepSimulation() {
+export function useSleepSimulation(campTicket?: () => boolean) {
   const state = createSleepSimulationTask(async (isActive) => {
     requireWorkerSupport()
     await new Promise<void>((resolve, reject) => wx.preDownloadSubpackage({ packageType: 'workers', success: () => resolve(), fail: () => reject(new Error('后台模拟资源下载失败，请检查网络后重试')) }))
@@ -68,7 +68,7 @@ export function useSleepSimulation() {
   })
   try {
     const saved = wx.getStorageSync?.(STORAGE_KEY) as (SleepSimulationRequest & { resourceRevision?: string }) | undefined
-    if (saved?.powers?.length && compatibleCheckpoint(saved) && Number.isInteger(saved.iterations) && saved.iterations > 0 && saved.iterations <= 100000) {
+    if (saved?.powers?.length && compatibleCheckpoint(saved) && (!campTicket || Boolean(saved.options?.campTicket) === campTicket()) && Number.isInteger(saved.iterations) && saved.iterations > 0 && saved.iterations <= 100000) {
       void state.calculate(saved); state.notice.value = '正在恢复上次未完成的模拟'
     }
   } catch { /* Ignore corrupt storage; new calculations remain available. */ }

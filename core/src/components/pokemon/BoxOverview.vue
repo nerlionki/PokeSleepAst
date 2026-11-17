@@ -303,7 +303,7 @@
       <div v-if="rankedBerries.length" class="berry-rank-grid">
         <section
           v-for="berry in rankedBerries"
-          :key="berry.name"
+          :key="berry.id"
           class="card berry-group"
         >
           <div class="berry-heading">

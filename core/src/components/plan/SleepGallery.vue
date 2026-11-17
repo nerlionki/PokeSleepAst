@@ -9,7 +9,7 @@
     toggleChoice,
     matchesChoice
   } from '../../calc/multiChoice';
-  import { specialtyHit } from '../../calc/specialty';
+  import { SPECIALTY_FILTERS, specialtyHit } from '../../calc/specialty';
   import { nationalDex } from '../../calc/pokedexOrder';
   import { pokeHit } from '../../calc/pokeSearch';
   import { storeToRefs } from 'pinia';
@@ -37,6 +37,7 @@
     components_plan_SleepGallery_config_clientDefaults['nameQueryInitial']
   );
   const stars = ref<number[]>([]);
+  const starOptions = [...new Set(SLEEP_STYLES.map(style => style.stars))].sort((a, b) => a - b);
   const view = shallowRef<'all' | 'found' | 'missing'>(
     components_plan_SleepGallery_config_clientDefaults[
       'viewInitial'
@@ -68,11 +69,7 @@
   const PAGE = components_plan_SleepGallery_config_clientDefaults['PAGE'] as 48;
 
   const types = computed(() => [...new Set(BERRIES.map(berry => berry.type))]);
-  const specs = computed(() => [
-    ...new Set(
-      POKEDEX.map(poke => poke.specialty).filter(item => item !== '全部')
-    )
-  ]);
+  const specs = SPECIALTY_FILTERS;
   const sleeps = computed(() => [
     ...new Set(POKEDEX.map(poke => poke.sleepType))
   ]);
@@ -259,12 +256,12 @@
         {{ translateUi('全部星') }}
       </button>
       <button
-        v-for="n in 5"
+        v-for="n in starOptions"
         :key="n"
         type="button"
         :class="{ on: stars.includes(n) }"
         @click="
-          toggleChoice(stars, n, [1, 2, 3, 4, 5]);
+          toggleChoice(stars, n, starOptions);
           resetPage();
         "
       >

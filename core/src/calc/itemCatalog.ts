@@ -29,3 +29,11 @@ export const ITEM_ROLES = tables.modules.items.roles
 export function itemById(id: number | PokemonItemId) {
   return typeof id === 'number' ? ITEM_CATALOG.find(item => item.id === id) : pokemonCatalog.find(item => item.id === id)
 }
+
+/** Positive recovery natures apply to these items without reducing base recovery.
+ * https://wikiwiki.jp/poke_sleep/どうぐ/げんきマクラ
+ */
+export function itemHealEnergy(effect: NonNullable<GameItem['useEffect']>, energy: number, factor: number): number {
+  const multiplier = effect.ignoreNegativeNature ? Math.max(1, factor) : factor
+  return Math.max(energy, Math.min(effect.energyCap, energy + effect.amount * multiplier))
+}

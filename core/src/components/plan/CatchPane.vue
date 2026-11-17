@@ -16,7 +16,7 @@ import { useEncounterActivity } from '../../composables/useEncounterAvailability
 import { useActivities } from '../../composables/useActivities'
 import { researchSleepStyles } from '../../calc/activities'
 import { SLEEP_STYLES } from '../../calc/data'
-import PokePicker from '../shared/PokePicker.vue'
+import PokePicker from '#platform/PokePicker.vue'
 const components_plan_CatchPane_config_clientDefaults = clientDefaults.modules.components_plan_CatchPane
 
 

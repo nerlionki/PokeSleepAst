@@ -4,6 +4,12 @@ const cookingSkillState_addCrit_ruleParameters = ruleParameters.modules.cookingS
 const cookingSkillState_potSize_ruleParameters = ruleParameters.modules.cookingSkillState.potSize
 const cookingSkillState_cook_ruleParameters = ruleParameters.modules.cookingSkillState.cook
 
+export function cookingPotCapacity(base: number, sunday: boolean, camp: boolean, extraPot: number, activityMultiplier = 1) {
+  const baseCapacity = base * (sunday ? cookingSkillState_potSize_ruleParameters.sundayPotMultiplier : 1)
+  const campMultiplier = camp ? cookingSkillState_potSize_ruleParameters.campPotMultiplier : 1
+  return Math.ceil((baseCapacity + extraPot) * campMultiplier * activityMultiplier)
+}
+
 /** 概率分支保留未暴击时的技能加成；仅暴击清零。 */
 export class CookingSkillState {
   private crit = new Map<number, number>([[0, 1]])
@@ -24,7 +30,7 @@ export class CookingSkillState {
   }
 
   potSize(base: number, sunday: boolean, camp: boolean) {
-    return Math.ceil((base * (sunday ? cookingSkillState_potSize_ruleParameters.sundayPotMultiplier : 1) + this.extraPot) * (camp ? cookingSkillState_potSize_ruleParameters.campPotMultiplier : 1))
+    return cookingPotCapacity(base, sunday, camp, this.extraPot)
   }
 
   cook(sunday: boolean, activityCritBonus = 0, activityCritMultiplier = 1) {

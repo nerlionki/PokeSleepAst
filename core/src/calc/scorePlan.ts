@@ -5,7 +5,7 @@ import runtimeParameters from '../data/runtime-parameters.resource'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
-import type { BoxPokemon, MealCategory, Settings } from '../types'
+import type { BoxPokemon, MealCategorySelection, Settings } from '../types'
 import { NATURES, pokeById } from './data'
 import { ingredientKey, ingredientLabel, ingredientRow, migrateCatalogCounts } from './catalogIds'
 import { POKEMON_LEVEL_MAX } from './xp'
@@ -22,7 +22,7 @@ const scorePlan_scoreTime_runtimeParameters = runtimeParameters.modules.scorePla
 
 
 // Checkpoint layout includes the ID-based policy and inventories.
-export const SCORE_RULE_VERSION = 4
+export const SCORE_RULE_VERSION = 5
 export interface ScoreSleep {
   start: string
   end: string
@@ -38,7 +38,7 @@ export interface ScoreOptions {
   initialStrength: number
   bag: Record<string, number>
   unresolvedBag?: Record<string, number>
-  category: MealCategory
+  category: MealCategorySelection
   meals: [string, string, string]
   collectMinutes: number
   precision: 'medium' | 'high'
@@ -49,6 +49,8 @@ export interface ScoreOptions {
   initialZone: number
   initialJuice: number
   useJuice: boolean
+  initialPillows?: number
+  usePillows?: boolean
   splitSleep: boolean
   device: boolean
   dayStart: string
@@ -61,6 +63,8 @@ export function defaultScoreOptions(settings?: Settings): ScoreOptions {
     meals: cloneData(factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_meals"]) as ScoreOptions['meals'], collectMinutes: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_collectMinutes"] as 60), precision: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_precision"] as "medium"), seed: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_seed"] as 20261012),
     initialDisguise: cloneData(factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_initialDisguise"]), initialCrit: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_initialCrit"] as 0), initialPot: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_initialPot"] as 0), initialZone: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_initialZone"] as 0), initialJuice: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_initialJuice"] as 0), useJuice: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_useJuice"] as true),
     splitSleep: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_splitSleep"] as false), device: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_device"] as false), dayStart: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_dayStart"] as "08:00"), dayEnd: (factory_scorePlan_config_clientFactoryDefaults["defaultScoreOptions_dayEnd"] as "22:00"),
+    initialPillows: factory_scorePlan_config_clientFactoryDefaults.defaultScoreOptions_initialPillows ?? 0,
+    usePillows: factory_scorePlan_config_clientFactoryDefaults.defaultScoreOptions_usePillows ?? false,
     sleeps: [sleep(settings?.sleepStart ?? '23:00', settings?.sleepEnd ?? '07:30'), sleep('13:00', '14:30')] }
 }
 export function normalizeScoreOptions(raw?: Partial<ScoreOptions> & { initialEnergy?: Record<string, number> }, settings?: Settings): ScoreOptions {
@@ -112,11 +116,12 @@ export function validateScoreOptions(o: ScoreOptions, settings: Settings): strin
   if (!integer(o.startDay, 0, (scorePlan_validateScoreOptions_runtimeParameters.p001 as 6)) || !integer(o.days, 1, (scorePlan_validateScoreOptions_runtimeParameters.p002 as 7) - o.startDay)) return '规划天数不能超过本周剩余天数'
   if (!Number.isFinite(hm(o.startTime)) || o.startDay === 0 && hm(o.startTime) < (scorePlan_validateScoreOptions_runtimeParameters.p003 as 240)) return '开始时刻须在本周一 04:00 之后'
   if (!integer(o.initialStrength, 0, Number.MAX_SAFE_INTEGER)) return '卡比兽初始能量须为非负整数'
-  if (!scorePlan_config_ruleCatalogs.validateScoreOptionsList0.values.includes(o.category) || !scorePlan_config_ruleCatalogs.validateScoreOptionsList1.values.includes(o.precision)) return '请选择料理类型和搜索精度'
+  if ((o.category !== 'all' && !scorePlan_config_ruleCatalogs.validateScoreOptionsList0.values.includes(o.category)) || !scorePlan_config_ruleCatalogs.validateScoreOptionsList1.values.includes(o.precision)) return '请选择料理类型和搜索精度'
   if (!integer(o.collectMinutes, (scorePlan_validateScoreOptions_runtimeParameters.p004 as 5), (scorePlan_validateScoreOptions_runtimeParameters.p005 as 240))) return '收菜间隔须为 5–240 分钟'
   if (!integer(o.seed, 1, (scorePlan_validateScoreOptions_runtimeParameters.p006 as 2147483647))) return '规划参数无效，请恢复默认设置'
   if (!Number.isFinite(o.initialCrit) || o.initialCrit < 0 || o.initialCrit > (scorePlan_validateScoreOptions_runtimeParameters.p007 as 70) || !integer(o.initialPot, 0, (scorePlan_validateScoreOptions_runtimeParameters.p008 as 200))
     || !Number.isFinite(o.initialZone) || o.initialZone < 0 || o.initialZone > (scorePlan_validateScoreOptions_runtimeParameters.p009 as 24) || !integer(o.initialJuice, 0, itemById(ITEM_ROLES.berryJuice)!.maxHeld!)) return '初始技能或道具加成超出允许范围'
+  if (!Number.isSafeInteger(o.initialPillows ?? 0) || (o.initialPillows ?? 0) < 0) return '活力枕头库存须为非负整数'
   const unresolved = Object.keys(o.unresolvedBag ?? {})
   if (unresolved.length) return `请处理无法迁移或数量冲突的初始食材：${unresolved.join('、')}`
   for (const [key, n] of Object.entries(o.bag)) {
@@ -160,16 +165,28 @@ export function scoreCandidates(box: BoxPokemon[]) {
   return { candidates, excluded }
 }
 export interface ScorePolicy {
+  lookaheadNodes?: number
+  kind?: 'berry' | 'targeted' | 'ingredients' | 'mixed'
   day: string[][]
+  foodTeamByMeal?: string[][]
+  dayAlternates?: string[][]
+  allowHealerRest?: boolean
   sleep: string[][]
+  sleepWithHealer?: boolean[]
+  sleepAfterCollect?: string[][]
   settle: string[][]
   recipeId: number | null
+  mealRecipeIds?: (number | null)[]
+  collectMode?: 'all' | 'targeted' | 'none'
   reserveMeals: number
   rotateMinutes: number
   fill: boolean
   juiceAt: number
 }
-export interface ScoreAction { minute: number, kind: string, text: string, members?: string[], foods?: Record<string, number>, energy?: number }
+export interface ScoreAction {
+  minute: number, kind: string, text: string, members?: string[], foods?: Record<string, number>,
+  energy?: number, recipeId?: number, reason?: string, energyBefore?: Record<string, number>, itemId?: number, energyRecovered?: number
+}
 export interface ScoreSegment { start: number, end: number, members: string[], purpose: string }
 export interface ScoreMemberResult { uid: string, hours: number, dailyHours: number[], energy: number, exp: number, heldBerries: number, heldFood: Record<string, number>, stock: number }
 export interface ScoreTrace {
@@ -179,13 +196,20 @@ export interface ScoreTrace {
   juice: { initial: number, received: number, used: number, lost: number, remain: number }
   items?: Record<number, { initial: number, received: number, used: number, lost: number, remain: number }>
   members: ScoreMemberResult[], actions: ScoreAction[], segments: ScoreSegment[], warnings: string[]
+  cookedByDay?: Record<number, Record<number, number>>
+  skillReleases?: number
+  suppressedSkillRolls?: number
+  decayApplied?: boolean
 }
 export interface ScoreSolution {
   policy: ScorePolicy, mean: number, min: number, max: number, deviation: number, berry: number, zone: number, skill: number, cooking: number
   simulations: number, trace: ScoreTrace, sensitivity: { rollback: number, mean: number }[]
+  mealDistribution?: Record<number, Record<number, number>>
+  skillReleases?: number
+  withoutDecay?: { mean: number, skillReleases: number, additionalSimulations: number }
 }
-export interface ScoreRequest { settings: Settings, box: BoxPokemon[], options: ScoreOptions, checkpoint?: ScoreCheckpoint }
-export interface ScoreResult { version: number, options: ScoreOptions, solutions: ScoreSolution[], excluded: ReturnType<typeof scoreCandidates>['excluded'], compared: number, simulations: number, elapsedMs: number, warnings: string[] }
+export interface ScoreRequest { settings: Settings, box: BoxPokemon[], options: ScoreOptions, baseline?: { name: string, members: BoxPokemon[] }, checkpoint?: ScoreCheckpoint }
+export interface ScoreResult { version: number, options: ScoreOptions, solutions: ScoreSolution[], baseline?: { name: string, solution: ScoreSolution }, excluded: ReturnType<typeof scoreCandidates>['excluded'], compared: number, simulations: number, elapsedMs: number, warnings: string[] }
 export interface ScoreCheckpoint { version: number, fingerprint: string, phase: 'search' | 'review', index: number, policies: ScorePolicy[], finalists: ScoreSolution[], solutions: ScoreSolution[], elapsedMs: number, simulations: number }
 export type ScoreMessage = { type: 'progress', completed: number, total: number } | { type: 'checkpoint', checkpoint: ScoreCheckpoint }
   | { type: 'result', result: ScoreResult } | { type: 'error', message: string }

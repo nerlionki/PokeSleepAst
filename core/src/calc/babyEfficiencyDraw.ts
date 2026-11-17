@@ -1,5 +1,5 @@
 import runtimeParameters from '../data/runtime-parameters.resource'
-import { createSleepSelector } from './sleepSelection'
+import { createSleepSelector, highestSleepUp } from './sleepSelection'
 const babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters = runtimeParameters.modules.babyEfficiencyDraw.simulateEfficiencySlots.values
 const babyEfficiencyDraw_efficiencyRewardsAfterResearch_runtimeParameters = runtimeParameters.modules.babyEfficiencyDraw.efficiencyRewardsAfterResearch.values
 
@@ -14,6 +14,7 @@ export interface EfficiencyBucket extends EfficiencyReward {
   order?: number
   unlockRank?: number
   weight?: number
+  upPriority?: number
   lastRollExcluded?: boolean
 }
 export interface EfficiencyDrawState {
@@ -51,7 +52,9 @@ export function efficiencyRandom(seed: number): () => number {
 export interface EfficiencySimulation extends EfficiencyReward { slotCandy: number[], slotFamily: number[], hitRuns: number, slotSecondCandy?: number[], slotSecondFamily?: number[] }
 export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: number, rng = efficiencyRandom(1)): EfficiencySimulation {
   const totalSlots = state.encounters + Number(!!state.campTicket)
-  const campPool = state.campTicket ? state.buckets.filter(bucket => bucket.typed && bucket.dpr <= state.power) : []
+  const campPool = state.campTicket
+    ? highestSleepUp(state.buckets.filter(bucket => bucket.typed && bucket.dpr <= state.power), bucket => bucket.upPriority ?? 1)
+    : []
   const campCount = campPool.reduce((sum, bucket) => sum + bucket.count, 0)
   const result: EfficiencySimulation = { catch: 0, candy: 0, slotCandy: Array(totalSlots).fill(0), slotFamily: Array(totalSlots).fill(0), hitRuns: 0 }
   if ([...state.buckets, state.typedFallback, state.openFallback].some(reward => reward.firstCandyMultiplier != null || reward.secondCandyMultiplier != null)) {
@@ -76,8 +79,7 @@ export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: 
       const camp = slot === state.encounters
       const anyType = !camp && slot < state.otherSlots
       const select: ReturnType<typeof createSleepSelector<EfficiencyBucket>> = selectors[Number(anyType) + Number(special) * 2 + Number(belly) * (babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters.p003 as 4)]!
-      // User-confirmed camp model: uniform per eligible style (bucket multiplicity),
-      // initial DPR and unlocked rank, independent of normal weighting/restrictions.
+      // Bucket multiplicity keeps styles in the selected UP tier equally likely.
       let item: EfficiencyBucket | undefined
       if (camp) {
         let pick = rng() * campCount

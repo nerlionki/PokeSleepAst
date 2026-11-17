@@ -18,7 +18,7 @@ import { CANDY_BOOSTS, CANDY_PRESETS, CANDY_PLANNING_ACTIVITY, candyBoostPolicy,
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
 import type { BoxPokemon } from '../../types'
-import PokePicker from '../shared/PokePicker.vue'
+import PokePicker from '#platform/PokePicker.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 const components_plan_CandyPane_config_clientDefaults = clientDefaults.modules.components_plan_CandyPane
 

@@ -115,7 +115,7 @@ export interface SplitResult {
   individual: SplitOptimum[]
 }
 interface Session { count: number, probability: number, candies: number[], camp?: Session }
-export interface SplitCheckpoint { version: 2, signature: string, pendingPokemon?: number[], completed: number, sessions: Session[][] }
+export interface SplitCheckpoint { version: 3, signature: string, pendingPokemon?: number[], completed: number, sessions: Session[][] }
 export interface SplitRequest { splitOptions: SplitOptions, checkpoint?: SplitCheckpoint }
 export type SplitMessage = { type: 'checkpoint', checkpoint: SplitCheckpoint } | { type: 'progress', completed: number, total: number } | { type: 'result', result: SplitResult } | { type: 'error', message: string }
 export function splitScore(values: number[], maxima: number[], metrics: SplitMetric[]): number | null {
@@ -151,7 +151,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
   if (error) throw new Error(error)
   const signature = JSON.stringify({ ...options, activity: { ...context, pendingPokemon: undefined } }) + (options.campTicket ? ":camp-v1" : "")
   let checkpoint = request.checkpoint
-  if (checkpoint && (checkpoint.version !== 2 || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
+  if (checkpoint && (checkpoint.version !== 3 || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
   if (checkpoint && JSON.stringify(checkpoint.pendingPokemon) !== JSON.stringify(context.pendingPokemon)) checkpoint = undefined
   const types = options.sleepType === 'all' ? EFFICIENCY_SLEEP_TYPES : [options.sleepType]
   const total = options.targets.length * 100 * types.length
@@ -200,7 +200,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
         sessions[targetIndex]![offset] = session
         completed++
       }
-      yield { version: 2, signature, pendingPokemon: context.pendingPokemon, completed, sessions }
+      yield { version: 3, signature, pendingPokemon: context.pendingPokemon, completed, sessions }
     }
   }
   const metrics = splitMetrics(options), candidates: SplitCandidate[] = []

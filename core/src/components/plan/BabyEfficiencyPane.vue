@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PlanCampTicket from './PlanCampTicket.vue'
+import { usePlanCampTicket } from '../../composables/usePlanCampTicket'
 import { gameText, t as translateUi } from '../../ui/i18n'
 
 
@@ -18,12 +20,13 @@ import { familyOf } from '../../calc/candyPlan'
 import { EVENT_BONUSES, sleepDiscoveryOptions } from '../../calc/sleep'
 import { useBabyEfficiency } from '../../composables/useBabyEfficiency'
 import { usePlanStore } from '../../stores/plans'
-import PokePicker from '../shared/PokePicker.vue'
+import PokePicker from '#platform/PokePicker.vue'
 import BabyEfficiencyResult from './BabyEfficiencyResult.vue'
 
 const { plan } = storeToRefs(usePlanStore())
 const options = computed(() => plan.value.babyEfficiency)
 const { settings } = storeToRefs(useSettingsStore())
+const { mode: campTicketMode, enabled: campTicket } = usePlanCampTicket('encounter')
 const activity = useActivities(options, () => options.value.island ?? 'all', () => settings.value.activity)
 const research = useEncounterActivity(activity.context)
 const babyIds = computed(() => availableBabyPokemonIds(research.value))
@@ -33,7 +36,7 @@ const otherTypes = computed({
   get: () => mixMode.value !== 'off',
   set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' },
 })
-const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), campTicket: campTicket.value, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, undefined, research.value))
 const sleepTypes = EFFICIENCY_SLEEP_TYPES
 watch(islands, () => {
@@ -42,6 +45,7 @@ watch(islands, () => {
 const family = computed(() => [...new Set(POKEDEX.filter((poke) => familyOf(poke.id) === familyOf(options.value.pokeId)).map((poke) => options.value.pokeId === 710 ? poke.name.replace(/\(.*\)/, '') : poke.name))].join('、'))
 const targetName = computed(() => babyEfficiencyPokemonName(options.value.pokeId))
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions)
+watch(() => campTicket.value, () => { if (busy.value) cancel() })
 const resultName = computed(() => result.value ? babyEfficiencyPokemonName(result.value.options.pokeId) : '')
 const percent = computed(() => Math.min(100, Math.floor(progress.value.percent)))
 </script>
@@ -56,7 +60,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
         <div class="field"><label for="baby-island">{{ translateUi("岛屿") }}</label><select id="baby-island" v-model="options.island" :disabled="busy"><option value="all">{{ translateUi("全部") }}</option><template v-if="islands.length > 1"><option v-for="island in islands" :key="island.id" :value="island.id">{{ gameText(island.name) }}</option></template></select></div>
         <div class="field"><label for="baby-sleep-type">{{ translateUi("睡眠类型") }}</label><select id="baby-sleep-type" v-model="options.sleepType" :disabled="busy"><option value="all">{{ translateUi("全部 · 自动择优") }}</option><option v-for="type in sleepTypes" :key="type" :value="type">{{ gameText(type) }}</option></select></div>
       </div>
-      <label class="row"><input v-model="options.campTicket" :disabled="busy" type="checkbox" role="switch"> {{ translateUi("露营券 +1（只加第一觉）") }}</label>
+      <PlanCampTicket v-model="campTicketMode" :disabled="busy" />
       <label class="row"><input v-model="options.splitSleep" :disabled="busy" type="checkbox" role="switch"> {{ translateUi("拆分睡眠") }}</label>
       <p class="muted">{{ options.splitSleep ? translateUi("计算两觉的最佳分数比例；选择具体睡眠类型时，两觉都使用该类型。") : translateUi("只计算一觉 100 分。") }}</p>
       <p class="muted">{{ translateUi("捕捉统计") }} {{ targetName }} {{ translateUi("的全部星级睡姿。糖果统计") }} {{ family }} {{ translateUi("的睡眠研究奖励。") }}</p>

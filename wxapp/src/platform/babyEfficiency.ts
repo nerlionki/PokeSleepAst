@@ -92,6 +92,7 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?:
     const saved = wx.getStorageSync?.(STORAGE_KEY) as SavedTask | undefined
     if (saved?.options && compatibleCheckpoint(saved) && !validateBabyEfficiency(saved.options)
       && Boolean(saved.options.activity?.includeUnreleasedPokemon) === Boolean(options.value.activity?.includeUnreleasedPokemon)
+      && Boolean(saved.options.campTicket) === Boolean(options.value.campTicket)
       && saved.options.objective === options.value.objective
       && (options.value.completionTarget == null || saved.options.completionTarget === options.value.completionTarget)) {
       task = saved; progress.value = saved.progress ?? { percent: 0, island: '', evaluatedStates: 0 }; notice.value = '正在恢复上次未完成的计算'; void launch()

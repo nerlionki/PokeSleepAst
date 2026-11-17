@@ -106,7 +106,7 @@
       )
         return false;
       if (!matchesChoice(sleep.value, p.sleepType)) return false;
-      if (!matchesChoice(berry.value, p.berry)) return false;
+      if (!matchesChoice(berry.value, String(p.berryId))) return false;
       if (!matchesChoice(skill.value, p.mainSkill)) return false;
       return true;
     }).map(p => ({ ...p, unknownPlaceholder: !p.mainSkill || !p.ingredients?.length })).sort(compareDex)
@@ -245,16 +245,16 @@
       </button>
       <button
         v-for="b in BERRIES"
-        :key="b.name"
+        :key="b.id"
         type="button"
         :class="{
-          on: b.name === '全部' ? !berry.length : berry.includes(b.name)
+          on: berry.includes(String(b.id))
         }"
         @click="
           toggleChoice(
             berry,
-            b.name,
-            BERRIES.map(item => item.name)
+            String(b.id),
+            BERRIES.map(item => String(item.id))
           )
         "
       >

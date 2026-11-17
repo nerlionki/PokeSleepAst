@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PlanCampTicket from './PlanCampTicket.vue'
+import { usePlanCampTicket } from '../../composables/usePlanCampTicket'
 import { gameText, sleepStyleText, t as translateUi } from '../../ui/i18n'
 
 
@@ -19,13 +21,14 @@ import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useBabyEfficiency } from '../../composables/useBabyEfficiency'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
-import PokePicker from '../shared/PokePicker.vue'
+import PokePicker from '#platform/PokePicker.vue'
 import ProgressDialog from '../shared/ProgressDialog.vue'
 import BabyEfficiencyResult from './BabyEfficiencyResult.vue'
 
 const router = useRouter()
 const { plan } = storeToRefs(usePlanStore())
 const { settings } = storeToRefs(useSettingsStore())
+const { mode: campTicketMode, enabled: campTicket } = usePlanCampTicket('encounter')
 const options = computed(() => plan.value.completionEfficiency)
 const targets = computed(() => completionTargets(plan.value, options.value.selectionMode, research.value))
 const pokeIds = computed(() => [...new Set(targets.value.map(style => style.pokeId))])
@@ -40,7 +43,7 @@ const otherTypes = computed({
   get: () => mixMode.value !== 'off',
   set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' },
 })
-const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), campTicket: campTicket.value, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 watch(pokeIds, ids => {
   if (!options.value.pokeId) options.value.pokeId = ids[0] ?? 0
 }, { immediate: true })
@@ -58,6 +61,7 @@ watch(islands, available => {
   if (available.length && !available.some(island => island.id === options.value.island)) options.value.island = 'all'
 }, { immediate: true })
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions)
+watch(() => campTicket.value, () => { if (busy.value) cancel() })
 const resultTarget = computed(() => result.value && targets.value.find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
 const resultStyle = computed(() => result.value && activitySleepStyles(SLEEP_STYLES, createActivityContext('research', result.value.options.activity)).find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
 // In dex mode a newly collected face leaves the target list; free mode keeps it.
@@ -87,7 +91,7 @@ watch(() => options.value.selectionMode, () => {
         <div class="field"><label for="completion-island">{{ translateUi("岛屿") }}</label><select id="completion-island" v-model="options.island" :disabled="busy"><option value="all">{{ translateUi("全部 · 自动择优") }}</option><option v-for="island in islands" :key="island.id" :value="island.id">{{ gameText(island.name) }}</option></select></div>
         <div class="field"><label for="completion-sleep-type">{{ translateUi("睡眠类型") }}</label><select id="completion-sleep-type" v-model="options.sleepType" :disabled="busy"><option value="all">{{ translateUi("全部 · 自动择优") }}</option><option v-for="type in EFFICIENCY_SLEEP_TYPES" :key="type" :value="type">{{ gameText(type) }}</option></select></div>
       </div>
-      <label class="row"><input v-model="options.campTicket" :disabled="busy" type="checkbox" role="switch"> {{ translateUi("露营券 +1（只加第一觉）") }}</label>
+      <PlanCampTicket v-model="campTicketMode" :disabled="busy" />
       <label class="row"><input v-model="options.splitSleep" :disabled="busy" type="checkbox" role="switch"> {{ translateUi("比较拆分睡眠") }}</label>
       <p class="muted">{{ options.splitSleep ? translateUi("同时比较整觉 100 分和两觉合计 100 分；指定睡眠类型时，两觉均使用该类型。") : translateUi("只计算一觉 100 分。") }}</p>
       <div class="field"><label for="completion-event">{{ translateUi("活动睡意之力倍率") }}</label><select id="completion-event" v-model.number="eventMult" :disabled="busy"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}{{ translateUi("倍（活动）") }}</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ translateUi(bonus.label) }}</option></select></div>

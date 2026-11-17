@@ -14,7 +14,7 @@ import { skillMaxFor } from '../../calc/mainSkills'
 import { SUBSKILL_GATES } from '../../calc/member'
 import type { ProduceInput } from '../../types'
 import IngredientIcon from './IngredientIcon.vue'
-import PokePicker from './PokePicker.vue'
+import PokePicker from '#platform/PokePicker.vue'
 
 const natureMinted = computed({ get: () => model.value.natureMinted === true, set: (natureMinted: boolean) => patch({ natureMinted }) })
 const model = defineModel<ProduceInput>({ required: true })

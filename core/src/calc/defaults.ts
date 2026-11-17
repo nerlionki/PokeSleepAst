@@ -1,4 +1,4 @@
-import { migrateCatalogCounts, recipeKey } from './catalogIds'
+import { migrateCatalogCounts, recipeLevelKey } from './catalogIds'
 import { clampAreaBonus } from './areaBonus'
 import ruleCatalogs from '../data/rule-catalogs.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
@@ -17,14 +17,17 @@ export function canPickBerries(island: IslandId): boolean {
   return BERRY_PREF_ISLANDS.includes(island)
 }
 
-export const defaultSettings = (): Settings => ((cloneData(factory_defaults_config_clientFactoryDefaults["defaultSettings"]) as unknown as Settings))
+export const defaultSettings = (): Settings => ({
+  ...(cloneData(factory_defaults_config_clientFactoryDefaults["defaultSettings"]) as unknown as Settings),
+  meals: true,
+  sundayPot: false,
+})
 
 export const idealSettings = (): Settings => ({
   ...defaultSettings(),
   sleepStart: (factory_defaults_config_clientFactoryDefaults["idealSettings_sleepStart"] as "21:30"),
   sleepEnd: (factory_defaults_config_clientFactoryDefaults["idealSettings_sleepEnd"] as "08:00"),
   sleepScore: (factory_defaults_config_clientFactoryDefaults["idealSettings_sleepScore"] as 100),
-  meals: (factory_defaults_config_clientFactoryDefaults["idealSettings_meals"] as true),
   goodCamp: (factory_defaults_config_clientFactoryDefaults["idealSettings_goodCamp"] as true),
 })
 
@@ -33,7 +36,6 @@ export const work18Settings = (): Settings => ({
   sleepStart: (factory_defaults_config_clientFactoryDefaults["work18Settings_sleepStart"] as "00:00"),
   sleepEnd: (factory_defaults_config_clientFactoryDefaults["work18Settings_sleepEnd"] as "06:00"),
   sleepScore: (factory_defaults_config_clientFactoryDefaults["work18Settings_sleepScore"] as 88),
-  meals: (factory_defaults_config_clientFactoryDefaults["work18Settings_meals"] as true),
 })
 
 export const helpMaxSettings = (): Settings => ({
@@ -54,10 +56,12 @@ export function mergeSettings(saved: (Partial<Settings> & { recipeLevel?: number
   const base = defaultSettings()
   if (!saved) return base
   const { recipeLevel: _legacy, goodNightRibbon: _ribbon, ...rest } = saved
-  const { counts: recipeLevels, unresolved } = migrateCatalogCounts(saved.recipeLevels ?? {}, recipeKey, saved.unresolvedRecipeLevels)
+  const { counts: recipeLevels, unresolved } = migrateCatalogCounts(saved.recipeLevels ?? {}, recipeLevelKey, saved.unresolvedRecipeLevels)
   const merged: Settings = {
     ...base,
     ...rest,
+    meals: base.meals,
+    sundayPot: base.sundayPot,
     sleepEventMix: saved.sleepEventMix === 'all' ? 'all' : 'some',
     berries: saved.berries?.length ? saved.berries : base.berries,
     recipeLevels,

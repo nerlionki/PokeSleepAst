@@ -8,6 +8,7 @@ import { selectionList, matchesChoice } from './multiChoice'
 import { specialtyHit } from './specialty'
 import { foldText } from './text'
 import { pokeHit } from './pokeSearch'
+import { ingredientKey } from './catalogIds'
 import type { BoxPokemon } from '../types'
 const boxFilter_config_extracted0 = extracted0.modules.boxFilter
 const boxFilter_slotOpen_runtimeParameters = runtimeParameters.modules.boxFilter.slotOpen.values
@@ -51,18 +52,13 @@ interface Tagged {
   open: boolean
 }
 
-function ingredientName(name: string): string {
-  const hit = INGREDIENTS.find((item) => foldText(item.name) === foldText(name))
-  return hit?.name ?? name
-}
-
 function ingredientTags(pokemon: BoxPokemon): Tagged[] {
   const lines = pokeById(pokemon.pokeId)?.ingredients ?? []
   return pokemon.ingredientSlots.flatMap((index, slot) => {
     if (index == null) return []
     const line = lines[index]
     if (!line) return []
-    return [{ id: ingredientName(line.name), open: slotOpen(pokemon.level, slot) }]
+    return [{ id: String(line.id), open: slotOpen(pokemon.level, slot) }]
   })
 }
 
@@ -100,24 +96,25 @@ export function boxMatches(pokemon: BoxPokemon, query: BoxQuery): boolean {
   const poke = pokeById(pokemon.pokeId)
   if (!poke) return false
   if (!pokeHit(poke, query.text, boxLabel(pokemon))) return false
-  if (!matchesChoice(selectionList(query.berryType), poke.berryType)) return false
+  const berries = selectionList(query.berryType)
+  if (berries.length && !berries.some(value => value === String(poke.berryId) || value === poke.berryType)) return false
   if (selectionList(query.specialty).length && !selectionList(query.specialty).some(value => specialtyHit(poke.specialty, value))) return false
   if (!matchesChoice(query.sleepTypes ?? [], poke.sleepType)) return false
   if (selectionList(query.mainSkill).length && !selectionList(query.mainSkill).some(value => skillHit(poke.mainSkill, value))) return false
-  if (!matchTagged(ingredientTags(pokemon), query.ingredients, query.ingredientLock, 'or')) return false
+  if (!matchTagged(ingredientTags(pokemon), query.ingredients.map(value => ingredientKey(value) ?? value), query.ingredientLock, 'or')) return false
   if (!matchTagged(subskillTags(pokemon), query.subskills, query.subskillLock, query.subskillCombine)) return false
   return true
 }
 
 export interface FilterCatalog {
-  berries: { name: string, type: string }[]
+  berries: { id: number, name: string, type: string }[]
   skills: string[]
   ingredients: { id: number, name: string }[]
   subskills: { id: string, name: string }[]
 }
 
 export const FILTER_CATALOG: FilterCatalog = {
-  berries: BERRIES.map((item) => ({ name: item.name, type: item.type })),
+  berries: BERRIES.map(({ id, name, type }) => ({ id, name, type })),
   skills: MAIN_SKILLS.map((item) => item.name),
   ingredients: INGREDIENTS.map((item) => ({ id: item.id, name: item.name })),
   subskills: SUBSKILLS.map((item) => ({ id: item.id, name: item.name })),

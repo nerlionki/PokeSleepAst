@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import PlanCampTicket from './PlanCampTicket.vue';
+  import { usePlanCampTicket } from '../../composables/usePlanCampTicket';
   import { gameText, sleepStyleText, t as translateUi } from '../../ui/i18n';
 
   import { INPUT_RANGES } from '../../calc/inputRanges';
@@ -34,7 +36,7 @@
     type SplitTarget
   } from '../../calc/splitSleep';
   import { useSplitSleep } from '../../composables/useSplitSleep';
-  import PokePicker from '../shared/PokePicker.vue';
+  import PokePicker from '#platform/PokePicker.vue';
   import ProgressDialog from '../shared/ProgressDialog.vue';
   import SplitRecommendation from './SplitRecommendation.vue';
   const components_plan_SplitSleepPane_config_clientDefaults =
@@ -43,6 +45,7 @@
   const { plan } = storeToRefs(usePlanStore());
   const settingsStore = useSettingsStore();
   const { settings } = storeToRefs(settingsStore);
+  const { mode: campTicketMode, enabled: campTicket } = usePlanCampTicket('split');
   const config = computed(() => plan.value.splitSleep);
   const island = computed({
     get: () => settings.value.island,
@@ -77,6 +80,7 @@
     ),
     island: island.value,
     strength: plan.value.snorlaxStrength,
+    campTicket: campTicket.value,
     activity: activity.context.value,
     eventMult: eventMult.value,
     eventMix: mixMode.value
@@ -163,6 +167,7 @@
   );
   const { busy, error, notice, progress, result, dirty, calculate, cancel } =
     useSplitSleep(options);
+  watch(() => campTicket.value, () => { if (busy.value) cancel(); });
   const percent = computed(() =>
     progress.value.total
       ? Math.min(
@@ -294,15 +299,7 @@
           />
         </div>
       </div>
-      <label class="row"
-        ><input
-          v-model="config.campTicket"
-          :disabled="busy"
-          type="checkbox"
-          role="switch"
-        />
-        {{ translateUi('露营券 +1（只加第一觉）') }}</label
-      >
+      <PlanCampTicket v-model="campTicketMode" :disabled="busy" />
       <h3>{{ translateUi('目标') }}</h3>
       <p v-if="!config.targets.length" class="muted">
         {{ translateUi('添加宝宝或指定睡姿，支持混选多个目标。') }}

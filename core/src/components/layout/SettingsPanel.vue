@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import TimeField from '../shared/TimeField.vue';
-  import { t as translateUi, gameText } from '../../ui/i18n';
+  import { t as translateUi } from '../../ui/i18n';
   import { INPUT_RANGES } from '../../calc/inputRanges';
   const INPUT_LIMITS = INPUT_RANGES.SettingsPanel;
 
@@ -12,20 +12,13 @@
   import { MIX_OPTIONS, eventMixLabel } from '../../calc/sleepRules';
   import { computed } from 'vue';
   import { storeToRefs } from 'pinia';
-  import { POT_TIERS, RECIPES } from '../../calc/data';
-  import {
-    categoryLabel,
-    RECIPE_LEVEL_MAX,
-    recipeLevelOf
-  } from '../../calc/cook';
-  import { compareRecipeEnergyDescending } from '../../calc/recipes';
+  import { POT_TIERS } from '../../calc/data';
+  import { normalizeRecipeLevel, RECIPE_LEVEL_MAX } from '../../calc/cook';
   import EnvironmentFields from '../shared/EnvironmentFields.vue';
-  import MealIcon from '../shared/MealIcon.vue';
   import { useSettingsStore } from '../../stores/settings';
-  import type { MealCategory } from '../../types';
 
   const props = defineProps<{ embedded?: boolean }>();
-  const emit = defineEmits<{ close: [] }>();
+  const emit = defineEmits<{ close: []; recipes: [] }>();
   const store = useSettingsStore();
   const { settings, summary } = storeToRefs(store);
   const activity = useActivities(settings, () => settings.value.island);
@@ -41,15 +34,6 @@
   const maxPotSize = Math.max(...POT_TIERS.map(tier => tier.pot));
   const minPotSize = Math.min(...POT_TIERS.map(tier => tier.pot));
 
-  const recipeGroups = computed(() =>
-    (['curry', 'salad', 'dessert'] as MealCategory[]).map(c => ({
-      id: c,
-      label: categoryLabel(c),
-      recipes: RECIPES.filter(r => r.category === c && !r.mix).sort((a, b) =>
-        compareRecipeEnergyDescending(a, b)
-      )
-    }))
-  );
 </script>
 
 <template>
@@ -136,20 +120,12 @@
           :max="INPUT_LIMITS.settings_sleepScore.max"
       /></FormField>
       <label class="row"
-        ><input v-model="settings.meals" type="checkbox" />
-        {{ translateUi('三餐回活力') }}</label
-      >
-      <label class="row"
         ><input v-model="settings.incense" type="checkbox" />
         {{ translateUi('回复薰香（恢复 ×2）') }}</label
       >
       <label class="row"
         ><input v-model="settings.goodCamp" type="checkbox" />
-        {{ translateUi('优质露营券') }}</label
-      >
-      <label class="row"
-        ><input v-model="settings.sundayPot" type="checkbox" />
-        {{ translateUi('周日锅 ×2（日产手动开）') }}</label
+        {{ translateUi('露营券') }}</label
       >
       <label class="row"
         ><input v-model="shinyUp" type="checkbox" />
@@ -174,56 +150,26 @@
       /></FormField>
       <FormField v-slot="{ id }" :label="translateUi('本周喜好料理')"
         ><select :id="id" v-model="settings.mealCategory">
+          <option value="all">{{ translateUi('全部料理') }}</option>
           <option value="curry">{{ translateUi('咖喱、浓汤') }}</option>
           <option value="salad">{{ translateUi('沙拉') }}</option>
           <option value="dessert">{{ translateUi('点心、饮料') }}</option>
         </select></FormField
       >
-      <div class="stack">
-        <p>{{ translateUi('食谱等级') }}</p>
-        <p class="muted">
-          {{ translateUi('每个食谱单独填写，未填按 1 级。') }}
-        </p>
-        <div
-          v-for="(level, key) in settings.unresolvedRecipeLevels"
-          :key="key"
-          class="row"
-        >
-          <span class="amber"
-            >{{ key }} · Lv.{{ level }} ·
-            {{ translateUi('旧食谱等级未匹配或冲突') }}</span
-          >
-          <button
-            class="btn ghost"
-            type="button"
-            @click="store.removeUnresolvedRecipeLevel(key)"
-          >
-            {{ translateUi('删除') }}
-          </button>
-        </div>
-        <details v-for="g in recipeGroups" :key="g.id" class="recipe-levels">
-          <summary>
-            {{ translateUi(g.label) }} · {{ g.recipes.length }}
-            {{ translateUi('道') }}
-          </summary>
-          <div v-for="r in g.recipes" :key="r.id" class="recipe-lv-row">
-            <MealIcon :name="r.name" :id="r.id" />
-            <span>{{ gameText(r.name) }}</span>
-            <input
-              :value="recipeLevelOf(settings, r.id)"
-              type="number"
-              :min="INPUT_LIMITS.recipeLevelOf_settings_r_name.min"
-              :max="RECIPE_LEVEL_MAX"
-              @change="
-                store.setRecipeLevel(
-                  r.id,
-                  Number(($event.target as HTMLInputElement).value)
-                )
-              "
-            />
-          </div>
-        </details>
-      </div>
+      <FormField v-slot="{ id }" :label="translateUi('全局食谱等级')">
+        <input
+          :id="id"
+          :value="normalizeRecipeLevel(settings.defaultRecipeLevel ?? 1)"
+          type="number"
+          :min="INPUT_LIMITS.recipeLevelOf_settings_r_name.min"
+          :max="RECIPE_LEVEL_MAX"
+          @change="store.setDefaultRecipeLevel(Number(($event.target as HTMLInputElement).value))"
+        />
+      </FormField>
+      <button type="button" class="btn ghost recipe-level-entry" @click="emit('recipes')">
+        <span>{{ translateUi('单独设置食谱等级') }}</span>
+        <span aria-hidden="true">›</span>
+      </button>
       <FormField v-slot="{ id }" :label="translateUi('锅容量')"
         ><input
           :id="id"
@@ -279,3 +225,14 @@
     </section>
   </div>
 </template>
+
+<style scoped>
+.recipe-level-entry {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+</style>

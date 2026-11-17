@@ -2,7 +2,13 @@
  * Terminal exclusions follow the user-approved RAE snapshot in sleep-last-roll-source.json.
  * https://wikiwiki.jp/poke_sleep/睡眠リサーチ/ねむけパワー/寝顔出現の法則
  */
-export interface DprCandidate { dpr: number, spoId?: number, order?: number, unlockRank?: number, lastRollExcluded?: boolean }
+export interface DprCandidate { dpr: number, spoId?: number, order?: number, unlockRank?: number, lastRollExcluded?: boolean, upPriority?: number }
+const upPriorityOf = (item: DprCandidate) => item.upPriority ?? 1
+
+export function highestSleepUp<T>(pool: readonly T[], priority: (item: T) => number): readonly T[] {
+  const highest = pool.reduce((best, item) => Math.max(best, priority(item)), 1)
+  return highest > 1 ? pool.filter(item => priority(item) === highest) : pool
+}
 export function compareSleepPriority(a: DprCandidate, b: DprCandidate): number {
   // User-confirmed 2026-10-15: equal DPR prefers the lower SPO ID.
   // Missing SPO metadata retains the rank/internal-ID fallback.
@@ -13,15 +19,18 @@ export function selectSleepStyle<T extends DprCandidate>(
   pool: readonly T[], remaining: number, last: boolean, rng: () => number,
   weight: (item: T) => number = () => 1,
   lowPower = false,
+  priority: (item: T) => number = upPriorityOf,
 ): T | undefined {
   if (last) pool = pool.filter(item => !item.lastRollExcluded)
   if (!pool.length) return undefined
+  const compareTie = (a: T, b: T) => (last ? priority(b) - priority(a) : 0) || compareSleepPriority(a, b)
   let minimum = pool[0]!, maximum: T | undefined
   for (const item of pool) {
-    if (item.dpr < minimum.dpr || (item.dpr === minimum.dpr && compareSleepPriority(item, minimum) < 0)) minimum = item
-    if (item.dpr <= remaining && (!maximum || item.dpr > maximum.dpr || (item.dpr === maximum.dpr && compareSleepPriority(item, maximum) < 0))) maximum = item
+    if (item.dpr < minimum.dpr || (item.dpr === minimum.dpr && compareTie(item, minimum) < 0)) minimum = item
+    if (last && item.dpr <= remaining && (!maximum || item.dpr > maximum.dpr ||
+      (item.dpr === maximum.dpr && compareTie(item, maximum) < 0))) maximum = item
   }
-  if (lowPower || !maximum) return minimum
+  if (lowPower || minimum.dpr > remaining) return minimum
   if (last) return maximum
   const eligible = pool.filter(item => item.dpr <= remaining)
   let roll = rng() * eligible.reduce((sum, item) => sum + weight(item), 0)
@@ -33,6 +42,7 @@ export function selectSleepStyle<T extends DprCandidate>(
 export function createSleepSelector<T extends DprCandidate>(pool: readonly T[], weight: (item: T) => number = () => 1) {
   const sorted = [...pool].sort((a, b) => a.dpr - b.dpr || compareSleepPriority(a, b))
   const terminal = sorted.filter(item => !item.lastRollExcluded)
+  terminal.sort((a, b) => a.dpr - b.dpr || upPriorityOf(b) - upPriorityOf(a) || compareSleepPriority(a, b))
   const prefix = [0]
   const terminalGroupStart: number[] = []
   for (let i = 0; i < terminal.length; i++) {

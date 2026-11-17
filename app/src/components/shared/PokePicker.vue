@@ -1,4 +1,4 @@
 <script lang="ts">
-import Component from '../../../../core/src/components/shared/PokePicker.vue'
+import Component from '../../platform/PokePicker.vue'
 export default Component
 </script>

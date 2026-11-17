@@ -15,11 +15,13 @@ import { normalizeEncounterGoals, type EncounterGoal } from '../calc/encounterPl
 const stores_plans_config_clientDefaults = clientDefaults.modules.stores_plans
 
 
+export type PlanCampTicketScope = 'sleep' | 'split' | 'encounter'
+
 interface PlanState {
   snorlaxStrength: number
   sleepScore: number
   sleepType: '淺淺入夢' | '安然入睡' | '深深入眠' | '没有特征'
-  campTicket: boolean
+  campTicketOverrides?: Partial<Record<PlanCampTicketScope, boolean>>
   incense: boolean
   rank: string
   sleepdex: string[]
@@ -43,7 +45,6 @@ const empty: PlanState = {
   snorlaxStrength: (stores_plans_config_clientDefaults["empty_snorlaxStrength"] as 0),
   sleepScore: (stores_plans_config_clientDefaults["empty_sleepScore"] as 100),
   sleepType: (stores_plans_config_clientDefaults["empty_sleepType"] as "没有特征"),
-  campTicket: (stores_plans_config_clientDefaults["empty_campTicket"] as false),
   incense: (stores_plans_config_clientDefaults["empty_incense"] as false),
   rank: (stores_plans_config_clientDefaults["empty_rank"] as ""),
   sleepdex: cloneData(stores_plans_config_clientDefaults["empty_sleepdex"]),

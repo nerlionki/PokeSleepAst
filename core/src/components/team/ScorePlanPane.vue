@@ -14,7 +14,11 @@ import { useScorePlan } from '#platform/scorePlan'
 import { showValidationError } from '#platform/confirm'
 import { loadJson, saveJson } from '../../storage'
 import { useBoxStore } from '../../stores/box'
+import { useRosterStore } from '../../stores/roster'
 import { useSettingsStore } from '../../stores/settings'
+import type { BoxPokemon } from '../../types'
+import { teamRestrictionError } from '../../calc/teamRestrictions'
+import { itemById, ITEM_ROLES } from '../../calc/itemCatalog'
 import { INGREDIENTS, islandById } from '../../calc/data'
 import { ingredientLabel, ingredientRow, recipeById } from '../../calc/catalogIds'
 import { boxLabel } from '../../calc/boxFilter'
@@ -25,11 +29,30 @@ const components_team_ScorePlanPane_config_clientDefaults = clientDefaults.modul
 
 
 const box = useBoxStore(), settings = useSettingsStore()
+const roster = useRosterStore()
+const pillowId = ITEM_ROLES.energyPillow
+const pillowAvailable = pillowId != null && Boolean(itemById(pillowId)?.useEffect)
 const options = ref(defaultScoreOptions(settings.settings))
 const ready = ref(components_team_ScorePlanPane_config_clientDefaults["readyInitial"]), advanced = ref(components_team_ScorePlanPane_config_clientDefaults["advancedInitial"]), inventory = ref(components_team_ScorePlanPane_config_clientDefaults["inventoryInitial"]), selected = ref(components_team_ScorePlanPane_config_clientDefaults["selectedInitial"]), showActions = ref(components_team_ScorePlanPane_config_clientDefaults["showActionsInitial"]), actionDay = ref(components_team_ScorePlanPane_config_clientDefaults["actionDayInitial"])
 const loadError = ref('')
 const optionsStorageKey = 'score-options-v2'
-const request = () => ({ settings: { ...settings.settings, mealCategory: options.value.category }, box: box.pokemon, options: options.value })
+const baselineStorageKey = 'score-baseline-team'
+const baselineId = ref('')
+const baselines = computed(() => roster.teamList().flatMap(team => {
+  const members: BoxPokemon[] = []
+  for (const uid of team.slots) {
+    if (!uid) continue
+    const boxed = box.pokemon.find(member => member.uid === uid)
+    const custom = team.customs.find(member => member.uid === uid)
+    const member = boxed ?? (custom && { ...custom, name: '', napping: false })
+    if (!member) return []
+    members.push({ ...member, tune: team.tunes[uid] ?? member.tune })
+  }
+  if (!members.length || teamRestrictionError(members) || scoreCandidates(members).excluded.length) return []
+  return [{ id: team.id, name: team.name, members }]
+}))
+const baseline = computed(() => baselines.value.find(team => team.id === baselineId.value))
+const request = () => ({ settings: { ...settings.settings, mealCategory: options.value.category }, box: box.pokemon, options: options.value, baseline: baseline.value })
 const { busy, error, notice, result, progress, dirty, calculate, cancel, restore } = useScorePlan(request)
 const inputError = computed(() => loadError.value || validateScoreOptions(options.value, settings.settings))
 const foodCount = computed(() => Object.values(options.value.bag).reduce((sum, n) => sum + (Number(n) || 0), 0))
@@ -44,6 +67,23 @@ const environment = computed(() => [
   translateUi(settings.settings.goodCamp ? '已开露营券' : '未开露营券'),
 ].join(' · '))
 const solution = computed(() => result.value?.solutions[selected.value])
+const pillowStock = computed(() => pillowAvailable ? solution.value?.trace.items?.[pillowId] : undefined)
+const baselineDelta = computed(() => {
+  const comparison = result.value?.baseline?.solution
+  const current = solution.value
+  if (!comparison || !current) return []
+  return (['mean', 'berry', 'zone', 'skill', 'cooking'] as const).map((key, index) => ({
+    label: ['· 平均新增', '树果', '· 领域加成', '· 直接技能', '· 料理'][index]!,
+    value: current[key] - comparison[key],
+  }))
+})
+const mealDistribution = computed(() => Object.entries(solution.value?.mealDistribution ?? {}).map(([id, counts]) => {
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0)
+  return { id, name: gameText(recipeById(Number(id))?.name ?? id),
+    entries: Object.entries(counts).map(([count, samples]) => ({
+      count, percent: total ? (100 * samples / total).toFixed(1) : '0',
+    })) }
+}))
 const percent = computed(() => Math.min(100, Math.floor(progress.value.completed / Math.max(1, progress.value.total) * 100)))
 const displayTime = (minute: number) => scoreTime(minute, translateUi)
 const boundLabel = computed(() => { const b = scoreBounds(options.value); return `${displayTime(b.start)} — ${b.end === 10320 ? translateUi('下周一 03:59') : displayTime(b.end)}` })
@@ -56,13 +96,14 @@ const daySegments = computed(() => solution.value?.trace.segments.filter(s => s.
 const sensitive = computed(() => solution.value?.sensitivity.some(s => Math.abs(s.mean - solution.value!.mean) > solution.value!.mean * 0.05))
 const advancedChanged = computed(() => {
   const defaults = defaultScoreOptions(settings.settings)
-  return ['startDay', 'startTime', 'days', 'collectMinutes', 'precision', 'splitSleep', 'device', 'initialPot', 'initialCrit', 'initialZone', 'initialJuice', 'useJuice', 'sleeps', 'meals', 'dayStart', 'dayEnd', 'initialDisguise']
+  return ['startDay', 'startTime', 'days', 'collectMinutes', 'precision', 'splitSleep', 'device', 'initialPot', 'initialCrit', 'initialZone', 'initialJuice', 'useJuice', 'initialPillows', 'usePillows', 'sleeps', 'meals', 'dayStart', 'dayEnd', 'initialDisguise']
     .some(key => JSON.stringify(options.value[key as keyof ScoreOptions]) !== JSON.stringify(defaults[key as keyof ScoreOptions]))
 })
 onMounted(async () => {
   try {
     const current = await loadJson<Partial<ScoreOptions> | null>(optionsStorageKey, null)
     const legacy = current ? null : await loadJson<Partial<ScoreOptions> | null>('score-options-v1', null)
+    baselineId.value = await loadJson(baselineStorageKey, '')
     options.value = normalizeScoreOptions(current ?? legacy ?? undefined, settings.settings)
     if (legacy || current && JSON.stringify([current.bag, current.unresolvedBag]) !== JSON.stringify([options.value.bag, options.value.unresolvedBag])) {
       await saveJson(optionsStorageKey, options.value)
@@ -77,7 +118,8 @@ onMounted(async () => {
   }
 })
 watch(options, value => { if (ready.value && !loadError.value) void saveJson(optionsStorageKey, value); if (busy.value) cancel() }, { deep: true })
-watch(() => JSON.stringify({ settings: settings.settings, box: box.pokemon }), () => { if (busy.value) cancel() })
+watch(baselineId, value => { if (ready.value && !loadError.value) void saveJson(baselineStorageKey, value) })
+watch(() => JSON.stringify({ settings: settings.settings, box: box.pokemon, baseline: baseline.value }), () => { if (busy.value) cancel() })
 watch(result, () => { selected.value = 0; actionDay.value = options.value.startDay })
 function reset() {
   loadError.value = ''
@@ -114,7 +156,15 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
       <p class="muted">{{ environment }} · Box {{ box.pokemon.length }} {{ translateUi("只") }}</p>
       <p>{{ boundLabel }}</p>
       <div class="row score-basics">
-        <div class="field"><label for="score-category">{{ translateUi("本周料理类型") }}</label><select id="score-category" v-model="options.category"><option value="curry">{{ translateUi("咖喱、浓汤") }}</option><option value="salad">{{ translateUi("沙拉") }}</option><option value="dessert">{{ translateUi("点心、饮料") }}</option></select></div>
+        <div class="field">
+          <label for="score-category">{{ translateUi("本周料理类型") }}</label>
+          <select id="score-category" v-model="options.category">
+            <option value="all">{{ translateUi("全部料理") }}</option>
+            <option value="curry">{{ translateUi("咖喱、浓汤") }}</option>
+            <option value="salad">{{ translateUi("沙拉") }}</option>
+            <option value="dessert">{{ translateUi("点心、饮料") }}</option>
+          </select>
+        </div>
         <div class="field"><label for="score-initial">{{ translateUi("卡比兽初始能量") }}</label><input id="score-initial" v-model.number="options.initialStrength" type="number" :min="INPUT_LIMITS.score_initial.min" :step="INPUT_LIMITS.score_initial.step" inputmode="numeric"></div>
       </div>
       <button class="btn ghost" type="button" :aria-expanded="inventory" @click="inventory = !inventory">{{ translateUi("初始食材 ·") }} {{ foodCount }}/{{ INPUT_LIMITS.options_bag_ingredient_name.max }} {{ translateUi("个") }}</button>
@@ -170,6 +220,10 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
           <div class="field"><label for="score-zone">{{ translateUi("已有树果领域（%）") }}</label><input id="score-zone" v-model.number="options.initialZone" type="number" :min="INPUT_LIMITS.score_zone.min" :max="INPUT_LIMITS.score_zone.max" :step="INPUT_LIMITS.score_zone.step"></div>
         </div>
         <div class="row"><div class="field"><label for="score-juice">{{ translateUi("已有树果汁（个）") }}</label><input id="score-juice" v-model.number="options.initialJuice" type="number" :min="INPUT_LIMITS.score_juice.min" :max="INPUT_LIMITS.score_juice.max"></div><label class="score-check"><input v-model="options.useJuice" type="checkbox"><span class="score-check-label">{{ translateUi("允许规划使用树果汁") }}</span></label></div>
+        <div v-if="pillowAvailable" class="row">
+          <div class="field"><label for="score-pillow">{{ translateUi("已有活力枕头（个）") }}</label><input id="score-pillow" v-model.number="options.initialPillows" type="number" min="0" step="1"></div>
+          <label class="score-check"><input v-model="options.usePillows" type="checkbox"><span class="score-check-label">{{ translateUi("允许规划使用活力枕头") }}</span></label>
+        </div>
         <template v-if="box.pokemon.some(p => !p.napping && p.pokeId === 778)">
           <h4>{{ translateUi("画皮初始状态") }}</h4>
           <label v-for="p in box.pokemon.filter(p => !p.napping && p.pokeId === 778)" :key="p.uid" class="score-check"><input :model-value="options.initialDisguise[p.uid] ?? true" :checked="options.initialDisguise[p.uid] ?? true" type="checkbox" @change="options.initialDisguise[p.uid] = ($event.target as HTMLInputElement).checked"><span class="score-check-label">{{ boxLabel(p) }} {{ translateUi("· 画皮仍可大成功") }}</span></label>
@@ -178,6 +232,13 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
       </div>
       <p v-if="inputError" class="amber" role="alert">{{ inputError }}</p>
       <p v-if="!box.pokemon.length" class="muted">{{ translateUi("请先在 Box 添加宝可梦，再开始规划。") }}</p>
+      <div v-if="baselines.length" class="field">
+        <label for="score-baseline">{{ translateUi("我的队伍") }}</label>
+        <select id="score-baseline" v-model="baselineId">
+          <option value="">{{ translateUi("无") }}</option>
+          <option v-for="team in baselines" :key="team.id" :value="team.id">{{ team.name }}</option>
+        </select>
+      </div>
       <div class="row"><button class="btn" type="button" :disabled="busy || !ready" @click="start">{{ busy ? translateUi("正在规划 {arg1}%", { arg1: String(percent) }) : translateUi("开始规划") }}</button></div>
       <ProgressDialog :open="busy" :title="translateUi('正在计算冲分规划')" :progress="percent" stage="比较队伍与料理策略" :notice="notice"
         :detail="translateUi('已比较 {done} / {total}', { done: progress.completed, total: progress.total })" cancellable cancel-text="取消规划" @cancel="cancel" />
@@ -190,24 +251,38 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
         <p>{{ translateUi("初始") }} {{ number(result.options.initialStrength) }} {{ translateUi("＋ 平均新增") }} {{ number(solution.mean) }}</p>
         <p class="muted">{{ translateUi("树果") }} {{ number(solution.berry) }} {{ translateUi("· 领域加成") }} {{ number(solution.zone) }} {{ translateUi("· 直接技能") }} {{ number(solution.skill) }} {{ translateUi("· 料理") }} {{ number(solution.cooking) }}</p>
         <p class="muted">{{ solution.simulations }} {{ translateUi("次模拟的新增能量范围") }} {{ number(solution.min) }}–{{ number(solution.max) }}{{ translateUi("，标准差") }} {{ number(solution.deviation) }}{{ translateUi("。范围是本次样本的最小／最大值。") }}</p>
+        <p v-if="result.baseline" class="muted">{{ translateUi("我的队伍") }} · {{ result.baseline.name }} {{ translateUi("· 平均新增") }} {{ number(result.baseline.solution.mean) }}</p>
+        <p v-if="baselineDelta.length" class="muted">
+          <span v-for="entry in baselineDelta" :key="entry.label"> {{ translateUi(entry.label) }} {{ entry.value > 0 ? '+' : '' }}{{ number(entry.value) }}</span>
+        </p>
         <p class="muted">{{ translateUi("比较") }} {{ result.compared }} {{ translateUi("个方案，共") }} {{ result.simulations }} {{ translateUi("次模拟，用时") }} {{ (result.elapsedMs / 1000).toFixed(1) }} {{ translateUi("秒。") }}</p>
         <div class="field"><label for="score-solution">{{ translateUi("比较其他方案") }}</label><select id="score-solution" v-model.number="selected"><option v-for="(s, i) in result.solutions" :key="i" :value="i">{{ translateUi("方案") }} {{ i + 1 }} {{ translateUi("· 平均新增") }} {{ number(s.mean) }}</option></select></div>
         <p v-if="sensitive" class="amber">{{ translateUi("该方案对换队保底回退假设敏感，请对照复核收益。") }}</p>
         <p class="muted">{{ translateUi("回退复核：") }}{{ solution.sensitivity.map(s => translateUi('{count} 次：{mean}', { count: s.rollback, mean: number(s.mean) })).join('；') }}</p>
+        <p v-if="solution.withoutDecay" class="muted">{{ translateUi("无技能衰退对照") }} {{ number(solution.withoutDecay.mean) }} · {{ translateUi("平均释放 {actual} → {control} 次", { actual: (solution.skillReleases ?? 0).toFixed(1), control: solution.withoutDecay.skillReleases.toFixed(1) }) }}</p>
       </article>
       <article class="card stack">
         <h3>{{ translateUi("推荐队伍与料理策略") }}</h3>
-        <p>{{ translateUi("优先") }} {{ gameText(recipeById(solution.policy.recipeId)?.name ?? '当前可用料理') }}{{ translateUi("；预留") }} {{ solution.policy.reserveMeals }} {{ translateUi("餐食材，白天至少间隔") }} {{ solution.policy.rotateMinutes }} {{ translateUi("分钟考虑轮换。") }}</p>
+        <p>{{ translateUi("优先") }} {{ (solution.policy.mealRecipeIds ?? [solution.policy.recipeId]).map(id => gameText(recipeById(id)?.name ?? '当前可用料理')).join(' / ') }}{{ translateUi("；预留") }} {{ solution.policy.reserveMeals }} {{ translateUi("餐食材，白天至少间隔") }} {{ solution.policy.rotateMinutes }} {{ translateUi("分钟考虑轮换。") }}</p>
         <div v-for="(uids, i) in [...solution.policy.day, ...solution.policy.sleep.slice(0, result.options.splitSleep ? 2 : 1), ...(result.options.device ? solution.policy.settle.slice(0, result.options.splitSleep ? 2 : 1) : [])]" :key="i" class="stack score-team">
-          <p><strong>{{ i < 2 ? i === 0 ? translateUi("白天树果／技能阶段") : translateUi("白天食材阶段") : i < 2 + (result.options.splitSleep ? 2 : 1) ? translateUi("睡眠生产队 {arg1}", { arg1: String(i - 1) }) : translateUi("外设结算队 {arg1}", { arg1: String(i - 1 - (result.options.splitSleep ? 2 : 1)) }) }}</strong></p>
+          <p><strong>{{ i < solution.policy.day.length ? i === 0 ? translateUi("白天树果／技能阶段") : translateUi("白天食材阶段") : i < solution.policy.day.length + (result.options.splitSleep ? 2 : 1) ? translateUi("睡眠生产队 {arg1}", { arg1: String(i - solution.policy.day.length + 1) }) : translateUi("外设结算队 {arg1}", { arg1: String(i - solution.policy.day.length + 1 - (result.options.splitSleep ? 2 : 1)) }) }}</strong></p>
           <div class="score-roster"><div v-for="uid in uids" :key="uid" class="score-pokemon"><PokeSprite :id="pokemon(uid)?.pokeId ?? 0" :name="name(uid)" :shiny="pokemon(uid)?.shiny" :ribbon-hours="pokemon(uid)?.tune?.ribbonHours" /><span>{{ name(uid) }}</span></div></div>
         </div>
+        <template v-if="mealDistribution.length">
+          <h4>{{ translateUi("每日成菜次数分布") }}</h4>
+          <p v-for="meal in mealDistribution" :key="meal.id" class="muted">
+            {{ meal.name }} · {{ meal.entries.map(entry => translateUi("做成 {count} 餐 · {percent}%", entry)).join(' / ') }}
+          </p>
+        </template>
       </article>
       <article class="card stack">
         <h3>{{ translateUi("执行示例与期末状态") }}</h3>
         <p class="muted">{{ translateUi("下方是一条固定种子的执行轨迹；料理暴击、技能和轮换会因实际产物变化，不能把示例总收益当作统计均值。") }}</p>
         <p>{{ translateUi("示例新增能量") }} {{ number(solution.trace.total) }} {{ translateUi("· 期末食材") }} {{ foods(solution.trace.bag) }}</p>
         <p class="muted">{{ translateUi("卖出") }} {{ foods(solution.trace.sold) }}{{ translateUi("；树果汁：初始") }} {{ solution.trace.juice.initial }}{{ translateUi("、入库") }} {{ solution.trace.juice.received }}{{ translateUi("、使用") }} {{ solution.trace.juice.used }}{{ translateUi("、未入库") }} {{ solution.trace.juice.lost }}{{ translateUi("、剩余") }} {{ solution.trace.juice.remain }}。</p>
+        <p v-if="pillowStock && (pillowStock.initial || pillowStock.used)" class="muted">
+          {{ gameText('活力枕头') }} · {{ translateUi("初始") }} {{ pillowStock.initial }}{{ translateUi("、使用") }} {{ pillowStock.used }}{{ translateUi("、剩余") }} {{ pillowStock.remain }}
+        </p>
         <div v-for="m in solution.trace.members" :key="m.uid" class="score-state">
           <p><strong>{{ name(m.uid) }}</strong> {{ translateUi("· 上场") }} {{ m.hours.toFixed(1) }} {{ translateUi("小时 · 睡眠 EXP") }} {{ number(m.exp) }} {{ translateUi("· 期末活力") }} {{ m.energy.toFixed(1) }}</p>
           <p class="muted">{{ translateUi("每日上场") }} {{ m.dailyHours.map(h => h.toFixed(1)).join(' / ') }} {{ translateUi("小时；未领树果") }} {{ m.heldBerries }} {{ translateUi("颗、食材") }} {{ foods(m.heldFood) }}{{ translateUi("、存储技能") }} {{ m.stock }} {{ translateUi("次。") }}</p>
@@ -216,7 +291,15 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
         <div v-if="showActions" class="stack">
           <div class="field"><label for="score-action-day">{{ translateUi("查看日期") }}</label><select id="score-action-day" v-model.number="actionDay"><option v-for="(day, i) in ['周一','周二','周三','周四','周五','周六','周日','下周一结算']" :key="day" :value="i">{{ day }}</option></select></div>
           <div v-for="(segment, i) in daySegments" :key="`segment-${i}`" class="score-action"><p><strong>{{ displayTime(Math.max(segment.start, actionDay * 1440 + 240)) }} — {{ displayTime(Math.min(segment.end, (actionDay + 1) * 1440 + 240)) }}</strong> · {{ translateUi(segment.purpose) }}</p><p class="muted">{{ segment.members.map(name).join('、') }}</p></div>
-          <div v-for="(action, i) in actions" :key="i" class="score-action"><p><strong>{{ displayTime(action.minute) }}</strong> · {{ translateUi(action.text) }}<span v-if="action.energy != null"> · {{ number(action.energy) }} {{ translateUi("能量") }}</span></p><p v-if="action.members" class="muted">{{ action.members.map(name).join('、') }}</p><p v-if="action.foods && Object.values(action.foods).some(n => n > 0)" class="muted">{{ foods(action.foods) }}</p></div>
+          <div v-for="(action, i) in actions" :key="i" class="score-action">
+            <p><strong>{{ displayTime(action.minute) }}</strong> ·
+              {{ action.itemId != null ? translateUi("使用{item}恢复 {amount} 活力", { item: gameText(action.text), amount: Number(action.energyRecovered?.toFixed(1) ?? 0) }) : translateUi(action.text) }}
+              <span v-if="action.reason"> · {{ translateUi(action.reason) }}</span><span v-if="action.energy != null"> · {{ number(action.energy) }} {{ translateUi("能量") }}</span>
+            </p>
+            <p v-if="action.members" class="muted">{{ action.members.map(name).join('、') }}</p>
+            <p v-if="action.energyBefore" class="muted">{{ translateUi("换队前活力") }} · {{ Object.entries(action.energyBefore).map(([uid, energy]) => name(uid) + ' ' + energy.toFixed(1)).join('、') }}</p>
+            <p v-if="action.foods && Object.values(action.foods).some(n => n > 0)" class="muted">{{ foods(action.foods) }}</p>
+          </div>
           <p v-if="!actions.length" class="muted">{{ translateUi("这一天没有安排操作。") }}</p>
         </div>
       </article>

@@ -17,10 +17,10 @@ export function dishEnergy(baseEnergy: number, level: number): number {
 
 /** Display order uses base energy so editing recipe levels never reorders a list. */
 export function compareRecipeEnergyDescending(
-  a: Pick<RecipeRow, 'baseEnergy' | 'pot' | 'name'>,
-  b: Pick<RecipeRow, 'baseEnergy' | 'pot' | 'name'>,
+  a: Pick<RecipeRow, 'pot' | 'name'> & { baseEnergy: number | null },
+  b: Pick<RecipeRow, 'pot' | 'name'> & { baseEnergy: number | null },
 ): number {
-  return b.baseEnergy - a.baseEnergy
+  return (b.baseEnergy ?? -1) - (a.baseEnergy ?? -1)
     || a.pot - b.pot || a.name.localeCompare(b.name, 'zh-CN')
 }
 

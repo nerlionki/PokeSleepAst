@@ -42,6 +42,8 @@ export function validateMainSkillModels(data: Record<string, unknown>) {
     if (item.legacyRewardKey != null) valid(item.legacyRewardKey === 'berryJuice', '未支持的旧奖励映射')
   }
   valid(itemIds.has(obj(items.roles).berryJuice) && items.catalog.find((i: any) => i.id === items.roles.berryJuice)?.useEffect, '道具消费引用缺失')
+  if (items.roles.energyPillow != null) valid(itemIds.has(items.roles.energyPillow) &&
+    items.catalog.find((item: any) => item.id === items.roles.energyPillow)?.useEffect, '活力枕头消费引用缺失')
   if (items.pokemonCatalog !== undefined) {
     valid(Array.isArray(items.pokemonCatalog), '宝可梦道具目录无效')
     const pokemonItemIds = new Set()

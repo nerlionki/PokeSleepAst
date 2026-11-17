@@ -3,8 +3,9 @@ import { gameText, t as translateUi } from '../../ui/i18n'
 
 
 import { INGREDIENT_CATALOG } from '../../calc/ingredientCatalog'
-import { ingredientKey } from '../../calc/catalogIds'
-import { RECIPE_CATALOG, type RecipeDisplayRow } from '../../calc/recipeCatalog'
+import { RECIPE_CATALOG, recipeDisplayLevelKey, type RecipeDisplayRow } from '../../calc/recipeCatalog'
+import { recipeLevelOf } from '../../calc/cook'
+import { useSettingsStore } from '../../stores/settings'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, ref, shallowRef } from 'vue'
@@ -17,26 +18,26 @@ import RecipeSheet from './RecipeSheet.vue'
 const components_data_RecipePane_config_clientDefaults = clientDefaults.modules.components_data_RecipePane
 
 
-const ingredientOptions = INGREDIENT_CATALOG.flatMap(ingredient => {
-  const key = ingredientKey(ingredient.name)
-  return key ? [{ ...ingredient, key }] : []
-})
+const ingredientOptions = INGREDIENT_CATALOG
+const store = useSettingsStore()
 const props = defineProps<{ q?: string }>()
 const ingredients = ref<string[]>([])
 const showIngredients = shallowRef(false)
-const category = shallowRef<(typeof MEAL_CATEGORIES)[number]['id']>((components_data_RecipePane_config_clientDefaults["categoryInitial"] as unknown as (typeof MEAL_CATEGORIES)[number]['id']))
+const categories = [{ id: 'all', label: '全部' } as const, ...MEAL_CATEGORIES]
+type Category = (typeof categories)[number]['id']
+const category = shallowRef<Category>((components_data_RecipePane_config_clientDefaults.categoryViewInitial ?? 'all') as Category)
 const sort = shallowRef<'energy' | 'pot'>('energy')
 const ascending = shallowRef(false)
 const opened = shallowRef<RecipeDisplayRow | null>((components_data_RecipePane_config_clientDefaults["openedInitial"] as unknown as RecipeDisplayRow | null))
 
 const list = computed(() => {
   const rows = RECIPE_CATALOG.filter((r) => {
-    if (r.category !== category.value) return false
+    if (category.value !== 'all' && r.category !== category.value) return false
     const query = props.q ?? ''
     const matchesQuery = [r.name, ...r.ingredients.map(ingredient => ingredient.name)]
       .some(name => textHit(name, query) || textHit(gameText(name), query))
     return matchesQuery && (!ingredients.value.length || r.ingredients.some(ingredient =>
-      ingredients.value.includes(ingredientKey(ingredient.name) ?? String(ingredient.id))))
+      ingredients.value.includes(ingredient.filterKey ?? String(ingredient.id))))
   })
   return rows.sort((a, b) => {
     const left = sort.value === 'pot' ? a.pot : a.baseEnergy
@@ -49,13 +50,18 @@ const list = computed(() => {
   })
 })
 function resetFilters() { ingredients.value = [] }
+
+function levelOf(recipe: RecipeDisplayRow) {
+  const key = recipeDisplayLevelKey(recipe)
+  return key == null ? undefined : recipeLevelOf(store.settings, key)
+}
 </script>
 
 <template>
   <div class="stack">
-    <div class="seg seg-3">
+    <div class="seg seg-4">
       <button
-        v-for="c in MEAL_CATEGORIES"
+        v-for="c in categories"
         :key="c.id"
         type="button"
         :class="{ on: category === c.id }"
@@ -94,11 +100,12 @@ function resetFilters() { ingredients.value = [] }
     <div class="meal-grid">
       <RecipeCard
         v-for="r in list"
-        :key="r.name"
+        :key="r.id > 0 ? r.id : r.announcementKey"
         :recipe="r"
+        :level="levelOf(r)"
         @open="opened = r"
       />
     </div>
-    <RecipeSheet v-if="opened" :recipe="opened" @close="opened = null" />
+    <RecipeSheet v-if="opened" :recipe="opened" :level="levelOf(opened)" @close="opened = null" />
   </div>
 </template>

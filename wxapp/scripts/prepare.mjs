@@ -12,7 +12,6 @@ const {
   nativeScopedStyles,
   stripWebCheckboxStyles
 } = require('./config/native-scoped-styles.cjs');
-const { nativePokePickerScroll } = require('./config/poke-picker-scroll.cjs');
 const { nativeCandyListScroll } = require('./config/candy-list-scroll.cjs');
 const { withHomeListAd } = require('./config/home-list-ad.cjs');
 const write = (file, value) => {
@@ -99,7 +98,7 @@ for (const file of walk(core)) {
         edits.push({
           start: node.loc.start.offset,
           length: 0,
-          value: '<view class="species-list-viewport"><scroll-view :scroll-y="true" class="species-list-scroll"><custom-wrapper>'
+          value: `<view class="species-list-viewport"><scroll-view :scroll-y="true" :scroll-into-view="resultsRevision ? (resultsRevision % 2 ? 'species-results-top' : 'species-results-start') : undefined" class="species-list-scroll"><view id="species-results-top" /><view id="species-results-start" /><custom-wrapper :key="resultsRevision">`
         }, {
           start: node.loc.end.offset,
           length: 0,
@@ -201,8 +200,6 @@ for (const file of walk(core)) {
     );
     text = text.replace(new RegExp(`</${tag}>`, 'g'), `</${component}>`);
   }
-  if (rel === 'components/shared/PokePicker.vue')
-    text = nativePokePickerScroll(text);
   if (rel === 'components/plan/CandyPane.vue')
     text = nativeCandyListScroll(text);
   if (rel === 'components/pokemon/PokedexPane.vue') text = withHomeListAd(text);

@@ -3,6 +3,23 @@ import { MAIN_SKILLS, clampSkillLevel, skillByPokedexName } from './mainSkills'
 import { SKILL_EXECUTION, modelAmount, modelCondition, conditionNeedsTarget, modelTargets, type ModelContext } from './skillModel'
 import type { SkillEffect } from './skillModelTypes'
 
+function sampledEffects(effects: readonly SkillEffect[]): SkillEffect[] {
+  return effects
+    .filter(effect => !effect.profiles || effect.profiles.includes('sampled'))
+    .flatMap(effect => [effect, ...sampledEffects(effect.effects ?? [])])
+}
+
+export function scoreSkillRoles(name: string, pokeId: number) {
+  const model = skillByPokedexName(name, pokeId)?.model
+  const effects = sampledEffects(model?.effects ?? [])
+  return {
+    teamHeal: model?.classification === 'healAll' || effects.some(effect => effect.op === 'heal' && effect.target?.kind === 'team'),
+    selfHeal: model?.classification === 'healSelf' || effects.some(effect => effect.op === 'heal' && effect.target?.kind === 'self'),
+    pot: effects.some(effect => effect.op === 'pot'),
+    crit: effects.some(effect => effect.op === 'crit'),
+  }
+}
+
 export interface ScoreActor {
   uid: string, pokeId: number, berry: string, skill: string, skillLevel: number, rate: number
   energy: number, factor: number, disguise: boolean, stockpile: number, firstFood: string

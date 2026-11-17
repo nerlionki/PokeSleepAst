@@ -59,6 +59,22 @@ export function pokemonSleepWeight(
     weight *= UP_WEIGHTS[moon];
   return weight;
 }
+export function pokemonSleepUpPriority(pokeId: number, mult = 1, ups: PokemonUps = {}): number {
+  const moon = moonUp(mult);
+  let priority = moon && (MOON_POKEMON as readonly number[]).includes(pokeId) ? UP_WEIGHTS[moon] : 1;
+  for (const tier of Object.keys(UP_WEIGHTS) as UpTier[]) {
+    if (ups[tier]?.includes(pokeId)) priority = Math.max(priority, UP_WEIGHTS[tier]);
+  }
+  return priority;
+}
+export function sleepEncounterWeights(pokeId: number, mult = 1, ups: PokemonUps = {}, activityWeight = 1, activityUpPriority = 1) {
+  // Explicit activity UP replaces the legacy moon UP inferred from sleep power.
+  const moonMultiplier = activityUpPriority > 1 ? 1 : mult;
+  return {
+    weight: pokemonSleepWeight(pokeId, moonMultiplier, ups) * activityWeight,
+    upPriority: Math.max(pokemonSleepUpPriority(pokeId, moonMultiplier, ups), activityUpPriority),
+  };
+}
 export function moonUpLabel(mult: number): string {
   const tier = moonUp(mult);
   return tier

@@ -6,7 +6,7 @@ import extracted1 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 import { researchActivity, researchSleepStyles, sameResearchAvailability, activityValues, type ActivityContext, type ResearchActivitySelection } from './activities'
 import { pendingResearchPokemon } from './researchAvailability'
-import { normalizeEventMix, openSleepSlots, pokemonSleepWeight, type EventMix } from './sleepRules'
+import { normalizeEventMix, openSleepSlots, sleepEncounterWeights, type EventMix } from './sleepRules'
 import { compareSleepPriority } from './sleepSelection'
 import { isLastRollExcluded } from './sleepLastRoll'
 import type { IslandId, SleepType } from '../types'
@@ -75,6 +75,7 @@ export interface EfficiencyStyle extends EfficiencyReward {
   pokeId?: number
   lastRollExcluded?: boolean
   activityWeight?: number
+  activityUpPriority?: number
   discoveryKey?: string
 }
 export interface EfficiencyIsland {
@@ -182,6 +183,7 @@ export function activityEfficiencyIsland(island: EfficiencyIsland, context: Acti
   }
   return { ...island, styles: island.styles.map(style => ({ ...style,
     ...multipliers(style.pokeId),
+    activityUpPriority: effects(style.pokeId).encounterUpPriority,
     activityWeight: effects(style.pokeId).encounterWeightMultiplier
       * (boost && style.discoveryKey && !discovered.has(style.discoveryKey) ? UNDISCOVERED_WEIGHT : 1) })),
     fallbacks: Object.fromEntries(EFFICIENCY_SLEEP_TYPES.map(type => [type, { ...island.fallbacks[type], ...multipliers(fallbackStyle(island.id, type, context).pokeId) }])) as Record<SleepType, EfficiencyReward> }
@@ -196,7 +198,7 @@ export function strengthForPower(power: number, score: number, mult: number): nu
 }
 
 interface CurveState { min: number, encounters: number, groups: Group[] }
-interface Group extends EfficiencyReward { sleepType: SleepType, special: boolean, count: number, dpr: number, spoId?: number, belly?: boolean, order?: number, unlockRank?: number, weight?: number, lastRollExcluded?: boolean }
+interface Group extends EfficiencyReward { sleepType: SleepType, special: boolean, count: number, dpr: number, spoId?: number, belly?: boolean, order?: number, unlockRank?: number, weight?: number, upPriority?: number, lastRollExcluded?: boolean }
 
 export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: number): CurveState[] {
   const unlocks = island.styles.map((style) => ({ style, at: Math.max(1, style.unlockStrength) }))
@@ -214,11 +216,11 @@ export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: n
     const previous = unlocked
     while (unlocked < unlocks.length && unlocks[unlocked]!.at <= min) {
       const style = unlocks[unlocked++]!.style
-      const weight = pokemonSleepWeight(style.pokeId ?? 0, mult) * (style.activityWeight ?? 1)
-      const key = `${weight}|${style.sleepType}|${Number(style.special)}|${style.catch}|${style.candy}|${style.dpr}|${style.belly}|${Number(!!style.lastRollExcluded)}|${style.firstCandyMultiplier ?? 1}|${style.secondCandyMultiplier ?? 1}`
+      const { weight, upPriority } = sleepEncounterWeights(style.pokeId ?? 0, mult, undefined, style.activityWeight, style.activityUpPriority)
+      const key = `${upPriority}|${weight}|${style.sleepType}|${Number(style.special)}|${style.catch}|${style.candy}|${style.dpr}|${style.belly}|${Number(!!style.lastRollExcluded)}|${style.firstCandyMultiplier ?? 1}|${style.secondCandyMultiplier ?? 1}`
       const group = groups.get(key)
       if (group) { group.count++; if (compareSleepPriority(style, group) < 0) { group.spoId = style.spoId; group.order = style.order; group.unlockRank = style.unlockRank } }
-      else groups.set(key, { sleepType: style.sleepType, special: style.special, catch: style.catch, candy: style.candy, dpr: style.dpr, spoId: style.spoId, belly: style.belly, order: style.order, unlockRank: style.unlockRank, weight, count: 1, lastRollExcluded: style.lastRollExcluded, firstCandyMultiplier: style.firstCandyMultiplier, secondCandyMultiplier: style.secondCandyMultiplier })
+      else groups.set(key, { sleepType: style.sleepType, special: style.special, catch: style.catch, candy: style.candy, dpr: style.dpr, spoId: style.spoId, belly: style.belly, order: style.order, unlockRank: style.unlockRank, weight, upPriority, count: 1, lastRollExcluded: style.lastRollExcluded, firstCandyMultiplier: style.firstCandyMultiplier, secondCandyMultiplier: style.secondCandyMultiplier })
     }
     // Budget points between rank unlocks share one immutable pool snapshot.
     // Dense precision adds scores, not copies of every style at every point.
@@ -240,10 +242,10 @@ export function efficiencyDrawState(island: EfficiencyIsland, state: CurveState,
     for (const group of state.groups) {
       const typed = type === '没有特征' || type === group.sleepType
       if (!mixed && !typed) continue
-      const key = `${group.weight}|${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}|${group.dpr}|${group.belly}|${Number(!!group.lastRollExcluded)}|${group.firstCandyMultiplier ?? 1}|${group.secondCandyMultiplier ?? 1}`
+      const key = `${group.upPriority}|${group.weight}|${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}|${group.dpr}|${group.belly}|${Number(!!group.lastRollExcluded)}|${group.firstCandyMultiplier ?? 1}|${group.secondCandyMultiplier ?? 1}`
       const existing = buckets.get(key)
       if (existing) { existing.count += group.count; if (compareSleepPriority(group, existing) < 0) { existing.spoId = group.spoId; existing.order = group.order; existing.unlockRank = group.unlockRank } }
-      else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, dpr: group.dpr, spoId: group.spoId, belly: group.belly, order: group.order, unlockRank: group.unlockRank, weight: group.weight, count: group.count, lastRollExcluded: group.lastRollExcluded, firstCandyMultiplier: group.firstCandyMultiplier, secondCandyMultiplier: group.secondCandyMultiplier })
+      else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, dpr: group.dpr, spoId: group.spoId, belly: group.belly, order: group.order, unlockRank: group.unlockRank, weight: group.weight, upPriority: group.upPriority, count: group.count, lastRollExcluded: group.lastRollExcluded, firstCandyMultiplier: group.firstCandyMultiplier, secondCandyMultiplier: group.secondCandyMultiplier })
     }
     prepared = [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, bucket]) => bucket)
     cached.set(cacheKey, prepared)
@@ -293,7 +295,7 @@ function mergeIntervals(intervals: EfficiencyInterval[]): EfficiencyInterval[] {
 
 interface SplitLeaders { catch: { value: number, splits: number[] }, candy: { value: number, splits: number[] } }
 export interface BabyEfficiencyCheckpoint {
-  version: 5
+  version: 6
   /** 捕捉目标组；用于丢弃南瓜精合并前的旧续算结果。 */
   targetPokeIds?: readonly number[]
   options: BabyEfficiencyOptions
@@ -313,7 +315,7 @@ export function* babyEfficiencySteps(
   checkpoint?: BabyEfficiencyCheckpoint,
 ): Generator<BabyEfficiencyCheckpoint, BabyEfficiencyResult> {
   const availability = researchActivity(options.activity ?? checkpoint?.options.activity, options.activity?.pendingPokemon ?? pendingResearchPokemon())
-  if (checkpoint && checkpoint.version !== 5) throw new Error('续算规则或参数与检查点不一致，请重新计算')
+  if (checkpoint && checkpoint.version !== 6) throw new Error('续算规则或参数与检查点不一致，请重新计算')
   if (checkpoint && !sameResearchAvailability(checkpoint.options.activity, availability)) checkpoint = undefined
   options = { ...options, activity: availability }
   islands ??= efficiencyIslands(options.pokeId, options.completionTarget, options.activity)
@@ -324,7 +326,7 @@ export function* babyEfficiencySteps(
   if (!completion && options.pokeId === 710 && JSON.stringify(checkpoint?.targetPokeIds) !== JSON.stringify(targetPokeIds)) checkpoint = undefined
   const error = validateBabyEfficiency(options)
   if (error) throw new Error(error)
-  if (checkpoint && (checkpoint.version !== 5 || JSON.stringify(checkpoint.options) !== JSON.stringify(options))) throw new Error('续算规则或参数与检查点不一致，请重新计算')
+  if (checkpoint && (checkpoint.version !== 6 || JSON.stringify(checkpoint.options) !== JSON.stringify(options))) throw new Error('续算规则或参数与检查点不一致，请重新计算')
   islands = islands.filter((island) => !options.island || options.island === 'all' || island.id === options.island)
   if (!islands.length) throw new Error('资料未收录这个家族可参与普通研究的睡姿')
   const cache = new Map<string, EfficiencySimulation>()
@@ -449,7 +451,7 @@ export function* babyEfficiencySteps(
       return leaders
     }
     const localLeaders = islandIndex === checkpoint?.islandIndex ? checkpoint.leaders : emptyLeaders()
-    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 5, targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
+    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 6, targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
     for (const [index, split] of baseSplits.entries()) {
       if (index < resumeIndex) continue
       const leaders = scanSplit(split, index, baseSplits.length + (options.precision === 'medium' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p011 as 4) : 0))

@@ -1,0 +1,53 @@
+export const scorePlanMessages: Record<string, Record<string, string>> = {
+  "zh-TW": {
+    "已有活力枕头（个）": "已有活力枕頭（個）",
+    "允许规划使用活力枕头": "允許規劃使用活力枕頭",
+    "活力枕头库存须为非负整数": "活力枕頭庫存須為非負整數",
+    "使用{item}恢复 {amount} 活力": "使用{item}回復 {amount} 活力",
+    "每日成菜次数分布": "每日成菜次數分布",
+    "做成 {count} 餐 · {percent}%": "做成 {count} 餐 · {percent}%",
+    "无技能衰退对照": "無技能衰退對照",
+    "平均释放 {actual} → {control} 次": "平均釋放 {actual} → {control} 次",
+    "换入奶妈": "換上團隊回復成員",
+    "换下奶妈": "換下團隊回復成員",
+    "料理暴击加成已满": "料理暴擊加成已滿",
+    "目标料理食材不足": "目標料理食材不足",
+    "目标料理锅容量不足": "目標料理鍋容量不足",
+    "换队前活力": "換隊前活力",
+    "技能衰退为模拟假设": "技能衰退為模擬假設"
+  },
+  "ja": {
+    "已有活力枕头（个）": "げんきマクラの所持数",
+    "允许规划使用活力枕头": "計画でげんきマクラの使用を許可",
+    "活力枕头库存须为非负整数": "げんきマクラの所持数は0以上の整数で入力してください",
+    "使用{item}恢复 {amount} 活力": "{item}でげんきを {amount} 回復",
+    "每日成菜次数分布": "1日あたりの料理成功回数の分布",
+    "做成 {count} 餐 · {percent}%": "{count} 食を作成 · {percent}%",
+    "无技能衰退对照": "スキル発生率低下なしとの比較",
+    "平均释放 {actual} → {control} 次": "平均スキル発動回数 {actual} → {control} 回",
+    "换入奶妈": "全体回復役を編成",
+    "换下奶妈": "全体回復役を交代",
+    "料理暴击加成已满": "料理の大成功率ボーナスが上限",
+    "目标料理食材不足": "目標料理の食材が不足",
+    "目标料理锅容量不足": "目標料理のなべ容量が不足",
+    "换队前活力": "交代前のげんき",
+    "技能衰退为模拟假设": "スキル発生率の低下はシミュレーション上の仮定"
+  },
+  "en": {
+    "已有活力枕头（个）": "Energy Pillows on hand",
+    "允许规划使用活力枕头": "Allow Energy Pillows in this plan",
+    "活力枕头库存须为非负整数": "Enter a nonnegative whole number of Energy Pillows",
+    "使用{item}恢复 {amount} 活力": "Used {item} to restore {amount} Energy",
+    "每日成菜次数分布": "Daily target dish frequency",
+    "做成 {count} 餐 · {percent}%": "{count} meals cooked · {percent}%",
+    "无技能衰退对照": "Without skill trigger reduction",
+    "平均释放 {actual} → {control} 次": "Average skill releases: {actual} → {control}",
+    "换入奶妈": "Team healer joins",
+    "换下奶妈": "Team healer leaves",
+    "料理暴击加成已满": "Extra Tasty skill bonus capped",
+    "目标料理食材不足": "Missing ingredients for the target dish",
+    "目标料理锅容量不足": "Pot too small for the target dish",
+    "换队前活力": "Energy before rotation",
+    "技能衰退为模拟假设": "Skill trigger reduction is a simulation assumption"
+  }
+}
