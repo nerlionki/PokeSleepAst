@@ -10,7 +10,6 @@
   import { EVENT_BONUSES } from '../../calc/sleep';
   import FormField from '../shared/FormField.vue';
   import { MIX_OPTIONS, eventMixLabel } from '../../calc/sleepRules';
-  import { computed } from 'vue';
   import { storeToRefs } from 'pinia';
   import { POT_TIERS } from '../../calc/data';
   import { normalizeRecipeLevel, RECIPE_LEVEL_MAX } from '../../calc/cook';

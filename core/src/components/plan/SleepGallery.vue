@@ -182,7 +182,7 @@
       which === 'type'
         ? types.value
         : which === 'spec'
-          ? specs.value
+          ? specs
           : sleeps.value
     );
     resetPage();
