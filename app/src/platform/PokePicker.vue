@@ -88,6 +88,7 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
             <button class="btn ghost picker-close" type="button" @click="open = false">{{ translateUi("关闭") }}</button>
           </header>
           <div class="picker-body stack">
+            <div class="picker-controls stack">
             <input v-model="q" class="picker-search" :placeholder="translateUi('搜索中文、英文、属性或编号')">
             <div class="picker-filters">
               <button type="button" :class="{ on: panel === 'spec' || spec.length > 0 }" @click="toggle('spec')">{{ translateUi("定位") }}</button>
@@ -112,6 +113,7 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
               <button v-for="i in INGREDIENTS" :key="i.id" type="button" :class="{ on: ing.includes(String(i.id)) }" @click="toggleChoice(ing, String(i.id), INGREDIENTS.map(item => String(item.id)))">{{ gameText(i.name) }}</button>
             </div></HorizontalStrip>
             <p class="muted">{{ list.length }} {{ translateUi("只宝可梦") }}{{ filterOn ? " " + translateUi("· 已筛选") : " " + translateUi("· 食材按可携带种类筛选") }}</p>
+            </div>
             <div :key="resultsRevision" class="picker-results">
             <div class="poke-grid">
               <button v-for="p in list" :key="p.id + p.name" type="button" class="poke-cell" :class="{ on: p.id === model }" @click="pick(p.id)">

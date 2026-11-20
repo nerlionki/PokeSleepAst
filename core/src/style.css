@@ -1833,3 +1833,124 @@ textarea {
   color: var(--on-accent);
   background: var(--amber);
 }
+
+/* Shared responsive geometry uses logical pixels, including native WeChat CSS. */
+.app-shell > .page,
+.appearance-root > .page {
+  width: 100%;
+  max-width: 1120px;
+  min-width: 0;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: calc(16px + var(--safe-left, 0px));
+  padding-right: calc(16px + var(--safe-right, 0px));
+}
+.stack,
+.card,
+.row > *,
+.poke-pick-txt,
+.slot-card,
+.cmp-col {
+  min-width: 0;
+}
+.stack { grid-auto-columns: minmax(0, 1fr); }
+.card,
+.field label,
+.field > span,
+.poke-pick-txt,
+.btn,
+.seg button,
+.picker-filters button,
+.picker-opts button {
+  overflow-wrap: anywhere;
+}
+.row > .field { flex: 1 1 180px; }
+.field input,
+.field select { min-height: 44px; }
+.btn { min-height: 40px; white-space: normal; }
+.seg button { min-height: 40px; white-space: normal; }
+.form-pane { width: 100%; max-width: 720px; margin-left: auto; margin-right: auto; }
+.box-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 10px;
+  align-items: start;
+}
+.style-wall { grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); }
+.poke-wall:not(.virtual-dex-grid) { grid-template-columns: repeat(auto-fill, minmax(min(100%, 96px), 1fr)); }
+.poke-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); }
+.poke-cell { min-width: 0; }
+.poke-cell .sprite { width: 48px; height: 48px; }
+.recipe-tools > label { flex: 1 1 140px; min-width: 0; }
+.recipe-tools select { width: 100%; min-width: 0; max-width: 100%; }
+.member-card,
+.member-editor,
+.member-editor > * { min-width: 0; max-width: 100%; }
+.member-editor .ing-token { max-width: 100%; }
+.sheet { max-height: calc(var(--visible-height, 100dvh) - var(--safe-top, 0px) - 16px); }
+.overlay {
+  top: var(--visible-top, 0px);
+  bottom: auto;
+  height: var(--visible-height, 100dvh);
+  min-height: 0;
+}
+.drawer-page,
+.picker-sheet {
+  height: 100%;
+  max-height: 100%;
+}
+.picker-header { min-width: 0; }
+.picker-body { gap: 10px; }
+.picker-controls {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 50%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.picker-controls .picker-opts { width: max-content; min-width: 100%; flex-wrap: nowrap; }
+.picker-controls .picker-opts button { flex: none; white-space: nowrap; }
+.picker-body > .picker-results { flex: 1 1 0; }
+.picker-body > .picker-scroll-viewport { min-height: 64px; }
+.picker-sheet { padding-top: calc(12px + var(--safe-top, 0px)); }
+.drawer-body,
+.member-editor-content { scroll-padding-bottom: 24px; }
+
+@media (min-width: 600px) {
+  .overlay { justify-items: center; }
+  .overlay > .sheet { max-width: 720px; }
+  .drawer-overlay,
+  .picker-overlay { align-items: center; padding: 16px; }
+  .drawer-overlay > .drawer-page,
+  .picker-overlay > .picker-sheet {
+    height: 100%;
+    max-height: 900px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+  }
+  .picker-overlay > .picker-sheet { max-width: 960px; }
+}
+@media (min-width: 900px) {
+  .roster-slot { width: calc(20% - 7px); }
+  .roster-slot.rich { width: calc(50% - 4px); }
+}
+@media (max-width: 359px) {
+  .app-shell > .page,
+  .appearance-root > .page {
+    padding-left: calc(12px + var(--safe-left, 0px));
+    padding-right: calc(12px + var(--safe-right, 0px));
+  }
+  .seg-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .row > .field { flex-basis: 100%; }
+  .sub-grid { grid-template-columns: minmax(0, 1fr); }
+  .sheet { padding-left: 12px; padding-right: 12px; }
+  .drawer-page { padding-left: 0; padding-right: 0; }
+  .picker-controls { max-height: 55%; }
+  .roster-slot { width: 100%; }
+}
+@media (max-height: 480px) {
+  .picker-controls { max-height: 45%; }
+  .picker-sheet { padding-top: 8px; padding-bottom: 8px; gap: 6px; }
+  .drawer-overlay,
+  .picker-overlay { padding-top: 0; padding-bottom: 0; }
+}

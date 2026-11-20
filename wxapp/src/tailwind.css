@@ -7,5 +7,5 @@
 
 /* Inline spacing survives native HTML style transformation. */
 @theme inline {
-  --spacing: 0.25rem;
+  --spacing: 4px;
 }

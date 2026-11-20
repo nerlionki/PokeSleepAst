@@ -3,7 +3,7 @@
 exports.withHomeListAd = function withHomeListAd(source) {
   const anchor = /<VirtualPokedex\b(?:[^"'<>]|"[^"]*"|'[^']*')*\/>/;
   const pane =
-    /\.dex-pane\s*\{[^}]*flex:\s*1;[^}]*min-height:\s*0;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*overflow:\s*hidden;[^}]*\}/;
+    /\.dex-pane\s*\{[^}]*flex:\s*1;[^}]*min-height:\s*0;[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;[^}]*\}/;
   const fixed = /\.dex-fixed\s*\{\s*flex-shrink:\s*0;\s*\}/;
   if (!anchor.test(source))
     throw new Error('PokedexPane ad insertion point is missing');

@@ -57,12 +57,13 @@ const skills = computed(() => SUBSKILL_GATES.map((level, index) => ({
 </template>
 <style scoped>
 .pokemon-preview { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: start; gap: 10px; width: 100%; }
-.pokemon-preview.with-actions { grid-template-columns: 56px minmax(0, 1fr) auto; }
+.pokemon-preview.with-actions { grid-template-columns: 56px minmax(0, 1fr); }
 .preview-details { min-width: 0; }
 .preview-details strong { overflow-wrap: anywhere; }
 .preview-ingredients, .preview-subskills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .preview-ingredient, .preview-subskill { display: inline-flex; align-items: center; gap: 3px; font-size: var(--font-12); }
 .preview-ingredient.locked { opacity: 0.45; }
 .preview-level { font-size: var(--font-10); font-variant-numeric: tabular-nums; }
-.preview-actions { align-self: center; }
+.preview-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-self: center; }
+.preview-actions > .btn { flex: 1 1 auto; }
 </style>

@@ -36,7 +36,7 @@ function goBack() {
 }
 </script>
 <template>
-  <div class="stack">
+  <div class="stack form-pane">
     <template v-if="tab === 'home'">
       <GuideEntry page="profile" />
       <section v-if="userInfo" class="card"><h3>{{ userInfo.name }}</h3></section>

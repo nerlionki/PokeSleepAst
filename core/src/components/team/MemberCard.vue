@@ -14,7 +14,7 @@
   import { exEffects } from '../../calc/exEffects';
   import { computed, shallowRef } from 'vue';
   import { storeToRefs } from 'pinia';
-  import { natureByName, pokeById } from '../../calc/data';
+  import { natureByName, pokeById, SUBSKILLS } from '../../calc/data';
   import { energyMultiplier, instantInterval } from '../../calc/helpSpeed';
   import {
     effectiveSkillLevel,
@@ -36,7 +36,7 @@
   const components_team_MemberCard_config_clientDefaults =
     clientDefaults.modules.components_team_MemberCard;
 
-  const props = defineProps<{
+  const props = withDefaults(defineProps<{
     environment?: Settings;
     pokeId: number;
     level: number;
@@ -46,13 +46,17 @@
     ingredientSlots: [number | null, number | null, number | null];
     skillLevel: number;
     mewSkill?: number;
-    result: ProduceResult;
+    result?: ProduceResult;
+    informationOnly?: boolean;
+    shiny?: boolean;
     carryMode?: CarryMode;
     wakeEnergy?: number;
     ribbonHours?: number;
     helpingBonus?: number;
     label?: string;
-  }>();
+  }>(), {
+    result: () => ({ helps: 0, berries: 0, berryEnergy: 0, ingredients: {}, skillProcs: 0, skillEnergy: 0, sneaky: 0, curve: [] })
+  });
   const showIndividualInfo = shallowRef(false);
 
   const { settings: rawSettings } = storeToRefs(useSettingsStore());
@@ -78,6 +82,10 @@
   });
   const nature = computed(() => natureByName(effectiveNature(props)));
   const subs = computed(() => unlockedSubskills(props.level, props.subskills));
+  const displayedSubskills = computed(() => props.subskills.flatMap((id, index) => {
+    const skill = SUBSKILLS.find(item => item.id === id);
+    return skill ? [{ ...skill, gate: SUBSKILL_GATES[index] ?? 1, index }] : [];
+  }));
   const lines = computed(() => {
     const list = poke.value?.ingredients ?? [];
     return props.ingredientSlots.flatMap(index => {
@@ -243,6 +251,7 @@
       >
       <b>Lv {{ level }}</b>
       <button
+        v-if="!informationOnly"
         class="member-info-toggle"
         :class="{ on: showIndividualInfo }"
         type="button"
@@ -266,9 +275,10 @@
       :id="poke.id"
       :name="poke.name"
       :ribbon-hours="props.ribbonHours"
+      :shiny="shiny"
       large
     />
-    <div v-if="!showIndividualInfo" class="member-summary">
+    <div v-if="!informationOnly && !showIndividualInfo" class="member-summary">
       <p
         v-if="poke.specialty === '树果型' || poke.specialty === '全部'"
         class="member-line berry"
@@ -327,12 +337,16 @@
         </template>
       </div>
       <div class="member-subs">
-        <SubskillIcon
-          v-for="(id, index) in subskills.filter(Boolean)"
-          :key="`${id}-${index}`"
-          :id="id"
-          :locked="level < (SUBSKILL_GATES[subskills.indexOf(id)] ?? 1)"
-        />
+        <span
+          v-for="skill in displayedSubskills"
+          :key="skill.index"
+          class="member-subskill"
+          :class="[`rarity-${skill.rarity}`, { 'member-subskill-locked': level < skill.gate }]"
+          :title="gameText(skill.name)"
+        >
+          <SubskillIcon :id="skill.id" decorative />
+          <span>{{ gameText(skill.name) }}</span>
+        </span>
       </div>
       <p class="member-nature">
         {{ gameText(props.nature) }}
@@ -344,95 +358,80 @@
           >{{ translateUi(STAT[nature.down] ?? '') }}↓</span
         >
       </p>
-      <p class="member-total">
-        {{
-          unknownFoodEnergy
-            ? translateUi('还未公布')
-            : Math.round(totalEnergy).toLocaleString('zh-CN')
-        }}
-      </p>
-      <div
-        v-if="!unknownFoodEnergy"
-        class="mix-bar"
-        :title="
-          translateUi('树果 {arg1}% · {arg2} {arg3}% · 技能 {arg4}%', {
-            arg1: String(berryShare),
-            arg2: String(result.cooking ? '料理' : '食材'),
-            arg3: String(ingShare),
-            arg4: String(skillShare)
-          })
-        "
-      >
-        <i class="berry" :style="{ width: `${berryShare}%` }" />
-        <i class="ing" :style="{ width: `${ingShare}%` }" />
-        <i class="skill" :style="{ width: `${skillShare}%` }" />
-      </div>
-      <p v-if="!unknownFoodEnergy" class="mix-legend">
-        <span>{{ berryShare }}%</span>
-        <span>{{ ingShare }}%</span>
-        <span>{{ skillShare }}%</span>
-      </p>
-      <p class="member-freq">
-        <span>{{ helpClock(seconds) }}</span>
-        <b>{{ seconds ? (86400 / seconds).toFixed(2) : '0.00' }}</b>
-      </p>
-      <p class="member-speed">
-        <span>{{ translateUi('白天') }}</span
-        ><b>{{ bandFactor(false) }}x</b>
-      </p>
-      <p class="member-speed">
-        <span>{{ translateUi('睡眠') }}</span
-        ><b>{{ bandFactor(true) }}x</b>
-      </p>
-      <p class="member-line berry">
-        <span
-          ><BerryIcon :name="poke.berry" small /> {{ translateUi('树果') }}
-          {{ result.berries.toFixed(2) }}</span
-        >
-        <b>{{ Math.round(result.berryEnergy).toLocaleString('zh-CN') }}</b>
-      </p>
-      <p class="member-line ing">
-        <span
-          >{{ translateUi('食材') }}
+      <template v-if="!informationOnly">
+        <p class="member-total">
           {{
-            (
-              rate(poke.ingredientRate, 'ingredient', 'ingS', 'ingM') * 100
-            ).toFixed(1)
-          }}%</span
-        >
-        <b>{{
-          unknownFoodEnergy
-            ? translateUi('还未公布')
-            : Math.round(ingEnergy).toLocaleString('zh-CN')
-        }}</b>
-      </p>
-      <p v-if="result.cooking" class="member-line ing">
-        <span>{{ translateUi('实际料理期望') }}</span
-        ><b>{{ Math.round(result.cooking.energy).toLocaleString('zh-CN') }}</b>
-      </p>
-      <p v-if="naturalRows.length || skillRows.length" class="member-line ing">
-        <span>{{
-          breakdown ? translateUi('帮忙食材') : translateUi('食材合计')
-        }}</span
-        ><b v-if="!naturalRows.length">{{ translateUi('0.00 个') }}</b>
-      </p>
-      <p v-for="row in naturalRows" :key="row.name" class="member-line quiet">
-        <span
-          ><IngredientIcon :id="row.id" :name="row.name" small />
-          {{ gameText(row.name) }} · {{ row.count.toFixed(2) }}</span
-        >
-        <b>{{
-          row.energy == null
-            ? translateUi('还未公布')
-            : Math.round(row.energy).toLocaleString('zh-CN')
-        }}</b>
-      </p>
-      <template v-if="skillRows.length">
-        <p class="member-line ing">
-          <span>{{ translateUi('技能食材') }}</span
-          ><span>{{ translateUi('已计入上方食材能量') }}</span>
+            unknownFoodEnergy
+              ? translateUi('还未公布')
+              : Math.round(totalEnergy).toLocaleString('zh-CN')
+          }}
         </p>
-        <p v-for="row in skillRows" :key="row.name" class="member-line quiet">
+        <div
+          v-if="!unknownFoodEnergy"
+          class="mix-bar"
+          :title="
+            translateUi('树果 {arg1}% · {arg2} {arg3}% · 技能 {arg4}%', {
+              arg1: String(berryShare),
+              arg2: String(result.cooking ? '料理' : '食材'),
+              arg3: String(ingShare),
+              arg4: String(skillShare)
+            })
+          "
+        >
+          <i class="berry" :style="{ width: `${berryShare}%` }" />
+          <i class="ing" :style="{ width: `${ingShare}%` }" />
+          <i class="skill" :style="{ width: `${skillShare}%` }" />
+        </div>
+        <p v-if="!unknownFoodEnergy" class="mix-legend">
+          <span>{{ berryShare }}%</span>
+          <span>{{ ingShare }}%</span>
+          <span>{{ skillShare }}%</span>
+        </p>
+        <p class="member-freq">
+          <span>{{ helpClock(seconds) }}</span>
+          <b>{{ seconds ? (86400 / seconds).toFixed(2) : '0.00' }}</b>
+        </p>
+        <p class="member-speed">
+          <span>{{ translateUi('白天') }}</span
+          ><b>{{ bandFactor(false) }}x</b>
+        </p>
+        <p class="member-speed">
+          <span>{{ translateUi('睡眠') }}</span
+          ><b>{{ bandFactor(true) }}x</b>
+        </p>
+        <p class="member-line berry">
+          <span
+            ><BerryIcon :name="poke.berry" small /> {{ translateUi('树果') }}
+            {{ result.berries.toFixed(2) }}</span
+          >
+          <b>{{ Math.round(result.berryEnergy).toLocaleString('zh-CN') }}</b>
+        </p>
+        <p class="member-line ing">
+          <span
+            >{{ translateUi('食材') }}
+            {{
+              (
+                rate(poke.ingredientRate, 'ingredient', 'ingS', 'ingM') * 100
+              ).toFixed(1)
+            }}%</span
+          >
+          <b>{{
+            unknownFoodEnergy
+              ? translateUi('还未公布')
+              : Math.round(ingEnergy).toLocaleString('zh-CN')
+          }}</b>
+        </p>
+        <p v-if="result.cooking" class="member-line ing">
+          <span>{{ translateUi('实际料理期望') }}</span
+          ><b>{{ Math.round(result.cooking.energy).toLocaleString('zh-CN') }}</b>
+        </p>
+        <p v-if="naturalRows.length || skillRows.length" class="member-line ing">
+          <span>{{
+            breakdown ? translateUi('帮忙食材') : translateUi('食材合计')
+          }}</span
+          ><b v-if="!naturalRows.length">{{ translateUi('0.00 个') }}</b>
+        </p>
+        <p v-for="row in naturalRows" :key="row.name" class="member-line quiet">
           <span
             ><IngredientIcon :id="row.id" :name="row.name" small />
             {{ gameText(row.name) }} · {{ row.count.toFixed(2) }}</span
@@ -443,84 +442,112 @@
               : Math.round(row.energy).toLocaleString('zh-CN')
           }}</b>
         </p>
+        <template v-if="skillRows.length">
+          <p class="member-line ing">
+            <span>{{ translateUi('技能食材') }}</span
+            ><span>{{ translateUi('已计入上方食材能量') }}</span>
+          </p>
+          <p v-for="row in skillRows" :key="row.name" class="member-line quiet">
+            <span
+              ><IngredientIcon :id="row.id" :name="row.name" small />
+              {{ gameText(row.name) }} · {{ row.count.toFixed(2) }}</span
+            >
+            <b>{{
+              row.energy == null
+                ? translateUi('还未公布')
+                : Math.round(row.energy).toLocaleString('zh-CN')
+            }}</b>
+          </p>
+          <p class="member-line quiet">
+            <span>{{ translateUi('食材合计') }}</span
+            ><b>{{ foodTotalCount.toFixed(2) }} {{ translateUi('个') }}</b>
+          </p>
+        </template>
+        <p v-if="!breakdown" class="muted">
+          {{ translateUi('食材来源暂无法拆分') }}
+        </p>
+        <p class="member-line skill">
+          <span
+            ><MainSkillIcon :name="poke.mainSkill" decorative />
+            {{ translateUi('技能 LV') }}{{ skillLv }}
+            {{ gameText(poke.mainSkill) }}
+            {{
+              (
+                Math.min(
+                  1,
+                  rate(poke.skillRate, 'skill', 'skillS', 'skillM') *
+                    exEffects(settings, poke.berry).skillMultiplier
+                ) * 100
+              ).toFixed(1)
+            }}%</span
+          >
+        </p>
+        <p v-if="ownedSelectionSkill(pokeId)" class="member-line quiet">
+          <span
+            >{{ gameText(ownedSelectionSkill(pokeId)?.name) }} Lv{{ skillLevel }}
+            {{ translateUi('· 所选效果 Lv') }}{{ skillLv }}</span
+          >
+        </p>
         <p class="member-line quiet">
-          <span>{{ translateUi('食材合计') }}</span
-          ><b>{{ foodTotalCount.toFixed(2) }} {{ translateUi('个') }}</b>
+          <span>{{ result.skillProcs.toFixed(2) }} {{ translateUi('次') }}</span>
+          <b>{{ Math.round(result.skillEnergy).toLocaleString('zh-CN') }}</b>
+        </p>
+        <p class="member-line quiet">
+          <span>{{ translateUi('持有') }} {{ carry }}</span>
+          <b>{{ translateUi('满包') }} {{ result.sneaky }}</b>
+        </p>
+        <p v-if="result.rewards" class="member-line quiet">
+          <span
+            >{{ translateUi('期望奖励：糖果') }}
+            {{ result.rewards.candies.toFixed(2) }}
+            {{ translateUi('· 梦之碎片') }}
+            {{ result.rewards.dreamShards.toFixed(2)
+            }}<template
+              v-for="(count, id) in result.rewards.items ?? {
+                [ITEM_ROLES.berryJuice]: result.rewards.berryJuice
+              }"
+              :key="id"
+            >
+              ·
+              {{
+                itemById(Number(id))?.name ??
+                translateUi('道具 {arg1}', { arg1: String(id) })
+              }}
+              {{ count.toFixed(2) }}</template
+            ></span
+          >
+        </p>
+        <p v-if="result.cooking" class="member-line quiet">
+          <span
+            >{{ translateUi('剩余食材：')
+            }}{{
+              Object.entries(result.cooking.remain)
+                .filter(([, count]) => count > 0)
+                .map(
+                  ([key, count]) =>
+                    `${gameText(ingredientLabel(key))} ×${count.toFixed(2)}`
+                )
+                .join('、') || translateUi('无')
+            }}</span
+          >
         </p>
       </template>
-      <p v-if="!breakdown" class="muted">
-        {{ translateUi('食材来源暂无法拆分') }}
-      </p>
-      <p class="member-line skill">
-        <span
-          ><MainSkillIcon :name="poke.mainSkill" decorative />
-          {{ translateUi('技能 LV') }}{{ skillLv }}
-          {{ gameText(poke.mainSkill) }}
-          {{
-            (
-              Math.min(
-                1,
-                rate(poke.skillRate, 'skill', 'skillS', 'skillM') *
-                  exEffects(settings, poke.berry).skillMultiplier
-              ) * 100
-            ).toFixed(1)
-          }}%</span
-        >
-      </p>
-      <p v-if="ownedSelectionSkill(pokeId)" class="member-line quiet">
-        <span
-          >{{ gameText(ownedSelectionSkill(pokeId)?.name) }} Lv{{ skillLevel }}
-          {{ translateUi('· 所选效果 Lv') }}{{ skillLv }}</span
-        >
-      </p>
-      <p class="member-line quiet">
-        <span>{{ result.skillProcs.toFixed(2) }} {{ translateUi('次') }}</span>
-        <b>{{ Math.round(result.skillEnergy).toLocaleString('zh-CN') }}</b>
-      </p>
-      <p class="member-line quiet">
-        <span>{{ translateUi('持有') }} {{ carry }}</span>
-        <b>{{ translateUi('满包') }} {{ result.sneaky }}</b>
-      </p>
-      <p v-if="result.rewards" class="member-line quiet">
-        <span
-          >{{ translateUi('期望奖励：糖果') }}
-          {{ result.rewards.candies.toFixed(2) }}
-          {{ translateUi('· 梦之碎片') }}
-          {{ result.rewards.dreamShards.toFixed(2)
-          }}<template
-            v-for="(count, id) in result.rewards.items ?? {
-              [ITEM_ROLES.berryJuice]: result.rewards.berryJuice
-            }"
-            :key="id"
-          >
-            ·
-            {{
-              itemById(Number(id))?.name ??
-              translateUi('道具 {arg1}', { arg1: String(id) })
-            }}
-            {{ count.toFixed(2) }}</template
-          ></span
-        >
-      </p>
-      <p v-if="result.cooking" class="member-line quiet">
-        <span
-          >{{ translateUi('剩余食材：')
-          }}{{
-            Object.entries(result.cooking.remain)
-              .filter(([, count]) => count > 0)
-              .map(
-                ([key, count]) =>
-                  `${gameText(ingredientLabel(key))} ×${count.toFixed(2)}`
-              )
-              .join('、') || translateUi('无')
-          }}</span
-        >
-      </p>
     </template>
   </article>
 </template>
 
 <style scoped>
+  .member-subs { flex-wrap: wrap; }
+  .member-subskill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    border: 1px solid currentColor;
+    border-radius: 8px;
+    font-size: var(--font-12);
+  }
+  .member-subskill-locked { opacity: 0.45; }
   .member-info-toggle {
     display: inline-flex;
     align-items: center;

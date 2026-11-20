@@ -15,14 +15,13 @@ export function compareSleepPriority(a: DprCandidate, b: DprCandidate): number {
   return (a.spoId ?? Number.MAX_SAFE_INTEGER) - (b.spoId ?? Number.MAX_SAFE_INTEGER)
     || (a.unlockRank ?? 0) - (b.unlockRank ?? 0) || (a.order ?? 0) - (b.order ?? 0)
 }
-export function selectSleepStyle<T extends DprCandidate>(
-  pool: readonly T[], remaining: number, last: boolean, rng: () => number,
-  weight: (item: T) => number = () => 1,
+function resolveSleepSelection<T extends DprCandidate>(
+  pool: readonly T[], remaining: number, last: boolean,
   lowPower = false,
   priority: (item: T) => number = upPriorityOf,
-): T | undefined {
+): { fixed: T | undefined } | { weighted: T[] } {
   if (last) pool = pool.filter(item => !item.lastRollExcluded)
-  if (!pool.length) return undefined
+  if (!pool.length) return { fixed: undefined }
   const compareTie = (a: T, b: T) => (last ? priority(b) - priority(a) : 0) || compareSleepPriority(a, b)
   let minimum = pool[0]!, maximum: T | undefined
   for (const item of pool) {
@@ -30,9 +29,20 @@ export function selectSleepStyle<T extends DprCandidate>(
     if (last && item.dpr <= remaining && (!maximum || item.dpr > maximum.dpr ||
       (item.dpr === maximum.dpr && compareTie(item, maximum) < 0))) maximum = item
   }
-  if (lowPower || minimum.dpr > remaining) return minimum
-  if (last) return maximum
-  const eligible = pool.filter(item => item.dpr <= remaining)
+  if (lowPower || minimum.dpr > remaining) return { fixed: minimum }
+  if (last) return { fixed: maximum }
+  return { weighted: pool.filter(item => item.dpr <= remaining) }
+}
+
+export function selectSleepStyle<T extends DprCandidate>(
+  pool: readonly T[], remaining: number, last: boolean, rng: () => number,
+  weight: (item: T) => number = () => 1,
+  lowPower = false,
+  priority: (item: T) => number = upPriorityOf,
+): T | undefined {
+  const selection = resolveSleepSelection(pool, remaining, last, lowPower, priority)
+  if ('fixed' in selection) return selection.fixed
+  const eligible = selection.weighted
   let roll = rng() * eligible.reduce((sum, item) => sum + weight(item), 0)
   for (const item of eligible) { roll -= weight(item); if (roll < 0) return item }
   return eligible.at(-1)

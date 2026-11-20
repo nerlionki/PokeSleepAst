@@ -1,8 +1,10 @@
-import { onMounted, onScopeDispose, shallowRef } from 'vue'
+import { onMounted, onScopeDispose, shallowRef, watch } from 'vue'
+import { useViewport } from './viewport'
 
 /** Header and tab bar include the active safe-area insets. Measure their real
  * heights so the pinned toolbar stays below a notch and above bottom controls. */
 export function useCandyViewport() {
+  const viewport = useViewport()
   const style = shallowRef<Record<string, string>>({})
   let observer: ResizeObserver | undefined
   function measure() {
@@ -12,7 +14,7 @@ export function useCandyViewport() {
     const top = header?.getBoundingClientRect().height ?? 0
     const bottom = nav?.getBoundingClientRect().height ?? 0
     const padding = page ? Number.parseFloat(getComputedStyle(page).paddingBottom) || 0 : 0
-    const height = window.visualViewport?.height ?? window.innerHeight
+    const height = viewport.value.visibleHeight
     style.value = { '--candy-sticky-top': `${top}px`, '--candy-frame-height': `${Math.max(1, height - top - bottom - padding)}px` }
   }
   onMounted(() => {
@@ -24,13 +26,10 @@ export function useCandyViewport() {
         if (node) observer.observe(node)
       }
     }
-    window.addEventListener('resize', measure)
-    window.visualViewport?.addEventListener('resize', measure)
   })
+  watch(viewport, measure, { flush: 'post' })
   onScopeDispose(() => {
     observer?.disconnect()
-    window.removeEventListener('resize', measure)
-    window.visualViewport?.removeEventListener('resize', measure)
   })
   return style
 }

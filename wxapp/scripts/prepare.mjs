@@ -238,7 +238,7 @@ const props = defineProps<{ id: string; locked?: boolean; decorative?: boolean }
 const skill = computed(() => SUBSKILLS.find(item => item.id === props.id))
 const src = computed(() => subskillImageUrl(props.id))
 </script>
-<template><FallbackImage v-if="skill" class="sub-ico wx-sub-ico" :class="{ locked }" :src="src" :alt="decorative ? '' : gameText(skill.name)" :aria-hidden="decorative || undefined"><template #fallback><span v-if="!decorative">{{ gameText(skill.name) }}</span></template></FallbackImage></template>
+<template><FallbackImage v-if="skill" class="sub-ico wx-sub-ico" :class="['rarity-' + skill.rarity, { locked }]" :src="src" :alt="decorative ? '' : gameText(skill.name)" :aria-hidden="decorative || undefined"><template #fallback><span v-if="!decorative" :class="['rarity-' + skill.rarity, { locked }]">{{ gameText(skill.name) }}</span></template></FallbackImage></template>
 `;
   }
   // Use Tailwind layout utilities only in native Box views; App keeps its grid.
@@ -637,11 +637,11 @@ write(
   path.join(wxRoot, 'src/app.css'),
   css +
     `
-.sheet.member-editor-sheet { display: block; height: 82vh; max-height: none; padding: 0; overflow: hidden; }
+.sheet.member-editor-sheet { display: block; height: var(--visible-height, 82vh); max-height: calc(var(--visible-height, 100vh) - 24px); padding: 0; overflow: hidden; }
 .member-editor-scroll { height: 100%; width: 100%; }
 .member-editor-content { padding: 16px 16px 28px; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
 .member-editor-content .btn { padding: 10px 12px; border-radius: 12px; }
-.sheet.species-sheet { display: flex; flex-direction: column; height: 82vh; max-height: none; overflow: hidden; }
+.sheet.species-sheet { display: flex; flex-direction: column; height: var(--visible-height, 82vh); max-height: calc(var(--visible-height, 100vh) - 24px); overflow: hidden; }
 .species-list-viewport { flex: 1; height: 0; min-height: 0; min-width: 0; position: relative; overflow: hidden; }
 .species-list-scroll { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 ` +

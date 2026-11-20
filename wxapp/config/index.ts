@@ -55,7 +55,9 @@ export default defineConfig({
   mini: {
     compile: { include: [path.resolve(__dirname, '../../core')] },
     postcss: {
-      pxtransform: { enable: true },
+      // Shared layouts use logical pixels. rpx scales every control with the
+      // full tablet window even when its content container is capped.
+      pxtransform: { enable: false },
       cssModules: { enable: false },
       htmltransform: { enable: true, config: { removeCursorStyle: false } }
     },
@@ -144,7 +146,7 @@ export default defineConfig({
           tailwindcssBasedir: path.resolve(__dirname, '..'),
           cssEntries: [path.resolve(__dirname, '../src/tailwind.css')],
           cssOptions: {
-            rem2rpx: true,
+            rem2rpx: false,
             injectAdditionalCssVarScope: true,
             cssPreflight: false,
             cssSelectorReplacement: { root: 'page' }

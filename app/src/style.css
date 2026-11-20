@@ -8,7 +8,13 @@
   --page-tabs-top: var(--safe-top);
 }
 
-.dex-shell, .fixed-tabs-shell { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+.dex-shell, .fixed-tabs-shell { height: var(--visible-height, 100dvh); min-height: 0; overflow: hidden; }
 :is(.dex-shell, .fixed-tabs-shell) > .page { min-height: 0; display: flex; flex-direction: column; padding-bottom: 12px; overflow: hidden; }
 .dex-shell .page-tab-strip { position: static; }
 .fixed-tabs-shell { background: var(--ink); }
+
+.tabbar {
+  padding-left: max(calc(8px + var(--safe-left)), calc((100% - 1120px) / 2));
+  padding-right: max(calc(8px + var(--safe-right)), calc((100% - 1120px) / 2));
+}
+.tabbar a { min-width: 0; overflow-wrap: anywhere; }

@@ -8,7 +8,9 @@ function run(steps, checkpoint) {
    if (next.done) worker.postMessage({type:'result',result:next.value});
    else { checkpoint(next.value); setTimeout(tick,0); }
   } catch(error) {
-   worker.postMessage({type:'error',message:error && error.message ? String(error.message) : '计算失败'});
+   const message = {type:'error',message:error && error.message ? String(error.message) : '计算失败'};
+   if (error && error.name === 'SleepDrawUnresolvedError') message.unresolved = error.detail;
+   worker.postMessage(message);
   }
  }
  tick();

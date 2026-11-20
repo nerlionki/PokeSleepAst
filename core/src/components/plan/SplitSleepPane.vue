@@ -260,7 +260,7 @@
 </script>
 
 <template>
-  <div class="stack" :aria-busy="busy">
+  <div class="stack form-pane" :aria-busy="busy">
     <button
       class="btn ghost"
       type="button"

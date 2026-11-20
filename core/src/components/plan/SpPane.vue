@@ -29,7 +29,7 @@ function load() {
 }
 </script>
 <template>
-  <div class="stack">
+  <div class="stack form-pane">
     <h3>{{ translateUi("SP 计算") }}</h3>
     <p class="muted">{{ translateUi("可自由编辑个体，也可从 Box 载入后继续编辑，不会修改 Box 中的原个体。SP 不计营地、活动或队友加成。") }}</p>
     <button class="btn ghost" type="button" @click="choose(input.pokeId)">{{ translateUi("新建个体") }}</button>

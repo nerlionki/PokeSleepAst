@@ -94,6 +94,8 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
             <button class="btn ghost picker-close" type="button" @click="open = false">{{ translateUi("关闭") }}</button>
           </header>
           <div class="picker-body stack">
+            <scroll-view :scroll-y="true" class="picker-controls">
+            <view class="stack">
             <WxInput v-model="q" class="picker-search" :placeholder="translateUi('搜索中文、英文、属性或编号')" />
             <div class="picker-filters">
               <button type="button" :class="{ on: panel === 'spec' || spec.length > 0 }" @click="toggle('spec')">{{ translateUi("定位") }}</button>
@@ -118,6 +120,8 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
               <button v-for="i in INGREDIENTS" :key="i.id" type="button" :class="{ on: ing.includes(String(i.id)) }" @click="toggleChoice(ing, String(i.id), INGREDIENTS.map(item => String(item.id)))">{{ gameText(i.name) }}</button>
             </div></HorizontalStrip>
             <p class="muted">{{ list.length }} {{ translateUi("只宝可梦") }}{{ filterOn ? " " + translateUi("· 已筛选") : " " + translateUi("· 食材按可携带种类筛选") }}</p>
+            </view>
+            </scroll-view>
             <view class="picker-scroll-viewport">
               <scroll-view :scroll-y="true" :scroll-into-view="scrollTarget" class="picker-scroll">
                 <view id="picker-results-top" />
@@ -168,5 +172,12 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
   flex: none;
   min-height: 0;
   overflow: visible;
+}
+
+.picker-controls {
+  flex: 0 1 auto;
+  height: min(220px, calc(var(--visible-height, 100vh) * 0.4));
+  max-height: 50%;
+  min-width: 0;
 }
 </style>

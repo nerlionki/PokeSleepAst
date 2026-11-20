@@ -358,7 +358,7 @@
       </div>
       <div v-if="speciesItems.length" class="stack">
         <div v-for="item in speciesItems" :key="item.id" class="row">
-          <FallbackImage v-if="item.icon" :src="item.icon" :alt="gameText(item.name)" style="width: 2rem; height: 2rem" />
+          <FallbackImage v-if="item.icon" :src="item.icon" :alt="gameText(item.name)" style="width: calc(var(--font-16) * 2); height: calc(var(--font-16) * 2)" />
           <span>{{ gameText(item.name) }}</span>
         </div>
       </div>
@@ -437,7 +437,8 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
   .dex-fixed {
     flex-shrink: 0;

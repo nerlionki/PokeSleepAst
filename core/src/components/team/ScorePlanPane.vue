@@ -149,8 +149,8 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
 </script>
 
 <template>
-  <div class="stack score-plan">
-    <article class="card stack">
+  <div class="stack score-plan" :class="{ 'has-results': result && solution }">
+    <article class="card stack score-inputs">
       <h3>{{ translateUi("冲分规划") }}</h3>
       <p>{{ translateUi("安排本周的队伍轮换、睡眠和料理，比较平均总能量。") }}</p>
       <p class="muted">{{ environment }} · Box {{ box.pokemon.length }} {{ translateUi("只") }}</p>
@@ -244,7 +244,7 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
         :detail="translateUi('已比较 {done} / {total}', { done: progress.completed, total: progress.total })" cancellable cancel-text="取消规划" @cancel="cancel" />
       <p v-if="notice" role="status" class="muted">{{ translateUi(notice) }}</p><p v-if="error" role="alert" class="amber">{{ translateUi(error) }}</p>
     </article>
-    <template v-if="result && solution">
+    <div v-if="result && solution" class="stack score-results">
       <p v-if="dirty" class="amber" role="status">{{ translateUi("输入已变化，以下是上次规划结果，请重新规划。") }}</p>
       <article class="card stack" aria-live="polite">
         <h3>{{ translateUi("预计期末能量") }} {{ number(result.options.initialStrength + solution.mean) }}</h3>
@@ -304,14 +304,16 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
         </div>
       </article>
       <article class="card stack"><h3>{{ translateUi("适用范围") }}</h3><p v-for="warning in result.warnings" :key="warning" class="muted">{{ translateUi(warning) }}</p><p v-for="(p, i) in result.excluded" :key="i" class="muted">{{ translateUi("未参与：") }}{{ p.name }} · {{ translateUi(p.reason) }}</p></article>
-    </template>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.score-plan { min-width: 0; }
-.score-basics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.score-foods { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.score-plan { min-width: 0; width: 100%; max-width: 720px; margin-left: auto; margin-right: auto; align-items: start; }
+.score-plan.has-results { max-width: none; gap: 16px; }
+.score-inputs, .score-results { min-width: 0; }
+.score-basics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.score-foods { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 12px; }
 .score-foods label { display: flex; gap: 6px; align-items: center; }
 .score-details { padding-top: 12px; border-top: 1px solid var(--line); }
 .score-details h4 { margin: 14px 0 0; }
@@ -321,4 +323,7 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
 .score-plan p { margin: 0; overflow-wrap: anywhere; }
 .score-check { display: flex; align-items: center; gap: 12px; min-height: 44px; min-width: 0; }
 .score-check-label { min-width: 0; overflow-wrap: anywhere; }
+@media (min-width: 900px) {
+  .score-plan.has-results { grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); }
+}
 </style>

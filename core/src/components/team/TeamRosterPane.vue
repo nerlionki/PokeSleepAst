@@ -25,7 +25,6 @@
   import PokeSprite from '../shared/PokeSprite.vue';
   import SpeciesSheet from '../shared/SpeciesSheet.vue';
   import MemberCard from './MemberCard.vue';
-  import PokemonPreview from '../pokemon/PokemonPreview.vue';
   import MemberEditor from './MemberEditor.vue';
   const components_team_TeamRosterPane_config_clientDefaults =
     clientDefaults.modules.components_team_TeamRosterPane;
@@ -351,7 +350,22 @@
             :helping-bonus="result.helpingBonus"
             :label="boxLabel(member)"
           />
-          <PokemonPreview v-else-if="props.editorOnly" :pokemon="member" />
+          <MemberCard
+            v-else-if="props.editorOnly"
+            information-only
+            :environment="calculationSettings"
+            :poke-id="member.pokeId"
+            :level="member.level"
+            :nature="member.nature"
+            :nature-minted="member.natureMinted"
+            :subskills="member.subskills"
+            :ingredient-slots="member.ingredientSlots"
+            :skill-level="member.skillLevel"
+            :mew-skill="member.mewSkill"
+            :shiny="member.shiny"
+            :ribbon-hours="member.tune.ribbonHours"
+            :label="boxLabel(member)"
+          />
           <p v-else class="muted">
             {{ individualName(member.name, pokeById(member.pokeId)?.name)
             }}{{

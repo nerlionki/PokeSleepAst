@@ -21,7 +21,8 @@ export function createSleepSimulationTask(createWorker: (isActive: () => boolean
   function reset() { stop(); result.value = []; error.value = ''; notice.value = ''; progress.value = { completed: 0, total: 0 } }
   async function calculate(request: SleepSimulationRequest) {
     if (busy.value) return
-    const snapshot = { ...request, powers: [...request.powers], options: { ...request.options, discovered: [...(request.options.discovered ?? [])] } }
+    const snapshot = { ...request, powers: [...request.powers], options: { ...request.options, discovered: [...(request.options.discovered ?? [])] },
+      ...(request.studies ? { studies: cloneData(request.studies) } : {}) }
     const active = ++generation
     busy.value = true; result.value = []; error.value = ''; notice.value = ''
     progress.value = { completed: 0, total: snapshot.iterations * snapshot.powers.length }

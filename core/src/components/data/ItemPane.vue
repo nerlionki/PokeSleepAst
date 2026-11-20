@@ -132,8 +132,8 @@
 .item-yield-row {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.35rem 0;
+  gap: var(--font-16);
+  padding: calc(var(--font-16) * 0.35) 0;
   font-variant-numeric: tabular-nums;
 }
 </style>

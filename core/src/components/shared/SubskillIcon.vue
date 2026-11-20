@@ -34,7 +34,7 @@ const mask = computed(() => {
   >
     <img class="sub-mask-loader" :src="src" alt="" aria-hidden="true" @error="failed = true" @load="loadedMask = ($event.target as HTMLImageElement).src">
   </span>
-  <span v-else-if="skill && !decorative">{{ gameText(skill.name) }}</span>
+  <span v-else-if="skill && !decorative" :class="[`rarity-${skill.rarity}`, { locked }]">{{ gameText(skill.name) }}</span>
 </template>
 <style scoped>
 .sub-mask-loader { display: none; }

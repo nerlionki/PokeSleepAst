@@ -159,12 +159,12 @@ function navigate(tab: string) {
 </template>
 
 <style scoped>
-.guide-tour { position: fixed; inset: 0; z-index: 100; color: var(--text); }
+.guide-tour { position: fixed; inset: 0; top: var(--visible-top, 0px); bottom: auto; height: var(--visible-height, 100dvh); z-index: 100; color: var(--text); }
 .guide-blocker { position: absolute; inset: 0; }
 .guide-mask { position: absolute; pointer-events: none; background: var(--overlay); }
 .guide-highlight { position: absolute; pointer-events: none; border: 2px solid var(--sage); box-sizing: border-box; border-radius: 8px; }
 .guide-arrow { position: absolute; pointer-events: none; width: 14px; height: 14px; background: var(--card); transform: rotate(45deg); }
-.guide-popover { position: absolute; display: flex; flex-direction: column; min-width: 0; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); max-width: calc(100dvw - 32px); max-height: calc(100dvh - 32px); background: var(--card); color: var(--text); border-radius: 8px; border: 1px solid var(--line); box-sizing: border-box; text-align: left; overflow: hidden; font-size: var(--font-14, 14px); }
+.guide-popover { position: absolute; display: flex; flex-direction: column; min-width: 0; max-width: calc(100vw - 32px); max-height: calc(var(--visible-height, 100dvh) - 32px); background: var(--card); color: var(--text); border-radius: 8px; border: 1px solid var(--line); box-sizing: border-box; text-align: left; overflow: hidden; font-size: var(--font-14, 14px); }
 .guide-popover:focus { outline: none; }
 .guide-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 4px 16px; min-height: 44px; box-sizing: border-box; }
 .guide-progress { color: var(--muted); font-size: var(--font-12, 12px); }

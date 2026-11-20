@@ -358,7 +358,7 @@
 </script>
 
 <template>
-  <div class="stack" :aria-busy="busy">
+  <div class="stack form-pane" :aria-busy="busy">
     <p class="muted">{{ translateUi('特殊加成') }}</p>
     <div class="lv-row">
       <button

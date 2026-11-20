@@ -33,7 +33,7 @@ function change(event: unknown) {
     <slider class="wx-range" :disabled="disabled" :value="boundedSliderValue(Math.round(Number(current) * sliderScale))" :min="sliderMin" :max="sliderMax" :step="Math.max(1, Math.round(Number(step ?? 1) * sliderScale))" :block-size="24" :background-color="appearance.palette.line" :active-color="appearance.palette.amber" @change="change" @changing="change" />
   </view>
   <picker @touchstart.stop @touchend.stop @touchcancel.stop v-else-if="type === 'time'" class="wx-control" mode="time" :disabled="disabled" :value="String(current)" @change="change"><view class="wx-select">{{ current || translateUi("选择时间") }}</view></picker>
-  <input @touchstart.stop @touchend.stop @touchcancel.stop v-else class="wx-control wx-input" :type="type === 'number' ? 'digit' : 'text'" :value="String(current)" :placeholder="placeholder" :disabled="disabled" @input="change" />
+  <input @touchstart.stop @touchend.stop @touchcancel.stop v-else class="wx-control wx-input" :adjust-position="false" :cursor-spacing="12" :type="type === 'number' ? 'digit' : 'text'" :value="String(current)" :placeholder="placeholder" :disabled="disabled" @input="change" />
 </template>
 <style>
 .wx-switch-control { display: inline-flex; align-items: center; flex: none; width: 52px; height: 32px; }

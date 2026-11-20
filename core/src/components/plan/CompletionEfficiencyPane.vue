@@ -75,7 +75,7 @@ watch(() => options.value.selectionMode, () => {
 </script>
 
 <template>
-  <div class="stack" :aria-busy="busy">
+  <div class="stack form-pane" :aria-busy="busy">
     <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">{{ translateUi("恢复本面板自动活动设置") }}</button>
     <div class="field"><label for="completion-selection">{{ translateUi("目标选择方式") }}</label><select id="completion-selection" v-model="options.selectionMode" :disabled="busy"><option value="sleepdex">{{ translateUi("根据睡姿图鉴") }}</option><option value="free">{{ translateUi("自由选择") }}</option></select></div>
     <p class="muted">{{ translateUi("每天合计 100 分，寻找指定") }}{{ options.selectionMode === 'free' ? '' : translateUi("未收集") }}{{ translateUi("睡姿至少出现一次的最佳方案。拆觉时，两觉使用相同卡比兽能量。") }}</p>

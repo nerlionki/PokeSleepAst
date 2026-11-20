@@ -558,29 +558,31 @@
         {{ translateUi('清除筛选') }}
       </button>
     </div>
-    <div v-for="pokemon in filtered" :key="pokemon.uid" class="card">
-      <PokemonPreview :pokemon="pokemon">
-        <template #actions>
-          <button
-            v-if="pokemon.ocrMissing?.length"
-            class="btn"
-            type="button"
-            @click="resumeCompletion(pokemon)"
-          >
-            {{ translateUi('补全') }}
-          </button>
-          <button class="btn ghost" type="button" @click="openEdit(pokemon)">
-            {{ translateUi('编辑') }}
-          </button>
-          <button
-            class="btn ghost"
-            type="button"
-            @click="removePokemon(pokemon.uid)"
-          >
-            {{ translateUi('删除') }}
-          </button>
-        </template>
-      </PokemonPreview>
+    <div class="box-cards">
+      <div v-for="pokemon in filtered" :key="pokemon.uid" class="card">
+        <PokemonPreview :pokemon="pokemon">
+          <template #actions>
+            <button
+              v-if="pokemon.ocrMissing?.length"
+              class="btn"
+              type="button"
+              @click="resumeCompletion(pokemon)"
+            >
+              {{ translateUi('补全') }}
+            </button>
+            <button class="btn ghost" type="button" @click="openEdit(pokemon)">
+              {{ translateUi('编辑') }}
+            </button>
+            <button
+              class="btn ghost"
+              type="button"
+              @click="removePokemon(pokemon.uid)"
+            >
+              {{ translateUi('删除') }}
+            </button>
+          </template>
+        </PokemonPreview>
+      </div>
     </div>
     <SpeciesSheet v-if="picking" @close="picking = false" @pick="pickSpecies" />
     <div

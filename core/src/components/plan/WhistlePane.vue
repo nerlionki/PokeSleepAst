@@ -75,7 +75,7 @@
 </script>
 
 <template>
-  <div class="stack">
+  <div class="stack form-pane">
     <article class="card stack">
       <h3>{{ translateUi('吹哨规划') }}</h3>
       <p class="muted">

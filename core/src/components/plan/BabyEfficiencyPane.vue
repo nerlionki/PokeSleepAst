@@ -51,7 +51,7 @@ const percent = computed(() => Math.min(100, Math.floor(progress.value.percent))
 </script>
 
 <template>
-  <div class="stack" :aria-busy="busy">
+  <div class="stack form-pane" :aria-busy="busy">
     <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">{{ translateUi("恢复本面板自动活动设置") }}</button>
     <p class="muted">{{ translateUi("每天按 100 分，在所选岛屿和睡眠类型范围内寻找最佳方案。开启拆分睡眠后，两觉合计 100 分，卡比兽能量按相同值计算。") }}</p>
     <article class="card stack">

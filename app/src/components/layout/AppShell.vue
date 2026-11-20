@@ -14,15 +14,19 @@ import { useRosterStore } from '../../stores/roster'
 import { useSettingsStore } from '../../stores/settings'
 import UpdateDialog from '../update/UpdateDialog.vue'
 import { useUpdateStore } from '../../stores/update'
+import { useViewport } from '../../platform/viewport'
+import { viewportVariables } from '../../../../core/src/ui/responsive'
 
 const route = useRoute()
 const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
 const settings = useSettingsStore()
 const updater = useUpdateStore()
 const appearance = useAppearanceStore()
+const viewport = useViewport()
 watchEffect(() => {
   document.documentElement.lang = language.value
   for (const [key, value] of Object.entries(appearance.variables)) document.documentElement.style.setProperty(key, value)
+  for (const [key, value] of Object.entries(viewportVariables(viewport.value))) document.documentElement.style.setProperty(key, value)
 })
 
 onMounted(async () => {

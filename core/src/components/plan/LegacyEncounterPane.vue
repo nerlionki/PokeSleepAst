@@ -26,7 +26,7 @@ const tab = computed({
 </script>
 
 <template>
-  <div class="stack">
+  <div class="stack form-pane">
     <Segmented v-model="tab" :options="options" />
     <CatchPane v-if="tab === 'catch'" />
     <BabyEfficiencyPane v-else-if="tab === 'baby'" />

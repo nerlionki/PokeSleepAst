@@ -163,7 +163,7 @@
 </script>
 
 <template>
-  <div class="stack train-pane">
+  <div class="stack form-pane train-pane">
     <FormField v-slot="{ id }" :label="translateUi('从 Box 带入')"
       ><select :id="id" v-model="uid">
         <option value="">{{ translateUi('不使用 Box') }}</option>
@@ -422,7 +422,7 @@
   }
   .train-fields {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
     align-items: start;
     gap: 12px;
   }

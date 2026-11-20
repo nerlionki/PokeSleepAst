@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { shallowRef } from 'vue'
+import { refreshViewport } from '../platform/viewport'
 
 const loaded = shallowRef(false)
 
-function onLoad() { loaded.value = true }
+function onLoad() { loaded.value = true; refreshViewport() }
 function onError(event: { detail?: { errCode?: number; errMsg?: string } }) {
   loaded.value = false
+  refreshViewport()
   console.warn('[home-list-ad]', event.detail?.errCode, event.detail?.errMsg)
 }
 </script>

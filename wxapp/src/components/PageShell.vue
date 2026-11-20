@@ -10,9 +10,19 @@ import { usePageTab } from '../../../core/src/composables/usePageTab'
 import { activatePage, route } from '../platform/router'
 import { useAppearanceStore } from '../../../core/src/stores/appearance'
 import { luminance } from '../../../core/src/ui/appearance'
+import { useViewport } from '../platform/viewport'
+import { viewportVariables } from '../../../core/src/ui/responsive'
 const props = defineProps<{ page: string }>()
 const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
 const appearance = useAppearanceStore()
+const viewport = useViewport()
+const layoutVariables = computed(() => ({
+  ...appearance.variables,
+  ...viewportVariables(viewport.value),
+  '--safe-left': `${viewport.value.safeLeft}px`,
+  '--safe-right': `${viewport.value.safeRight}px`,
+  '--safe-bottom': `${viewport.value.safeBottom}px`,
+}))
 function applyBars() {
   if (route.name !== props.page) return
   const p = appearance.palette
@@ -45,7 +55,7 @@ onMounted(() => { active(); void load(); refreshShareMode() })
 useDidShow(() => { active(); applyBars(); applyLanguage(); refreshShareMode() })
 </script>
 <template>
-  <view class="appearance-root" :class="{ 'dex-page-shell': page === 'pokemon' && pokemonTab === 'dex', 'fixed-tabs-shell': page === 'plan' || page === 'data' || page === 'team' }" :style="appearance.variables">
+  <view class="appearance-root" :class="{ 'dex-page-shell': page === 'pokemon' && pokemonTab === 'dex', 'fixed-tabs-shell': page === 'plan' || page === 'data' || page === 'team' }" :style="layoutVariables">
     <view v-if="error" class="card stack"><text>{{ translateUi(error) }}</text><button class="btn" @tap="load">{{ translateUi("重试") }}</button></view>
     <view v-else-if="!ready" class="muted">{{ translateUi("正在加载本机数据…") }}</view>
     <view v-else-if="privatePreview" class="page">
@@ -59,6 +69,6 @@ useDidShow(() => { active(); applyBars(); applyLanguage(); refreshShareMode() })
 </template>
 <style>
 .appearance-root { min-height: 100vh; background: var(--ink); color: var(--text); font-size: var(--font-16); font-family: var(--font-family, sans-serif); }
-.dex-page-shell, .fixed-tabs-shell { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.dex-page-shell, .fixed-tabs-shell { height: var(--visible-height, 100vh); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .dex-page-shell > .page, .fixed-tabs-shell > .page { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 12px; overflow: hidden; }
 </style>
