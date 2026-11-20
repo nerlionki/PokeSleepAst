@@ -111,8 +111,7 @@ async function readSpeciesEvidence(image: PixelImage, words: OcrWord[]): Promise
   }
 }
 
-async function matchPortrait(image: PixelImage, words: OcrWord[]): Promise<{ id: number, shiny: boolean } | null> {
-  const evidence = await readSpeciesEvidence(image, words)
+async function matchPortrait(image: PixelImage, words: OcrWord[], evidence: SpeciesEvidence): Promise<{ id: number, shiny: boolean } | null> {
   const allowed = new Set(speciesCandidates(evidence))
   if (!allowed.size) return null
   const box = avatarBox(words)
@@ -179,6 +178,7 @@ async function refineHeader(sessions: OcrSessions, image: PixelImage, words: Ocr
 
 async function matchSlotLines(image: PixelImage, words: OcrWord[], pokeId: number,
   match: (shot: PixelImage, ids: number[]) => Promise<number | null> = (shot, ids) => bestIngredient(shot, ids.map((id) => ({ id, url: ingredientImageUrl(id) }))),
+  evidence?: SpeciesEvidence,
 ): Promise<[number | null, number | null]> {
   const marks = ingredientQuantityMarks(words)
   const poke = pokeById(pokeId)
@@ -204,6 +204,23 @@ async function matchSlotLines(image: PixelImage, words: OcrWord[], pokeId: numbe
     if (candidates.length === 1) {
       lines.push(candidates[0]!)
       continue
+    }
+    // 数量相同且图标容易混淆时，用另一格独立识别出的同种食材和数量交叉核对。
+    const recognized = evidence?.ingredientCandidates?.[slot]
+    if (byQuantity.length > 1 && recognized?.length === 1) {
+      const matching = byQuantity.filter(index => poke.ingredients[index]!.id === recognized[0])
+      const repeated = evidence?.ingredientCandidates?.some((ids, otherSlot) => {
+        const quantity = evidence.quantities?.[otherSlot]
+        if (otherSlot === slot || ids?.length !== 1 || ids[0] !== recognized[0] || quantity == null) return false
+        return poke.ingredients.some((_, index) => {
+          const drop = slotDrop(poke.ingredients, otherSlot, index)
+          return drop != null && drop.id === recognized[0] && drop.amount === quantity
+        })
+      })
+      if (matching.length === 1 && repeated) {
+        lines.push(matching[0]!)
+        continue
+      }
     }
     const shot = ingredientIconCrop(image, mark.word, gap)
     const unique = [...new Set(candidates.map((index) => poke.ingredients[index]!.id))]
@@ -237,12 +254,13 @@ async function importScreenshotFiles(files: Array<File | string>, existing: BoxP
       }
       for (const group of groups) {
         await refineHeader(sessions, image, group)
-        const portrait = await matchPortrait(image, group)
+        const evidence = await readSpeciesEvidence(image, group)
+        const portrait = await matchPortrait(image, group, evidence)
         if (!portrait) {
           cards.push(null)
           continue
         }
-        const slotLines = await matchSlotLines(image, group, portrait.id)
+        const slotLines = await matchSlotLines(image, group, portrait.id, undefined, evidence)
         cards.push(parseCard(group, { portraitId: portrait.id, shiny: portrait.shiny, slotLines, characters: new Set(sessions.dict) }))
       }
     }

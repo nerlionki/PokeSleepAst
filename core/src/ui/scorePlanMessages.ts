@@ -1,5 +1,13 @@
 export const scorePlanMessages: Record<string, Record<string, string>> = {
   "zh-TW": {
+    "导入背包食材": "匯入背包食材",
+    "正在识别背包食材": "正在辨識背包食材",
+    "未能识别背包食材，请选择简体或繁体中文的游戏背包食材截图。": "無法辨識背包食材，請選擇簡體或繁體中文的遊戲背包食材截圖。",
+    "已跳过 {count} 张无法识别的截图。": "已略過 {count} 張無法辨識的截圖。",
+    "以下食材在截图中的数量不同。请选择或填写正确的数量。": "以下食材在截圖中的數量不同。請選擇或輸入正確的數量。",
+    "确认数量": "確認數量",
+    "确认导入": "確認匯入",
+    "数量待填写": "請補填數量",
     "已有活力枕头（个）": "已有活力枕頭（個）",
     "允许规划使用活力枕头": "允許規劃使用活力枕頭",
     "活力枕头库存须为非负整数": "活力枕頭庫存須為非負整數",
@@ -17,6 +25,14 @@ export const scorePlanMessages: Record<string, Record<string, string>> = {
     "技能衰退为模拟假设": "技能衰退為模擬假設"
   },
   "ja": {
+    "导入背包食材": "バッグの食材を取り込む",
+    "正在识别背包食材": "バッグの食材を読み取り中",
+    "未能识别背包食材，请选择简体或繁体中文的游戏背包食材截图。": "食材を読み取れませんでした。中国語（簡体字または繁体字）のゲーム内バッグの食材画面を選択してください。",
+    "已跳过 {count} 张无法识别的截图。": "読み取れなかったスクリーンショットを {count} 枚スキップしました。",
+    "以下食材在截图中的数量不同。请选择或填写正确的数量。": "以下の食材は画像によって個数が異なります。正しい個数を選択または入力してください。",
+    "确认数量": "個数を確認",
+    "确认导入": "取り込みを確定",
+    "数量待填写": "個数を入力してください",
     "已有活力枕头（个）": "げんきマクラの所持数",
     "允许规划使用活力枕头": "計画でげんきマクラの使用を許可",
     "活力枕头库存须为非负整数": "げんきマクラの所持数は0以上の整数で入力してください",
@@ -34,6 +50,14 @@ export const scorePlanMessages: Record<string, Record<string, string>> = {
     "技能衰退为模拟假设": "スキル発生率の低下はシミュレーション上の仮定"
   },
   "en": {
+    "导入背包食材": "Import bag ingredients",
+    "正在识别背包食材": "Reading bag ingredients",
+    "未能识别背包食材，请选择简体或繁体中文的游戏背包食材截图。": "No bag ingredients could be read. Choose a screenshot of the in-game ingredient bag in Simplified or Traditional Chinese.",
+    "已跳过 {count} 张无法识别的截图。": "Skipped {count} unreadable screenshots.",
+    "以下食材在截图中的数量不同。请选择或填写正确的数量。": "These ingredient counts differ across screenshots. Select or enter the correct counts.",
+    "确认数量": "Confirm count",
+    "确认导入": "Confirm import",
+    "数量待填写": "Enter amount",
     "已有活力枕头（个）": "Energy Pillows on hand",
     "允许规划使用活力枕头": "Allow Energy Pillows in this plan",
     "活力枕头库存须为非负整数": "Enter a nonnegative whole number of Energy Pillows",

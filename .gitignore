@@ -9,12 +9,16 @@ ocrTest/*
 !ocrTest/magnezone-ios-20261104-2.png
 !ocrTest/magnezone-shiny-20261113.jpg
 !ocrTest/tyranitar-shiny-20261113.jpg
+!ocrTest/cottonee-20261120.jpg
+!ocrTest/whimsicott-aaa.jpg
 !ocrTest/ninetales-ios-20261104.png
 !ocrTest/skeledirge-shiny-ios-20261104.png
 !ocrTest/context/
 !ocrTest/context/wrong-flaaffy-result-20261104.jpg
 !ocrTest/context/ocr-progress-stuck-ios-20261104.png
 !ocrTest/context/iphone15-ios26-1-20261104.png
+!ocrTest/ingredient-bag/
+!ocrTest/ingredient-bag/*.jpg
 docs/
 *.md
 !AGENTS.md

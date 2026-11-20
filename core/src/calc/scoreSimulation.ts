@@ -26,6 +26,7 @@ import { allocateIngredients, canCookRecipe, mealEnergy, recipeLevelOf, recipeEn
 import { cookingPotCapacity } from './cookingSkillState'
 import { teamRestrictionError } from './teamRestrictions'
 import { scoreSkill, scoreSkillRoles, type ScoreActor } from './scoreSkills'
+import { createMealSupply, DAY_MINUTES, type MealSupplyOptions, type MealSupplyResult } from './mealSupply'
 import { hm, scoreBounds, scoreCandidates, scoreSleeps, seededRandom, validateScoreOptions,
   type ScoreAction, type ScorePolicy, type ScoreRequest, type ScoreSegment, type ScoreTrace, type SleepSession } from './scorePlan'
 const scoreSimulation_config_extracted0 = extracted0.modules.scoreSimulation
@@ -82,11 +83,11 @@ const foodEnergy = (name: string) => ingredientEnergyValue(name) ?? 0
 
 /** 始终按事件顺序推进，成员状态以 UID 保存。结束边界不领取携带物。 */
 export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: number, rollback = 1, record = true,
-  skillDecayMultiplier = SCORE_SKILL_DECAY.probabilityMultiplier): ScoreTrace {
+  skillDecayMultiplier = SCORE_SKILL_DECAY.probabilityMultiplier, meal?: MealSupplyOptions): ScoreTrace & { mealSupply?: MealSupplyResult } {
   const { options: o } = request
   const sourceSettings = snapshotActivity(request.settings, 'week')
   let settings = activityBerrySettings(sourceSettings, sourceSettings.activity, scoreBounds(o).start)
-  const invalid = validateScoreOptions(o, settings)
+  const invalid = validateScoreOptions(o, settings, !meal)
   if (invalid) throw new Error(invalid)
   const { start, end } = scoreBounds(o)
   const random = seededRandom(seed)
@@ -124,6 +125,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
   const actions: ScoreAction[] = []
   const segments: ScoreSegment[] = []
   const bag = { ...o.bag }, received: Record<string, number> = {}, consumed: Record<string, number> = {}, sold: Record<string, number> = {}
+  const supply = meal && createMealSupply(bag, scoreSimulation_creditFood_ruleParameters.bagCapacity, meal)
   const items: Record<number, ScoreTrace['juice']> = {}
   const stock = (id: number) => items[id] ??= { initial: 0, received: 0, used: 0, lost: 0, remain: 0 }
   const juice = items[ITEM_ROLES.berryJuice] = { initial: o.initialJuice, received: 0, used: 0, lost: 0, remain: o.initialJuice }
@@ -248,9 +250,10 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     }
     return sales
   }
-  function creditFood(name: string, amount: number) {
+  function creditFood(name: string, amount: number, uid: string) {
     amount = Math.max(0, Math.floor(amount))
     if (!amount) return
+    if (supply) { supply.credit(name, amount, uid, currentMinute - start); return }
     // 调用仅发生在可操作节点；先卖出，再接收，单批大于上限时分批处理。
     for (let left = amount; left > 0;) {
       const part = Math.min(scoreSimulation_creditFood_ruleParameters.bagCapacity, left)
@@ -282,7 +285,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       const ex = exEffects(settings, m.berry, m.poke.specialty)
       const bonus = !extra && ex.ingredientExtra ? 1 + Number(ex.ingredientExtra > 1 && random() < scoreSimulation_help_ruleParameters.fractionalExExtraChance) : 0
       const count = extra ? drop.amount : Math.min(drop.amount + bonus + m.activity.ingredientCountBonus, Math.max(0, m.carry - m.heldBerries - sumBag(m.heldFood)))
-      if (extra) creditFood(String(drop.id), count); else {
+      if (extra) creditFood(String(drop.id), count, m.uid); else {
         add(m.heldFood, drop.id, count)
         for (const [name, bonus] of Object.entries(m.activity.fixedIngredientDrops)) add(m.heldFood, name, Math.min(bonus, Math.max(0, m.carry - m.heldBerries - sumBag(m.heldFood))))
       }
@@ -312,7 +315,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       },
       heal: (target, amount) => { const a = target as Actor; a.energy = Math.min(scoreSimulation_release_ruleParameters.energyCap, a.energy + amount); a.decay = currentMinute },
       charge: amount => { skill += amount * (1 + settings.areaBonus) * m.activity.skillStrengthMultiplier },
-      berries: (target, amount) => creditBerries(target as Actor, amount), ingredient: creditFood,
+      berries: (target, amount) => creditBerries(target as Actor, amount), ingredient: (name, amount) => creditFood(name, amount, m.uid),
       helps: (target, count, only) => {
         const a = target as Actor
         if (only) { for (let i = 0; i < count; i++) if (random() < a.rate) { release(a); break } }
@@ -350,7 +353,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     let fruits = 0
     for (const m of members) {
       fruits += m.heldBerries; creditBerries(m, m.heldBerries); m.heldBerries = 0
-      for (const [name, count] of Object.entries(m.heldFood)) { if (record) add(food, name, count); creditFood(name, count) }
+      for (const [name, count] of Object.entries(m.heldFood)) { if (record) add(food, name, count); creditFood(name, count, m.uid) }
       m.heldFood = {}
       m.fullSkillHelps = 0
       if (!beforeRotation) {
@@ -611,8 +614,9 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
   refreshActivities(start)
   rotate(initialSleep ? select(policy.sleep[initialSleep.slot]!) : daytime(), initialSleep ? `睡眠生产队 ${initialSleep.slot + 1}` : '白天生产队')
   if (initialSleep) sleepProducers.set(initialSleep, new Set(active))
+  supply?.prepare(0)
   let mealIndex = -1
-  for (let t = start; t < end; t++) {
+  for (let t = start; t < end + Number(Boolean(supply)) && !supply?.complete; t++) {
     currentMinute = t
     if (t % 1440 === (scoreSimulation_simulateScore_runtimeParameters.p006 as 240)) refreshActivities(t)
     const entering = sessionsStarting.get(t)
@@ -632,10 +636,12 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       if (t - m.decay >= (scoreSimulation_simulateScore_runtimeParameters.p007 as 10)) { m.energy = Math.max(0, m.energy - ruleParameters.modules.scoreSimulation.energyDecay.perTick); m.decay = t }
     }
     if (t > start) for (const s of sessionsSettling.get(t) ?? []) settle(s)
-    for (const m of active) while (m.next <= t && m.next < end) {
+    for (const m of active) while (m.next <= t && (supply || m.next < end) && !supply?.complete) {
       help(m); m.next += interval(m)
+      if (supply) collect([m])
     }
-    const collection = t > start && (Boolean(waking) || Boolean(entering) || canCollect && (sleep ? (t - sleep.start) % o.sleeps[sleep.slot]!.collectMinutes === 0 : (t - start) % o.collectMinutes === 0))
+    if (supply && t === start + DAY_MINUTES) supply.captureFirstDay()
+    const collection = !supply && t > start && (Boolean(waking) || Boolean(entering) || canCollect && (sleep ? (t - sleep.start) % o.sleeps[sleep.slot]!.collectMinutes === 0 : (t - start) % o.collectMinutes === 0))
     if (collection) {
       if (waking || sleep && !entering) collect(active)
       else if (!entering && (policy.collectMode ?? 'all') === 'all') collect(active)
@@ -675,12 +681,12 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
         useRecoveryItem(target, ITEM_ROLES.berryJuice)
       }
     }
-    if (canCollect && mealMinutes.includes(t % 1440)) cook()
+    if (!supply && canCollect && mealMinutes.includes(t % 1440)) cook()
   }
   // 分钟边界之后、结束之前完成的帮忙仍计生产；不产生末尾领取事件。
-  for (const m of active) while (m.next < end) { currentMinute = m.next; help(m); m.next += interval(m) }
+  if (!supply) for (const m of active) while (m.next < end) { currentMinute = m.next; help(m); m.next += interval(m) }
   // 最后一段睡眠允许延迟结算；仅恢复与经验，没有结束后的帮忙/收菜/技能/料理。
-  for (const s of sessions) if (s.settle >= end && s.start >= start && s.start < end) { currentMinute = s.settle; settle(s, true) }
+  if (!supply) for (const s of sessions) if (s.settle >= end && s.start >= start && s.start < end) { currentMinute = s.settle; settle(s, true) }
   if (segments.length) segments[segments.length - 1]!.end = end
   // At a rotation minute the outgoing roster has already produced for that tick.
   for (const segment of segments) {
@@ -701,5 +707,6 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     energy: m.energy, exp: m.exp, heldBerries: m.heldBerries, heldFood: m.heldFood, stock: m.stock }))
   const total = berry + zoneEnergy + skill + cooking
   return { berry, zone: zoneEnergy, skill, cooking, total, bag, received, consumed, sold, items, juice, members, actions, segments,
-    cookedByDay, skillReleases: skillReleases.total, suppressedSkillRolls, decayApplied, warnings: [...warnings] }
+    cookedByDay, skillReleases: skillReleases.total, suppressedSkillRolls, decayApplied, warnings: [...warnings],
+    ...(supply ? { mealSupply: supply.result() } : {}) }
 }

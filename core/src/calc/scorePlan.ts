@@ -111,7 +111,7 @@ export function scoreSleeps(o: ScoreOptions, settings: Settings): SleepSession[]
   }
   return sessions.sort((a, b) => a.start - b.start)
 }
-export function validateScoreOptions(o: ScoreOptions, settings: Settings): string | null {
+export function validateScoreOptions(o: ScoreOptions, settings: Settings, scheduledMeals = true): string | null {
   const integer = (v: number, min: number, max: number) => Number.isSafeInteger(v) && v >= min && v <= max
   if (!integer(o.startDay, 0, (scorePlan_validateScoreOptions_runtimeParameters.p001 as 6)) || !integer(o.days, 1, (scorePlan_validateScoreOptions_runtimeParameters.p002 as 7) - o.startDay)) return '规划天数不能超过本周剩余天数'
   if (!Number.isFinite(hm(o.startTime)) || o.startDay === 0 && hm(o.startTime) < (scorePlan_validateScoreOptions_runtimeParameters.p003 as 240)) return '开始时刻须在本周一 04:00 之后'
@@ -129,16 +129,16 @@ export function validateScoreOptions(o: ScoreOptions, settings: Settings): strin
     if (!integer(n, 0, (scorePlan_validateScoreOptions_runtimeParameters.p011 as 800))) return `初始食材「${ingredientLabel(key)}」的数量须为 0–800 的整数`
   }
   if (Object.values(o.bag).reduce((a, b) => a + b, 0) > (scorePlan_validateScoreOptions_runtimeParameters.p012 as 800)) return '初始食材合计不能超过 800'
-  if (o.meals.length !== 3 || o.meals.some((m, i) => !Number.isFinite(hm(m)) || hm(m) < scorePlan_config_ruleCatalogs.validateScoreOptionsList2.values[i]! || hm(m) >= scorePlan_config_ruleCatalogs.validateScoreOptionsList3.values[i]!)) return '做饭时间须分别位于早餐 06:00–11:59、午餐 12:00–17:59、晚餐 18:00–23:59'
+  if (scheduledMeals && (o.meals.length !== 3 || o.meals.some((m, i) => !Number.isFinite(hm(m)) || hm(m) < scorePlan_config_ruleCatalogs.validateScoreOptionsList2.values[i]! || hm(m) >= scorePlan_config_ruleCatalogs.validateScoreOptionsList3.values[i]!))) return '做饭时间须分别位于早餐 06:00–11:59、午餐 12:00–17:59、晚餐 18:00–23:59'
   if (!Number.isFinite(hm(o.dayStart)) || !Number.isFinite(hm(o.dayEnd)) || o.dayStart === o.dayEnd) return '白天分类范围须为两个不同的有效时刻'
   for (const s of o.sleeps.slice(0, o.splitSleep ? 2 : 1)) {
     if (!Number.isFinite(hm(s.start)) || !Number.isFinite(hm(s.end)) || s.start === s.end) return '睡眠开始和结束须为不同的有效时刻'
     if (!integer(s.collectMinutes, 0, (scorePlan_validateScoreOptions_runtimeParameters.p013 as 240)) || s.collectMinutes > 0 && s.collectMinutes < (scorePlan_validateScoreOptions_runtimeParameters.p014 as 5) || !integer(s.settleDelay, 0, (scorePlan_validateScoreOptions_runtimeParameters.p015 as 1440))) return '睡眠收菜间隔须为 0 或 5–240 分钟，结算延迟须为 0–1440 分钟'
-    if (o.meals.some(m => clockIn(hm(m), hm(s.start), hm(s.end))) && !extremeSleep(o, s)) return '做饭时间与不收菜的睡眠冲突，请在详细设置调整餐次或睡眠时间'
+    if (scheduledMeals && o.meals.some(m => clockIn(hm(m), hm(s.start), hm(s.end))) && !extremeSleep(o, s)) return '做饭时间与不收菜的睡眠冲突，请在详细设置调整餐次或睡眠时间'
   }
   const sleeps = scoreSleeps(o, settings)
   if (sleeps.some((s, i) => i > 0 && s.start < sleeps[i - 1]!.end)) return '两段睡眠不能重叠'
-  if (!Number.isFinite(settings.areaBonus) || settings.areaBonus < 0 || settings.areaBonus > AREA_BONUS_MAX || !integer(settings.potSize, 1, (scorePlan_validateScoreOptions_runtimeParameters.p017 as 1000))) return '请先检查岛屿加成和锅容量设置'
+  if (!Number.isFinite(settings.areaBonus) || settings.areaBonus < 0 || settings.areaBonus > AREA_BONUS_MAX || scheduledMeals && !integer(settings.potSize, 1, (scorePlan_validateScoreOptions_runtimeParameters.p017 as 1000))) return '请先检查岛屿加成和锅容量设置'
   return null
 }
 export function scoreCandidates(box: BoxPokemon[]) {

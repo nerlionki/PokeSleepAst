@@ -81,7 +81,7 @@ function clearFilters() {
           >{{ gameText(panel === 'ing' ? INGREDIENTS.find(item => String(item.id) === value)?.name : value) }}</button>
         </div>
       </HorizontalStrip>
-      <div :key="resultsRevision" class="poke-wall">
+      <div :key="resultsRevision" class="poke-wall poke-wall-auto">
         <button v-for="poke in list" :key="poke.id" type="button" class="poke-wall-cell" @click="emit('pick', poke.id)">
           <PokeSprite :id="poke.id" :name="poke.name" />
           <span>{{ gameText(poke.name) }}</span>

@@ -93,7 +93,7 @@ for (const file of walk(core)) {
         });
       }
       if (rel === 'components/shared/SpeciesSheet.vue' && node.props?.some(
-        prop => prop.type === 6 && prop.name === 'class' && prop.value?.content === 'poke-wall'
+        prop => prop.type === 6 && prop.name === 'class' && prop.value?.content.split(/\s+/).includes('poke-wall')
       )) {
         edits.push({
           start: node.loc.start.offset,
@@ -103,6 +103,19 @@ for (const file of walk(core)) {
           start: node.loc.end.offset,
           length: 0,
           value: '</custom-wrapper></scroll-view></view>'
+        });
+      }
+      if (rel === 'components/team/MealPlanPane.vue' && node.props?.some(
+        prop => prop.type === 6 && prop.name === 'class' && prop.value?.content === 'meal-recipe-picker-scroll'
+      )) {
+        edits.push({
+          start: node.loc.start.offset,
+          length: node.loc.source.indexOf('>') + 1,
+          value: '<scroll-view :scroll-y="true" class="meal-recipe-picker-scroll"><custom-wrapper>'
+        }, {
+          start: node.loc.end.offset - '</div>'.length,
+          length: '</div>'.length,
+          value: '</custom-wrapper></scroll-view>'
         });
       }
       // Keep fixed dialogs above the native tab content scroll-view.
@@ -496,6 +509,7 @@ await esbuild.build({
     contents: `import { babyEfficiencySteps } from './core/src/calc/babyEfficiency';
 import { sleepSimulationSteps } from './core/src/calc/sleepSimulation';
 import { scoreSearchSteps } from './core/src/calc/scoreSearch';
+import { mealPlanSteps } from './core/src/calc/mealPlan';
 import { splitSleepSteps } from './core/src/calc/splitSleep';
   export { installImportWorker } from './core/src/calc/ocrWorker';
 export function runBaby({options, checkpoint, splitOptions}) {
@@ -512,6 +526,10 @@ export function runSleep(request) {
  run(steps, state => { worker.postMessage({type:'checkpoint',checkpoint:state}); worker.postMessage({type:'progress',completed:state.powerIndex*request.iterations+(state.session?.completed||0),total:request.iterations*request.powers.length}); });
 }
 export function runScore(request) {
+ if (request.mode === 'meal') {
+  run(mealPlanSteps(request), progress => worker.postMessage({type:'progress',...progress}));
+  return;
+ }
  run(scoreSearchSteps(request), state => { worker.postMessage({type:'checkpoint',checkpoint:state}); worker.postMessage({type:'progress',completed:state.phase==='search'?state.index:state.policies.length+state.index,total:state.policies.length+5}); });
 }
 ${schedulerSource}`,

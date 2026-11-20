@@ -3,17 +3,19 @@ import { sleepSimulationSteps, type SleepSimulationRequest } from '../../../core
 import { SleepDrawUnresolvedError } from '../../../core/src/calc/sleepTransition'
 import type { BabyEfficiencyRequest } from '../../../core/src/calc/babyEfficiencyMessages'
 import { scoreSearchSteps } from '../../../core/src/calc/scoreSearch'
+import { mealPlanSteps, type MealPlanRequest } from '../../../core/src/calc/mealPlan'
 import type { ScoreRequest } from '../../../core/src/calc/scorePlan'
 import { splitSleepSteps, type SplitRequest } from '../../../core/src/calc/splitSleep'
 let splitSteps: ReturnType<typeof splitSleepSteps> | null = null
 let splitTotal = 0
 let scoreSteps: ReturnType<typeof scoreSearchSteps> | null = null
+let mealSteps: ReturnType<typeof mealPlanSteps> | null = null
 let steps: ReturnType<typeof babyEfficiencySteps> | null = null
 let progress: unknown = null
 let sleepSteps: ReturnType<typeof sleepSimulationSteps> | null = null
 let total = 0, iterations = 0
-export function beginTask(kind: 'baby' | 'sleep' | 'score', request: BabyEfficiencyRequest | SleepSimulationRequest | ScoreRequest | SplitRequest) {
-  steps = null; sleepSteps = null; scoreSteps = null; splitSteps = null; progress = null
+export function beginTask(kind: 'baby' | 'sleep' | 'score', request: BabyEfficiencyRequest | SleepSimulationRequest | ScoreRequest | SplitRequest | MealPlanRequest) {
+  steps = null; sleepSteps = null; scoreSteps = null; mealSteps = null; splitSteps = null; progress = null
   if (kind === 'baby') {
     if ('splitOptions' in request) {
       splitSteps = splitSleepSteps(request)
@@ -23,7 +25,8 @@ export function beginTask(kind: 'baby' | 'sleep' | 'score', request: BabyEfficie
     const baby = request as BabyEfficiencyRequest
     steps = babyEfficiencySteps(baby.options, (value) => { progress = value }, undefined, baby.checkpoint)
   } else if (kind === 'score') {
-    scoreSteps = scoreSearchSteps(request as ScoreRequest)
+    if ('mode' in request && request.mode === 'meal') mealSteps = mealPlanSteps(request as MealPlanRequest)
+    else scoreSteps = scoreSearchSteps(request as ScoreRequest)
   } else {
     const sleep = request as SleepSimulationRequest
     sleepSteps = sleepSimulationSteps(sleep); total = sleep.iterations * sleep.powers.length; iterations = sleep.iterations
@@ -40,6 +43,10 @@ export function nextTask(): string {
       if (next.done) return JSON.stringify({ type: 'result', result: next.value })
       const state = next.value
       return JSON.stringify({ type: 'progress', completed: state.phase === 'search' ? state.index : state.policies.length + state.index, total: state.policies.length + 5 })
+    }
+    if (mealSteps) {
+      const next = mealSteps.next()
+      return JSON.stringify(next.done ? { type: 'result', result: next.value } : { type: 'progress', ...next.value })
     }
     if (steps) {
       const next = steps.next()

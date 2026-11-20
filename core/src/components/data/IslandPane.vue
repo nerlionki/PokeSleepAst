@@ -217,7 +217,7 @@
                   }}</span>
                 </button>
               </h3>
-              <div v-if="!folded.has(sleep)" class="poke-wall">
+              <div v-if="!folded.has(sleep)" class="poke-wall poke-wall-auto">
                 <div v-for="p in list" :key="p.id" class="poke-wall-cell">
                   <PokeSprite :id="p.id" :name="p.name" />
                   <span>{{ gameText(p.name) }}</span>

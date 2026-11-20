@@ -19,5 +19,5 @@ export function useListScroll(key: string) {
     restoreTop.value = 0
   }
 
-  return { restoreTop, trackListScroll, resetListScroll }
+  return { scrollArea, restoreTop, trackListScroll, resetListScroll }
 }

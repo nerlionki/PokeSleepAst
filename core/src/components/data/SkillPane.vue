@@ -189,7 +189,7 @@
       <p v-if="!holders.length" class="muted">
         {{ translateUi('图鉴里没有对应名字。') }}
       </p>
-      <div v-else class="poke-wall">
+      <div v-else class="poke-wall poke-wall-auto">
         <div v-for="poke in holders" :key="poke.id" class="poke-wall-cell">
           <PokeSprite :id="poke.id" :name="poke.name" />
           <span>{{ gameText(poke.name) }}</span>

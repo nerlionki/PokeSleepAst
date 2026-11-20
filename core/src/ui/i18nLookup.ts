@@ -1,6 +1,8 @@
 import { itemMessages } from './itemMessages'
 import { encounterMessages } from './encounterMessages'
 import { scorePlanMessages } from './scorePlanMessages'
+import { recipeCoverageMessages } from './recipeCoverageMessages'
+import { mealPlanMessages } from './mealPlanMessages'
 
 const settingsSummary = '{island} · 营地 {bonus}% · {start}–{end} / {score}分';
 
@@ -75,6 +77,6 @@ export function translate(
         : undefined;
   const result = typeof entry === 'string' && entry.trim()
     ? entry
-    : updatedLabels[language]?.[lookup] ?? encounterMessages[language]?.[lookup] ?? itemMessages[language]?.[lookup] ?? scorePlanMessages[language]?.[lookup] ?? source;
+    : updatedLabels[language]?.[lookup] ?? encounterMessages[language]?.[lookup] ?? itemMessages[language]?.[lookup] ?? scorePlanMessages[language]?.[lookup] ?? recipeCoverageMessages[language]?.[lookup] ?? mealPlanMessages[language]?.[lookup] ?? source;
   return fill(result, values);
 }

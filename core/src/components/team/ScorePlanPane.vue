@@ -19,12 +19,12 @@ import { useSettingsStore } from '../../stores/settings'
 import type { BoxPokemon } from '../../types'
 import { teamRestrictionError } from '../../calc/teamRestrictions'
 import { itemById, ITEM_ROLES } from '../../calc/itemCatalog'
-import { INGREDIENTS, islandById } from '../../calc/data'
-import { ingredientLabel, ingredientRow, recipeById } from '../../calc/catalogIds'
+import { islandById } from '../../calc/data'
+import { ingredientLabel, recipeById } from '../../calc/catalogIds'
 import { boxLabel } from '../../calc/boxFilter'
 import { defaultScoreOptions, normalizeScoreOptions, scoreBounds, scoreCandidates, scoreTime, validateScoreOptions, type ScoreOptions } from '../../calc/scorePlan'
 import PokeSprite from '../shared/PokeSprite.vue'
-import IngredientIcon from '../shared/IngredientIcon.vue'
+import PlanningInventory from './PlanningInventory.vue'
 const components_team_ScorePlanPane_config_clientDefaults = clientDefaults.modules.components_team_ScorePlanPane
 
 
@@ -33,7 +33,7 @@ const roster = useRosterStore()
 const pillowId = ITEM_ROLES.energyPillow
 const pillowAvailable = pillowId != null && Boolean(itemById(pillowId)?.useEffect)
 const options = ref(defaultScoreOptions(settings.settings))
-const ready = ref(components_team_ScorePlanPane_config_clientDefaults["readyInitial"]), advanced = ref(components_team_ScorePlanPane_config_clientDefaults["advancedInitial"]), inventory = ref(components_team_ScorePlanPane_config_clientDefaults["inventoryInitial"]), selected = ref(components_team_ScorePlanPane_config_clientDefaults["selectedInitial"]), showActions = ref(components_team_ScorePlanPane_config_clientDefaults["showActionsInitial"]), actionDay = ref(components_team_ScorePlanPane_config_clientDefaults["actionDayInitial"])
+const ready = ref(components_team_ScorePlanPane_config_clientDefaults["readyInitial"]), advanced = ref(components_team_ScorePlanPane_config_clientDefaults["advancedInitial"]), selected = ref(components_team_ScorePlanPane_config_clientDefaults["selectedInitial"]), showActions = ref(components_team_ScorePlanPane_config_clientDefaults["showActionsInitial"]), actionDay = ref(components_team_ScorePlanPane_config_clientDefaults["actionDayInitial"])
 const loadError = ref('')
 const optionsStorageKey = 'score-options-v2'
 const baselineStorageKey = 'score-baseline-team'
@@ -56,9 +56,6 @@ const request = () => ({ settings: { ...settings.settings, mealCategory: options
 const { busy, error, notice, result, progress, dirty, calculate, cancel, restore } = useScorePlan(request)
 const inputError = computed(() => loadError.value || validateScoreOptions(options.value, settings.settings))
 const foodCount = computed(() => Object.values(options.value.bag).reduce((sum, n) => sum + (Number(n) || 0), 0))
-const unresolvedFoods = computed(() => Object.entries(options.value.unresolvedBag ?? {}))
-const unknownFoods = computed(() => Object.keys(options.value.bag).filter(key => !ingredientRow(key)))
-function removeUnresolvedFood(key: string) { if (options.value.unresolvedBag) delete options.value.unresolvedBag[key] }
 const environment = computed(() => [
   translateUi('{island} · 岛屿加成 {bonus}%', {
     island: gameText(islandById(settings.settings.island)?.name ?? ''),
@@ -125,13 +122,6 @@ function reset() {
   loadError.value = ''
   options.value = { ...defaultScoreOptions(settings.settings), bag: { ...options.value.bag }, unresolvedBag: { ...options.value.unresolvedBag }, initialStrength: options.value.initialStrength }
 }
-function updateFood(id: number, event: Event) {
-  const input = event.target as HTMLInputElement
-  const value = input.value
-  if (input.validity?.badInput) options.value.bag[id] = Number.NaN
-  else if (value === '') delete options.value.bag[id]
-  else options.value.bag[id] = Number(value)
-}
 function start() {
   if (busy.value || !ready.value) return
   const reason = inputError.value || (!box.pokemon.length ? '请先在 Box 添加宝可梦，再开始规划。' : '')
@@ -167,24 +157,7 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
         </div>
         <div class="field"><label for="score-initial">{{ translateUi("卡比兽初始能量") }}</label><input id="score-initial" v-model.number="options.initialStrength" type="number" :min="INPUT_LIMITS.score_initial.min" :step="INPUT_LIMITS.score_initial.step" inputmode="numeric"></div>
       </div>
-      <button class="btn ghost" type="button" :aria-expanded="inventory" @click="inventory = !inventory">{{ translateUi("初始食材 ·") }} {{ foodCount }}/{{ INPUT_LIMITS.options_bag_ingredient_name.max }} {{ translateUi("个") }}</button>
-      <div v-if="inventory" class="stack">
-        <p class="muted">{{ translateUi("填写规划开始时已经持有的数量。未填写按 0 处理，规划不会扣除保存的库存。") }}</p>
-        <div class="score-foods">
-          <div v-for="ingredient in INGREDIENTS" :key="ingredient.id" class="field">
-            <label :for="`score-food-${ingredient.id}`"><IngredientIcon :id="ingredient.id" :name="ingredient.name" small /> {{ gameText(ingredient.name) }}</label>
-            <input :id="`score-food-${ingredient.id}`" :value="options.bag[ingredient.id]" type="number" :min="INPUT_LIMITS.options_bag_ingredient_name.min" :max="INPUT_LIMITS.options_bag_ingredient_name.max" :step="INPUT_LIMITS.options_bag_ingredient_name.step" inputmode="numeric" @input="updateFood(ingredient.id, $event)">
-          </div>
-        </div>
-        <div v-for="[key, amount] in unresolvedFoods" :key="key" class="row">
-          <span class="amber">{{ key }} ×{{ amount }} · {{ translateUi('旧库存未匹配或冲突') }}</span>
-          <button class="btn ghost" type="button" @click="removeUnresolvedFood(key)">{{ translateUi('删除') }}</button>
-        </div>
-        <div v-for="name in unknownFoods" :key="name" class="row">
-          <span class="amber">{{ name }} · {{ translateUi("当前资料未收录") }}</span>
-          <button class="btn ghost" type="button" @click="delete options.bag[name]">{{ translateUi("删除") }}</button>
-        </div>
-      </div>
+      <PlanningInventory v-model:bag="options.bag" v-model:unresolved="options.unresolvedBag" :disabled="!ready" :initially-open="components_team_ScorePlanPane_config_clientDefaults.inventoryInitial" />
       <p v-if="!foodCount" class="muted">{{ translateUi("尚无初始食材，早餐只能使用开始后实际收取的产物。") }}</p>
       <button class="btn ghost" type="button" :aria-expanded="advanced" @click="advanced = !advanced">{{ translateUi("详细设置") }}{{ advancedChanged ? " " + translateUi("· 已调整") : '' }}</button>
       <div v-if="advanced" class="stack score-details">
@@ -313,8 +286,6 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
 .score-plan.has-results { max-width: none; gap: 16px; }
 .score-inputs, .score-results { min-width: 0; }
 .score-basics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
-.score-foods { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 12px; }
-.score-foods label { display: flex; gap: 6px; align-items: center; }
 .score-details { padding-top: 12px; border-top: 1px solid var(--line); }
 .score-details h4 { margin: 14px 0 0; }
 .score-sleep, .score-team, .score-state, .score-action { padding: 12px 0; border-bottom: 1px solid var(--line); }

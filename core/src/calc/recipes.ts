@@ -24,6 +24,24 @@ export function compareRecipeEnergyDescending(
     || a.pot - b.pot || a.name.localeCompare(b.name, 'zh-CN')
 }
 
+const strongestIngredientRecipes = new Map<string, { recipe: RecipeRow; dailyNeed: number }>()
+for (const recipe of RECIPES.filter(row => !row.mix && row.baseEnergy > 0).sort(compareRecipeEnergyDescending)) {
+  for (const ingredient of recipe.ingredients) {
+    const key = String(ingredient.id)
+    if (ingredient.count > 0 && !strongestIngredientRecipes.has(key)) {
+      strongestIngredientRecipes.set(key, { recipe, dailyNeed: ingredient.count * 3 })
+    }
+  }
+}
+
+/** Read production in its current period and compare its daily average with three servings. */
+export function ingredientRecipeCoverage(ingredientKey: string, amount: number | undefined, period: 'day' | 'week' = 'day') {
+  const target = strongestIngredientRecipes.get(ingredientKey)
+  if (!target || amount == null || !Number.isFinite(amount) || amount < 0) return undefined
+  const days = period === 'week' ? 7 : 1
+  return { ...target, percent: amount / days / target.dailyNeed * 100 }
+}
+
 export function bonusLabel(bonus: number): string {
   const pct = Math.round(bonus * 100)
   return `+${pct}%（${(1 + bonus).toFixed(2)}x）`

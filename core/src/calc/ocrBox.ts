@@ -107,6 +107,7 @@ function nameWord(words: OcrWord[]): OcrWord | null {
 
 export function subskillId(text: string): string {
   let key = ocrFold(text)
+  if (key === '书手厅') key = ocrFold('帮手奖励')
   // 字库会把金色副技能末尾的「獎勵」合并识别成「厅」。
   if (key === ocrFold('睡眠EXP厅') || key === ocrFold('夢之碎片厅')) key = key.slice(0, -1) + '奖励'
   for (const [pattern, replacement] of compatibilityMaps.modules.ocrMatching.subskillCorrections) key = key.replace(new RegExp(pattern!), replacement!)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { t as translateUi } from '../../ui/i18n'
+import { gameText, t as translateUi } from '../../ui/i18n'
 import { editorMemberFields, MEMBER_PRESETS } from '../../calc/memberPresets'
 
 
@@ -7,6 +7,8 @@ import { defaultSkillLevel } from '../../calc/member'
 
 import { confirmRemoval } from '#platform/confirm'
 import { ingredientEnergyValue } from '../../calc/activityIngredients'
+import { addIngredient, ingredientImageId, ingredientKey, ingredientLabel } from '../../calc/catalogIds'
+import { ingredientRecipeCoverage } from '../../calc/recipes'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -28,6 +30,7 @@ import type { ProduceResult } from '../../types'
 import MemberCard from './MemberCard.vue'
 import MemberEditor from './MemberEditor.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
+import IngredientIcon from '../shared/IngredientIcon.vue'
 import SpeciesSheet from '../shared/SpeciesSheet.vue'
 const components_team_ComparePane_config_clientDefaults = clientDefaults.modules.components_team_ComparePane
 
@@ -52,6 +55,7 @@ interface CompareRow {
   ribbonHours?: number
   bonus: number
   r: ProduceResult
+  coverage: Array<{ key: string; id: number; name: string; percent: number }>
 }
 
 const LEVELS = cloneData(components_team_ComparePane_config_clientDefaults["LEVELS"])
@@ -162,6 +166,18 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
     wakeEnergy: MEMBER_PRESETS.comparisonWakeEnergy,
   }
   const bonus = compareHelpingBonus(input.level, source.subskills, settings.value.helpingBonus)
+  const r = produce(calculationSettings.value, input, bonus)
+  const amounts: Record<string, number> = {}
+  for (const [name, count] of Object.entries(r.ingredients)) {
+    const key = ingredientKey(name)
+    if (key && count > 0) addIngredient(amounts, key, count)
+  }
+  const coverage = Object.entries(amounts).flatMap(([key, amount]) => {
+    const result = ingredientRecipeCoverage(key, amount, calculationSettings.value.period)
+    return result
+      ? [{ key, id: ingredientImageId(key), name: ingredientLabel(key), percent: result.percent }]
+      : []
+  })
   return {
     uid,
     pokeId: source.pokeId,
@@ -177,7 +193,8 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
     carryMode: tune?.carryMode,
     ribbonHours: tune?.ribbonHours,
     bonus,
-    r: produce(calculationSettings.value, input, bonus),
+    r,
+    coverage,
   }
 }).filter((row): row is CompareRow => row !== null))
 
@@ -237,6 +254,13 @@ function saveCustomToBox() {
           :helping-bonus="row.bonus"
           :label="row.name"
         />
+        <section v-if="row.coverage.length" class="compare-coverage">
+          <h4>{{ translateUi('食谱覆盖率') }}</h4>
+          <p v-for="food in row.coverage" :key="food.key" class="member-line">
+            <span><IngredientIcon :id="food.id" :name="food.name" small /> {{ gameText(food.name) }}</span>
+            <b>{{ food.percent.toFixed(1) }}%</b>
+          </p>
+        </section>
         <span v-if="best(strength(row))" class="chip">{{ translateUi("最高") }}</span>
         <div class="row">
           <button class="btn ghost" type="button" @click="editing = row.uid">{{ translateUi("编辑") }}</button>
@@ -277,3 +301,15 @@ function saveCustomToBox() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.compare-coverage {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.compare-coverage h4 {
+  margin: 0 0 4px;
+  font-size: var(--font-12);
+}
+</style>

@@ -7,6 +7,7 @@
   import { pokeById, SUBSKILLS } from '../../calc/data';
   import { slotDrop, unlockedIngredientSlots } from '../../calc/ingredients';
   import { SUBSKILL_GATES } from '../../calc/member';
+  import { ingredientRecipeCoverage } from '../../calc/recipes';
   import PokeSprite from '../shared/PokeSprite.vue';
   import IngredientIcon from '../shared/IngredientIcon.vue';
   const props = defineProps<{
@@ -14,6 +15,7 @@
     rank: number;
     unit: string;
     ingredients?: boolean;
+    ingredientKey?: string;
   }>();
   const mon = computed(() => props.row.pokemon);
   const species = computed(() => pokeById(mon.value.pokeId));
@@ -40,6 +42,9 @@
   );
   const amount = computed(() =>
     formatOverviewAmount(props.row.amount, props.ingredients ? 2 : 0)
+  );
+  const coverage = computed(() =>
+    props.ingredientKey && ingredientRecipeCoverage(props.ingredientKey, props.row.amount)
   );
 </script>
 <template>
@@ -69,6 +74,9 @@
         >
       </div>
       <p v-if="skills" class="muted rank-skills">{{ skills }}</p>
+      <p v-if="coverage" class="muted rank-coverage">{{
+        translateUi('食谱覆盖率 {percent}%', { percent: coverage.percent.toFixed(1) })
+      }}</p>
     </div>
     <div class="rank-amount">
       <strong>{{ amount }}</strong
@@ -77,6 +85,10 @@
   </div>
 </template>
 <style scoped>
+  .rank-coverage {
+    font-size: var(--font-12);
+    margin: 0;
+  }
   .overview-rank {
     display: grid;
     grid-template-columns: 20px 48px minmax(0, 1fr) auto;

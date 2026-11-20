@@ -8,7 +8,7 @@ import { recipeLevelOf } from '../../calc/cook'
 import { useSettingsStore } from '../../stores/settings'
 import clientDefaults from '../../data/client-defaults.resource'
 
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { MEAL_CATEGORIES } from '../../calc/recipes'
 import { textHit } from '../../calc/text'
 import { toggleChoice } from '../../calc/multiChoice'
@@ -20,7 +20,11 @@ const components_data_RecipePane_config_clientDefaults = clientDefaults.modules.
 
 const ingredientOptions = INGREDIENT_CATALOG
 const store = useSettingsStore()
-const props = defineProps<{ q?: string }>()
+const props = defineProps<{ q?: string; selectable?: boolean; selectedId?: number; disabled?: boolean }>()
+const emit = defineEmits<{ pick: [id: number] }>()
+const query = shallowRef('')
+const pageSize = 8
+const visibleCount = shallowRef(pageSize)
 const ingredients = ref<string[]>([])
 const showIngredients = shallowRef(false)
 const categories = [{ id: 'all', label: '全部' } as const, ...MEAL_CATEGORIES]
@@ -32,10 +36,11 @@ const opened = shallowRef<RecipeDisplayRow | null>((components_data_RecipePane_c
 
 const list = computed(() => {
   const rows = RECIPE_CATALOG.filter((r) => {
+    if (props.selectable && (r.mix || r.announcementKey || !r.ingredients.length)) return false
     if (category.value !== 'all' && r.category !== category.value) return false
-    const query = props.q ?? ''
+    const search = props.selectable ? query.value : props.q ?? ''
     const matchesQuery = [r.name, ...r.ingredients.map(ingredient => ingredient.name)]
-      .some(name => textHit(name, query) || textHit(gameText(name), query))
+      .some(name => textHit(name, search) || textHit(gameText(name), search))
     return matchesQuery && (!ingredients.value.length || r.ingredients.some(ingredient =>
       ingredients.value.includes(ingredient.filterKey ?? String(ingredient.id))))
   })
@@ -49,7 +54,14 @@ const list = computed(() => {
       || a.name.localeCompare(b.name, 'zh-CN')
   })
 })
+watch(list, () => { visibleCount.value = pageSize })
+const shown = computed(() => props.selectable ? list.value.slice(0, visibleCount.value) : list.value)
 function resetFilters() { ingredients.value = [] }
+function open(recipe: RecipeDisplayRow) {
+  if (props.selectable) {
+    if (!props.disabled) emit('pick', recipe.id)
+  } else opened.value = recipe
+}
 
 function levelOf(recipe: RecipeDisplayRow) {
   const key = recipeDisplayLevelKey(recipe)
@@ -59,6 +71,7 @@ function levelOf(recipe: RecipeDisplayRow) {
 
 <template>
   <div class="stack">
+    <input v-if="selectable" v-model="query" class="picker-search" :aria-label="translateUi('搜索食谱或食材')" :placeholder="translateUi('搜索食谱或食材')">
     <div class="seg seg-4">
       <button
         v-for="c in categories"
@@ -99,13 +112,18 @@ function levelOf(recipe: RecipeDisplayRow) {
     <p v-if="!list.length" class="muted">{{ translateUi("暂无符合条件的食谱，可调整食材筛选。") }}</p>
     <div class="meal-grid">
       <RecipeCard
-        v-for="r in list"
+        v-for="r in shown"
         :key="r.id > 0 ? r.id : r.announcementKey"
         :recipe="r"
         :level="levelOf(r)"
-        @open="opened = r"
+        :selected="selectable ? selectedId === r.id : undefined"
+        :disabled="selectable && disabled"
+        @open="open(r)"
       />
     </div>
+    <button v-if="selectable && visibleCount < list.length" type="button" class="btn ghost" @click="visibleCount += pageSize">
+      {{ translateUi('加载更多食谱') }}
+    </button>
     <RecipeSheet v-if="opened" :recipe="opened" :level="levelOf(opened)" @close="opened = null" />
   </div>
 </template>

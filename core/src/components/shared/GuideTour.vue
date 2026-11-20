@@ -26,10 +26,10 @@ const actions = computed(() => content.value.actions.filter(action => features.e
 const anchors: Record<GuidePage, readonly string[]> = {
   pokemon: ['#guide-pokemon-tabs-box', '#guide-pokemon-tabs'],
   plan: ['#guide-plan-tabs'],
-  team: ['#guide-team-tabs-score', '#guide-team-tabs'],
+  team: ['#guide-team-tabs-meal', '#guide-team-tabs'],
   data: ['#guide-data-tabs'],
 }
-const initialTabs: Record<GuidePage, string> = { pokemon: 'box', plan: 'encounter', team: 'score', data: 'recipe' }
+const initialTabs: Record<GuidePage, string> = { pokemon: 'box', plan: 'encounter', team: 'meal', data: 'recipe' }
 const layout = shallowRef(guideLayout({ width: 390, height: 720 }))
 const positioned = shallowRef(false)
 const visible = computed(() => open.value && positioned.value)

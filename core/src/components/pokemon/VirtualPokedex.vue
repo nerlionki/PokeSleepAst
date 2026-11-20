@@ -2,7 +2,7 @@
 import { gameText, t as translateUi } from '../../ui/i18n'
 
 
-import { computed, nextTick, onMounted, onBeforeUnmount, shallowRef, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onBeforeUnmount, shallowRef, watch } from 'vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 import { useListScroll } from '../../composables/useListScroll'
 import { measureVirtualGrid, observeVirtualGrid, scrollVirtualGrid } from '#platform/virtualGrid'
@@ -14,12 +14,11 @@ const props = defineProps<{
   scrollResetKey: string
 }>()
 const emit = defineEmits<{ pick: [id: number] }>()
-const { restoreTop, trackListScroll, resetListScroll } = useListScroll('pokedex')
+const { scrollArea, restoreTop, trackListScroll, resetListScroll } = useListScroll('pokedex')
 const scrollTop = shallowRef(restoreTop.value)
 const revision = shallowRef(0)
 const viewport = useViewport()
 const appearance = useAppearanceStore()
-const scrollArea = useTemplateRef<HTMLElement>('scrollArea')
 const columns = shallowRef(pokedexColumns(Math.min(1120, viewport.value.width) - 32))
 const ROW_HEIGHT = shallowRef(112)
 const viewportHeight = shallowRef(viewport.value.visibleHeight)

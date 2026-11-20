@@ -7,16 +7,18 @@ import { t as translateUi, gameText } from '../../ui/i18n'
   import IngredientIcon from '../shared/IngredientIcon.vue';
   import MealIcon from '../shared/MealIcon.vue';
 
-  defineProps<{
+  withDefaults(defineProps<{
     recipe: RecipeDisplayRow;
     level?: number;
-  }>();
+    selected?: boolean;
+    disabled?: boolean;
+  }>(), { selected: undefined });
 
   defineEmits<{ open: [] }>();
 </script>
 
 <template>
-  <button type="button" class="meal-card" @click="$emit('open')">
+  <button type="button" class="meal-card" :class="{ 'recipe-selected': selected }" :aria-pressed="selected" :disabled="disabled" @click="$emit('open')">
     <span class="meal-card-head">
       <strong>{{ gameText(recipe.name) }}</strong>
       <MealIcon :name="recipe.name" :id="recipe.id" />
@@ -54,3 +56,7 @@ import { t as translateUi, gameText } from '../../ui/i18n'
     </span>
   </button>
 </template>
+
+<style scoped>
+.recipe-selected { border-color: var(--sage); }
+</style>

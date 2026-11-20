@@ -1877,7 +1877,7 @@ textarea {
   align-items: start;
 }
 .style-wall { grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); }
-.poke-wall:not(.virtual-dex-grid) { grid-template-columns: repeat(auto-fill, minmax(min(100%, 96px), 1fr)); }
+.poke-wall.poke-wall-auto { grid-template-columns: repeat(auto-fill, minmax(min(100%, 96px), 1fr)); }
 .poke-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); }
 .poke-cell { min-width: 0; }
 .poke-cell .sprite { width: 48px; height: 48px; }

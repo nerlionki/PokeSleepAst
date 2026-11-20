@@ -1,5 +1,6 @@
 import { withResources, resourceRevision, compatibleCheckpoint } from '../../../core/src/resources/runtime'
-import { createScorePlanTask, type ScoreWorker } from '../../../core/src/composables/scorePlanTask'
+import { createPlanningTask, createScorePlanTask, type PlanningWorker, type ScoreWorker } from '../../../core/src/composables/scorePlanTask'
+import type { MealPlanMessage, MealPlanRequest, MealPlanResult } from '../../../core/src/calc/mealPlan'
 import { scoreFingerprint } from '../../../core/src/calc/scoreSearch'
 import { SCORE_RULE_VERSION, type ScoreCheckpoint, type ScoreMessage, type ScoreRequest } from '../../../core/src/calc/scorePlan'
 import { requireWorkerSupport } from './compatibility'
@@ -45,4 +46,24 @@ export function useScorePlan(currentInput: () => ScoreRequest) {
     } else wx.removeStorageSync(KEY)
   } catch { /* 损坏或过期的存档不影响重新规划。 */ } }
   return { ...task, restore }
+}
+
+export function useMealPlan(currentInput: () => MealPlanRequest) {
+  return createPlanningTask<MealPlanRequest, MealPlanResult, MealPlanMessage>(async () => {
+    requireWorkerSupport()
+    await new Promise<void>((resolve, reject) => wx.preDownloadSubpackage({
+      packageType: 'workers', success: () => resolve(), fail: () => reject(new Error('规划资源下载失败，请检查网络')),
+    }))
+    const worker = wx.createWorker('workers/score.js', { useExperimentalWorker: true })
+    let killed = false
+    const adapter: PlanningWorker<MealPlanRequest, MealPlanMessage> = {
+      onmessage: null, onerror: null,
+      postMessage: request => worker.postMessage(withResources(request)),
+      terminate: () => { if (!killed) worker.terminate() },
+    }
+    worker.onMessage(data => adapter.onmessage?.({ data: data as unknown as MealPlanMessage }))
+    worker.onError?.(event => adapter.onmessage?.({ data: { type: 'error', message: workerErrorMessage(event, '后台规划失败，请重新尝试') } }))
+    worker.onProcessKilled(() => { killed = true; adapter.onerror?.() })
+    return adapter
+  }, currentInput)
 }

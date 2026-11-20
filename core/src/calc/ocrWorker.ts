@@ -1,13 +1,17 @@
 import { createScreenshotImporter, type ImportProgress } from './ocrImportCore'
 import type { OcrSessions, PixelImage } from './ocrPipeline'
 import type { BoxPokemon } from '../types'
+import { importIngredientBag, type BagImportOptions, type BagImportResult } from './ocrIngredientBag'
 
 export interface ImportAssets { ingredients: Record<number, string>; portraits: Record<number, string>; shiny: Record<number, string> }
 export type ImportResult = ReturnType<typeof import('./ocrBox').planImports>
-type Request = { type: 'start'; files: Array<File | string>; existing: BoxPokemon[]; assets: ImportAssets }
+type BoxRequest = { type: 'start'; files: Array<File | string>; existing: BoxPokemon[]; assets: ImportAssets }
+type BagRequest = { type: 'start-bag'; files: Array<File | string>; options: BagImportOptions }
+type Request = BoxRequest | BagRequest
 type Rpc = { type: 'rpc'; id: number; method: string; args: unknown[] }
 type Reply = { type: 'reply'; id: number; value?: unknown; error?: string }
-type Message = Request | Rpc | Reply | { type: 'progress'; progress: ImportProgress } | { type: 'result'; result: ImportResult } | { type: 'error'; message: string }
+type Message = Request | Rpc | Reply | { type: 'progress'; progress: ImportProgress }
+  | { type: 'result'; result: ImportResult } | { type: 'bag-result'; result: BagImportResult } | { type: 'error'; message: string }
 interface WireImage { width: number; height: number; data: ArrayBuffer }
 interface WireTensor { dims: readonly number[]; data: ArrayBuffer }
 export interface ImportPort { postMessage(message: Message): void }
@@ -29,32 +33,41 @@ export function installImportWorker(port: ImportPort, listen: (handler: (message
       pending.delete(message.id)
       if (message.error) request?.reject(new Error(message.error))
       else request?.resolve(message.value)
-    } else if (message.type === 'start' && !started) {
+    } else if ((message.type === 'start' || message.type === 'start-bag') && !started) {
       started = true
+      const fileToImage = async (file: File | string) => {
+        const image = await rpc<WireImage>('file', file)
+        return { width: image.width, height: image.height, data: new Uint8ClampedArray(image.data) }
+      }
+      const loadUrl = async (url: string) => {
+        const image = await rpc<WireImage | null>('image', url)
+        return image ? { width: image.width, height: image.height, data: new Uint8ClampedArray(image.data) } : null
+      }
+      const loadOcr = localOcr ?? (async () => {
+        const dict = await rpc<string[]>('models')
+        const model = (name: 'det' | 'rec') => ({ async run(data: Float32Array, dims: number[]) {
+          const result = await rpc<WireTensor>('run', name, data.buffer, dims)
+          return { ...result, data: new Float32Array(result.data) }
+        } })
+        return { dict, det: model('det'), rec: model('rec') }
+      })
+      const progress = (progress: ImportProgress) => port.postMessage({ type: 'progress', progress })
+      const failed = (error: unknown) => port.postMessage({ type: 'error', message: error instanceof Error ? error.message : '截图识别失败' })
+      if (message.type === 'start-bag') {
+        void importIngredientBag(message.files, message.options, fileToImage, loadOcr, progress, loadUrl)
+          .then(result => port.postMessage({ type: 'bag-result', result })).catch(failed)
+        return
+      }
       const importer = createScreenshotImporter({
-        fileToImage: async file => {
-          const image = await rpc<WireImage>('file', file)
-          return { width: image.width, height: image.height, data: new Uint8ClampedArray(image.data) }
-        },
-        loadUrl: async url => {
-          const image = await rpc<WireImage | null>('image', url)
-          return image ? { width: image.width, height: image.height, data: new Uint8ClampedArray(image.data) } : null
-        },
+        fileToImage,
+        loadUrl,
         ingredientImageUrl: id => message.assets.ingredients[id] ?? '',
         pokemonPortraitUrl: id => message.assets.portraits[id] ?? '',
         pokemonShinyPortraitUrl: id => message.assets.shiny[id] ?? '',
-        loadOcr: localOcr ?? (async () => {
-          const dict = await rpc<string[]>('models')
-          const model = (name: 'det' | 'rec') => ({ async run(data: Float32Array, dims: number[]) {
-            const result = await rpc<WireTensor>('run', name, data.buffer, dims)
-            return { ...result, data: new Float32Array(result.data) }
-          } })
-          return { dict, det: model('det'), rec: model('rec') }
-        }),
+        loadOcr,
       })
-      void importer.importScreenshotFiles(message.files, message.existing, progress => port.postMessage({ type: 'progress', progress }))
-        .then(result => port.postMessage({ type: 'result', result }))
-        .catch(error => port.postMessage({ type: 'error', message: error instanceof Error ? error.message : '截图识别失败' }))
+      void importer.importScreenshotFiles(message.files, message.existing, progress)
+        .then(result => port.postMessage({ type: 'result', result })).catch(failed)
     }
   })
 }
@@ -71,9 +84,20 @@ export interface ImportHost {
 }
 export function runImportWorker(worker: ImportWorker, files: Array<File | string>, existing: BoxPokemon[], assets: ImportAssets,
   host: ImportHost, progress: (value: ImportProgress) => void): Promise<ImportResult> {
+  return runScreenshotWorker(worker, { type: 'start', files, existing, assets }, host, progress)
+}
+
+export function runBagImportWorker(worker: ImportWorker, files: Array<File | string>, options: BagImportOptions,
+  host: ImportHost, progress: (value: ImportProgress) => void): Promise<BagImportResult> {
+  return runScreenshotWorker(worker, { type: 'start-bag', files, options }, host, progress)
+}
+
+function runScreenshotWorker(worker: ImportWorker, request: BoxRequest, host: ImportHost, progress: (value: ImportProgress) => void): Promise<ImportResult>
+function runScreenshotWorker(worker: ImportWorker, request: BagRequest, host: ImportHost, progress: (value: ImportProgress) => void): Promise<BagImportResult>
+function runScreenshotWorker(worker: ImportWorker, request: Request, host: ImportHost, progress: (value: ImportProgress) => void): Promise<ImportResult | BagImportResult> {
   return new Promise((resolve, reject) => {
     let finished = false
-    const finish = (error?: Error, result?: ImportResult) => {
+    const finish = (error?: Error, result?: ImportResult | BagImportResult) => {
       if (finished) return
       finished = true
       clearTimeout(timer)
@@ -90,7 +114,8 @@ export function runImportWorker(worker: ImportWorker, files: Array<File | string
       if (finished) return
       heartbeat()
       if (data.type === 'progress') progress(data.progress)
-      else if (data.type === 'result') finish(undefined, data.result)
+      else if (data.type === 'result' && request.type === 'start') finish(undefined, data.result)
+      else if (data.type === 'bag-result' && request.type === 'start-bag') finish(undefined, data.result)
       else if (data.type === 'error') finish(new Error(data.message))
       else if (data.type === 'rpc') {
         const request = data
@@ -119,7 +144,7 @@ export function runImportWorker(worker: ImportWorker, files: Array<File | string
       }
     }
     try {
-      worker.postMessage({ type: 'start', files, existing: JSON.parse(JSON.stringify(existing)), assets })
+      worker.postMessage(request.type === 'start' ? { ...request, existing: JSON.parse(JSON.stringify(request.existing)) } : request)
     } catch (error) { finish(error instanceof Error ? error : new Error('无法启动截图识别')) }
   })
 }

@@ -27,6 +27,7 @@
   import { useBoxStore } from '../../stores/box';
   import { useSettingsStore } from '../../stores/settings';
   import { useProductionActivity } from '../../composables/useProductionActivity';
+  import { ingredientRecipeCoverage } from '../../calc/recipes';
   import BerryIcon from '../shared/BerryIcon.vue';
   import IngredientIcon from '../shared/IngredientIcon.vue';
   import Segmented from '../shared/Segmented.vue';
@@ -149,8 +150,14 @@
       ? overview.value.excludedBerries
       : overview.value.excludedIngredients
   );
+  const ingredientTiles = computed(() =>
+    overview.value.ingredients.map(ingredient => ({
+      ...ingredient,
+      coverage: ingredientRecipeCoverage(ingredient.key, ingredient.rows[0]?.amount)
+    }))
+  );
   const selected = computed(() =>
-    overview.value.ingredients.find(
+    ingredientTiles.value.find(
       ingredient => ingredient.key === selectedIngredientKey.value
     )
   );
@@ -339,7 +346,7 @@
       </p>
       <div class="ingredient-grid">
         <button
-          v-for="ingredient in overview.ingredients"
+          v-for="ingredient in ingredientTiles"
           :key="ingredient.key"
           class="ingredient-tile"
           type="button"
@@ -347,6 +354,7 @@
           :aria-label="
             ingredient.name + (ingredient.rows.length ? '产量排名' : '暂无产出')
           "
+          :aria-describedby="ingredient.coverage ? `ingredient-coverage-${ingredient.key}` : undefined"
           @click="openIngredient(ingredient.key)"
         >
           <IngredientIcon :id="ingredient.imageId" :name="ingredient.name" :image-file="ingredient.imageFile" />
@@ -357,6 +365,9 @@
               {{ translateUi('/日') }}</small
             ></strong
           >
+          <span v-if="ingredient.coverage" :id="`ingredient-coverage-${ingredient.key}`" class="muted">{{
+            translateUi('食谱覆盖率 {percent}%', { percent: ingredient.coverage.percent.toFixed(1) })
+          }}</span>
           <span class="muted">{{
             ingredient.rows.length
               ? translateUi('最高单只 · {count} 只产出', {
@@ -395,6 +406,11 @@
           {{ translateUi('当前等级 · 全天满活 · 无持有上限 ·') }}
           {{ selected.rows.length }} {{ translateUi('只个体') }}
         </p>
+        <p v-if="selected.coverage" class="muted">{{
+          translateUi('{recipe} · 三餐需 {count} 个/日', {
+            recipe: gameText(selected.coverage.recipe.name), count: selected.coverage.dailyNeed
+          })
+        }}</p>
         <IngredientRankScroll>
           <OverviewRankRow
             v-for="(row, index) in selected.rows.slice(0, visibleRanks)"
@@ -403,6 +419,7 @@
             :rank="index + 1"
             unit="个"
             ingredients
+            :ingredient-key="selected.key"
           />
           <button
             v-if="selected.rows.length > visibleRanks"
