@@ -263,7 +263,7 @@ function mergeIntervals(intervals: EfficiencyInterval[]): EfficiencyInterval[] {
 
 interface SplitLeaders { catch: { value: number, splits: number[] }, candy: { value: number, splits: number[] } }
 export interface BabyEfficiencyCheckpoint {
-  version: 9
+  version: 10
   /** 捕捉目标组；用于丢弃南瓜精合并前的旧续算结果。 */
   targetPokeIds?: readonly number[]
   options: BabyEfficiencyOptions
@@ -288,7 +288,7 @@ export function* babyEfficiencySteps(
   checkpoint?: BabyEfficiencyCheckpoint,
 ): Generator<BabyEfficiencyCheckpoint, BabyEfficiencyResult> {
   const availability = researchActivity(options.activity ?? checkpoint?.options.activity, options.activity?.pendingPokemon ?? pendingResearchPokemon())
-  if (checkpoint && checkpoint.version !== 9) throw new Error('续算规则或参数与检查点不一致，请重新计算')
+  if (checkpoint && checkpoint.version !== 10) throw new Error('续算规则或参数与检查点不一致，请重新计算')
   if (checkpoint && !sameResearchAvailability(checkpoint.options.activity, availability)) checkpoint = undefined
   options = { ...options, activity: availability }
   islands ??= efficiencyIslands(options.pokeId, options.completionTarget, options.activity)
@@ -300,7 +300,7 @@ export function* babyEfficiencySteps(
   const error = validateBabyEfficiency(options)
   if (error) throw new Error(error)
   const iterations = options.precision === 'low' ? options.iterations : 1
-  if (checkpoint && (checkpoint.version !== 9 || JSON.stringify(checkpoint.options) !== JSON.stringify(options))) throw new Error('续算规则或参数与检查点不一致，请重新计算')
+  if (checkpoint && (checkpoint.version !== 10 || JSON.stringify(checkpoint.options) !== JSON.stringify(options))) throw new Error('续算规则或参数与检查点不一致，请重新计算')
   islands = islands.filter((island) => !options.island || options.island === 'all' || island.id === options.island)
   if (!islands.length) throw new Error('资料未收录这个家族可参与普通研究的睡姿')
   const cache = new Map<string, EfficiencySimulation>()
@@ -429,7 +429,7 @@ export function* babyEfficiencySteps(
       return leaders
     }
     const localLeaders = islandIndex === checkpoint?.islandIndex ? checkpoint.leaders : emptyLeaders()
-    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 9, targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
+    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 10, targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
     for (const [index, split] of baseSplits.entries()) {
       if (index < resumeIndex) continue
       const leaders = scanSplit(split, index, baseSplits.length + (options.precision === 'medium' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p011 as 4) : 0))

@@ -48,6 +48,7 @@ export interface RaeTreeFrontier {
   usedLimits: number
   incomingStates: number
   prunedMass: number
+  unreachableMass?: number
   before: { states: number, mass: number }
   after: { states: number, mass: number }
   representatives?: [budget: number, mass: number][]
@@ -67,6 +68,7 @@ interface SlotPool {
   fillers: StyleOutcome[]
   fullLeaders: StyleOutcome[]
   limitedLeaders: StyleOutcome[]
+  minTargetBudget: number
 }
 interface SleepSlot { pools: SlotPool[], kind: 'regular' | 'last' | 'camp', restrictedLeaderChance: number }
 
@@ -145,6 +147,7 @@ function preparePool(candidates: readonly RaeSleepCandidate[]): SlotPool[] {
       fillers: eligible.filter(row => row.filler),
       fullLeaders: eligible,
       limitedLeaders: eligible.filter(row => row.limited),
+      minTargetBudget: eligible.reduce((minimum, row) => row.hits ? Math.min(minimum, row.filler ? -Infinity : row.spo) : minimum, Infinity),
     }
   })
   preparedPools.set(candidates, pools)
@@ -182,7 +185,7 @@ function sampleSlot(pool: SlotPool, slot: SleepSlot, budget: number, random: () 
   return outcomes[low]!
 }
 
-interface TreeDiagnostics { peakFrontier: number, peakAfterClustering: number, discardedMass: number }
+interface TreeDiagnostics { peakFrontier: number, peakAfterClustering: number, discardedMass: number, unreachableMass?: number }
 
 function frontierSize(partitions: Map<number, number>[]): number {
   return partitions.reduce((sum, part) => sum + part.size, 0)
@@ -228,7 +231,19 @@ function advanceTree(
   const slotCounts = slots.map(() => 0), slotCandy = slots.map(() => 0)
   const slotAdditionalCandy = slots.map(() => [0, 0, 0])
   const firstHit = statistic === 'first-hit'
-  const accumulation = budgetAccumulator(spo, slots)
+  // The RAE clustered first-hit frontier carries the keys of fully matched picks
+  // and removes unreachable miss paths when processing the next slot.
+  // Camp resets the budget, so natural-slot affordability cannot prove a miss there.
+  const trackTargetFrontier = firstHit && model.precision === 'medium' && slots.at(-1)?.kind !== 'camp'
+  const accumulation = trackTargetFrontier ? undefined : budgetAccumulator(spo, slots)
+  const targetMinimums: number[][] = []
+  if (trackTargetFrontier) {
+    let following = [Infinity, Infinity, Infinity, Infinity]
+    for (let index = slots.length - 1; index >= 0; index--) {
+      following = slots[index]!.pools.map((pool, mask) => Math.min(pool.minTargetBudget, following[mask]!))
+      targetMinimums[index] = following
+    }
+  }
   const fraction = spo - Math.floor(spo)
   const trace = model.trace
   const diagnostics: TreeDiagnostics = { peakFrontier: 1, peakAfterClustering: 1, discardedMass: 0 }
@@ -236,11 +251,12 @@ function advanceTree(
     const last = slotIndex === slots.length - 1
     const next = accumulation ? undefined : frontier.map(() => new Map<number, number>())
     const pruned = trace?.frontier ? [0, 0, 0, 0] : undefined
+    const unreachable = trackTargetFrontier && trace?.frontier ? [0, 0, 0, 0] : undefined
     for (const [usedLimits, budgets] of frontier.entries()) {
       const pool = slot.pools[usedLimits]!
       const { outcomes, cumulative } = pool.buckets
       const transfer = (row: Outcome, remaining: number, mass: number) => {
-        if (mass <= 0) return
+        if (mass <= 0 && !trackTargetFrontier) return
         // Keep the same key after spending integer costs in different orders.
         // Rounded Otsu centers start a new, integral budget path.
         const following = Number.isInteger(remaining)
@@ -263,6 +279,11 @@ function advanceTree(
         if (!last) transfer(row, remaining, firstHit ? mass - hitMass : mass)
       }
       for (const [remaining, mass] of budgets) {
+        if (trackTargetFrontier && remaining < targetMinimums[slotIndex]![usedLimits]!) {
+          diagnostics.unreachableMass = (diagnostics.unreachableMass ?? 0) + mass
+          if (unreachable) unreachable[usedLimits]! += mass
+          continue
+        }
         if (mass <= prune) {
           diagnostics.discardedMass += mass
           if (pruned) pruned[usedLimits]! += mass
@@ -326,7 +347,7 @@ function advanceTree(
       for (const [usedLimits, before] of advanced.entries()) {
         const after = following[usedLimits]!
         trace.frontier({ statistic, slot: slotIndex + 1, usedLimits, incomingStates: frontier[usedLimits]!.size,
-          prunedMass: pruned![usedLimits]!, before: stats(before), after: stats(after),
+          prunedMass: pruned![usedLimits]!, unreachableMass: unreachable?.[usedLimits], before: stats(before), after: stats(after),
           representatives: before === after ? undefined : [...after].sort(([a], [b]) => a - b) })
       }
     }
