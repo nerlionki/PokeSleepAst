@@ -9,6 +9,7 @@ import { confirmRemoval } from '#platform/confirm'
 import { ingredientEnergyValue } from '../../calc/activityIngredients'
 import { addIngredient, ingredientImageId, ingredientKey, ingredientLabel } from '../../calc/catalogIds'
 import { ingredientRecipeCoverage } from '../../calc/recipes'
+import { breakdownProduceIngredients } from '../../calc/produceDisplay'
 import clientDefaults from '../../data/client-defaults.resource'
 import { cloneData } from '../../calc/dataClone'
 
@@ -168,7 +169,7 @@ const rows = computed<CompareRow[]>(() => selected.value.map((uid): CompareRow |
   const bonus = compareHelpingBonus(input.level, source.subskills, settings.value.helpingBonus)
   const r = produce(calculationSettings.value, input, bonus)
   const amounts: Record<string, number> = {}
-  for (const [name, count] of Object.entries(r.ingredients)) {
+  for (const [name, count] of Object.entries(breakdownProduceIngredients(r)?.natural ?? {})) {
     const key = ingredientKey(name)
     if (key && count > 0) addIngredient(amounts, key, count)
   }

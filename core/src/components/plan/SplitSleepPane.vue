@@ -24,7 +24,6 @@
   import { ISLANDS, SLEEP_STYLES } from '../../calc/data';
   import {
     EVENT_BONUSES,
-    sleepDiscoveryOptions,
     styleKey
   } from '../../calc/sleep';
   import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules';
@@ -73,11 +72,6 @@
   });
   const options = computed<SplitOptions>(() => ({
     ...config.value,
-    ...sleepDiscoveryOptions(
-      plan.value,
-      activity.context.value,
-      plan.value.undiscoveredPreference
-    ),
     island: island.value,
     strength: plan.value.snorlaxStrength,
     campTicket: campTicket.value,

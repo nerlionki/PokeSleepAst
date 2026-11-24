@@ -12,7 +12,7 @@ import { storeToRefs } from 'pinia'
 import type { EncounterGoal } from '../../calc/encounterPlan'
 import { availableBabyPokemonIds, BABY_POKEMON_NAMES, babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { completionTargets } from '../../calc/completionEfficiency'
-import { EVENT_BONUSES, sleepDiscoveryOptions, styleKey } from '../../calc/sleep'
+import { EVENT_BONUSES, styleKey } from '../../calc/sleep'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useEncounterActivity } from '../../composables/useEncounterAvailability'
 import { useActivities } from '../../composables/useActivities'
@@ -48,10 +48,14 @@ watch(pokeIds, ids => {
     options.value.completionTarget = ''
   }
 }, { immediate: true })
-const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId))
-const validStyle = computed(() => faces.value.some(style => styleKey(style.pokeId, style.stars, style.styleId) === options.value.completionTarget))
+const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId).sort((a, b) => a.stars - b.stars))
+const faceKeys = computed(() => faces.value.map(style => styleKey(style.pokeId, style.stars, style.styleId)))
+const validStyle = computed(() => faceKeys.value.includes(options.value.completionTarget ?? ''))
+watch([isStyle, () => props.goal.selectionMode, faceKeys, validStyle], ([sleep, mode, keys, valid]) => {
+  if (sleep && mode === 'sleepdex' && !valid) options.value.completionTarget = keys[0] ?? ''
+}, { immediate: true })
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, isStyle.value ? options.value.completionTarget : undefined, research.value))
-const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), campTicket: campTicket.value, objective: isStyle.value ? undefined : props.goal.purpose === 'candy' ? 'candy' as const : 'catch' as const, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const simulationOptions = computed(() => ({ ...options.value, campTicket: campTicket.value, objective: isStyle.value ? undefined : props.goal.purpose === 'candy' ? 'candy' as const : 'catch' as const, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions, props.goal.id)
 watch(() => campTicket.value, () => { if (busy.value) cancel() })
 watch(busy, value => emit('busy', value), { immediate: true })
@@ -79,7 +83,13 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : babyIds.v
         <p v-if="!pokeIds.length" class="muted">{{ translateUi("暂无可选择的睡姿。可切换为自由选择，或在睡姿图鉴中取消勾选尚未收集的睡姿。") }}</p>
       </template>
       <div v-if="pokeIds.length || options.pokeId" class="field"><label>{{ isStyle ? translateUi("目标宝可梦") : translateUi("目标一阶段宝可梦") }}</label><PokePicker v-if="!busy" v-model="options.pokeId" :allowed-ids="pokeIds" :name-overrides="isStyle ? undefined : BABY_POKEMON_NAMES" /></div>
-      <div v-if="isStyle" class="field"><label for="encounter-style">{{ translateUi("具体睡姿") }}</label><select :disabled="busy" id="encounter-style" v-model="options.completionTarget"><option value="">{{ translateUi("请选择具体睡姿") }}</option><option v-for="style in faces" :key="styleKey(style.pokeId, style.stars, style.styleId)" :value="styleKey(style.pokeId, style.stars, style.styleId)">{{ style.stars }}★ · {{ sleepStyleText(style) }}</option></select></div>
+      <div v-if="isStyle && (goal.selectionMode === 'free' || faces.length > 1)" class="field">
+        <label for="encounter-style">{{ translateUi('具体睡姿') }}</label>
+        <select id="encounter-style" v-model="options.completionTarget" :disabled="busy">
+          <option v-if="goal.selectionMode === 'free'" value="">{{ translateUi('请选择具体睡姿') }}</option>
+          <option v-for="(style, index) in faces" :key="faceKeys[index]" :value="faceKeys[index]">{{ style.stars }}★ · {{ sleepStyleText(style) }}</option>
+        </select>
+      </div>
       <p v-if="isStyle && !validStyle" class="amber">{{ translateUi("请先选择范围内的宝可梦及具体睡姿。") }}</p>
       <p v-else-if="isStyle" class="muted">{{ translateUi("计算这个睡姿每天至少出现一次的概率。") }}</p>
       <p v-else-if="isCandy" class="muted">{{ translateUi("糖果统计") }} {{ family }} {{ translateUi("的睡眠研究奖励；第 11 只起按每只 1 颗结算。") }}</p>
@@ -95,10 +105,10 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : babyIds.v
       <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox" role="switch"> {{ translateUi("活动期间遇到一些其他类型宝可梦") }}</label>
       <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">{{ translateUi("恢复此目标自动活动设置") }}</button>
       <div class="efficiency-fields">
-        <div class="field"><label for="encounter-iterations">{{ translateUi("计算次数") }}</label><input :disabled="busy" id="encounter-iterations" v-model.number="options.iterations" type="number" :min="INPUT_LIMITS.encounter_iterations.min" :max="INPUT_LIMITS.encounter_iterations.max" :step="INPUT_LIMITS.encounter_iterations.step" inputmode="numeric"></div>
+        <div v-if="options.precision === 'low'" class="field"><label for="encounter-iterations">{{ translateUi("计算次数") }}</label><input :disabled="busy" id="encounter-iterations" v-model.number="options.iterations" type="number" :min="INPUT_LIMITS.encounter_iterations.min" :max="INPUT_LIMITS.encounter_iterations.max" :step="INPUT_LIMITS.encounter_iterations.step" inputmode="numeric"></div>
         <div class="field"><label for="encounter-precision">{{ translateUi("计算精度") }}</label><select :disabled="busy" id="encounter-precision" v-model="options.precision"><option value="low">{{ translateUi("低 · 快速搜索") }}</option><option value="medium">{{ translateUi("中 · 细化搜索") }}</option><option value="high">{{ translateUi("高 · 密集搜索") }}</option></select></div>
       </div>
-      <p class="muted">{{ translateUi("每觉最多搜索 50 亿睡意之力。计算次数用于每个候选抽取状态；精度控制能量和拆分比例的搜索细度。高精度耗时较长，可随时取消。") }}</p>
+      <p v-if="options.precision === 'low'" class="muted">{{ translateUi("每觉最多搜索 50 亿睡意之力。计算次数用于每个候选抽取状态；精度控制能量和拆分比例的搜索细度。高精度耗时较长，可随时取消。") }}</p>
     </div>
     <button class="btn sage" type="button" :disabled="busy || !canCalculate" @click="calculate">{{ translateUi("计算此目标效率") }}</button>
     <p v-if="error" class="amber" role="alert">{{ translateUi(error) }}</p>
@@ -106,7 +116,7 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : babyIds.v
     <p v-if="options.pokeId && (isStyle ? options.completionTarget && !validStyle : !canCalculate)" class="muted">{{ translateUi("此目标暂不可参与抽选") }}</p>
     <template v-if="result">
       <p v-if="dirty" class="amber">{{ translateUi("参数已修改，请重新计算更新结果。") }}</p>
-      <p class="muted">{{ gameText(resultName) }}<template v-if="resultStyle"> · {{ resultStyle.stars }}★ {{ sleepStyleText(resultStyle) }}</template> · {{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}{{ result.options.eventMult }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。以下为本次搜索中该指标最高的方案。") }}</p>
+      <p class="muted">{{ gameText(resultName) }}<template v-if="resultStyle"> · {{ resultStyle.stars }}★ {{ sleepStyleText(resultStyle) }}</template> · <template v-if="result.options.precision === 'low'">{{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}</template><template v-else>{{ translateUi("睡意之力") }} ×</template>{{ result.options.eventMult }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。以下为本次搜索中该指标最高的方案。") }}</p>
       <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="isStyle ? translateUi('每日补齐概率最高') : isCandy ? translateUi('家族糖果最多') : translateUi('遇见只数最多')" :unit="isCandy ? '颗' : '只'" :optimum="isCandy ? result.candy : result.catch" :precision="result.options.precision" :probability="isStyle" />
     </template>
     <ProgressDialog :open="busy" :title="translateUi('正在计算{title}', { title: translateUi(title) })" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="translateUi('已模拟 {count} 个抽取状态', { count: progress.evaluatedStates.toLocaleString('zh-CN') })" cancellable cancel-text="取消计算" @cancel="cancel" />

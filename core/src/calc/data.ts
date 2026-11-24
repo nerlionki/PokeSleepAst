@@ -3,7 +3,6 @@ import clientDefaults from '../data/client-defaults.resource'
 import compatibility from '../data/compatibility-maps.resource'
 import candyDrops from '../data/candy-drops.resource'
 import encounterBands from '../data/encounter-bands.resource'
-import fallbacks from '../data/fallbacks.resource'
 import ingredients from '../data/ingredients.resource'
 import islands from '../data/islands.resource'
 import mealRecovery from '../data/meal-recovery.resource'
@@ -52,7 +51,6 @@ export const POKEDEX = (pokedex as PokeRow[]).map(row => {
 })
 export const ISLANDS = islands
 export const ENCOUNTER_BANDS = encounterBands
-export const FALLBACKS = fallbacks
 export const XP_TABLE = xp
 export const CANDY_DROPS = candyDrops
 export const MEAL_RECOVERY = mealRecovery
@@ -103,6 +101,10 @@ export function berryByName(name: string) {
   const folded = foldText(name)
   return BERRIES.find((b) => b.name === name || name.startsWith(b.name))
     ?? BERRIES.find((b) => folded.startsWith(foldText(b.name)))
+}
+
+export function berryByType(type: string) {
+  return BERRIES.find(berry => berry.type === type)
 }
 
 export function natureByName(name: string) {

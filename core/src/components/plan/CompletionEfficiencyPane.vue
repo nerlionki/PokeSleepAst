@@ -15,7 +15,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { completionTargets } from '../../calc/completionEfficiency'
-import { EVENT_BONUSES, sleepDiscoveryOptions, styleKey } from '../../calc/sleep'
+import { EVENT_BONUSES, styleKey } from '../../calc/sleep'
 import { ISLANDS, SLEEP_STYLES } from '../../calc/data'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useBabyEfficiency } from '../../composables/useBabyEfficiency'
@@ -43,7 +43,7 @@ const otherTypes = computed({
   get: () => mixMode.value !== 'off',
   set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' },
 })
-const simulationOptions = computed(() => ({ ...options.value, ...sleepDiscoveryOptions(plan.value, activity.context.value, plan.value.undiscoveredPreference), campTicket: campTicket.value, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
+const simulationOptions = computed(() => ({ ...options.value, campTicket: campTicket.value, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 watch(pokeIds, ids => {
   if (!options.value.pokeId) options.value.pokeId = ids[0] ?? 0
 }, { immediate: true })
@@ -97,10 +97,10 @@ watch(() => options.value.selectionMode, () => {
       <div class="field"><label for="completion-event">{{ translateUi("活动睡意之力倍率") }}</label><select id="completion-event" v-model.number="eventMult" :disabled="busy"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}{{ translateUi("倍（活动）") }}</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ translateUi(bonus.label) }}</option></select></div>
       <label class="row"><input v-model="otherTypes" :disabled="busy" type="checkbox" role="switch"> {{ translateUi("活动期间遇到一些其他类型宝可梦") }}</label>
       <div class="efficiency-fields">
-        <div class="field"><label for="completion-iterations">{{ translateUi("计算次数") }}</label><input id="completion-iterations" v-model.number="options.iterations" :disabled="busy" type="number" :min="INPUT_LIMITS.completion_iterations.min" :max="INPUT_LIMITS.completion_iterations.max" :step="INPUT_LIMITS.completion_iterations.step" inputmode="numeric"></div>
+        <div v-if="options.precision === 'low'" class="field"><label for="completion-iterations">{{ translateUi("计算次数") }}</label><input id="completion-iterations" v-model.number="options.iterations" :disabled="busy" type="number" :min="INPUT_LIMITS.completion_iterations.min" :max="INPUT_LIMITS.completion_iterations.max" :step="INPUT_LIMITS.completion_iterations.step" inputmode="numeric"></div>
         <div class="field"><label for="completion-precision">{{ translateUi("计算精度") }}</label><select id="completion-precision" v-model="options.precision" :disabled="busy"><option value="low">{{ translateUi("低 · 快速搜索") }}</option><option value="medium">{{ translateUi("中 · 细化搜索") }}</option><option value="high">{{ translateUi("高 · 密集搜索") }}</option></select></div>
       </div>
-      <p class="muted">{{ translateUi("每觉最多搜索 50 亿睡意之力。计算次数用于每个候选抽取状态；精度控制能量候选点与拆分比例的搜索细度。") }}</p>
+      <p v-if="options.precision === 'low'" class="muted">{{ translateUi("每觉最多搜索 50 亿睡意之力。计算次数用于每个候选抽取状态；精度控制能量候选点与拆分比例的搜索细度。") }}</p>
       <button class="btn sage" type="button" :disabled="busy || !targetAvailable" @click="calculate">{{ translateUi("计算补齐效率") }}</button>
     </article>
     <p v-if="error" class="amber" role="alert">{{ translateUi(error) }}</p>
@@ -108,7 +108,7 @@ watch(() => options.value.selectionMode, () => {
     <p v-if="options.pokeId && options.completionTarget && !targetAvailable" class="muted">{{ translateUi("此目标暂不可参与抽选") }}</p>
     <template v-if="result && resultTarget">
       <p v-if="dirty" class="amber">{{ translateUi("参数已修改，请重新计算更新结果。") }}</p>
-      <p class="muted">{{ gameText(resultStyle?.name) }} · {{ resultStyle?.stars }}★ {{ resultStyle ? sleepStyleText(resultStyle) : "" }} · {{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}{{ result.options.eventMult }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。列出本次搜索中每日补齐概率最高的方案。") }}</p>
+      <p class="muted">{{ gameText(resultStyle?.name) }} · {{ resultStyle?.stars }}★ {{ resultStyle ? sleepStyleText(resultStyle) : "" }} · <template v-if="result.options.precision === 'low'">{{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}</template><template v-else>{{ translateUi("睡意之力") }} ×</template>{{ result.options.eventMult }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。列出本次搜索中每日补齐概率最高的方案。") }}</p>
       <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="translateUi('每日补齐概率最高')" unit="%" :optimum="result.catch" :precision="result.options.precision" probability />
     </template>
     <ProgressDialog :open="busy" :title="translateUi('正在计算补齐效率')" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="translateUi('已模拟 {count} 个抽取状态', { count: progress.evaluatedStates.toLocaleString('zh-CN') })" cancellable cancel-text="取消计算" @cancel="cancel" />

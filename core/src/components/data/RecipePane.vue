@@ -9,11 +9,12 @@ import { useSettingsStore } from '../../stores/settings'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, ref, shallowRef, watch } from 'vue'
-import { MEAL_CATEGORIES } from '../../calc/recipes'
+import type { MealCategorySelection } from '../../types'
 import { textHit } from '../../calc/text'
 import { toggleChoice } from '../../calc/multiChoice'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import RecipeCard from './RecipeCard.vue'
+import RecipeCategoryTabs from './RecipeCategoryTabs.vue'
 import RecipeSheet from './RecipeSheet.vue'
 const components_data_RecipePane_config_clientDefaults = clientDefaults.modules.components_data_RecipePane
 
@@ -27,9 +28,7 @@ const pageSize = 8
 const visibleCount = shallowRef(pageSize)
 const ingredients = ref<string[]>([])
 const showIngredients = shallowRef(false)
-const categories = [{ id: 'all', label: '全部' } as const, ...MEAL_CATEGORIES]
-type Category = (typeof categories)[number]['id']
-const category = shallowRef<Category>((components_data_RecipePane_config_clientDefaults.categoryViewInitial ?? 'all') as Category)
+const category = shallowRef<MealCategorySelection>((components_data_RecipePane_config_clientDefaults.categoryViewInitial ?? 'all') as MealCategorySelection)
 const sort = shallowRef<'energy' | 'pot'>('energy')
 const ascending = shallowRef(false)
 const opened = shallowRef<RecipeDisplayRow | null>((components_data_RecipePane_config_clientDefaults["openedInitial"] as unknown as RecipeDisplayRow | null))
@@ -72,15 +71,7 @@ function levelOf(recipe: RecipeDisplayRow) {
 <template>
   <div class="stack">
     <input v-if="selectable" v-model="query" class="picker-search" :aria-label="translateUi('搜索食谱或食材')" :placeholder="translateUi('搜索食谱或食材')">
-    <div class="seg seg-4">
-      <button
-        v-for="c in categories"
-        :key="c.id"
-        type="button"
-        :class="{ on: category === c.id }"
-        @click="category = c.id"
-      >{{ translateUi(c.label) }}</button>
-    </div>
+    <RecipeCategoryTabs v-model="category" />
     <div class="picker-filters">
       <button type="button" :aria-expanded="showIngredients" @click="showIngredients = !showIngredients">{{ showIngredients ? translateUi("收起食材") : translateUi("展开食材") }}{{ ingredients.length ? translateUi("（已选 {arg1}）", { arg1: String(ingredients.length) }) : '' }}</button>
       <button type="button" class="ghost" @click="resetFilters">{{ translateUi("重置筛选") }}</button>

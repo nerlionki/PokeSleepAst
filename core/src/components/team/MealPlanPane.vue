@@ -159,37 +159,37 @@ function pick(id: number) {
           </span>
         </div>
       </div>
-      <button v-if="recipe" type="button" class="btn" :disabled="!ready || busy" @click="listTask.calculate()">{{ t('推荐') }}</button>
-      <p v-if="listTask.error.value" role="alert" class="amber">{{ t(listTask.error.value) }}</p>
-      <p v-if="listTask.dirty.value" class="muted">{{ t('参数已修改，请重新计算更新结果。') }}</p>
+      <button v-if="recipe && !full" type="button" class="btn" :disabled="!ready || busy" @click="listTask.calculate()">{{ t('推荐') }}</button>
+      <p v-if="!full && listTask.error.value" role="alert" class="amber">{{ t(listTask.error.value) }}</p>
+      <p v-if="!full && listTask.dirty.value" class="muted">{{ t('参数已修改，请重新计算更新结果。') }}</p>
     </section>
 
     <section v-if="resultList || team.length" class="card stack">
       <div class="row meal-plan-between">
         <h3 :aria-label="t('队伍') + ' ' + team.length + '/5'">{{ team.length }}/5</h3>
-        <button type="button" class="btn ghost" :aria-expanded="picking" @click="picking = !picking">{{ t('从 Box 选择队员') }}</button>
+        <button v-if="!full" type="button" class="btn ghost" :aria-expanded="picking" @click="picking = !picking">{{ t('从 Box 选择队员') }}</button>
       </div>
       <div v-for="member in team" :key="member.uid" class="row meal-plan-between">
         <span>{{ gameText(boxLabel(member)) }} · Lv.{{ member.level }}<template v-if="isMealHealer(member)"> · {{ t('回复活力') }}</template></span>
         <button type="button" class="btn ghost" :disabled="busy" @click="toggle(member)">{{ t('移出队伍') }}</button>
       </div>
-      <template v-if="picking">
+      <template v-if="picking && !full">
         <input v-model="query" class="picker-search" :placeholder="t('搜索 Box 个体')" :aria-label="t('搜索 Box 个体')">
         <p v-if="!pickerRows.length" class="muted">{{ t('暂无可上场的个体') }}</p>
         <div v-for="{ pokemon, name, healer } in pickerRows.slice(0, visible)" :key="pokemon.uid" class="row meal-plan-between">
           <span>{{ name }} · Lv.{{ pokemon.level }}<template v-if="healer"> · {{ t('回复活力') }}</template></span>
-          <button type="button" class="btn ghost" :disabled="busy || full && !teamIds.has(pokemon.uid)" @click="toggle(pokemon)">
+          <button type="button" class="btn ghost" :disabled="busy" @click="toggle(pokemon)">
             {{ t(teamIds.has(pokemon.uid) ? '移出队伍' : '加入队伍') }}
           </button>
         </div>
         <button v-if="visible < pickerRows.length" type="button" class="btn ghost" @click="visible += 20">{{ t('加载更多') }}</button>
       </template>
       <p v-if="selectionError" role="alert" class="amber">{{ t(selectionError) }}</p>
-      <template v-if="resultList">
+      <template v-if="resultList && !full">
         <h4>{{ t('Box 供料个体') }}</h4>
         <p class="muted">{{ t(resultList.length ? '按所选料理的食谱覆盖率排序，分食材显示三顿用量的达标时间。' : 'Box 中暂无能提供目标食材的可用个体') }}</p>
         <MealCandidateRow v-for="{ pokemon, estimate: candidate } in resultList" :key="pokemon.uid"
-          :pokemon="pokemon" :estimate="candidate" :selected="teamIds.has(pokemon.uid)" :full="full"
+          :pokemon="pokemon" :estimate="candidate" :selected="teamIds.has(pokemon.uid)" :disabled="busy"
           @toggle="toggle(pokemon)" />
       </template>
     </section>

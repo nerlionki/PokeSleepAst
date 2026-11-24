@@ -6,14 +6,13 @@ import extracted1 from '../data/calc-tables.resource'
 import { cloneData } from './dataClone'
 import { researchActivity, researchSleepStyles, sameResearchAvailability, activityValues, type ActivityContext, type ResearchActivitySelection } from './activities'
 import { pendingResearchPokemon } from './researchAvailability'
-import { normalizeEventMix, openSleepSlots, sleepEncounterWeights, type EventMix } from './sleepRules'
-import { compareSleepPriority } from './sleepSelection'
-import { isLastRollExcluded } from './sleepLastRoll'
+import { normalizeEventMix, openSleepSlots, type EventMix } from './sleepRules'
+import { isLastRollExcluded, isRaeFiller, raeSpoCost, RAE_SPO_RATE } from './sleepLastRoll'
 import type { IslandId, SleepType } from '../types'
 import { familyOf } from './candyPlan'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES, type SleepStyleRow } from './data'
 import { evolutionStages } from './evolution'
-import { fallbackStyle, RANK_ORDER, rankStrength, SPECIAL_POKEMON, styleUnlockIndex, styleKey, prefersUndiscovered, UNDISCOVERED_WEIGHT, type SleepDiscoveryOptions } from './sleep'
+import { RANK_ORDER, rankStrength, SPECIAL_POKEMON, styleUnlockIndex, styleKey } from './sleep'
 import { sleepReward, sleepStyleInternalId } from './sleepRewards'
 import { createDrawStateKey, efficiencyRandom, simulateEfficiencySlots, efficiencyRewardsAfterResearch, type EfficiencySimulation, type EfficiencyBucket, type EfficiencyDrawState, type EfficiencyReward } from './babyEfficiencyDraw'
 const babyEfficiency_config_extracted0 = extracted0.modules.babyEfficiency
@@ -28,7 +27,7 @@ const babyEfficiency_babyEfficiencySteps_runtimeParameters = runtimeParameters.m
 export const MAX_EFFICIENCY_DROWSY_POWER = (babyEfficiency_config_extracted0.MAX_EFFICIENCY_DROWSY_POWER as 5000000000)
 
 export type EfficiencyPrecision = 'low' | 'medium' | 'high'
-export interface BabyEfficiencyOptions extends SleepDiscoveryOptions {
+export interface BabyEfficiencyOptions {
   /** Omitted for the legacy planner, which optimizes both metrics. */
   objective?: 'catch' | 'candy'
   activity?: ResearchActivitySelection
@@ -68,22 +67,19 @@ export interface EfficiencyStyle extends EfficiencyReward {
   special: boolean
   unlockStrength: number
   dpr: number
-  spoId?: number
   belly?: boolean
   order?: number
   unlockRank?: number
   pokeId?: number
   lastRollExcluded?: boolean
   activityWeight?: number
-  activityUpPriority?: number
-  discoveryKey?: string
+  filler?: boolean
 }
 export interface EfficiencyIsland {
   id: IslandId
   name: string
   styles: EfficiencyStyle[]
   bands: { count: number, min: number }[]
-  fallbacks: Record<SleepType, EfficiencyReward>
 }
 export interface EfficiencySleep { score: number, sleepTypes: SleepType[] }
 export interface EfficiencyInterval {
@@ -111,7 +107,7 @@ export function validateBabyEfficiency(options: BabyEfficiencyOptions, checkAvai
   if (options.sleepType != null && options.sleepType !== 'all' && !EFFICIENCY_SLEEP_TYPES.includes(options.sleepType)) return '请选择有效的睡眠类型'
   if (options.campTicket != null && typeof options.campTicket !== 'boolean') return '请选择是否使用露营券'
   if (options.splitSleep != null && typeof options.splitSleep !== 'boolean') return '请选择是否拆分睡眠'
-  if (!Number.isInteger(options.iterations) || options.iterations < babyEfficiency_validateBabyEfficiency_ruleParameters.minIterations || options.iterations > babyEfficiency_validateBabyEfficiency_ruleParameters.maxIterations) return '计算次数需为 100–100000 的整数'
+  if (options.precision === 'low' && (!Number.isInteger(options.iterations) || options.iterations < babyEfficiency_validateBabyEfficiency_ruleParameters.minIterations || options.iterations > babyEfficiency_validateBabyEfficiency_ruleParameters.maxIterations)) return '计算次数需为 100–100000 的整数'
   if (!Number.isFinite(options.eventMult) || options.eventMult <= 0 || options.eventMult > babyEfficiency_validateBabyEfficiency_ruleParameters.maxEventMultiplier) return '请选择有效的活动倍率'
   if (!babyEfficiency_config_ruleCatalogs.validateBabyEfficiencyList0.values.includes(options.eventMix)) return '请选择有效的跨睡眠类型模式'
   if (!babyEfficiency_config_ruleCatalogs.validateBabyEfficiencyList1.values.includes(options.precision)) return '请选择有效的搜索精度'
@@ -153,40 +149,32 @@ export function efficiencyIslands(pokeId: number, completionTarget?: string, act
       id: island.id as IslandId,
       name: island.name,
       bands,
-      fallbacks: Object.fromEntries(EFFICIENCY_SLEEP_TYPES.map((type) => [type, rewardOf(fallbackStyle(island.id as IslandId, type, context))])) as Record<SleepType, EfficiencyReward>,
       styles: styles.map((style: SleepStyleRow) => ({
         ...rewardOf(style),
         pokeId: style.pokeId,
-        discoveryKey: styleKey(style.pokeId, style.stars, style.styleId),
         unlockRank: styleUnlockIndex(island.id as IslandId, style),
         sleepType: style.sleepType as SleepType,
         special: SPECIAL_POKEMON.has(style.pokeId),
         unlockStrength: rankStrength(island.id as IslandId, RANK_ORDER[styleUnlockIndex(island.id as IslandId, style)]!),
         dpr: style.dpr,
-        spoId: style.spoId,
         belly: style.styleName.includes('大肚'),
         order: sleepStyleInternalId(style),
         lastRollExcluded: isLastRollExcluded(style),
+        filler: isRaeFiller(island.id, sleepStyleInternalId(style)),
       })),
     }]
   })
 }
 
 /** Correct boundary rounding using the same multiplication order as drowsyPower. */
-export function activityEfficiencyIsland(island: EfficiencyIsland, context: ActivityContext, discovery: SleepDiscoveryOptions = {}): EfficiencyIsland {
-  const boost = prefersUndiscovered(context, discovery.undiscoveredBoost)
-  const discovered = new Set(discovery.discovered ?? [])
-  const effects = (id?: number, session = 0) => activityValues(context, island.id, POKEDEX.find(p => p.id === id), 240, undefined, session)
-  const multipliers = (id?: number) => {
-    const first = effects(id).researchCandyMultiplier, second = effects(id, 1).researchCandyMultiplier
-    return first === 1 && second === 1 ? {} : { firstCandyMultiplier: first, secondCandyMultiplier: second }
-  }
-  return { ...island, styles: island.styles.map(style => ({ ...style,
-    ...multipliers(style.pokeId),
-    activityUpPriority: effects(style.pokeId).encounterUpPriority,
-    activityWeight: effects(style.pokeId).encounterWeightMultiplier
-      * (boost && style.discoveryKey && !discovered.has(style.discoveryKey) ? UNDISCOVERED_WEIGHT : 1) })),
-    fallbacks: Object.fromEntries(EFFICIENCY_SLEEP_TYPES.map(type => [type, { ...island.fallbacks[type], ...multipliers(fallbackStyle(island.id, type, context).pokeId) }])) as Record<SleepType, EfficiencyReward> }
+export function activityEfficiencyIsland(island: EfficiencyIsland, context: ActivityContext, session = 0): EfficiencyIsland {
+  const effects = (id?: number, research = session) => activityValues(context, island.id, POKEDEX.find(p => p.id === id), 240, undefined, research)
+  return { ...island, styles: island.styles.map(style => ({
+    ...style,
+    firstCandyMultiplier: effects(style.pokeId, 0).researchCandyMultiplier,
+    secondCandyMultiplier: effects(style.pokeId, 1).researchCandyMultiplier,
+    activityWeight: effects(style.pokeId).encounterModifier,
+  })) }
 }
 
 export function strengthForPower(power: number, score: number, mult: number): number {
@@ -197,66 +185,46 @@ export function strengthForPower(power: number, score: number, mult: number): nu
   return strength
 }
 
-interface CurveState { min: number, encounters: number, groups: Group[] }
-interface Group extends EfficiencyReward { sleepType: SleepType, special: boolean, count: number, dpr: number, spoId?: number, belly?: boolean, order?: number, unlockRank?: number, weight?: number, upPriority?: number, lastRollExcluded?: boolean }
+interface CurveState { min: number, encounters: number, groups: EfficiencyStyle[] }
 
 export function efficiencyCurve(island: EfficiencyIsland, score: number, mult: number): CurveState[] {
-  const unlocks = island.styles.map((style) => ({ style, at: Math.max(1, style.unlockStrength) }))
-    .sort((a, b) => a.at - b.at)
-  const bands = island.bands.map((band) => ({ count: band.count, at: strengthForPower(band.min, score, mult) }))
-  const maxCount = Math.max(3, ...island.bands.map((band) => band.count))
-  const costs = [...new Set(island.styles.map((style) => style.dpr))]
-  const budgetPoints = costs.flatMap((cost) => Array.from({ length: maxCount }, (_, i) => strengthForPower(cost * (i + 1), score, mult)))
+  const unlocks = island.styles.map(style => ({ style, at: Math.max(1, style.unlockStrength) })).sort((a, b) => a.at - b.at)
+  const bands = island.bands.map(band => ({ count: band.count, at: strengthForPower(band.min, score, mult) }))
+  const maxCount = Math.max(3, ...island.bands.map(band => band.count))
+  const costs = [...new Set(island.styles.map(style => raeSpoCost(style.dpr) * RAE_SPO_RATE))]
+  const budgetPoints = costs.flatMap(cost => Array.from({ length: maxCount }, (_, i) => strengthForPower(cost * (i + 1), score, mult)))
   const ceiling = Math.floor(MAX_EFFICIENCY_DROWSY_POWER / (score * mult))
-  const starts = [...new Set([1, ceiling, ...budgetPoints, ...unlocks.map((row) => row.at), ...bands.map((row) => row.at)])].filter(min => min <= ceiling).sort((a, b) => a - b)
-  const groups = new Map<string, Group>()
+  const starts = [...new Set([1, ceiling, ...budgetPoints, ...unlocks.map(row => row.at), ...bands.map(row => row.at)])]
+    .filter(min => min <= ceiling).sort((a, b) => a - b)
   let unlocked = 0
-  let snapshot: Group[] = []
-  return starts.map((min) => {
+  let snapshot: EfficiencyStyle[] = []
+  return starts.map(min => {
     const previous = unlocked
-    while (unlocked < unlocks.length && unlocks[unlocked]!.at <= min) {
-      const style = unlocks[unlocked++]!.style
-      const { weight, upPriority } = sleepEncounterWeights(style.pokeId ?? 0, mult, undefined, style.activityWeight, style.activityUpPriority)
-      const key = `${upPriority}|${weight}|${style.sleepType}|${Number(style.special)}|${style.catch}|${style.candy}|${style.dpr}|${style.belly}|${Number(!!style.lastRollExcluded)}|${style.firstCandyMultiplier ?? 1}|${style.secondCandyMultiplier ?? 1}`
-      const group = groups.get(key)
-      if (group) { group.count++; if (compareSleepPriority(style, group) < 0) { group.spoId = style.spoId; group.order = style.order; group.unlockRank = style.unlockRank } }
-      else groups.set(key, { sleepType: style.sleepType, special: style.special, catch: style.catch, candy: style.candy, dpr: style.dpr, spoId: style.spoId, belly: style.belly, order: style.order, unlockRank: style.unlockRank, weight, upPriority, count: 1, lastRollExcluded: style.lastRollExcluded, firstCandyMultiplier: style.firstCandyMultiplier, secondCandyMultiplier: style.secondCandyMultiplier })
-    }
-    // Budget points between rank unlocks share one immutable pool snapshot.
-    // Dense precision adds scores, not copies of every style at every point.
-    if (unlocked !== previous) snapshot = [...groups.values()].map((group) => ({ ...group }))
+    while (unlocked < unlocks.length && unlocks[unlocked]!.at <= min) unlocked++
+    if (unlocked !== previous) snapshot = unlocks.slice(0, unlocked).map(row => row.style)
     const encounters = bands.reduce((n, band) => band.at <= min ? Math.max(n, band.count) : n, 3)
     return { min, encounters, groups: snapshot }
   })
 }
 
-const bucketCache = new WeakMap<CurveState['groups'], Map<string, EfficiencyBucket[]>>()
-export function efficiencyDrawState(island: EfficiencyIsland, state: CurveState, type: SleepType, eventMix: EventMix | boolean, power: number): EfficiencyDrawState {
+const bucketCache = new WeakMap<EfficiencyStyle[], Map<string, EfficiencyBucket[]>>()
+export function efficiencyDrawState(_island: EfficiencyIsland, state: CurveState, type: SleepType, eventMix: EventMix | boolean, power: number): EfficiencyDrawState {
   const mixed = normalizeEventMix(eventMix) !== 'off' && type !== '没有特征'
-  const cacheKey = type + ':' + Number(mixed)
-  let cached = bucketCache.get(state.groups)
-  if (!cached) { cached = new Map(); bucketCache.set(state.groups, cached) }
-  let prepared = cached.get(cacheKey)
-  if (!prepared) {
-    const buckets = new Map<string, EfficiencyBucket>()
-    for (const group of state.groups) {
-      const typed = type === '没有特征' || type === group.sleepType
-      if (!mixed && !typed) continue
-      const key = `${group.upPriority}|${group.weight}|${Number(typed)}|${Number(group.special)}|${group.catch}|${group.candy}|${group.dpr}|${group.belly}|${Number(!!group.lastRollExcluded)}|${group.firstCandyMultiplier ?? 1}|${group.secondCandyMultiplier ?? 1}`
-      const existing = buckets.get(key)
-      if (existing) { existing.count += group.count; if (compareSleepPriority(group, existing) < 0) { existing.spoId = group.spoId; existing.order = group.order; existing.unlockRank = group.unlockRank } }
-      else buckets.set(key, { typed, special: group.special, catch: group.catch, candy: group.candy, dpr: group.dpr, spoId: group.spoId, belly: group.belly, order: group.order, unlockRank: group.unlockRank, weight: group.weight, upPriority: group.upPriority, count: group.count, lastRollExcluded: group.lastRollExcluded, firstCandyMultiplier: group.firstCandyMultiplier, secondCandyMultiplier: group.secondCandyMultiplier })
-    }
-    prepared = [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, bucket]) => bucket)
-    cached.set(cacheKey, prepared)
+  const key = type + ':' + Number(mixed)
+  let prepared = bucketCache.get(state.groups)
+  if (!prepared) { prepared = new Map(); bucketCache.set(state.groups, prepared) }
+  let buckets = prepared.get(key)
+  if (!buckets) {
+    buckets = state.groups.flatMap(style => {
+      const typed = type === '没有特征' || type === style.sleepType
+      return typed || mixed ? [{ ...style, typed, weight: style.activityWeight }] : []
+    })
+    prepared.set(key, buckets)
   }
+  const maxSpo = Math.max(0, ...buckets.map(row => raeSpoCost(row.dpr))) * state.encounters
   return {
-    buckets: prepared,
-    power: Math.min(power, MAX_EFFICIENCY_DROWSY_POWER, Math.max(0, ...prepared.map((group) => group.dpr * state.encounters))),
-    encounters: state.encounters,
-    otherSlots: mixed ? openSleepSlots(state.encounters, eventMix) : 0,
-    typedFallback: island.fallbacks[type],
-    openFallback: island.fallbacks[mixed ? '没有特征' : type],
+    buckets, power: Math.min(power, MAX_EFFICIENCY_DROWSY_POWER, maxSpo * RAE_SPO_RATE),
+    encounters: state.encounters, otherSlots: mixed ? openSleepSlots(state.encounters, eventMix) : 0,
   }
 }
 
@@ -295,7 +263,7 @@ function mergeIntervals(intervals: EfficiencyInterval[]): EfficiencyInterval[] {
 
 interface SplitLeaders { catch: { value: number, splits: number[] }, candy: { value: number, splits: number[] } }
 export interface BabyEfficiencyCheckpoint {
-  version: 6
+  version: 9
   /** 捕捉目标组；用于丢弃南瓜精合并前的旧续算结果。 */
   targetPokeIds?: readonly number[]
   options: BabyEfficiencyOptions
@@ -307,6 +275,11 @@ export interface BabyEfficiencyCheckpoint {
 }
 const emptyLeaders = (): SplitLeaders => ({ catch: { value: -1, splits: [] }, candy: { value: -1, splits: [] } })
 
+function compareEfficiency(a: number, b: number): number {
+  const difference = a - b
+  return Math.abs(difference) <= 1e-12 * Math.max(Math.abs(a), Math.abs(b)) ? 0 : difference
+}
+
 /** A checkpoint completes one split search; interrupted splits are safely repeated. */
 export function* babyEfficiencySteps(
   options: BabyEfficiencyOptions,
@@ -315,7 +288,7 @@ export function* babyEfficiencySteps(
   checkpoint?: BabyEfficiencyCheckpoint,
 ): Generator<BabyEfficiencyCheckpoint, BabyEfficiencyResult> {
   const availability = researchActivity(options.activity ?? checkpoint?.options.activity, options.activity?.pendingPokemon ?? pendingResearchPokemon())
-  if (checkpoint && checkpoint.version !== 6) throw new Error('续算规则或参数与检查点不一致，请重新计算')
+  if (checkpoint && checkpoint.version !== 9) throw new Error('续算规则或参数与检查点不一致，请重新计算')
   if (checkpoint && !sameResearchAvailability(checkpoint.options.activity, availability)) checkpoint = undefined
   options = { ...options, activity: availability }
   islands ??= efficiencyIslands(options.pokeId, options.completionTarget, options.activity)
@@ -326,7 +299,8 @@ export function* babyEfficiencySteps(
   if (!completion && options.pokeId === 710 && JSON.stringify(checkpoint?.targetPokeIds) !== JSON.stringify(targetPokeIds)) checkpoint = undefined
   const error = validateBabyEfficiency(options)
   if (error) throw new Error(error)
-  if (checkpoint && (checkpoint.version !== 6 || JSON.stringify(checkpoint.options) !== JSON.stringify(options))) throw new Error('续算规则或参数与检查点不一致，请重新计算')
+  const iterations = options.precision === 'low' ? options.iterations : 1
+  if (checkpoint && (checkpoint.version !== 9 || JSON.stringify(checkpoint.options) !== JSON.stringify(options))) throw new Error('续算规则或参数与检查点不一致，请重新计算')
   islands = islands.filter((island) => !options.island || options.island === 'all' || island.id === options.island)
   if (!islands.length) throw new Error('资料未收录这个家族可参与普通研究的睡姿')
   const cache = new Map<string, EfficiencySimulation>()
@@ -353,19 +327,20 @@ export function* babyEfficiencySteps(
     const context = baseOptions.activity as ActivityContext
     const effects = activityValues(context, originalIsland.id, undefined, (babyEfficiency_babyEfficiencySteps_runtimeParameters.p007 as 240), { drowsyPowerMultiplier: baseOptions.eventMult, eventMix: normalizeEventMix(baseOptions.eventMix) })
     const options = { ...baseOptions, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
-    const island = context.catalog.activities.length || Object.keys(context.overrides ?? {}).length || options.undiscoveredBoost
-      ? activityEfficiencyIsland(originalIsland, context, options) : originalIsland
+    const island = activityEfficiencyIsland(originalIsland, context)
+    const secondIsland = activityEfficiencyIsland(originalIsland, context, 1)
     if (islandIndex < (checkpoint?.islandIndex ?? 0)) continue
     const resumeIndex = islandIndex === checkpoint?.islandIndex ? checkpoint.splitIndex : 0
     update(islandIndex / islands.length * 100, island.name, true)
     const curves = new Map<number, CurveState[]>()
-    const curveOf = (score: number) => {
-      if (!curves.has(score)) curves.set(score, efficiencyCurve(island, score, options.eventMult))
-      return curves.get(score)!
+    const curveOf = (score: number, second = false) => {
+      const key = second ? -score : score
+      if (!curves.has(key)) curves.set(key, efficiencyCurve(second ? secondIsland : island, score, options.eventMult))
+      return curves.get(key)!
     }
     const sessionCache = new Map<string, { catch: { value: number, types: SleepType[] }, candy: { value: number, types: SleepType[] } }>()
     const sessionAt = (score: number, min: number, researchedBefore = 0) => {
-      const state = stateAt(curveOf(score), min)
+      const state = stateAt(curveOf(score, researchedBefore > 0), min)
       const sessionKey = `${score}:${min}:${researchedBefore}`
       const known = sessionCache.get(sessionKey)
       if (known) return known
@@ -376,14 +351,15 @@ export function* babyEfficiencySteps(
         const key = drawStateKey(draw)
         let metric = cache.get(key)
         if (!metric) {
-          metric = simulateEfficiencySlots(draw, options.iterations, efficiencyRandom(1))
+          metric = simulateEfficiencySlots(draw, iterations, efficiencyRandom(42), options.precision, completion ? 'first-hit' : 'expectation')
           cache.set(key, metric)
         }
         const rewards = efficiencyRewardsAfterResearch(metric, researchedBefore)
         if (completion) rewards.catch = metric.hitRuns
         for (const goal of goals) {
-          if (rewards[goal] > result[goal].value) result[goal] = { value: rewards[goal], types: [type] }
-          else if (rewards[goal] === result[goal].value) result[goal].types.push(type)
+          const comparison = compareEfficiency(rewards[goal], result[goal].value)
+          if (comparison > 0) result[goal] = { value: rewards[goal], types: [type] }
+          else if (comparison === 0) result[goal].types.push(type)
         }
       }
       sessionCache.set(sessionKey, result)
@@ -396,7 +372,7 @@ export function* babyEfficiencySteps(
       const starts = [...new Set([ceiling, ...curvesToMerge.flatMap((curve) => curve.map((state) => state.min))])].filter(min => min <= ceiling).sort((a, b) => a - b)
       const smallestScore = second ? Math.min(first, second) : first
       const maxCount = Math.max(3, ...island.bands.map(band => band.count))
-      const stableFrom = Math.max(1, ...island.styles.map(style => Math.max(style.unlockStrength, strengthForPower(style.dpr * maxCount, smallestScore, options.eventMult))), ...island.bands.map(band => strengthForPower(band.min, smallestScore, options.eventMult)))
+      const stableFrom = Math.max(1, ...island.styles.map(style => Math.max(style.unlockStrength, strengthForPower(raeSpoCost(style.dpr) * RAE_SPO_RATE * maxCount, smallestScore, options.eventMult))), ...island.bands.map(band => strengthForPower(band.min, smallestScore, options.eventMult)))
       const checked = new Set<number>()
       const values = new Map<number, EfficiencyReward>()
       const leaders = { catch: { value: -1, indexes: [] as number[] }, candy: { value: -1, indexes: [] as number[] } }
@@ -410,14 +386,16 @@ export function* babyEfficiencySteps(
         const max = min >= stableFrom ? ceiling : min
         const a = sessionAt(first, min)
         const b = second ? sessionAt(second, min, stateAt(curveOf(first), min).encounters + Number(!!options.campTicket)) : null
-        const totals = { catch: a.catch.value + (b?.catch.value ?? 0) - (completion && b ? a.catch.value * b.catch.value / options.iterations : 0), candy: a.candy.value + (b?.candy.value ?? 0) }
+        const totals = { catch: a.catch.value + (b?.catch.value ?? 0) - (completion && b ? a.catch.value * b.catch.value / iterations : 0), candy: a.candy.value + (b?.candy.value ?? 0) }
         values.set(index, totals)
         for (const goal of goals) {
           const value = totals[goal]
-          if (value > leaders[goal].value) leaders[goal] = { value, indexes: [index] }
-          else if (value === leaders[goal].value) leaders[goal].indexes.push(index)
-          if (value <= 0 || value < best[goal].value) continue
-          if (value > best[goal].value) best[goal] = { value, intervals: [] }
+          const local = compareEfficiency(value, leaders[goal].value)
+          if (local > 0) leaders[goal] = { value, indexes: [index] }
+          else if (local === 0) leaders[goal].indexes.push(index)
+          const global = compareEfficiency(value, best[goal].value)
+          if (value <= 0 || global < 0) continue
+          if (global > 0) best[goal] = { value, intervals: [] }
           best[goal].intervals.push({
             min, max, islandId: island.id, island: island.name,
             sleeps: [{ score: first, sleepTypes: a[goal].types }, ...(b ? [{ score: second, sleepTypes: b[goal].types }] : [])],
@@ -441,23 +419,24 @@ export function* babyEfficiencySteps(
           if (expanded.has(index)) continue
           expanded.add(index)
           const current = values.get(index)!
-          if (!goals.some(goal => current[goal] > 0 && current[goal] === leaders[goal].value)) continue
+          if (!goals.some(goal => current[goal] > 0 && compareEfficiency(current[goal], leaders[goal].value) === 0)) continue
           for (const neighbor of [index - 1, index + 1]) {
             const metric = evaluate(neighbor)
-            if (metric && goals.some(goal => metric[goal] > 0 && metric[goal] === leaders[goal].value)) queue.push(neighbor)
+            if (metric && goals.some(goal => metric[goal] > 0 && compareEfficiency(metric[goal], leaders[goal].value) === 0)) queue.push(neighbor)
           }
         }
       }
       return leaders
     }
     const localLeaders = islandIndex === checkpoint?.islandIndex ? checkpoint.leaders : emptyLeaders()
-    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 6, targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
+    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: 9, targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
     for (const [index, split] of baseSplits.entries()) {
       if (index < resumeIndex) continue
       const leaders = scanSplit(split, index, baseSplits.length + (options.precision === 'medium' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p011 as 4) : 0))
       for (const goal of goals) {
-        if (leaders[goal].value > localLeaders[goal].value) localLeaders[goal] = { value: leaders[goal].value, splits: [split] }
-        else if (leaders[goal].value === localLeaders[goal].value) localLeaders[goal].splits.push(split)
+        const comparison = compareEfficiency(leaders[goal].value, localLeaders[goal].value)
+        if (comparison > 0) localLeaders[goal] = { value: leaders[goal].value, splits: [split] }
+        else if (comparison === 0) localLeaders[goal].splits.push(split)
       }
       yield save(index + 1)
     }
@@ -475,8 +454,8 @@ export function* babyEfficiencySteps(
   }
   return {
     options: { ...options },
-    catch: { value: best.catch.value / options.iterations, intervals: mergeIntervals(best.catch.intervals) },
-    candy: { value: best.candy.value / options.iterations, intervals: mergeIntervals(best.candy.intervals) },
+    catch: { value: best.catch.value / iterations, intervals: mergeIntervals(best.catch.intervals) },
+    candy: { value: best.candy.value / iterations, intervals: mergeIntervals(best.candy.intervals) },
     evaluatedStates: completedStates(),
   }
 }

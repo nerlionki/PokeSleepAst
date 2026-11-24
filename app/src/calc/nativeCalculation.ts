@@ -1,6 +1,5 @@
 import { babyEfficiencySteps } from '../../../core/src/calc/babyEfficiency'
 import { sleepSimulationSteps, type SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
-import { SleepDrawUnresolvedError } from '../../../core/src/calc/sleepTransition'
 import type { BabyEfficiencyRequest } from '../../../core/src/calc/babyEfficiencyMessages'
 import { scoreSearchSteps } from '../../../core/src/calc/scoreSearch'
 import { mealPlanSteps, type MealPlanRequest } from '../../../core/src/calc/mealPlan'
@@ -58,8 +57,6 @@ export function nextTask(): string {
     }
     return JSON.stringify({ type: 'error', message: '没有可运行的计算任务' })
   } catch (cause) {
-    return JSON.stringify(cause instanceof SleepDrawUnresolvedError
-      ? { type: 'error', message: cause.message, unresolved: cause.detail }
-      : { type: 'error', message: cause instanceof Error ? cause.message : '计算失败' })
+    return JSON.stringify({ type: 'error', message: cause instanceof Error ? cause.message : '计算失败' })
   }
 }

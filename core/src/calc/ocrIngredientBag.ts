@@ -18,7 +18,7 @@ const centerY = (word: OcrWord) => word.y + word.height / 2
 const traditionalGlyphs: Record<string, string> = { 窩: '窝', 製: '制', 薑: '姜', 腦: '脑', 堅: '坚' }
 const nameText = (text: string) => ocrFold(text).replace(/[窩製薑腦堅]/g, glyph => traditionalGlyphs[glyph]!)
   .replace(/[^\u3400-\u9fff]/g, '')
-const imperfectNames: Record<string, string[]> = { 哞哞鲜奶: ['哗鲜奶', '鲜奶'], 特选苹果: ['特选果'] }
+const imperfectNames: Record<string, string[]> = { 哞哞鲜奶: ['哗鲜奶', '鲜奶'], 特选苹果: ['特选果'], 纯粹油: ['粹油'] }
 
 function oneEditApart(left: string, right: string) {
   if (Math.abs(left.length - right.length) > 1) return false

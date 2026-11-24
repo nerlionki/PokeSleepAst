@@ -11,7 +11,7 @@ import { formatSleepLength, gameText, t } from '../../ui/i18n'
 import IngredientIcon from '../shared/IngredientIcon.vue'
 import PokeSprite from '../shared/PokeSprite.vue'
 
-const props = defineProps<{ pokemon: BoxPokemon; estimate: MealCandidate; selected: boolean; full: boolean }>()
+const props = defineProps<{ pokemon: BoxPokemon; estimate: MealCandidate; selected: boolean; disabled: boolean }>()
 const emit = defineEmits<{ toggle: [] }>()
 const species = computed(() => pokeById(props.pokemon.pokeId))
 const skill = computed(() => species.value ? resolveMemberSkill(species.value, props.pokemon).name : '')
@@ -36,7 +36,7 @@ const duration = (time: number | null | undefined) => time == null ? t('7 天内
         <strong>{{ gameText(boxLabel(pokemon)) }}</strong>
         <span class="muted">Lv.{{ pokemon.level }} · {{ combo }}</span>
       </div>
-      <button type="button" class="btn ghost" :aria-pressed="selected" :disabled="full && !selected" @click="emit('toggle')">
+      <button type="button" class="btn ghost" :aria-pressed="selected" :disabled="disabled" @click="emit('toggle')">
         {{ t(selected ? '移出队伍' : '加入队伍') }}
       </button>
     </div>

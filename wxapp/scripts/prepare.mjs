@@ -239,17 +239,16 @@ for (const file of walk(core)) {
     );
   }
   if (rel === 'components/shared/SubskillIcon.vue') {
-    if (!imports.some(line => line.startsWith('import WxImage ')))
-      imports.push("import WxImage from '../../../components/WxImage.vue'");
     text = `<script setup lang="ts">
 import FallbackImage from './FallbackImage.vue'
 import { computed } from 'vue'
 import { SUBSKILLS } from '../../calc/data'
-import { subskillImageUrl } from '../../calc/raeImage'
+import { bundledImageUrl } from '#platform/images'
 import { gameText } from '../../ui/i18n'
 const props = defineProps<{ id: string; locked?: boolean; decorative?: boolean }>()
 const skill = computed(() => SUBSKILLS.find(item => item.id === props.id))
-const src = computed(() => subskillImageUrl(props.id))
+// Native images need the pack's pre-tinted PNG instead of the remote white mask.
+const src = computed(() => bundledImageUrl(\`subSkill/\${props.id}.webp\`))
 </script>
 <template><FallbackImage v-if="skill" class="sub-ico wx-sub-ico" :class="['rarity-' + skill.rarity, { locked }]" :src="src" :alt="decorative ? '' : gameText(skill.name)" :aria-hidden="decorative || undefined"><template #fallback><span v-if="!decorative" :class="['rarity-' + skill.rarity, { locked }]">{{ gameText(skill.name) }}</span></template></FallbackImage></template>
 `;

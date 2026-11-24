@@ -140,7 +140,7 @@ function purposeLabel(purpose: CatchPurpose) {
           <strong>{{ pick.island }}</strong>
           <span class="muted">{{ translateUi("命中") }} {{ pick.count }} / {{ pick.score }}</span>
         </header>
-        <div v-for="group in pick.sleepGroups" :key="group.sleepType" class="rec-sleep">
+        <div v-for="group in pick.sleepGroups.filter(group => group.matches.length)" :key="group.sleepType" class="rec-sleep">
           <span>{{ gameText(group.sleepType) }}</span>
           <div class="rec-matches">
             <span v-for="match in group.matches" :key="match.purpose + match.pokeId" class="chip">

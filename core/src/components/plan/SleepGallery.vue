@@ -13,14 +13,16 @@
   import { nationalDex } from '../../calc/pokedexOrder';
   import { pokeHit } from '../../calc/pokeSearch';
   import { storeToRefs } from 'pinia';
-  import { BERRIES, ISLANDS, POKEDEX, SLEEP_STYLES } from '../../calc/data';
-  import { resolvedSleepdex, styleKey } from '../../calc/sleep';
+  import { BERRIES, ISLANDS, POKEDEX, SLEEP_STYLES, berryByType, type SleepStyleRow } from '../../calc/data';
+  import { RANK_ORDER, resolvedSleepdex, styleKey, styleUnlockRequirement } from '../../calc/sleep';
+  import type { IslandId } from '../../types';
   import { sleepReward } from '../../calc/sleepRewards';
   import { usePlanStore } from '../../stores/plans';
   import { useSettingsStore } from '../../stores/settings';
   import { useActivities } from '../../composables/useActivities';
   import { activitySleepStyles } from '../../calc/activities';
   import PokeSprite from '../shared/PokeSprite.vue';
+  import BerryIcon from '../shared/BerryIcon.vue';
   import { resetPageScroll } from '#platform/pageScroll';
   const components_plan_SleepGallery_config_clientDefaults =
     clientDefaults.modules.components_plan_SleepGallery;
@@ -33,6 +35,13 @@
   const islandIds = new Set(ISLANDS.map(island => island.id));
   const pokeOf = new Map(POKEDEX.map(poke => [poke.id, poke]));
   const island = ref<string[]>([]);
+  const rankLabels = { 普通: '普通{level}', 超级: '超级{level}', 高级: '高级{level}', 大师: '大师{level}' };
+  function unlockRankLabel(style: SleepStyleRow) {
+    const index = styleUnlockRequirement(style.island as IslandId, style);
+    const rank = index == null ? undefined : RANK_ORDER[index];
+    return rank?.replace(/^(普通|超级|高级|大师)(\d+)$/, (_, tier: keyof typeof rankLabels, level: string) =>
+      translateUi(rankLabels[tier], { level })) ?? '？';
+  }
   const nameQuery = shallowRef(
     components_plan_SleepGallery_config_clientDefaults['nameQueryInitial']
   );
@@ -331,7 +340,7 @@
         :class="{ on: berryType.includes(item) }"
         @click="pickChip('type', item)"
       >
-        {{ gameText(item) }}
+        <BerryIcon :name="berryByType(item)?.name ?? ''" small />{{ gameText(item) }}
       </button>
     </div>
     <div v-else-if="panel === 'spec'" class="picker-opts">
@@ -405,6 +414,7 @@
           translateUi('活动限定睡姿')
         }}</em>
         <em>{{ islandNames(islands) }}</em>
+        <em v-if="island.length">{{ translateUi('解锁等级 · {rank}', { rank: unlockRankLabel(style) }) }}</em>
       </button>
     </div>
     <div class="row">

@@ -1,21 +1,20 @@
-import runtimeParameters from '../data/runtime-parameters.resource'
-import { createSleepSelector, highestSleepUp } from './sleepSelection'
-const babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters = runtimeParameters.modules.babyEfficiencyDraw.simulateEfficiencySlots.values
-const babyEfficiencyDraw_efficiencyRewardsAfterResearch_runtimeParameters = runtimeParameters.modules.babyEfficiencyDraw.efficiencyRewardsAfterResearch.values
+import ruleParameters from '../data/rule-parameters.resource'
+import { runRaeSleepLottery, type RaeSleepCandidate } from './raeSleepLottery'
+import { raeSpoBudget, raeSpoCost } from './sleepLastRoll'
+import { createSleepRandom } from './sleepTransition'
+import { RAE_RESTRICTED_LEADER_CHANCE, UP_WEIGHTS } from './sleepRules'
 
 export interface EfficiencyReward { catch: number, candy: number, firstCandyMultiplier?: number, secondCandyMultiplier?: number }
 export interface EfficiencyBucket extends EfficiencyReward {
-  count: number
   typed: boolean
   special: boolean
   dpr: number
-  spoId?: number
   belly?: boolean
   order?: number
   unlockRank?: number
   weight?: number
-  upPriority?: number
   lastRollExcluded?: boolean
+  filler?: boolean
 }
 export interface EfficiencyDrawState {
   buckets: EfficiencyBucket[]
@@ -24,95 +23,92 @@ export interface EfficiencyDrawState {
   power: number
   encounters: number
   otherSlots: number
-  typedFallback: EfficiencyReward
-  openFallback: EfficiencyReward
 }
+
 export function createDrawStateKey() {
   const arrays = new WeakMap<EfficiencyBucket[], number>()
   const signatures = new Map<string, number>()
   return (state: EfficiencyDrawState) => {
     let id = arrays.get(state.buckets)
-    if (id == null) { const signature = JSON.stringify(state.buckets); id = signatures.get(signature); if (id == null) { id = signatures.size; signatures.set(signature, id) }; arrays.set(state.buckets, id) }
-    return [id, state.power, state.encounters, state.otherSlots, Number(!!state.campTicket), state.researchedBefore ?? 0, JSON.stringify(state.typedFallback), JSON.stringify(state.openFallback)].join(':')
-  }
-}
-export function drawStateKey(state: EfficiencyDrawState): string { return JSON.stringify(state) }
-const selectorCache = new WeakMap<EfficiencyBucket[], ReturnType<typeof createSleepSelector<EfficiencyBucket>>[]>()
-export function efficiencyRandom(seed: number): () => number {
-  let value = seed >>> 0
-  return () => {
-    value = (value + 0x6D2B79F5) >>> 0
-    let x = value
-    x = Math.imul(x ^ (x >>> 15), x | 1)
-    x ^= x + Math.imul(x ^ (x >>> 7), x | 61)
-    return ((x ^ (x >>> 14)) >>> 0) / 0x100000000
-  }
-}
-/** Same DPR selection as sleepDraw, grouping only equivalent rewards and costs. */
-export interface EfficiencySimulation extends EfficiencyReward { slotCandy: number[], slotFamily: number[], hitRuns: number, slotSecondCandy?: number[], slotSecondFamily?: number[] }
-export function simulateEfficiencySlots(state: EfficiencyDrawState, iterations: number, rng = efficiencyRandom(1)): EfficiencySimulation {
-  const totalSlots = state.encounters + Number(!!state.campTicket)
-  const campPool = state.campTicket
-    ? highestSleepUp(state.buckets.filter(bucket => bucket.typed && bucket.dpr <= state.power), bucket => bucket.upPriority ?? 1)
-    : []
-  const campCount = campPool.reduce((sum, bucket) => sum + bucket.count, 0)
-  const result: EfficiencySimulation = { catch: 0, candy: 0, slotCandy: Array(totalSlots).fill(0), slotFamily: Array(totalSlots).fill(0), hitRuns: 0 }
-  if ([...state.buckets, state.typedFallback, state.openFallback].some(reward => reward.firstCandyMultiplier != null || reward.secondCandyMultiplier != null)) {
-    result.slotSecondCandy = Array(totalSlots).fill(0); result.slotSecondFamily = Array(totalSlots).fill(0)
-  }
-  if (state.buckets.every((bucket) => !bucket.catch && !bucket.candy)
-    && !state.typedFallback.catch && !state.typedFallback.candy
-    && !state.openFallback.catch && !state.openFallback.candy) return result
-  // Precompute type, special and belly restriction combinations, outside the Monte Carlo loop.
-  let selectors = selectorCache.get(state.buckets)
-  if (!selectors) {
-    const pools = Array.from({ length: (babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters.p001 as 8) }, (_, mask) => state.buckets.filter((bucket) =>
-    (mask & 1 || bucket.typed) && (!(mask & 2) || !bucket.special) && (!(mask & (babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters.p002 as 4)) || !bucket.belly)))
-    selectors = pools.map((pool) => createSleepSelector(pool, (bucket) => bucket.count * (bucket.weight ?? 1)))
-    selectorCache.set(state.buckets, selectors)
-  }
-  for (let run = 0; run < iterations; run++) {
-    let remaining = state.power
-    let hit = false
-    let special = false, belly = false
-    for (let slot = 0; slot < totalSlots; slot++) {
-      const camp = slot === state.encounters
-      const anyType = !camp && slot < state.otherSlots
-      const select: ReturnType<typeof createSleepSelector<EfficiencyBucket>> = selectors[Number(anyType) + Number(special) * 2 + Number(belly) * (babyEfficiencyDraw_simulateEfficiencySlots_runtimeParameters.p003 as 4)]!
-      // Bucket multiplicity keeps styles in the selected UP tier equally likely.
-      let item: EfficiencyBucket | undefined
-      if (camp) {
-        let pick = rng() * campCount
-        item = campPool.find(bucket => { pick -= bucket.count; return pick < 0 })
-      } else item = select(remaining, slot === state.encounters - 1, rng)
-      const reward = item ?? (anyType ? state.openFallback : state.typedFallback)
-      result.catch += reward.catch
-      hit ||= reward.catch > 0
-      const first = reward.firstCandyMultiplier ?? 1, second = reward.secondCandyMultiplier ?? 1
-      result.candy += reward.candy * first
-      result.slotCandy[slot]! += reward.candy * first
-      result.slotFamily[slot]! += Number(reward.candy > 0) * first
-      if (result.slotSecondCandy && result.slotSecondFamily) {
-        result.slotSecondCandy[slot]! += reward.candy * second
-        result.slotSecondFamily[slot]! += Number(reward.candy > 0) * second
-      }
-      if (item && !camp) {
-        remaining = Math.max(0, remaining - item.dpr)
-        special ||= item.special
-        belly ||= !!item.belly
-      }
+    if (id == null) {
+      const signature = JSON.stringify(state.buckets)
+      id = signatures.get(signature) ?? signatures.size
+      signatures.set(signature, id)
+      arrays.set(state.buckets, id)
     }
-    result.hitRuns += Number(hit)
+    return [id, raeSpoBudget(state.power), state.encounters, state.otherSlots, Number(!!state.campTicket)].join(':')
   }
-  return result
 }
 
-/** Daily limits only change rewards, so reuse the same full simulation across preceding counts. */
-export function efficiencyRewardsAfterResearch(result: EfficiencySimulation, researchedBefore = 0): EfficiencyReward {
-  const candies = researchedBefore > 0 ? result.slotSecondCandy ?? result.slotCandy : result.slotCandy
-  const reduced = researchedBefore > 0 ? result.slotSecondFamily ?? result.slotFamily : result.slotFamily
-  return { catch: result.catch, candy: candies.reduce((sum, candy, slot) => sum + (researchedBefore + slot >= (babyEfficiencyDraw_efficiencyRewardsAfterResearch_runtimeParameters.p001 as 10) ? reduced[slot]! : candy), 0) }
+export function efficiencyRandom(seed: number): () => number {
+  return createSleepRandom(seed).next
 }
-export function simulateEfficiencyState(state: EfficiencyDrawState, iterations: number, rng = efficiencyRandom(1)): EfficiencyReward {
-  return efficiencyRewardsAfterResearch(simulateEfficiencySlots(state, iterations, rng), state.researchedBefore)
+
+export interface EfficiencySimulation extends EfficiencyReward {
+  slotCandy: number[]
+  slotFamily: number[]
+  hitRuns: number
+  slotSecondCandy: number[]
+  slotSecondFamily: number[]
+}
+
+const candidateCache = new WeakMap<EfficiencyBucket[], { typed: RaeSleepCandidate[], mixed: RaeSleepCandidate[] }>()
+function efficiencyCandidates(buckets: EfficiencyBucket[]) {
+  const cached = candidateCache.get(buckets)
+  if (cached) return cached
+  const typed: RaeSleepCandidate[] = []
+  const mixed = buckets.map((row, index): RaeSleepCandidate => {
+    const first = row.firstCandyMultiplier ?? 1
+    const second = row.secondCandyMultiplier ?? 1
+    const reduced = row.candy > 0 ? ruleParameters.modules.sleepRewards.dailyResearchReward.reducedCandy : 0
+    const candidate: RaeSleepCandidate = {
+      internalId: row.order ?? index + 1, unlockRank: row.unlockRank ?? 0, spo: raeSpoCost(row.dpr),
+      weight: row.weight ?? UP_WEIGHTS.normal, belly: Boolean(row.belly), legendary: row.special,
+      leaderExcluded: Boolean(row.lastRollExcluded), filler: row.filler === true, target: row.catch > 0,
+      candy: row.candy * first, additionalCandy: [reduced * first, row.candy * second, reduced * second],
+    }
+    if (row.typed) typed.push(candidate)
+    return candidate
+  })
+  const pools = { typed, mixed }
+  candidateCache.set(buckets, pools)
+  return pools
+}
+
+export function simulateEfficiencySlots(
+  state: EfficiencyDrawState, iterations: number, random = efficiencyRandom(42), precision: 'low' | 'medium' | 'high' = 'low',
+  statistic?: 'expectation' | 'first-hit',
+): EfficiencySimulation {
+  const naturalSlots = state.encounters
+  const slots = naturalSlots + Number(!!state.campTicket)
+  if (!state.buckets.some(row => row.catch > 0 || row.candy > 0)) {
+    const zeros = Array<number>(slots).fill(0)
+    return { catch: 0, candy: 0, hitRuns: 0, slotCandy: zeros, slotFamily: zeros, slotSecondCandy: zeros, slotSecondFamily: zeros }
+  }
+  const pool = efficiencyCandidates(state.buckets)
+  const result = runRaeSleepLottery({
+    spo: raeSpoBudget(state.power), naturalSlots, campTicket: state.campTicket, restrictedLeaderChance: RAE_RESTRICTED_LEADER_CHANCE,
+    typedPool: pool.typed,
+    mixedPool: state.otherSlots ? { slots: state.otherSlots, candidates: pool.mixed } : undefined,
+  }, precision === 'low' ? { precision, iterations, random } : { precision, statistic })
+  const sum = (values: number[]) => values.reduce((total, amount) => total + amount, 0) * iterations
+  return {
+    catch: sum(result.slotCounts), candy: sum(result.slotCandy), hitRuns: result.probability * iterations,
+    slotCandy: result.slotCandy.map(value => value * iterations),
+    slotFamily: result.slotAdditionalCandy.map(values => values[0]! * iterations),
+    slotSecondCandy: result.slotAdditionalCandy.map(values => values[1]! * iterations),
+    slotSecondFamily: result.slotAdditionalCandy.map(values => values[2]! * iterations),
+  }
+}
+
+/** The daily threshold changes reward, without affecting the draw or probability. */
+export function efficiencyRewardsAfterResearch(result: EfficiencySimulation, researchedBefore = 0): EfficiencyReward {
+  const threshold = ruleParameters.modules.sleepRewards.dailyResearchReward.defaultFullRewardLimit
+  const candies = researchedBefore > 0 ? result.slotSecondCandy : result.slotCandy
+  const reduced = researchedBefore > 0 ? result.slotSecondFamily : result.slotFamily
+  return { catch: result.catch, candy: candies.reduce((sum, candy, slot) => sum + (researchedBefore + slot >= threshold ? reduced[slot]! : candy), 0) }
+}
+
+export function simulateEfficiencyState(state: EfficiencyDrawState, iterations: number, random = efficiencyRandom(42), precision: 'low' | 'medium' | 'high' = 'low'): EfficiencyReward {
+  return efficiencyRewardsAfterResearch(simulateEfficiencySlots(state, iterations, random, precision), state.researchedBefore)
 }

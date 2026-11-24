@@ -292,8 +292,8 @@ import { useActivities } from '../../composables/useActivities';
             :key="group.sleepType"
             class="stack"
           >
-            <span class="muted">{{ gameText(group.sleepType) }}</span>
-            <div class="row">
+            <span class="muted">{{ gameText(group.sleepType) }} {{ translateUi('· 覆盖评分') }} {{ group.score }}</span>
+            <div v-if="group.matches.length" class="row">
               <span
                 v-for="(match, index) in group.matches"
                 :key="index"

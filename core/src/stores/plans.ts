@@ -28,7 +28,6 @@ interface PlanState {
   /** all：默认全选，sleepdexExcluded 里的是取消的。list：sleepdex 是手动记下的已发现。 */
   sleepdexMode: 'all' | 'list'
   sleepdexExcluded: string[]
-  undiscoveredPreference?: boolean
   rare: boolean
   shinyUp: boolean
   catchGoals: CatchGoal[]
@@ -67,7 +66,7 @@ export const usePlanStore = defineStore('plans', () => {
   const ready = ref(stores_plans_config_clientDefaults["readyInitial"])
 
   async function hydrate() {
-    const { undiscoveredBoost: legacyBoost, ...saved } = await loadJson<Partial<PlanState> & { undiscoveredBoost?: boolean }>('plans', empty)
+    const { undiscoveredBoost: _legacyBoost, undiscoveredPreference: _legacyPreference, ...saved } = await loadJson<Partial<PlanState> & { undiscoveredBoost?: boolean, undiscoveredPreference?: boolean }>('plans', empty)
     const babyEfficiency = { ...DEFAULT_BABY_EFFICIENCY, ...saved.babyEfficiency }
     babyEfficiency.pokeId = normalizeBabyEfficiencyPokemonId(babyEfficiency.pokeId)
     const selectionMode = saved.completionEfficiency?.selectionMode === 'free' ? 'free' : 'sleepdex'
@@ -75,8 +74,6 @@ export const usePlanStore = defineStore('plans', () => {
     plan.value = {
       ...empty,
       ...saved,
-      // The former default was true. Only a saved false was an explicit change.
-      undiscoveredPreference: saved.undiscoveredPreference ?? (legacyBoost === false ? false : undefined),
       sleepdex: saved.sleepdex ?? [],
       sleepdexMode: saved.sleepdexMode ?? ((saved.sleepdex?.length ?? 0) > 0 ? 'list' : 'all'),
       sleepdexExcluded: saved.sleepdexExcluded ?? [],

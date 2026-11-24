@@ -4,12 +4,15 @@ import { gameText, t as translateUi } from '../../ui/i18n'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, ref, shallowRef, watch } from 'vue'
-import { BERRIES, INGREDIENTS, POKEDEX } from '../../calc/data'
+import { BERRIES, INGREDIENTS, POKEDEX, berryByType } from '../../calc/data'
+import { ingredientLabel } from '../../calc/catalogIds'
 import { matchesChoice, toggleChoice } from '../../calc/multiChoice'
 import { pokeHit } from '../../calc/pokeSearch'
 import { compareDex } from '../../calc/pokedexOrder'
 import { SPECIALTY_FILTERS, specialtyHit } from '../../calc/specialty'
 import PokeSprite from './PokeSprite.vue'
+import BerryIcon from './BerryIcon.vue'
+import IngredientIcon from './IngredientIcon.vue'
 const components_shared_SpeciesSheet_config_clientDefaults = clientDefaults.modules.components_shared_SpeciesSheet
 
 
@@ -78,7 +81,11 @@ function clearFilters() {
             type="button"
             :class="{ on: activeSelection.includes(value) }"
             @click="toggleChoice(activeSelection, value, activeOptions)"
-          >{{ gameText(panel === 'ing' ? INGREDIENTS.find(item => String(item.id) === value)?.name : value) }}</button>
+          >
+            <IngredientIcon v-if="panel === 'ing'" :id="Number(value)" :name="ingredientLabel(value)" small />
+            <BerryIcon v-else-if="panel === 'type'" :name="berryByType(value)?.name ?? ''" small />
+            {{ gameText(panel === 'ing' ? ingredientLabel(value) : value) }}
+          </button>
         </div>
       </HorizontalStrip>
       <div :key="resultsRevision" class="poke-wall poke-wall-auto">

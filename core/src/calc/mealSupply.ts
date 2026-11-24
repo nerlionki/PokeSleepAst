@@ -10,7 +10,7 @@ export interface MealSupplyOptions {
   autoSpace: boolean
 }
 
-interface Lot { amount: number; uid?: string; minute: number }
+interface Lot { amount: number; uid?: string; minute: number; natural?: boolean }
 
 export function createMealSupply(bag: Record<string, number>, capacity: number, options: MealSupplyOptions) {
   const quantities = new Map<string, number>()
@@ -26,10 +26,11 @@ export function createMealSupply(bag: Record<string, number>, capacity: number, 
   const lastContribution: Record<string, number> = {}
   const received: Record<string, number> = {}
   const sold: Record<string, number> = {}
+  const cookedNatural: Record<string, number> = {}
   let stocked = Object.values(bag).reduce((sum, amount) => sum + amount, 0)
   let overflow = 0
   let completion: number | undefined
-  let firstDay: Record<string, number> | undefined
+  let firstDayNatural: Record<string, number> | undefined
   const remainingNeed = (key: string) => (quantities.get(key) ?? 0) * (MEAL_TARGET - meals.length)
 
   function removeLot(key: string, amount: number, fromNewest: boolean) {
@@ -40,6 +41,7 @@ export function createMealSupply(bag: Record<string, number>, capacity: number, 
       const lot = entries[index]!
       const taken = Math.min(amount, lot.amount)
       if (!fromNewest && lot.uid && taken > 0) lastContribution[lot.uid] = Math.max(lastContribution[lot.uid] ?? 0, lot.minute)
+      if (!fromNewest && lot.natural) cookedNatural[key] = (cookedNatural[key] ?? 0) + taken
       lot.amount -= taken
       amount -= taken
       if (lot.amount === 0) entries.splice(index, 1)
@@ -64,7 +66,7 @@ export function createMealSupply(bag: Record<string, number>, capacity: number, 
       relevant.every(([key]) => ingredientTimes[key] != null))) completion = minute
   }
 
-  function credit(key: string, amount: number, uid: string, minute: number) {
+  function credit(key: string, amount: number, uid: string, minute: number, natural = true) {
     if (completion != null) return
     if (options.autoSpace && stocked + amount > capacity) {
       // Sell excess only to make room for food that can still contribute to a meal.
@@ -92,12 +94,13 @@ export function createMealSupply(bag: Record<string, number>, capacity: number, 
     received[key] = (received[key] ?? 0) + accepted
     stocked += accepted
     const entries = lots.get(key)
-    if (entries) entries.push({ uid, minute, amount: accepted })
+    if (entries) entries.push({ uid, minute, amount: accepted, natural })
     prepare(minute)
   }
 
   function captureFirstDay() {
-    firstDay ??= Object.fromEntries(required.map(([key, count]) => [key, meals.length * count + (bag[key] ?? 0)]))
+    firstDayNatural ??= Object.fromEntries(required.map(([key]) => [key, (cookedNatural[key] ?? 0)
+      + (lots.get(key) ?? []).reduce((sum, lot) => sum + (lot.natural ? lot.amount : 0), 0)]))
   }
 
   return {
@@ -105,7 +108,7 @@ export function createMealSupply(bag: Record<string, number>, capacity: number, 
     get complete() { return completion != null },
     result() {
       captureFirstDay()
-      return { meals, completion, ingredientTimes, received, sold, overflow, lastContribution, firstDay: firstDay!,
+      return { meals, completion, ingredientTimes, received, sold, overflow, lastContribution, firstDayNatural: firstDayNatural!,
         missing: Object.fromEntries(required.map(([key]) => [key, Math.max(0, remainingNeed(key) - (bag[key] ?? 0))])) }
     },
   }

@@ -5,14 +5,14 @@ import { loadImageModule } from '#image-loader'
 import { createImageResolver, type ImageFiles } from './imageCache'
 import { activeSnapshot, remoteImage, RESOURCE_ORIGIN } from '../../../core/src/resources/runtime'
 import { sha256 } from '../../../core/src/resources/sha256'
-function localOnly(file: string): string { return (images as Record<string, string>)[file] ?? '' }
-export function localImage(file: string): string { return remoteImage(`images/${file}`) || (isBundledImage(file) ? localOnly(file) : '') }
+export function bundledImageUrl(file: string): string { return (images as Record<string, string>)[file] ?? '' }
+export function localImage(file: string): string { return remoteImage(`images/${file}`) || (isBundledImage(file) ? bundledImageUrl(file) : '') }
 export function publicImage(file: string): string { return remoteImage(file) }
 export function bundledImage(src: string): string {
   const match = Object.entries(activeSnapshot()?.manifest.assets ?? {}).find(([,item]) => RESOURCE_ORIGIN + item.path === src)
   if (!match) return Object.entries(images).some(([file, url]) => isBundledImage(file) && url === src) ? src : ''
   if (!isBundledImage(match[0])) return ''
-  return match[0].startsWith('images/') ? localOnly(match[0].slice(7)) : localOnly(match[0]) || '/' + match[0]
+  return match[0].startsWith('images/') ? bundledImageUrl(match[0].slice(7)) : bundledImageUrl(match[0]) || '/' + match[0]
 }
 let resolve: ReturnType<typeof createImageResolver> | undefined
 const pending = new Map<string, Promise<string>>()
@@ -21,7 +21,7 @@ export function resolveBundledImagePath(src: string): Promise<string> {
   resolve ??= createImageResolver(manifest, wx.env.USER_DATA_PATH, wx.getFileSystemManager() as unknown as ImageFiles, loadImageModule)
   const bundled = bundledImage(src)
   if (!bundled) return Promise.reject(new Error('没有对应的本地图片'))
-  return resolve(localOnly(bundled.replace(/^\//, '')) || bundled)
+  return resolve(bundledImageUrl(bundled.replace(/^\//, '')) || bundled)
 }
 export function resolveImagePath(src: string): Promise<string> {
   resolve ??= createImageResolver(manifest, wx.env.USER_DATA_PATH, wx.getFileSystemManager() as unknown as ImageFiles, loadImageModule)

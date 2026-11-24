@@ -10,7 +10,7 @@ import type { IslandId, SleepType } from '../types'
 import { ISLANDS, SLEEP_STYLES } from './data'
 import { BABY_POKEMON_IDS, babyEfficiencyIslands, babyEfficiencyPokemonName, efficiencyCurve, efficiencyDrawState, efficiencyIslands, EFFICIENCY_SLEEP_TYPES, MAX_EFFICIENCY_DROWSY_POWER, normalizeBabyEfficiencyPokemonId, type EfficiencyIsland } from './babyEfficiency'
 import { createDrawStateKey, efficiencyRandom, efficiencyRewardsAfterResearch, simulateEfficiencySlots, type EfficiencySimulation } from './babyEfficiencyDraw'
-import { drowsyPower, encounterCount, rankStrength, RANK_ORDER, styleKey, styleUnlockIndex, type SleepDiscoveryOptions } from './sleep'
+import { drowsyPower, encounterCount, rankStrength, RANK_ORDER, styleKey, styleUnlockIndex } from './sleep'
 import { normalizeEventMix, type EventMix } from './sleepRules'
 const factory_splitSleep_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_splitSleep
 const splitSleep_config_ruleCatalogs = ruleCatalogs.modules.splitSleep
@@ -27,7 +27,7 @@ export interface SplitTarget {
   candyWeight: number
   probabilityWeight: number
 }
-export interface SplitOptions extends SleepDiscoveryOptions {
+export interface SplitOptions {
   campTicket?: boolean
   activity?: ResearchActivitySelection
   island: IslandId
@@ -114,8 +114,9 @@ export interface SplitResult {
   whole: SplitOptimum
   individual: SplitOptimum[]
 }
-interface Session { count: number, probability: number, candies: number[], camp?: Session }
-export interface SplitCheckpoint { version: 3, signature: string, pendingPokemon?: number[], completed: number, sessions: Session[][] }
+interface SessionMetric { count: number, probability: number, candies: number[] }
+interface Session extends SessionMetric { second: SessionMetric, camp?: SessionMetric }
+export interface SplitCheckpoint { version: 6, signature: string, pendingPokemon?: number[], completed: number, sessions: Session[][] }
 export interface SplitRequest { splitOptions: SplitOptions, checkpoint?: SplitCheckpoint }
 export type SplitMessage = { type: 'checkpoint', checkpoint: SplitCheckpoint } | { type: 'progress', completed: number, total: number } | { type: 'result', result: SplitResult } | { type: 'error', message: string }
 export function splitScore(values: number[], maxima: number[], metrics: SplitMetric[]): number | null {
@@ -151,56 +152,62 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
   if (error) throw new Error(error)
   const signature = JSON.stringify({ ...options, activity: { ...context, pendingPokemon: undefined } }) + (options.campTicket ? ":camp-v1" : "")
   let checkpoint = request.checkpoint
-  if (checkpoint && (checkpoint.version !== 3 || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
+  if (checkpoint && (checkpoint.version !== 6 || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
   if (checkpoint && JSON.stringify(checkpoint.pendingPokemon) !== JSON.stringify(context.pendingPokemon)) checkpoint = undefined
   const types = options.sleepType === 'all' ? EFFICIENCY_SLEEP_TYPES : [options.sleepType]
   const total = options.targets.length * 100 * types.length
   if (checkpoint && (!Number.isInteger(checkpoint.completed) || checkpoint.completed < 0 || checkpoint.completed > total || checkpoint.sessions.length !== options.targets.length)) throw new Error('拆觉检查点无效，请重新计算')
   const sessions: Session[][] = checkpoint ? JSON.parse(JSON.stringify(checkpoint.sessions)) : options.targets.map(() => [])
   let completed = checkpoint?.completed ?? 0
+  const precedingCounts = options.campTicket ? 10 : 9
+  const validSession = (session?: SessionMetric) => Boolean(session && Number.isFinite(session.count) && session.count >= 0
+    && Number.isFinite(session.probability) && session.probability >= 0 && session.probability <= 1
+    && Array.isArray(session.candies) && session.candies.length === precedingCounts
+    && session.candies.every(value => Number.isFinite(value) && value >= 0))
   if (checkpoint) {
     for (let i = 0; i < completed; i++) {
       const session = sessions[Math.floor(i / (100 * types.length))]?.[i % (100 * types.length)]
-      if (!session || !Number.isFinite(session.count) || session.count < 0 || !Number.isFinite(session.probability) || session.probability < 0 || session.probability > 1
-        || !Array.isArray(session.candies) || session.candies.length !== (options.campTicket ? 10 : 9) || session.candies.some(value => !Number.isFinite(value) || value < 0)) throw new Error('拆觉检查点无效，请重新计算')
-      if (options.campTicket && (!session.camp || !Number.isFinite(session.camp.count) || session.camp.count < 0
-        || !Number.isFinite(session.camp.probability) || session.camp.probability < 0 || session.camp.probability > 1
-        || !Array.isArray(session.camp.candies) || session.camp.candies.length !== 10 || session.camp.candies.some(value => !Number.isFinite(value) || value < 0))) throw new Error('拆觉检查点无效，请重新计算')
+      if (!session || !validSession(session) || !validSession(session.second) || (options.campTicket && !validSession(session.camp))) {
+        throw new Error('拆觉检查点无效，请重新计算')
+      }
     }
   }
   for (const [targetIndex, target] of options.targets.entries()) {
     const end = (targetIndex + 1) * 100 * types.length
     if (completed >= end) continue
     const status = splitTargetStatus(target, options.island, options.strength, context)
-    const island = activityEfficiencyIsland(efficiencyIslands(target.pokeId, target.kind === 'style' ? target.style : undefined, context).find(row => row.id === options.island)!, context, options)
+    const base = efficiencyIslands(target.pokeId, target.kind === 'style' ? target.style : undefined, context).find(row => row.id === options.island)!
+    const island = activityEfficiencyIsland(base, context)
+    const secondIsland = activityEfficiencyIsland(base, context, 1)
     const pool = fixedPool(island, options.strength, options.eventMult)
+    const secondPool = fixedPool(secondIsland, options.strength, options.eventMult)
     const keyOf = createDrawStateKey(), cache = new Map<string, EfficiencySimulation>()
     for (let score = 1; score <= (splitSleep_splitSleepSteps_runtimeParameters.p003 as 100); score++) {
       for (const [typeIndex, type] of types.entries()) {
         const offset = (score - 1) * types.length + typeIndex
         if (targetIndex * 100 * types.length + offset < completed) continue
         const power = drowsyPower(score, options.strength, options.eventMult)
-        const draw = efficiencyDrawState(island, { ...pool, encounters: encounterCount(options.island, power) }, type, options.eventMix, power)
-        const simulate = (campTicket: boolean): Session => {
+        const encounters = encounterCount(options.island, power)
+        const simulate = (campTicket: boolean, second = false): SessionMetric => {
+          const draw = efficiencyDrawState(second ? secondIsland : island, { ...(second ? secondPool : pool), encounters }, type, options.eventMix, power)
           draw.campTicket = campTicket
           const key = keyOf(draw)
           let simulation = cache.get(key)
           if (!simulation && (target.kind === 'baby' || status.unlocked)) {
-            simulation = simulateEfficiencySlots(draw, options.iterations, efficiencyRandom(1)); cache.set(key, simulation)
+            simulation = simulateEfficiencySlots(draw, options.iterations, efficiencyRandom(42)); cache.set(key, simulation)
           }
-          const precedingCounts = options.campTicket ? 10 : 9
           return simulation ? {
             count: simulation.catch / options.iterations,
             probability: simulation.hitRuns / options.iterations,
             candies: Array.from({ length: precedingCounts }, (_, before) => efficiencyRewardsAfterResearch(simulation!, before).candy / options.iterations),
           } : { count: 0, probability: 0, candies: Array(precedingCounts).fill(0) }
         }
-        const session = simulate(false)
+        const session: Session = { ...simulate(false), second: simulate(false, true) }
         if (options.campTicket) session.camp = simulate(true)
         sessions[targetIndex]![offset] = session
         completed++
       }
-      yield { version: 3, signature, pendingPokemon: context.pendingPokemon, completed, sessions }
+      yield { version: 6, signature, pendingPokemon: context.pendingPokemon, completed, sessions }
     }
   }
   const metrics = splitMetrics(options), candidates: SplitCandidate[] = []
@@ -215,7 +222,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
       const rows = sessions[metric.targetIndex]!
       const normalFirst = rows[(first - 1) * types.length + firstType]!
       const a = options.campTicket ? normalFirst.camp! : normalFirst
-      const b = secondType == null ? null : rows[((splitSleep_splitSleepSteps_runtimeParameters.p007 as 99) - first) * types.length + secondType]!
+      const b = secondType == null ? null : rows[((splitSleep_splitSleepSteps_runtimeParameters.p007 as 99) - first) * types.length + secondType]?.second
       if (!a || (secondType != null && !b)) throw new Error('拆觉检查点缺少研究结果，请重新计算')
       if (metric.kind === 'count') return a.count + (b?.count ?? 0)
       if (metric.kind === 'probability') return b ? 1 - (1 - a.probability) * (1 - b.probability) : a.probability

@@ -124,7 +124,7 @@ export function hasLegacyShinyUp(event: Activity, context: ActivityContext, isla
     phase.rules.some(rule => rule.effects.shinyUp === true && matches(rule.target, island, pokemon)
       && appliesToResearch(rule, context, weekday, session)))
 }
-type ResolvedActivityValues = ActivityValues & { encounterUpPriority: number }
+type ResolvedActivityValues = ActivityValues & { encounterModifier: number }
 const valueCache = new WeakMap<ActivityContext, Map<string, ResolvedActivityValues>>()
 /** User-selected planning convention: any applicable encounter UP enables the
  * special-encounter default. This is a default, not proof of an actual encounter.
@@ -158,7 +158,8 @@ export function activityValues(context: ActivityContext, island: string, pokemon
   const cached = cache.get(cacheKey)
   if (cached) return cached
   const values = Object.fromEntries(fields.map(key => [key, NUMERIC_ACTIVITY_EFFECTS[key] === 'add' ? 0 : 1])) as unknown as ResolvedActivityValues
-  values.encounterUpPriority = 1
+  let encounterModifier = EVENT_PARAMETERS.sleep.upWeights.normal
+  let encounterEvent = ''
   Object.assign(values, { eventMix: 'off', shinyUp: false, allRecipeCategories: false, fixedIngredientDrops: {}, extraIngredientEnergyMultipliers: {}, recipeEnergyModifiers: [], availableRecipeCategories: [], favoredBerries: [] })
   const touched = new Set<string>()
   const date = activityDate(context, minute)
@@ -170,7 +171,11 @@ export function activityValues(context: ActivityContext, island: string, pokemon
     for (const phase of [event, ...(event.phases ?? []).filter(p => active(p, date))]) {
       for (const rule of phase.rules) {
         if (!matches(rule.target, island, pokemon) || !appliesToResearch(rule, context, weekday, researchSession)) continue
-        values.encounterUpPriority = Math.max(values.encounterUpPriority, rule.effects.encounterWeightMultiplier ?? 1)
+        const encounterPriority = `${event.startsOn}:${event.id}`
+        if (rule.effects.encounterWeightMultiplier != null && encounterPriority >= encounterEvent) {
+          encounterEvent = encounterPriority
+          encounterModifier = rule.effects.encounterWeightMultiplier
+        }
         for (const key of fields) if (rule.effects[key] != null) {
           const n = rule.effects[key]!
           if (event.stacking === 'max') maximum[key] = maximum[key] == null ? n : key === 'helpIntervalMultiplier' ? Math.min(maximum[key]!, n) : Math.max(maximum[key]!, n)
@@ -212,8 +217,8 @@ export function activityValues(context: ActivityContext, island: string, pokemon
   for (const key of ['fixedIngredientDrops', 'extraIngredientEnergyMultipliers'] as const) for (const [name, number] of Object.entries(maps[key]!)) values[key][name] = key === 'fixedIngredientDrops' ? (values[key][name] ?? 0) + number : (values[key][name] ?? 1) * number
   for (const [key, value] of Object.entries(fallback ?? {})) if (!touched.has(key)) Object.assign(values, { [key]: value })
   Object.assign(values, context.overrides)
-  values.encounterUpPriority = Math.max(1, context.overrides?.encounterWeightMultiplier
-    ?? (touched.has('encounterWeightMultiplier') ? values.encounterUpPriority : fallback?.encounterWeightMultiplier ?? 1))
+  values.encounterModifier = context.overrides?.encounterWeightMultiplier
+    ?? (encounterEvent ? encounterModifier : fallback?.encounterWeightMultiplier ?? EVENT_PARAMETERS.sleep.upWeights.normal)
   if (context.overrides?.allRecipeCategories === false) values.availableRecipeCategories = []
   else if (values.allRecipeCategories) values.availableRecipeCategories = ['curry', 'salad', 'dessert']
   values.allRecipeCategories = values.availableRecipeCategories.length === 3

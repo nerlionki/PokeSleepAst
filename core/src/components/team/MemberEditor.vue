@@ -164,13 +164,13 @@ function stepEvolution(delta: number) {
       <h3>{{ translateUi("进化链") }}</h3>
       <div class="evo-stages">
         <template v-for="(stage, index) in stages" :key="index">
-          <span v-if="index" class="evo-arrow" aria-hidden="true">↓</span>
+          <span v-if="index" class="evo-arrow" aria-hidden="true">→</span>
           <div class="evo-stage">
             <button v-for="node in stage" :key="node.id" type="button" class="evo-node"
               :class="{ on: node.id === model.pokeId }" :aria-pressed="node.id === model.pokeId"
               @click="switchEvolution(node.id)">
               <PokeSprite :id="node.id" :name="node.name" :shiny="props.shiny" />
-              <span>{{ gameText(node.name) }}</span>
+              <span class="evo-name">{{ gameText(node.name) }}</span>
             </button>
           </div>
         </template>

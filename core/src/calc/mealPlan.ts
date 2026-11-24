@@ -90,8 +90,8 @@ export function* mealPlanSteps(input: MealPlanRequest): Generator<MealProgress, 
     const total = list.length * INDIVIDUAL_TRIALS
     let completed = 0
     for (const pokemon of list) {
-      const estimated = scoreCandidateProduction(request, pokemon).ingredients
-      const suitable = recipe.ingredients.filter(({ id }) => (estimated[id] ?? 0) > 0)
+      const estimated = scoreCandidateProduction(request, pokemon)
+      const suitable = recipe.ingredients.filter(({ id }) => (estimated.ingredients[id] ?? 0) > 0)
       if (!suitable.length) {
         completed += INDIVIDUAL_TRIALS
         yield { completed, total }
@@ -108,7 +108,7 @@ export function* mealPlanSteps(input: MealPlanRequest): Generator<MealProgress, 
       const times = trials.map(trial => trial.completion)
       candidates.push({ uid: pokemon.uid, minutes: median(times), dayChance: dayChance(times),
         ingredientTimes: Object.fromEntries(keys.map(key => [key, median(trials.map(trial => trial.ingredientTimes[key]))])),
-        coverage: Object.fromEntries(suitable.map(({ id, count }) => [id, (estimated[id] ?? 0) / (count * MEAL_TARGET)])) })
+        coverage: Object.fromEntries(suitable.map(({ id, count }) => [id, (estimated.naturalIngredients[id] ?? 0) / (count * MEAL_TARGET)])) })
     }
     const bestCoverage = (candidate: MealCandidate) => Math.max(...Object.values(candidate.coverage))
     candidates.sort((a, b) => bestCoverage(b) - bestCoverage(a)
@@ -145,7 +145,7 @@ export function* mealPlanSteps(input: MealPlanRequest): Generator<MealProgress, 
     milestones: Array.from({ length: MEAL_TARGET }, (_, i) => median(trials.map(trial => trial.meals[i]))),
     dayChance: dayChance(trials.map(trial => trial.completion)),
     coverage: Object.fromEntries(recipe.ingredients.map(({ id, count }) => [
-      id, trials.reduce((sum, trial) => sum + (trial.firstDay[id] ?? 0), 0) / (TEAM_TRIALS * count * MEAL_TARGET),
+      id, trials.reduce((sum, trial) => sum + (trial.firstDayNatural[id] ?? 0), 0) / (TEAM_TRIALS * count * MEAL_TARGET),
     ])),
     missing: Object.fromEntries(recipe.ingredients.map(({ id }) => [id, median(trials.map(trial => trial.missing[id])) ?? 0])),
     contributions,

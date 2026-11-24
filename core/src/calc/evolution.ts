@@ -86,6 +86,10 @@ function entry(id: number): EvoEntry | undefined {
   return EVOLUTION[String(id)];
 }
 
+export function isFinalEvolution(id: number): boolean {
+  return !entry(id)?.next.length;
+}
+
 export function pokemonUsingEvolutionItem(itemId: number): number[] {
   return Object.entries(EVOLUTION)
     .filter(([, entry]) => entry.next.some(([, conditions]) =>

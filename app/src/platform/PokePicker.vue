@@ -4,12 +4,13 @@ import { t as translateUi, gameText } from '../../../core/src/ui/i18n'
 import clientDefaults from '../../../core/src/data/client-defaults.resource'
 
 import { computed, ref, shallowRef, watch } from 'vue'
-import { BERRIES, INGREDIENTS, POKEDEX } from '../../../core/src/calc/data'
+import { BERRIES, INGREDIENTS, POKEDEX, berryByType } from '../../../core/src/calc/data'
 import { selectionList, toggleChoice, matchesChoice } from '../../../core/src/calc/multiChoice'
 import { pokeHit } from '../../../core/src/calc/pokeSearch'
 import { compareDex } from '../../../core/src/calc/pokedexOrder'
 import { SPECIALTY_FILTERS, specialtyHit } from '../../../core/src/calc/specialty'
 import BerryIcon from '../../../core/src/components/shared/BerryIcon.vue'
+import IngredientIcon from '../../../core/src/components/shared/IngredientIcon.vue'
 import PokeSprite from '../../../core/src/components/shared/PokeSprite.vue'
 const components_shared_PokePicker_config_clientDefaults = clientDefaults.modules.components_shared_PokePicker
 
@@ -102,7 +103,9 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
             </div></HorizontalStrip>
             <HorizontalStrip v-else-if="panel === 'type'"><div class="picker-opts">
               <button type="button" :class="{ on: !type.length }" @click="type = []">{{ translateUi("全部") }}</button>
-              <button v-for="t in types" :key="t" type="button" :class="{ on: type.includes(t) }" @click="toggleChoice(type, t, types)">{{ gameText(t) }}</button>
+              <button v-for="t in types" :key="t" type="button" :class="{ on: type.includes(t) }" @click="toggleChoice(type, t, types)">
+                <BerryIcon :name="berryByType(t)?.name ?? ''" small />{{ gameText(t) }}
+              </button>
             </div></HorizontalStrip>
             <HorizontalStrip v-else-if="panel === 'sleep'"><div class="picker-opts">
               <button type="button" :class="{ on: !sleep.length }" @click="sleep = []">{{ translateUi("全部") }}</button>
@@ -110,7 +113,9 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
             </div></HorizontalStrip>
             <HorizontalStrip v-else-if="panel === 'ing'"><div class="picker-opts">
               <button type="button" :class="{ on: !ing.length }" @click="ing = []">{{ translateUi("全部") }}</button>
-              <button v-for="i in INGREDIENTS" :key="i.id" type="button" :class="{ on: ing.includes(String(i.id)) }" @click="toggleChoice(ing, String(i.id), INGREDIENTS.map(item => String(item.id)))">{{ gameText(i.name) }}</button>
+              <button v-for="i in INGREDIENTS" :key="i.id" type="button" :class="{ on: ing.includes(String(i.id)) }" @click="toggleChoice(ing, String(i.id), INGREDIENTS.map(item => String(item.id)))">
+                <IngredientIcon :id="i.id" :name="i.name" small />{{ gameText(i.name) }}
+              </button>
             </div></HorizontalStrip>
             <p class="muted">{{ list.length }} {{ translateUi("只宝可梦") }}{{ filterOn ? " " + translateUi("· 已筛选") : " " + translateUi("· 食材按可携带种类筛选") }}</p>
             </div>

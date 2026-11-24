@@ -34,6 +34,7 @@ export interface CatchMatch {
 export interface CatchSleepGroup {
   sleepType: string
   matches: CatchMatch[]
+  score: number
 }
 
 export interface CatchIslandPick {
@@ -49,6 +50,16 @@ const SLEEP_ORDER = cloneData(catch_config_extracted1.SLEEP_ORDER)
 const DEFER = new Set<IslandId>((cloneData(catch_config_extracted0.DEFER) as IslandId[]))
 
 export const CATCH_MODES = cloneData(catch_config_extracted1.CATCH_MODES)
+
+function uniqueMatches(matches: readonly CatchMatch[]) {
+  return new Map(matches.map(match => [`${match.name}|${match.purpose}|${match.weight}`, match] as const))
+}
+
+function coverageScore(matches: Iterable<CatchMatch>) {
+  let hundredths = 0
+  for (const match of matches) hundredths += Math.round(match.weight * 100)
+  return hundredths / 100
+}
 
 function mergeGoals(goals: CatchGoal[]) {
   const valid: { pokeId: number, purpose: CatchPurpose, stars: number[] }[] = []
@@ -132,18 +143,15 @@ export function recommendIslands(
           stars,
         })
       }
-      if (matches.length) sleepGroups.push({ sleepType, matches })
+      sleepGroups.push({ sleepType, matches, score: coverageScore(uniqueMatches(matches).values()) })
     }
 
-    if (!sleepGroups.length) continue
-    const unique = new Map<string, CatchMatch>()
-    for (const group of sleepGroups) {
-      for (const match of group.matches) unique.set(`${match.name}|${match.purpose}|${match.weight}`, match)
-    }
+    const unique = uniqueMatches(sleepGroups.flatMap(group => group.matches))
+    if (!unique.size) continue
     picks.push({
       islandId: island.id as IslandId,
       island: island.name,
-      score: [...unique.values()].reduce((sum, match) => sum + match.weight, 0),
+      score: coverageScore(unique.values()),
       count: unique.size,
       sleepGroups,
     })

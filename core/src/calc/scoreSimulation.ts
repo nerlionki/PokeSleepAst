@@ -250,10 +250,10 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
     }
     return sales
   }
-  function creditFood(name: string, amount: number, uid: string) {
+  function creditFood(name: string, amount: number, uid: string, natural = true) {
     amount = Math.max(0, Math.floor(amount))
     if (!amount) return
-    if (supply) { supply.credit(name, amount, uid, currentMinute - start); return }
+    if (supply) { supply.credit(name, amount, uid, currentMinute - start, natural); return }
     // 调用仅发生在可操作节点；先卖出，再接收，单批大于上限时分批处理。
     for (let left = amount; left > 0;) {
       const part = Math.min(scoreSimulation_creditFood_ruleParameters.bagCapacity, left)
@@ -285,7 +285,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       const ex = exEffects(settings, m.berry, m.poke.specialty)
       const bonus = !extra && ex.ingredientExtra ? 1 + Number(ex.ingredientExtra > 1 && random() < scoreSimulation_help_ruleParameters.fractionalExExtraChance) : 0
       const count = extra ? drop.amount : Math.min(drop.amount + bonus + m.activity.ingredientCountBonus, Math.max(0, m.carry - m.heldBerries - sumBag(m.heldFood)))
-      if (extra) creditFood(String(drop.id), count, m.uid); else {
+      if (extra) creditFood(String(drop.id), count, m.uid, false); else {
         add(m.heldFood, drop.id, count)
         for (const [name, bonus] of Object.entries(m.activity.fixedIngredientDrops)) add(m.heldFood, name, Math.min(bonus, Math.max(0, m.carry - m.heldBerries - sumBag(m.heldFood))))
       }
@@ -315,7 +315,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       },
       heal: (target, amount) => { const a = target as Actor; a.energy = Math.min(scoreSimulation_release_ruleParameters.energyCap, a.energy + amount); a.decay = currentMinute },
       charge: amount => { skill += amount * (1 + settings.areaBonus) * m.activity.skillStrengthMultiplier },
-      berries: (target, amount) => creditBerries(target as Actor, amount), ingredient: (name, amount) => creditFood(name, amount, m.uid),
+      berries: (target, amount) => creditBerries(target as Actor, amount), ingredient: (name, amount) => creditFood(name, amount, m.uid, false),
       helps: (target, count, only) => {
         const a = target as Actor
         if (only) { for (let i = 0; i < count; i++) if (random() < a.rate) { release(a); break } }

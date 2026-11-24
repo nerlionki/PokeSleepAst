@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { t as translateUi, gameText } from '../../ui/i18n'
 import { INPUT_RANGES } from '../../calc/inputRanges'
+import { computed } from 'vue'
+import { POKEDEX } from '../../calc/data'
+import { isFinalEvolution } from '../../calc/evolution'
+import { ingredientColumns } from '../../calc/ingredients'
 const INPUT_LIMITS = INPUT_RANGES.RecipeSheet
 
   import type { RecipeDisplayRow } from '../../calc/recipeCatalog';
@@ -14,12 +18,27 @@ const INPUT_LIMITS = INPUT_RANGES.RecipeSheet
   import DrawerSheet from '../shared/DrawerSheet.vue';
   import IngredientIcon from '../shared/IngredientIcon.vue';
   import MealIcon from '../shared/MealIcon.vue';
+  import PokeSprite from '../shared/PokeSprite.vue';
 
-  defineProps<{
+  const props = defineProps<{
     recipe: RecipeDisplayRow;
     level?: number;
     editableLevel?: boolean;
   }>();
+
+  const suppliers = computed(() => {
+    const ingredients = new Set(props.recipe.ingredients.map(ingredient => ingredient.id))
+    const byIngredient = new Map<number, typeof POKEDEX>()
+    for (const pokemon of POKEDEX) {
+      if (pokemon.specialty !== '食材型' || !isFinalEvolution(pokemon.id)) continue
+      const drops = ingredientColumns(pokemon.ingredients).slice(0, 2).flat()
+      for (const id of new Set(drops.filter(drop => drop.amount > 0 && ingredients.has(drop.id)).map(drop => drop.id))) {
+        if (!byIngredient.has(id)) byIngredient.set(id, [])
+        byIngredient.get(id)!.push(pokemon)
+      }
+    }
+    return byIngredient
+  });
 
   const emit = defineEmits<{ close: []; 'update:level': [level: number] }>();
 
@@ -48,9 +67,15 @@ const INPUT_LIMITS = INPUT_RANGES.RecipeSheet
     </div>
     <p v-if="recipe.nameUnannounced" class="muted">{{ translateUi("食谱名称还未公布") }}</p>
     <div v-if="recipe.ingredients.length" class="stack">
-      <div v-for="ing in recipe.ingredients" :key="ing.name" class="row">
-        <IngredientIcon :id="ing.id" :name="ing.name" />
-        <span>{{ gameText(ing.name) }} × {{ ing.count ?? translateUi("还未公布") }}</span>
+      <div v-for="ing in recipe.ingredients" :key="ing.name" class="stack">
+        <div class="row recipe-ingredient">
+          <IngredientIcon :id="ing.id" :name="ing.name" />
+          <span>{{ gameText(ing.name) }} × {{ ing.count ?? translateUi("还未公布") }}</span>
+        </div>
+        <div v-if="suppliers.get(ing.id)?.length" class="recipe-suppliers">
+          <PokeSprite v-for="pokemon in suppliers.get(ing.id)" :key="pokemon.id" class="recipe-supplier"
+            :id="pokemon.id" :name="gameText(pokemon.name)" />
+        </div>
       </div>
     </div>
     <p v-else class="muted">{{ translateUi("拌拌食谱，用当餐剩下的食材。") }}</p>
@@ -82,3 +107,9 @@ const INPUT_LIMITS = INPUT_RANGES.RecipeSheet
     </div>
   </DrawerSheet>
 </template>
+
+<style scoped>
+.recipe-ingredient { align-items: center; }
+.recipe-suppliers { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.recipe-supplier.sprite { width: 38px; height: 38px; }
+</style>

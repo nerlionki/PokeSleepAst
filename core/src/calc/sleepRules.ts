@@ -1,92 +1,36 @@
-import ruleCatalogs from '../data/rule-catalogs.resource';
-/** Wiki research model; UP multipliers are simulator assumptions, not confirmed game rates. */
-export type EventMix = 'off' | 'some' | 'all';
-import { EVENT_PARAMETERS } from './activities';
-const sleepRules_config_ruleCatalogs = ruleCatalogs.modules.sleepRules;
+import { EVENT_PARAMETERS } from './activities'
 
-export const MIX_OPTIONS = EVENT_PARAMETERS.sleep.mixOptions as {
-  value: EventMix;
-  label: string;
-}[];
-/** Legacy booleans: true meant the partial cross-type event. */
-export function normalizeEventMix(
-  value: EventMix | boolean | undefined
-): EventMix {
-  return value === true || value === 'some'
-    ? 'some'
-    : value === 'all'
-      ? 'all'
-      : 'off';
+export type EventMix = 'off' | 'some' | 'all'
+export const MIX_OPTIONS = EVENT_PARAMETERS.sleep.mixOptions as { value: EventMix, label: string }[]
+
+/** Legacy flags represent the partial mixed-type event. */
+export function normalizeEventMix(value: EventMix | boolean | undefined): EventMix {
+  return value === true || value === 'some' ? 'some' : value === 'all' ? 'all' : 'off'
 }
-export function openSleepSlots(
-  count: number,
-  mode: EventMix | boolean | undefined
-): number {
-  const mix = normalizeEventMix(mode);
-  return mix === 'off'
-    ? 0
-    : mix === 'all'
-      ? count
-      : count - Math.floor(count * EVENT_PARAMETERS.sleep.sameTypeShare);
+
+/** RAE Worker event-balanced table. */
+const mixedSlots: Readonly<Record<number, number>> = { 3: 3, 4: 3, 5: 4, 6: 5, 7: 5, 8: 6 }
+export function openSleepSlots(count: number, mode: EventMix | boolean | undefined): number {
+  const mix = normalizeEventMix(mode)
+  if (mix === 'off') return 0
+  return mix === 'all' ? count : mixedSlots[count] ?? Math.ceil(0.7 * count)
 }
-export const UP_WEIGHTS = EVENT_PARAMETERS.sleep.upWeights;
-export type UpTier = keyof typeof UP_WEIGHTS;
-export type PokemonUps = Partial<Record<UpTier, readonly number[]>>;
-export const MOON_POKEMON = EVENT_PARAMETERS.sleep.moonPokemon;
-/** These multipliers correspond to the explicitly named Good Sleep Day options in the UI. */
-export function moonUp(mult = 1): UpTier | undefined {
-  return EVENT_PARAMETERS.sleep.moonTiers.find(row =>
-    row.multipliers.includes(mult)
-  )?.tier as UpTier | undefined;
-}
-export function pokemonSleepWeight(
-  pokeId: number,
-  mult = 1,
-  ups: PokemonUps = {}
-): number {
-  let weight = 1;
-  for (const tier of sleepRules_config_ruleCatalogs.pokemonSleepWeightList0
-    .values as unknown as readonly ['small', 'mid', 'large']) {
-    if (ups[tier]?.includes(pokeId)) weight *= UP_WEIGHTS[tier];
+
+export const UP_WEIGHTS = EVENT_PARAMETERS.sleep.upWeights
+export const RAE_RESTRICTED_LEADER_CHANCE = EVENT_PARAMETERS.sleep.raeRestrictedLeaderChance
+type EncounterModifier = 'blocked' | 'small' | 'mid' | 'large'
+export type PokemonUps = Partial<Record<EncounterModifier, readonly number[]>>
+
+/** RAE custom and preset rate changes are separate modes. */
+export function sleepEncounterWeight(pokeId: number, activityWeight = UP_WEIGHTS.normal, ups?: PokemonUps): number {
+  if (!ups) return activityWeight
+  for (const tier of ['blocked', 'large', 'mid', 'small'] as const) {
+    if (ups[tier]?.includes(pokeId)) return UP_WEIGHTS[tier]
   }
-  const moon = moonUp(mult);
-  // The automatic moon group is the same tier, not an additional copy of that tier.
-  if (
-    moon &&
-    (MOON_POKEMON as unknown as readonly number[]).includes(pokeId) &&
-    !ups[moon]?.includes(pokeId)
-  )
-    weight *= UP_WEIGHTS[moon];
-  return weight;
+  return UP_WEIGHTS.normal
 }
-export function pokemonSleepUpPriority(pokeId: number, mult = 1, ups: PokemonUps = {}): number {
-  const moon = moonUp(mult);
-  let priority = moon && (MOON_POKEMON as readonly number[]).includes(pokeId) ? UP_WEIGHTS[moon] : 1;
-  for (const tier of Object.keys(UP_WEIGHTS) as UpTier[]) {
-    if (ups[tier]?.includes(pokeId)) priority = Math.max(priority, UP_WEIGHTS[tier]);
-  }
-  return priority;
-}
-export function sleepEncounterWeights(pokeId: number, mult = 1, ups: PokemonUps = {}, activityWeight = 1, activityUpPriority = 1) {
-  // Explicit activity UP replaces the legacy moon UP inferred from sleep power.
-  const moonMultiplier = activityUpPriority > 1 ? 1 : mult;
-  return {
-    weight: pokemonSleepWeight(pokeId, moonMultiplier, ups) * activityWeight,
-    upPriority: Math.max(pokemonSleepUpPriority(pokeId, moonMultiplier, ups), activityUpPriority),
-  };
-}
-export function moonUpLabel(mult: number): string {
-  const tier = moonUp(mult);
-  return tier
-    ? `${EVENT_PARAMETERS.sleep.moonPokemonLabel}：` +
-        (tier === 'mid' ? '中 UP' : '大 UP') +
-        ` ×${UP_WEIGHTS[tier]}（模拟权重）`
-    : '当前无好眠日宝可梦 UP';
-}
+
 export function eventMixLabel(value: EventMix | boolean | undefined): string {
-  const label = MIX_OPTIONS.find(
-    option => option.value === normalizeEventMix(value)
-  )!.label;
-  // 关闭 is also the Close button. Keep that translation and use a dedicated off label here.
-  return label === '关闭' ? '不混合' : label;
+  const label = MIX_OPTIONS.find(option => option.value === normalizeEventMix(value))!.label
+  return label === '关闭' ? '不混合' : label
 }

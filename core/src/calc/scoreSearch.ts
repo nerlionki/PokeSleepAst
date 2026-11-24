@@ -9,6 +9,7 @@ import { recipeLevelMult, recipeLevelOf } from './cook'
 import { nextSpecialTeamState, type SpecialTeamState } from './teamRestrictions'
 import { unlockedSubskills } from './member'
 import { SCORE_ASSUMPTIONS, simulateScore } from './scoreSimulation'
+import { breakdownProduceIngredients } from './produceDisplay'
 import { scoreSkillRoles } from './scoreSkills'
 import { resourceRevision } from '../resources/runtime'
 import { SCORE_RULE_VERSION, hm, scoreBounds, scoreCandidates, seededRandom, validateScoreOptions,
@@ -29,7 +30,7 @@ export function scoreCandidateProduction(request: ScoreRequest, pokemon: ScoreRe
   const settings = snapshotActivity(request.settings, 'week')
   const poke = pokeById(pokemon.pokeId)!
   const { start, end } = scoreBounds(request.options)
-  const total = { berryEnergy: 0, skillEnergy: 0, ingredients: {} as Record<string, number> }
+  const total = { berryEnergy: 0, skillEnergy: 0, ingredients: {} as Record<string, number>, naturalIngredients: {} as Record<string, number> }
   const cache = new Map<string, ReturnType<typeof produce>>()
   for (let minute = start; minute < end;) {
     const next = Math.min(end, (Math.floor((minute - 240) / 1440) + 1) * 1440 + 240)
@@ -48,6 +49,7 @@ export function scoreCandidateProduction(request: ScoreRequest, pokemon: ScoreRe
     total.berryEnergy += result.berryEnergy * weight
     total.skillEnergy += result.skillEnergy * weight
     for (const [name, amount] of Object.entries(result.ingredients)) addIngredient(total.ingredients, name, amount * weight)
+    for (const [name, amount] of Object.entries(breakdownProduceIngredients(result)?.natural ?? {})) addIngredient(total.naturalIngredients, name, amount * weight)
     minute = next
   }
   return total

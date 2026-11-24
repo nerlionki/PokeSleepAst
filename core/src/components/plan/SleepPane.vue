@@ -26,7 +26,6 @@
     rankStrength,
     rankToNext,
     resolvedSleepdex,
-    prefersUndiscovered,
     sleepShinyRate,
     sleepMinutes,
     strengthToNext
@@ -94,16 +93,6 @@
       researchSession.value
     )
   );
-  const undiscoveredBoost = computed({
-    get: () =>
-      prefersUndiscovered(
-        activity.context.value,
-        plan.value.undiscoveredPreference
-      ),
-    set: (value: boolean) => {
-      plan.value.undiscoveredPreference = value;
-    }
-  });
   const rank = computed(() =>
     rankFromStrength(island.value, plan.value.snorlaxStrength)
   );
@@ -257,7 +246,6 @@
       eventMult.value,
       whole.value,
       plan.value.sleepType,
-      undiscoveredBoost.value,
       plan.value.rare,
       plan.value.shinyUp,
       shinyUp.value,
@@ -296,7 +284,6 @@
         Number(specialEncountered.value),
       rank: rank.value,
       discovered: resolvedSleepdex(plan.value),
-      undiscoveredBoost: undiscoveredBoost.value,
       rare: plan.value.rare,
       shinyUp: shinyUp.value,
       activity: activity.context.value,
@@ -538,10 +525,6 @@
       ><input :disabled="busy" v-model="otherTypes" type="checkbox" />
       {{ translateUi('活动期间遇到一些其他类型宝可梦') }}</label
     >
-    <label class="row"
-      ><input :disabled="busy" v-model="undiscoveredBoost" type="checkbox" />
-      {{ translateUi('优先遇到未发现睡姿') }}</label
-    >
     <p class="muted">
       {{ gameText(ISLANDS.find(i => i.id === island)?.name)
       }}{{ translateUi('评级') }} {{ rank
@@ -554,15 +537,6 @@
         )
       }}
     </p>
-    <button
-      v-if="plan.undiscoveredPreference !== undefined"
-      class="btn ghost"
-      type="button"
-      :disabled="busy"
-      @click="plan.undiscoveredPreference = undefined"
-    >
-      {{ translateUi('未发现睡姿优先跟随活动') }}
-    </button>
     <article class="expect-board">
       <div class="row">
         <button

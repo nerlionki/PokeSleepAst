@@ -4,11 +4,13 @@
   import { ANNOUNCED } from '../../calc/announcedContent';
   import clientDefaults from '../../data/client-defaults.resource';
 
-  import { computed, ref, shallowRef } from 'vue';
+  import { computed, ref, shallowRef, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { skillByPokedexName } from '../../calc/mainSkills';
   import { storeToRefs } from 'pinia';
   import { BERRIES, ISLANDS, POKEDEX } from '../../calc/data';
+  import { INGREDIENT_CATALOG } from '../../calc/ingredientCatalog';
+  import { ingredientKey } from '../../calc/catalogIds';
   import {
     selectionList,
     toggleChoice,
@@ -60,10 +62,11 @@
       components_pokemon_PokedexPane_config_clientDefaults['specInitial']
     )
   );
-  const panel = shallowRef<'none' | 'sleep' | 'berry' | 'skill'>(
+  type FilterPanel = 'none' | 'sleep' | 'berry' | 'skill' | 'ingredient';
+  const panel = shallowRef<FilterPanel>(
     components_pokemon_PokedexPane_config_clientDefaults[
       'panelInitial'
-    ] as unknown as 'none' | 'sleep' | 'berry' | 'skill'
+    ] as FilterPanel
   );
   const sleep = ref(
     selectionList(
@@ -80,6 +83,14 @@
       components_pokemon_PokedexPane_config_clientDefaults['skillInitial']
     )
   );
+  const ingredients = ref<string[]>([]);
+  const ingredientOptions = INGREDIENT_CATALOG.map(ingredient => ingredient.key);
+  const showSkillFilter = computed(() => spec.value.includes('技能型'));
+  watch(showSkillFilter, shown => {
+    if (shown) return;
+    skill.value = [];
+    if (panel.value === 'skill') panel.value = 'none';
+  }, { immediate: true, flush: 'sync' });
   const selected = shallowRef<number | null>(
     components_pokemon_PokedexPane_config_clientDefaults[
       'selectedInitial'
@@ -94,7 +105,8 @@
   ]);
   const skills = computed(() => [
     '全部',
-    ...new Set(POKEDEX.map(p => p.mainSkill).filter(Boolean))
+    ...new Set(POKEDEX.filter(p => spec.value.some(value => specialtyHit(p.specialty, value)))
+      .map(p => p.mainSkill).filter(Boolean))
   ]);
 
   const knownList = computed(() =>
@@ -107,7 +119,8 @@
         return false;
       if (!matchesChoice(sleep.value, p.sleepType)) return false;
       if (!matchesChoice(berry.value, String(p.berryId))) return false;
-      if (!matchesChoice(skill.value, p.mainSkill)) return false;
+      if (showSkillFilter.value && !matchesChoice(skill.value, p.mainSkill)) return false;
+      if (ingredients.value.length && !p.ingredients?.some(item => ingredients.value.includes(String(item.id)))) return false;
       return true;
     }).map(p => ({ ...p, unknownPlaceholder: !p.mainSkill || !p.ingredients?.length })).sort(compareDex)
   );
@@ -126,7 +139,8 @@
           !spec.value.length &&
           matchesChoice(sleep.value, p.sleepType) &&
           !berry.value.length &&
-          !skill.value.length
+          (!ingredients.value.length || !!p.canGatherIngredientKey &&
+            ingredients.value.includes(ingredientKey(`announced:${p.canGatherIngredientKey}`) ?? ''))
       )
   );
   // Display-only rows stay out of POKEDEX and all production/member selectors.
@@ -134,7 +148,7 @@
     [...knownList.value, ...announced.value].sort(compareDex)
   );
   const scrollResetKey = computed(() =>
-    JSON.stringify([q.value, spec.value, sleep.value, berry.value, skill.value])
+    JSON.stringify([q.value, spec.value, sleep.value, berry.value, skill.value, ingredients.value])
   );
   const announcedDetail = computed(
     () =>
@@ -181,6 +195,7 @@
     sleep.value = [];
     berry.value = [];
     skill.value = [];
+    ingredients.value = [];
     panel.value = 'none';
   }
 </script>
@@ -221,11 +236,16 @@
         {{ translateUi('树果') }}
       </button>
       <button
+        v-if="showSkillFilter"
         type="button"
         :class="{ on: panel === 'skill' || skill.length > 0 }"
         @click="toggle('skill')"
       >
         {{ translateUi('主技能') }}
+      </button>
+      <button type="button" :class="{ on: panel === 'ingredient' || ingredients.length }"
+        :aria-expanded="panel === 'ingredient'" @click="toggle('ingredient')">
+        {{ translateUi('食材') }}
       </button>
     </div>
     <div v-if="panel === 'sleep'" class="picker-opts dex-fixed">
@@ -261,7 +281,7 @@
         <BerryIcon :name="b.name" />{{ gameText(b.name) }}
       </button>
     </div>
-    <div v-else-if="panel === 'skill'" class="picker-opts dex-fixed">
+    <div v-else-if="panel === 'skill' && showSkillFilter" class="picker-opts dex-fixed">
       <button
         v-for="s in skills"
         :key="s"
@@ -272,6 +292,16 @@
         <MainSkillIcon v-if="s !== '全部'" :name="s" decorative />{{
           gameText(s)
         }}
+      </button>
+    </div>
+    <div v-else-if="panel === 'ingredient'" class="picker-opts dex-fixed">
+      <button type="button" :class="{ on: !ingredients.length }" @click="ingredients = []">
+        {{ translateUi('全部') }}
+      </button>
+      <button v-for="item in INGREDIENT_CATALOG" :key="item.key" type="button"
+        :class="{ on: ingredients.includes(item.key) }" :aria-pressed="ingredients.includes(item.key)"
+        @click="toggleChoice(ingredients, item.key, ingredientOptions)">
+        <IngredientIcon :id="item.imageId" :name="item.name" :image-file="item.imageFile" small />{{ gameText(item.name) }}
       </button>
     </div>
     <p class="muted dex-fixed">{{ list.length }} {{ translateUi('只') }}</p>
@@ -366,7 +396,7 @@
         <h3>{{ translateUi('进化') }}</h3>
         <div v-if="stages.length > 1" class="evo-stages">
           <template v-for="(stage, i) in stages" :key="i">
-            <span v-if="i" class="evo-arrow" aria-hidden="true">↓</span>
+            <span v-if="i" class="evo-arrow" aria-hidden="true">→</span>
             <div class="evo-stage">
               <button
                 v-for="node in stage"
@@ -377,8 +407,8 @@
                 @click="selected = node.id"
               >
                 <PokeSprite :id="node.id" :name="node.name" />
-                <span>{{ gameText(node.name) }}</span>
-                <em v-for="text in node.conditions" :key="text">{{
+                <span class="evo-name">{{ gameText(node.name) }}</span>
+                <em v-for="text in node.conditions" :key="text" class="evo-condition">{{
                   gameText(text)
                 }}</em>
               </button>

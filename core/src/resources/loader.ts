@@ -6,6 +6,7 @@ import type { LoadingProgress } from './loadingProgress'
 import { validateActivityResource } from './validateActivities'
 import { validateCatalogReferences } from './catalogReferences'
 import { validateSkillResources } from './validateSkillResources'
+import { validateSleepLottery } from './validateSleepLottery'
 import { validateActivityArchive } from './activityArchive'
 export interface ResourceTransport {
   readCache(): Promise<string | null>
@@ -33,6 +34,7 @@ export function decodeSnapshot(manifest: unknown, payload: string, context?: Res
   validateActivityResource(data)
   validateCatalogReferences(data)
   validateSkillResources(data)
+  validateSleepLottery(data)
   const { activityArchive } = data['meta.json'] as { activityArchive?: unknown }
   if (activityArchive !== undefined) validateActivityArchive(activityArchive, data)
   return { manifest, data }
