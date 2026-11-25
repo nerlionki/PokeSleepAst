@@ -26,6 +26,7 @@ export function normalizeEncounterGoals(saved: unknown): EncounterGoal[] {
       delete options.completionTarget
       if (!BABY_POKEMON_IDS.includes(options.pokeId)) options.pokeId = DEFAULT_BABY_EFFICIENCY.pokeId
     }
+    if (row.purpose !== 'sleep' || (options.completionStatistic !== 'expectation' && options.completionStatistic !== 'first-hit')) delete options.completionStatistic
     // Empty/unavailable style selections must remain editable rather than dropping the goal.
     const probe = { ...options, pokeId: DEFAULT_BABY_EFFICIENCY.pokeId }
     delete probe.completionTarget

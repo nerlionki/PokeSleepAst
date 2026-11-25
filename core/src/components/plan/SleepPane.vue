@@ -214,7 +214,8 @@
     calculate: startSimulation,
     cancel,
     reset
-  } = useSleepSimulation(() => campTicket.value);
+  } = useSleepSimulation(() => campTicket.value, () => plan.value.sleepPrecision);
+  const sampled = computed(() => plan.value.sleepPrecision === 'low');
   watch(
     () => [
       researchBonuses.value,
@@ -242,6 +243,7 @@
     () => [
       island.value,
       plan.value.sleepScore,
+      plan.value.sleepPrecision,
       plan.value.snorlaxStrength,
       eventMult.value,
       whole.value,
@@ -301,6 +303,7 @@
         drowsyPower(score, plan.value.snorlaxStrength, eventMult.value)
       ),
       iterations: BATCH,
+      precision: plan.value.sleepPrecision,
       seed: drawSeed,
       options: opts
     });
@@ -342,6 +345,8 @@
   }));
   const average = (n: number) =>
     n.toLocaleString('zh-CN', { maximumFractionDigits: 1 });
+  const expectedCount = (n: number) =>
+    (n / BATCH).toLocaleString('zh-CN', { maximumFractionDigits: 4 });
 </script>
 
 <template>
@@ -538,6 +543,14 @@
       }}
     </p>
     <article class="expect-board">
+      <div class="field">
+        <label for="sleep-precision">{{ translateUi('计算精度') }}</label>
+        <select id="sleep-precision" v-model="plan.sleepPrecision" :disabled="busy">
+          <option value="low">{{ translateUi('低 · 快速搜索') }}</option>
+          <option value="medium">{{ translateUi('中 · 细化搜索') }}</option>
+          <option value="high">{{ translateUi('高 · 密集搜索') }}</option>
+        </select>
+      </div>
       <div class="row">
         <button
           class="btn sage"
@@ -545,14 +558,14 @@
           :disabled="busy"
           @click="calculate"
         >
-          {{ busy ? translateUi('正在模拟…') : translateUi('计算 4000 次') }}
+          {{ busy ? translateUi('正在模拟…') : translateUi(sampled ? '计算 4000 次' : '计算睡姿') }}
         </button>
       </div>
       <p class="muted">
         {{ translateUi('每只独立抽选闪光 · 全体适用模拟概率') }}
         {{ (shinyRate * 100).toFixed(2) }}%<template v-if="seenTotal">
-          · {{ translateUi('抽到闪光') }}
-          {{ seenShiny.toLocaleString('zh-CN') }}
+          · {{ translateUi(sampled ? '抽到闪光' : '闪光') }}
+          {{ sampled ? seenShiny.toLocaleString('zh-CN') : expectedCount(seenShiny) }}
           {{ translateUi('只') }}</template
         >
       </p>
@@ -560,7 +573,7 @@
         {{ simulationError }}
       </p>
       <p v-if="notice" class="muted" role="status">{{ translateUi(notice) }}</p>
-      <p v-if="seenTotal" class="muted">
+      <p v-if="sampled && seenTotal" class="muted">
         {{ translateUi('本次模拟') }} {{ BATCH.toLocaleString('zh-CN') }}
         {{ translateUi('次')
         }}{{ whole ? translateUi('整觉') : translateUi('拆分方案')
@@ -571,7 +584,7 @@
           )
         }}
       </p>
-      <p v-else-if="!busy" class="muted">
+      <p v-else-if="sampled && !busy" class="muted">
         {{
           translateUi(
             '点一次单独模拟 4000 次当前方案。再点会换一批结果，不会和上一次加在一起。'
@@ -650,8 +663,8 @@
             >{{ gameText(item.name) }}<ShinyMark v-if="item.shiny"
           /></strong>
           <span class="muted"
-            >{{ translateUi('遇到') }}
-            {{ item.count.toLocaleString('zh-CN') }}</span
+            >{{ translateUi(sampled ? '遇到' : '期望') }}
+            {{ sampled ? item.count.toLocaleString('zh-CN') : expectedCount(item.count) }}</span
           >
           <b>{{ item.percent.toFixed(2) }}%</b>
         </div>
@@ -664,10 +677,10 @@
       :notice="notice"
       hint="模拟期间参数已锁定"
       :detail="
-        translateUi('已模拟 {done} / {total} 次', {
+        sampled ? translateUi('已模拟 {done} / {total} 次', {
           done: progress.completed.toLocaleString('zh-CN'),
           total: progress.total.toLocaleString('zh-CN')
-        })
+        }) : ''
       "
       cancellable
       cancel-text="取消模拟"

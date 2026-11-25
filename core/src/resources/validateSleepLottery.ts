@@ -8,10 +8,15 @@ export function validateSleepLottery(data: Record<string, unknown>) {
   const filler = source?.raeFiller
   const sleep = (data['event-parameters.json'] as { sleep?: { upWeights?: Record<string, unknown>, raeRestrictedLeaderChance?: number } } | undefined)?.sleep
   const weights = sleep?.upWeights
-  const weightKeys = ['normal', 'small', 'mid', 'large']
+  const weightKeys = ['small', 'mid', 'large']
   const share = sleep?.raeRestrictedLeaderChance
-  if (!weights || weightKeys.some(key => typeof weights[key] !== 'number' || !Number.isFinite(weights[key]) || Number(weights[key]) <= 0)
-    || weights.blocked !== 0 || typeof share !== 'number' || !Number.isFinite(share) || share < 0 || share > 1) {
+  const positiveWeight = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0
+  if (!weights || weightKeys.some(key => !positiveWeight(weights[key]))) {
+    throw new Error('资料包缺少 RAE 睡姿抽选权重')
+  }
+  // Published v2 snapshots predating the RAE lottery extension have none of its fields.
+  if (filler === undefined && share === undefined && weights.normal === undefined && weights.blocked === undefined) return
+  if (!positiveWeight(weights.normal) || weights.blocked !== 0 || typeof share !== 'number' || !Number.isFinite(share) || share < 0 || share > 1) {
     throw new Error('资料包缺少 RAE 睡姿抽选权重')
   }
   if (typeof filler?.source !== 'string' || !filler.source || !Number.isSafeInteger(filler.baseStyleCount) || filler.baseStyleCount! <= 0 ||

@@ -538,6 +538,8 @@ ${schedulerSource}`,
   bundle: true,
   platform: 'neutral',
   format: 'cjs',
+  // The standalone Worker is bundled without Vite's development environment.
+  define: { 'import.meta.env': '{}' },
   target: 'es2020',
   minify: true,
   plugins: [

@@ -1,5 +1,7 @@
 export const encounterMessages: Record<string, Record<string, string>> = {
   'zh-TW': {
+    '计算睡姿': '計算睡姿',
+    '请选择计算精度': '請選擇計算精度',
     "RAE 睡姿抽选资料不完整": "RAE 睡姿抽選資料不完整",
     "RAE 睡姿抽选缺少符合限额的补位睡姿": "RAE 睡姿抽選缺少符合限額的補位睡姿",
     "RAE 睡姿抽选缺少可负担的末槽候选": "RAE 睡姿抽選缺少符合剩餘預算的末槽候選",
@@ -12,6 +14,8 @@ export const encounterMessages: Record<string, Record<string, string>> = {
     '大师{level}': '大師{level}',
   },
   ja: {
+    '计算睡姿': '寝顔を計算',
+    '请选择计算精度': '計算精度を選択してください',
     "RAE 睡姿抽选资料不完整": "RAEの寝顔抽選データが不完全です",
     "RAE 睡姿抽选缺少符合限额的补位睡姿": "RAEの寝顔抽選に出現制限を満たす補充候補がありません",
     "RAE 睡姿抽选缺少可负担的末槽候选": "RAEの寝顔抽選に残り予算で選べる最終枠の候補がありません",
@@ -24,6 +28,8 @@ export const encounterMessages: Record<string, Record<string, string>> = {
     '大师{level}': 'マスター{level}',
   },
   en: {
+    '计算睡姿': 'Calculate sleep styles',
+    '请选择计算精度': 'Select a calculation precision',
     "RAE 睡姿抽选资料不完整": "RAE sleep style draw data is incomplete.",
     "RAE 睡姿抽选缺少符合限额的补位睡姿": "The RAE draw has no filler sleep styles within the encounter limits.",
     "RAE 睡姿抽选缺少可负担的末槽候选": "The RAE draw has no affordable sleep style for the final slot.",

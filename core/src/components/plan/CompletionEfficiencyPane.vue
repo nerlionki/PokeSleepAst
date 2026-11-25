@@ -33,8 +33,8 @@ const options = computed(() => plan.value.completionEfficiency)
 const targets = computed(() => completionTargets(plan.value, options.value.selectionMode, research.value))
 const pokeIds = computed(() => [...new Set(targets.value.map(style => style.pokeId))])
 const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId))
-const targetAvailable = computed(() => faces.value.some(style => styleKey(style.pokeId, style.stars, style.styleId) === options.value.completionTarget))
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, options.value.completionTarget, research.value))
+const targetAvailable = computed(() => islands.value.length > 0 && faces.value.some(style => styleKey(style.pokeId, style.stars, style.styleId) === options.value.completionTarget))
 const activity = useActivities(options, () => options.value.island ?? 'all', () => settings.value.activity)
 const research = useEncounterActivity(activity.context)
 const eventMult = activity.field('drowsyPowerMultiplier', () => options.value.eventMult)
@@ -64,6 +64,8 @@ const { busy, error, notice, result, progress, dirty, calculate, cancel } = useB
 watch(() => campTicket.value, () => { if (busy.value) cancel() })
 const resultTarget = computed(() => result.value && targets.value.find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
 const resultStyle = computed(() => result.value && activitySleepStyles(SLEEP_STYLES, createActivityContext('research', result.value.options.activity)).find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
+const statistic = computed({ get: () => options.value.completionStatistic ?? 'first-hit', set: (value: 'first-hit' | 'expectation') => { options.value.completionStatistic = value } })
+const probabilityResult = computed(() => result.value?.options.completionStatistic !== 'expectation')
 // In dex mode a newly collected face leaves the target list; free mode keeps it.
 watch(() => [options.value.pokeId, options.value.completionTarget], () => { if (busy.value) cancel() })
 watch(() => options.value.selectionMode, () => {
@@ -97,6 +99,7 @@ watch(() => options.value.selectionMode, () => {
       <div class="field"><label for="completion-event">{{ translateUi("活动睡意之力倍率") }}</label><select id="completion-event" v-model.number="eventMult" :disabled="busy"><option v-if="!EVENT_BONUSES.some(b => b.mult === eventMult)" :value="eventMult">{{ eventMult }}{{ translateUi("倍（活动）") }}</option><option v-for="bonus in EVENT_BONUSES" :key="bonus.mult" :value="bonus.mult">{{ translateUi(bonus.label) }}</option></select></div>
       <label class="row"><input v-model="otherTypes" :disabled="busy" type="checkbox" role="switch"> {{ translateUi("活动期间遇到一些其他类型宝可梦") }}</label>
       <div class="efficiency-fields">
+        <div class="field"><label for="completion-statistic">{{ translateUi("目标") }}</label><select id="completion-statistic" v-model="statistic" :disabled="busy"><option value="first-hit">{{ translateUi("每日补齐概率最高") }}</option><option value="expectation">{{ translateUi("遇见只数最多") }}</option></select></div>
         <div v-if="options.precision === 'low'" class="field"><label for="completion-iterations">{{ translateUi("计算次数") }}</label><input id="completion-iterations" v-model.number="options.iterations" :disabled="busy" type="number" :min="INPUT_LIMITS.completion_iterations.min" :max="INPUT_LIMITS.completion_iterations.max" :step="INPUT_LIMITS.completion_iterations.step" inputmode="numeric"></div>
         <div class="field"><label for="completion-precision">{{ translateUi("计算精度") }}</label><select id="completion-precision" v-model="options.precision" :disabled="busy"><option value="low">{{ translateUi("低 · 快速搜索") }}</option><option value="medium">{{ translateUi("中 · 细化搜索") }}</option><option value="high">{{ translateUi("高 · 密集搜索") }}</option></select></div>
       </div>
@@ -108,8 +111,8 @@ watch(() => options.value.selectionMode, () => {
     <p v-if="options.pokeId && options.completionTarget && !targetAvailable" class="muted">{{ translateUi("此目标暂不可参与抽选") }}</p>
     <template v-if="result && resultTarget">
       <p v-if="dirty" class="amber">{{ translateUi("参数已修改，请重新计算更新结果。") }}</p>
-      <p class="muted">{{ gameText(resultStyle?.name) }} · {{ resultStyle?.stars }}★ {{ resultStyle ? sleepStyleText(resultStyle) : "" }} · <template v-if="result.options.precision === 'low'">{{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}</template><template v-else>{{ translateUi("睡意之力") }} ×</template>{{ result.options.eventMult }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。列出本次搜索中每日补齐概率最高的方案。") }}</p>
-      <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="translateUi('每日补齐概率最高')" unit="%" :optimum="result.catch" :precision="result.options.precision" probability />
+      <p class="muted">{{ gameText(resultStyle?.name) }} · {{ resultStyle?.stars }}★ {{ resultStyle ? sleepStyleText(resultStyle) : "" }} · <template v-if="result.options.precision === 'low'">{{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}</template><template v-else>{{ translateUi("睡意之力") }} ×</template>{{ result.options.eventMult }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ probabilityResult ? translateUi("。列出本次搜索中每日补齐概率最高的方案。") : '' }}</p>
+      <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="translateUi(probabilityResult ? '每日补齐概率最高' : '遇见只数最多')" :unit="probabilityResult ? '%' : '只'" :optimum="result.catch" :precision="result.options.precision" :probability="probabilityResult" />
     </template>
     <ProgressDialog :open="busy" :title="translateUi('正在计算补齐效率')" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="translateUi('已模拟 {count} 个抽取状态', { count: progress.evaluatedStates.toLocaleString('zh-CN') })" cancellable cancel-text="取消计算" @cancel="cancel" />
   </div>

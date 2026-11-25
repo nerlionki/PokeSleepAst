@@ -6,9 +6,9 @@ import { cloneData } from './dataClone'
 import { ACTIVITY_CATALOG, EVENT_PARAMETERS, activeActivities, researchActivity, researchSleepStyles, activityValues, assertActivitySupported, hasLegacyShinyUp, type ActivityContext, type ResearchActivityContext, type ResearchActivitySelection } from './activities'
 import { hasResearchDpr } from './researchAvailability'
 import { normalizeEventMix, openSleepSlots, RAE_RESTRICTED_LEADER_CHANCE, sleepEncounterWeight, type EventMix, type PokemonUps } from './sleepRules'
-import { prepareRaeSleepDraw, type RaeSleepCandidate } from './raeSleepLottery'
+import { prepareRaeSleepDraw, runRaeSleepLottery, type RaeSleepCandidate } from './raeSleepLottery'
 import { createSleepRandom } from './sleepTransition'
-import { isLastRollExcluded, isRaeFiller, raeSpoBudget, raeSpoCost, RAE_SPO_RATE } from './sleepLastRoll'
+import { isLastRollExcluded, isRaeFiller, raeSpoBudget, raeSpoCost, RAE_SPO_RATE, requireRaeSleepLottery } from './sleepLastRoll'
 import snorlaxRanks from '../data/snorlax-ranks.resource'
 import type { IslandId, SleepType } from '../types'
 import { ENCOUNTER_BANDS, ISLANDS, islandById, pokeById, SLEEP_STYLES, type SleepStyleRow } from './data'
@@ -312,6 +312,7 @@ export function favoredOnIsland(island: IslandId, berries: string[]) {
 }
 
 function buildResearchLottery(island: IslandId, sleepType: SleepType, power: number, rank: string, mode: 'normal' | 'map', context: ResearchActivityContext, options: DrawOpts) {
+  requireRaeSleepLottery()
   rank = options.rank ?? rank
   mode = options.mode ?? mode
   const naturalSlots = encounterCount(island, power)
@@ -417,6 +418,47 @@ export function inspectResearchLottery(island: IslandId, sleepType: SleepType, d
 
 export interface SleepExpectRow { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }
 export interface SleepExpectCheckpoint { completed: number, randomState: number, rows: SleepExpectRow[] }
+
+function researchRewardAtSlot(style: SleepStyleRow, index: number, island: IslandId, activity: ResearchActivityContext, opts: DrawOpts) {
+  const base = boostedResearchReward(dailyResearchReward(sleepReward(style), (opts.researchedBefore ?? 0) + index, opts.researchLimit ?? (sleep_sleepExpectSteps_runtimeParameters.p003 as 10)), opts)
+  if (!base) return undefined
+  const effect = activityValues(activity, island, pokeById(style.pokeId), 240, undefined, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
+  return { researchExp: base.researchExp * effect.researchExpMultiplier, shards: base.shards * effect.dreamShardsMultiplier, candy: base.candy * effect.researchCandyMultiplier }
+}
+
+/** Returns the same accumulated row units as sleepExpect, scaled by the display batch size. */
+export function sleepTreeExpect(island: IslandId, sleepType: SleepType, dp: number, displayBatch: number, opts: DrawOpts, precision: 'medium' | 'high'): SleepExpectRow[] {
+  const { power, context, options } = resolveSleepDrawOptions(island, dp, opts)
+  const { query, styles } = buildResearchLottery(island, sleepType, power, opts.rank ?? '大师1', 'normal', context, options)
+  const session = options.researchSession ?? Number((options.researchedBefore ?? 0) > 0)
+  const counts = new Map<RaeSleepCandidate, number[]>()
+  runRaeSleepLottery(query, { precision, statistic: 'expectation', trace: { styleExpectation(candidate, slot, mass) {
+    if (mass <= 0) return
+    let slots = counts.get(candidate)
+    if (!slots) { slots = []; counts.set(candidate, slots) }
+    slots[slot] = (slots[slot] ?? 0) + mass
+  } } })
+  const rows = new Map<string, SleepExpectRow>()
+  for (const [candidate, slots] of counts) {
+    const style = styles.get(candidate)!
+    const key = `${style.pokeId}-${style.stars}-${candidate.legendary ? 'r' : 'n'}`
+    const row = rows.get(key) ?? { name: style.name, pokeId: style.pokeId, stars: style.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
+    const shiny = sleepShinyRate(context, options.shinyUp, island, style.pokeId, session)
+    slots.forEach((mass, slot) => {
+      const count = mass * displayBatch
+      const reward = researchRewardAtSlot(style, slot, island, context, options)
+      row.count += count
+      row.shiny += count * shiny
+      if (candidate.legendary) row.rare += count
+      row.researchExp += count * (reward?.researchExp ?? 0)
+      row.shards += count * (reward?.shards ?? 0)
+      row.candy += count * (reward?.candy ?? 0)
+    })
+    rows.set(key, row)
+  }
+  return [...rows.values()].sort((a, b) => b.count - a.count)
+}
+
 export function* sleepExpectSteps(
   island: IslandId,
   sleepType: SleepType,
@@ -443,10 +485,7 @@ export function* sleepExpectSteps(
     for (const [index, s] of draw.entries()) {
       const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
       const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
-      const baseReward = boostedResearchReward(dailyResearchReward(sleepReward(s), (opts.researchedBefore ?? 0) + index, opts.researchLimit ?? (sleep_sleepExpectSteps_runtimeParameters.p003 as 10)), opts)
-      const reward = baseReward ? { ...baseReward } : undefined
-      const activityReward = activityValues(activity, island, pokeById(s.pokeId), 240, undefined, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
-      if (reward) { reward.researchExp *= activityReward.researchExpMultiplier; reward.shards *= activityReward.dreamShardsMultiplier; reward.candy *= activityReward.researchCandyMultiplier }
+      const reward = researchRewardAtSlot(s, index, island, activity, opts)
       cur.count += 1
       cur.researchExp += reward?.researchExp ?? 0
       cur.shards += reward?.shards ?? 0

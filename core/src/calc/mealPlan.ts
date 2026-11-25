@@ -13,6 +13,8 @@ const INDIVIDUAL_TRIALS = 24
 const TEAM_TRIALS = 128
 const STEPS_PER_UPDATE = 4
 
+export const MEAL_PLAN_NO_CANDIDATES = 'Box 中没有可参与规划的个体，请先添加并确认生产资料'
+
 export interface MealPlanRequest {
   mode: 'meal'
   scope: 'individuals' | 'team'
@@ -78,6 +80,7 @@ export function* mealPlanSteps(input: MealPlanRequest): Generator<MealProgress, 
   const error = validateScoreOptions(options, input.settings, false)
   if (error) throw new Error(error)
   const list = scoreCandidates(input.box).candidates
+  if (!list.length) throw new Error(MEAL_PLAN_NO_CANDIDATES)
   const byUid = new Map(list.map(pokemon => [pokemon.uid, pokemon]))
   const request: ScoreRequest = { settings: input.settings, options, box: [] }
   function runTrial(team: BoxPokemon[], policy: ScorePolicy, index: number, individualKeys?: string[]) {

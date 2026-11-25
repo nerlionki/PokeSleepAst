@@ -8,9 +8,11 @@ import { pendingResearchPokemon } from './researchAvailability'
 import { activityEfficiencyIsland } from './babyEfficiency'
 import type { IslandId, SleepType } from '../types'
 import { ISLANDS, SLEEP_STYLES } from './data'
-import { BABY_POKEMON_IDS, babyEfficiencyIslands, babyEfficiencyPokemonName, efficiencyCurve, efficiencyDrawState, efficiencyIslands, EFFICIENCY_SLEEP_TYPES, MAX_EFFICIENCY_DROWSY_POWER, normalizeBabyEfficiencyPokemonId, type EfficiencyIsland } from './babyEfficiency'
+import { familyOf } from './candyPlan'
+import { BABY_POKEMON_IDS, babyEfficiencyIslands, babyEfficiencyPokemonName, efficiencyCurve, efficiencyDrawState, efficiencyIslands, EFFICIENCY_SLEEP_TYPES, MAX_EFFICIENCY_DROWSY_POWER, normalizeBabyEfficiencyPokemonId, type EfficiencyIsland, type EfficiencyPrecision } from './babyEfficiency'
 import { createDrawStateKey, efficiencyRandom, efficiencyRewardsAfterResearch, simulateEfficiencySlots, type EfficiencySimulation } from './babyEfficiencyDraw'
 import { drowsyPower, encounterCount, rankStrength, RANK_ORDER, styleKey, styleUnlockIndex } from './sleep'
+import { raeMappedSleepStyleId } from './sleepRewards'
 import { normalizeEventMix, type EventMix } from './sleepRules'
 const factory_splitSleep_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_splitSleep
 const splitSleep_config_ruleCatalogs = ruleCatalogs.modules.splitSleep
@@ -20,12 +22,13 @@ const splitSleep_splitSleepSteps_runtimeParameters = runtimeParameters.modules.s
 
 
 export interface SplitTarget {
-  kind: 'baby' | 'style'
+  kind: 'baby' | 'catch' | 'candy' | 'style'
   pokeId: number
   style: string
   countWeight: number
   candyWeight: number
   probabilityWeight: number
+  statistic?: 'expectation' | 'first-hit'
 }
 export interface SplitOptions {
   campTicket?: boolean
@@ -37,26 +40,31 @@ export interface SplitOptions {
   eventMult: number
   eventMix: EventMix | boolean
   iterations: number
+  precision?: EfficiencyPrecision
 }
 export const newSplitTarget = (kind: SplitTarget['kind'], pokeId: number, style = ''): SplitTarget => ({ kind, pokeId, style, ...cloneData(clientFactoryDefaults.modules.factory_splitSleep.newSplitTarget) })
 export function defaultSplitOptions(): SplitOptions {
-  return (cloneData(factory_splitSleep_config_clientFactoryDefaults["defaultSplitOptions"]) as unknown as SplitOptions)
+  const options = cloneData(factory_splitSleep_config_clientFactoryDefaults["defaultSplitOptions"]) as unknown as SplitOptions
+  return { ...options, precision: options.precision ?? 'low' }
 }
-export const splitTargetKey = (target: SplitTarget) => target.kind === 'baby' ? `baby:${normalizeBabyEfficiencyPokemonId(target.pokeId)}` : `style:${target.style}`
+export const splitTargetKey = (target: SplitTarget) => target.kind === 'style' ? `style:${target.style}`
+  : `${target.kind}:${target.kind === 'candy' ? familyOf(target.pokeId) : normalizeBabyEfficiencyPokemonId(target.pokeId)}`
 export function splitTargetStatus(target: SplitTarget, island: IslandId, strength: number, activity?: ResearchActivitySelection) {
   const style = researchSleepStyles(SLEEP_STYLES, researchActivity(activity)).find(row => row.island === island && row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
-  const available = target.kind === 'baby' ? babyEfficiencyIslands(target.pokeId, undefined, activity).some(row => row.id === island) : !!style
+  const available = target.kind === 'style' ? !!style && raeMappedSleepStyleId(style) != null
+    : babyEfficiencyIslands(target.pokeId, undefined, activity, target.kind === 'candy' ? 'candy' : 'catch').some(row => row.id === island)
   const unlockStrength = style ? rankStrength(island, RANK_ORDER[styleUnlockIndex(island, style)]!) : null
-  const unlocked = available && (target.kind === 'baby' || (unlockStrength != null && strength >= unlockStrength))
+  const unlocked = available && (target.kind !== 'style' || (unlockStrength != null && strength >= unlockStrength))
   const namedStyle = style ?? SLEEP_STYLES.find(row => row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
-  const label = target.kind === 'baby' ? babyEfficiencyPokemonName(target.pokeId) : namedStyle ? `${namedStyle.name} ${namedStyle.stars}★ ${namedStyle.styleName}` : target.style
+  const label = target.kind !== 'style' ? babyEfficiencyPokemonName(target.pokeId) : namedStyle ? `${namedStyle.name} ${namedStyle.stars}★ ${namedStyle.styleName}` : target.style
   const reason = !available ? '当前岛屿无此普通研究目标，请更换岛屿或移除目标' : !unlocked ? `未达到解锁能量 ${unlockStrength!.toLocaleString('zh-CN')}，当前权重为 0` : ''
   return { label, namedStyle, available, unlocked, unlockStrength, reason }
 }
 function validTarget(target: SplitTarget): boolean {
-  if (!target || !splitSleep_config_ruleCatalogs.validTargetList0.values.includes(target.kind)) return false
+  if (!target || !['baby', 'catch', 'candy', 'style'].includes(target.kind)) return false
   if (![target.countWeight, target.candyWeight, target.probabilityWeight].every(n => Number.isFinite(n) && n >= 0)) return false
-  return target.kind === 'baby' ? BABY_POKEMON_IDS.includes(normalizeBabyEfficiencyPokemonId(target.pokeId))
+  if (target.statistic != null && !['expectation', 'first-hit'].includes(target.statistic)) return false
+  return target.kind !== 'style' ? BABY_POKEMON_IDS.includes(normalizeBabyEfficiencyPokemonId(target.pokeId))
     : [...SLEEP_STYLES.filter(row => !row.limited), ...ACTIVITY_CATALOG.activities.flatMap(event => event.spawns ?? [])].some(row => row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
 }
 /** Preserve valid saved preferences without carrying corrupt data into a worker. */
@@ -69,8 +77,14 @@ export function normalizeSplitOptions(saved?: Partial<SplitOptions> | null): Spl
   if (!splitSleep_config_ruleCatalogs.normalizeSplitOptionsList0.values.includes(value.eventMix)) value.eventMix = false
   if (!Number.isInteger(value.iterations) || value.iterations < splitSleep_normalizeSplitOptions_ruleParameters.minIterations || value.iterations > splitSleep_normalizeSplitOptions_ruleParameters.maxIterations) value.iterations = splitSleep_normalizeSplitOptions_ruleParameters.defaultIterations
   if (value.campTicket != null && typeof value.campTicket !== 'boolean') value.campTicket = false
+  if (value.precision == null || !['low', 'medium', 'high'].includes(value.precision)) value.precision = defaultSplitOptions().precision
   const seen = new Set<string>()
-  value.targets = (Array.isArray(saved?.targets) ? saved.targets : []).filter(validTarget).map(target => ({ ...target, pokeId: target.kind === 'baby' ? normalizeBabyEfficiencyPokemonId(target.pokeId) : target.pokeId })).filter(target => {
+  value.targets = (Array.isArray(saved?.targets) ? saved.targets : []).filter(validTarget).flatMap((target): SplitTarget[] => {
+    if (target.kind === 'style') return [target]
+    const normalized = { ...target, pokeId: normalizeBabyEfficiencyPokemonId(target.pokeId) }
+    if (normalized.kind !== 'baby') return [normalized]
+    return [{ ...normalized, kind: 'catch' }, { ...normalized, kind: 'candy' }]
+  }).filter(target => {
     const key = splitTargetKey(target)
     if (seen.has(key)) return false
     seen.add(key); return true
@@ -82,14 +96,15 @@ export interface SplitMetric { targetIndex: number, kind: SplitMetricKind, label
 export function splitMetrics(options: SplitOptions): SplitMetric[] {
   return options.targets.flatMap<SplitMetric>((target, targetIndex) => {
     const status = splitTargetStatus(target, options.island, options.strength, options.activity)
-    return target.kind === 'baby' ? [
-      { targetIndex, kind: 'count' as const, label: `${status.label} · 只数`, weight: target.countWeight },
-      { targetIndex, kind: 'candy' as const, label: `${status.label} · 家族糖果`, weight: target.candyWeight },
-    ] : [{ targetIndex, kind: 'probability' as const, label: status.label, weight: status.unlocked ? target.probabilityWeight : 0 }]
+    if (target.kind === 'style') return [{ targetIndex, kind: target.statistic === 'expectation' ? 'count' : 'probability', label: status.label, weight: status.unlocked ? target.probabilityWeight : 0 }]
+    const count = { targetIndex, kind: 'count' as const, label: `${status.label} · 只数`, weight: target.countWeight }
+    const candy = { targetIndex, kind: 'candy' as const, label: `${status.label} · 家族糖果`, weight: target.candyWeight }
+    return target.kind === 'catch' ? [count] : target.kind === 'candy' ? [candy] : [count, candy]
   })
 }
 export function validateSplitOptions(options: SplitOptions): string | null {
   if (options.campTicket != null && typeof options.campTicket !== 'boolean') return '请选择是否使用露营券'
+  if (options.precision != null && !['low', 'medium', 'high'].includes(options.precision)) return '请选择计算精度'
   if (!ISLANDS.some(row => row.id === options.island)) return '请选择有效岛屿'
   if (!Number.isSafeInteger(options.strength) || options.strength < 0) return '卡比兽能量需为非负安全整数'
   if (!Array.isArray(options.targets) || !options.targets.length || options.targets.some(target => !validTarget(target))) return '请添加有效目标，权重需为非负有限数'
@@ -97,7 +112,7 @@ export function validateSplitOptions(options: SplitOptions): string | null {
   if (options.targets.some(target => !splitTargetStatus(target, options.island, options.strength, options.activity).available)) return '存在当前岛屿不适用的目标，请更换岛屿或移除目标'
   if (options.sleepType !== 'all' && !EFFICIENCY_SLEEP_TYPES.includes(options.sleepType)) return '请选择有效睡眠类型'
   if ((!Number.isFinite(options.eventMult) || options.eventMult <= 0 || options.eventMult > splitSleep_validateSplitOptions_ruleParameters.maxEventMultiplier) || !splitSleep_config_ruleCatalogs.validateSplitOptionsList0.values.includes(options.eventMix)) return '请选择有效活动设置'
-  if (!Number.isInteger(options.iterations) || options.iterations < splitSleep_validateSplitOptions_ruleParameters.minIterations || options.iterations > splitSleep_validateSplitOptions_ruleParameters.maxIterations) return '模拟次数需为 100–100000 的整数'
+  if ((options.precision ?? 'low') === 'low' && (!Number.isInteger(options.iterations) || options.iterations < splitSleep_validateSplitOptions_ruleParameters.minIterations || options.iterations > splitSleep_validateSplitOptions_ruleParameters.maxIterations)) return '模拟次数需为 100–100000 的整数'
   if (drowsyPower(splitSleep_validateSplitOptions_ruleParameters.minIterations, options.strength, options.eventMult) > MAX_EFFICIENCY_DROWSY_POWER) return '整觉睡意之力超过 50 亿，请降低能量或活动倍率'
   if (!splitMetrics(options).some(metric => metric.weight > 0)) return '所有指标的有效权重均为 0，请调整能量、目标或权重'
   return null
@@ -116,7 +131,8 @@ export interface SplitResult {
 }
 interface SessionMetric { count: number, probability: number, candies: number[] }
 interface Session extends SessionMetric { second: SessionMetric, camp?: SessionMetric }
-export interface SplitCheckpoint { version: 6, signature: string, pendingPokemon?: number[], completed: number, sessions: Session[][] }
+export const SPLIT_CHECKPOINT_VERSION = 7
+export interface SplitCheckpoint { version: typeof SPLIT_CHECKPOINT_VERSION, signature: string, pendingPokemon?: number[], completed: number, sessions: Session[][] }
 export interface SplitRequest { splitOptions: SplitOptions, checkpoint?: SplitCheckpoint }
 export type SplitMessage = { type: 'checkpoint', checkpoint: SplitCheckpoint } | { type: 'progress', completed: number, total: number } | { type: 'result', result: SplitResult } | { type: 'error', message: string }
 export function splitScore(values: number[], maxima: number[], metrics: SplitMetric[]): number | null {
@@ -150,9 +166,11 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
   const options: SplitOptions = { ...JSON.parse(JSON.stringify(request.splitOptions)), activity: context, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
   const error = validateSplitOptions(options)
   if (error) throw new Error(error)
+  const precision = options.precision ?? 'low'
+  const iterations = precision === 'low' ? options.iterations : 1
   const signature = JSON.stringify({ ...options, activity: { ...context, pendingPokemon: undefined } }) + (options.campTicket ? ":camp-v1" : "")
   let checkpoint = request.checkpoint
-  if (checkpoint && (checkpoint.version !== 6 || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
+  if (checkpoint && (checkpoint.version !== SPLIT_CHECKPOINT_VERSION || checkpoint.signature !== signature)) throw new Error('拆觉规则或参数已变化，请重新计算')
   if (checkpoint && JSON.stringify(checkpoint.pendingPokemon) !== JSON.stringify(context.pendingPokemon)) checkpoint = undefined
   const types = options.sleepType === 'all' ? EFFICIENCY_SLEEP_TYPES : [options.sleepType]
   const total = options.targets.length * 100 * types.length
@@ -176,7 +194,8 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
     const end = (targetIndex + 1) * 100 * types.length
     if (completed >= end) continue
     const status = splitTargetStatus(target, options.island, options.strength, context)
-    const base = efficiencyIslands(target.pokeId, target.kind === 'style' ? target.style : undefined, context).find(row => row.id === options.island)!
+    const base = efficiencyIslands(target.pokeId, target.kind === 'style' ? target.style : undefined, context, target.kind === 'candy' ? 'candy' : undefined).find(row => row.id === options.island)!
+    const statistic = target.kind === 'style' && target.statistic !== 'expectation' ? 'first-hit' : 'expectation'
     const island = activityEfficiencyIsland(base, context)
     const secondIsland = activityEfficiencyIsland(base, context, 1)
     const pool = fixedPool(island, options.strength, options.eventMult)
@@ -193,13 +212,13 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
           draw.campTicket = campTicket
           const key = keyOf(draw)
           let simulation = cache.get(key)
-          if (!simulation && (target.kind === 'baby' || status.unlocked)) {
-            simulation = simulateEfficiencySlots(draw, options.iterations, efficiencyRandom(42)); cache.set(key, simulation)
+          if (!simulation && status.unlocked) {
+            simulation = simulateEfficiencySlots(draw, iterations, efficiencyRandom(42), precision, statistic); cache.set(key, simulation)
           }
           return simulation ? {
-            count: simulation.catch / options.iterations,
-            probability: simulation.hitRuns / options.iterations,
-            candies: Array.from({ length: precedingCounts }, (_, before) => efficiencyRewardsAfterResearch(simulation!, before).candy / options.iterations),
+            count: simulation.catch / iterations,
+            probability: simulation.hitRuns / iterations,
+            candies: Array.from({ length: precedingCounts }, (_, before) => efficiencyRewardsAfterResearch(simulation!, before).candy / iterations),
           } : { count: 0, probability: 0, candies: Array(precedingCounts).fill(0) }
         }
         const session: Session = { ...simulate(false), second: simulate(false, true) }
@@ -207,7 +226,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
         sessions[targetIndex]![offset] = session
         completed++
       }
-      yield { version: 6, signature, pendingPokemon: context.pendingPokemon, completed, sessions }
+      yield { version: SPLIT_CHECKPOINT_VERSION, signature, pendingPokemon: context.pendingPokemon, completed, sessions }
     }
   }
   const metrics = splitMetrics(options), candidates: SplitCandidate[] = []

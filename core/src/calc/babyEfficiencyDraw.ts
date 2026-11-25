@@ -1,6 +1,6 @@
 import ruleParameters from '../data/rule-parameters.resource'
 import { runRaeSleepLottery, type RaeSleepCandidate } from './raeSleepLottery'
-import { raeSpoBudget, raeSpoCost } from './sleepLastRoll'
+import { raeSpoBudget, raeSpoCost, requireRaeSleepLottery } from './sleepLastRoll'
 import { createSleepRandom } from './sleepTransition'
 import { RAE_RESTRICTED_LEADER_CHANCE, UP_WEIGHTS } from './sleepRules'
 
@@ -75,22 +75,27 @@ function efficiencyCandidates(buckets: EfficiencyBucket[]) {
   return pools
 }
 
+export function prepareEfficiencyLottery(state: EfficiencyDrawState) {
+  const pool = efficiencyCandidates(state.buckets)
+  return {
+    spo: raeSpoBudget(state.power), naturalSlots: state.encounters, campTicket: state.campTicket, restrictedLeaderChance: RAE_RESTRICTED_LEADER_CHANCE,
+    typedPool: pool.typed,
+    mixedPool: state.otherSlots ? { slots: state.otherSlots, candidates: pool.mixed } : undefined,
+  }
+}
+
 export function simulateEfficiencySlots(
   state: EfficiencyDrawState, iterations: number, random = efficiencyRandom(42), precision: 'low' | 'medium' | 'high' = 'low',
   statistic?: 'expectation' | 'first-hit',
 ): EfficiencySimulation {
+  requireRaeSleepLottery()
   const naturalSlots = state.encounters
   const slots = naturalSlots + Number(!!state.campTicket)
   if (!state.buckets.some(row => row.catch > 0 || row.candy > 0)) {
     const zeros = Array<number>(slots).fill(0)
     return { catch: 0, candy: 0, hitRuns: 0, slotCandy: zeros, slotFamily: zeros, slotSecondCandy: zeros, slotSecondFamily: zeros }
   }
-  const pool = efficiencyCandidates(state.buckets)
-  const result = runRaeSleepLottery({
-    spo: raeSpoBudget(state.power), naturalSlots, campTicket: state.campTicket, restrictedLeaderChance: RAE_RESTRICTED_LEADER_CHANCE,
-    typedPool: pool.typed,
-    mixedPool: state.otherSlots ? { slots: state.otherSlots, candidates: pool.mixed } : undefined,
-  }, precision === 'low' ? { precision, iterations, random } : { precision, statistic })
+  const result = runRaeSleepLottery(prepareEfficiencyLottery(state), precision === 'low' ? { precision, iterations, random } : { precision, statistic })
   const sum = (values: number[]) => values.reduce((total, amount) => total + amount, 0) * iterations
   return {
     catch: sum(result.slotCounts), candy: sum(result.slotCandy), hitRuns: result.probability * iterations,

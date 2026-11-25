@@ -4,7 +4,7 @@ import { workerErrorMessage } from './workerError'
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { researchActivity, sameResearchAvailability } from '../../../core/src/calc/activities'
 import { pendingResearchPokemon } from '../../../core/src/calc/researchAvailability'
-import { validateBabyEfficiency, type BabyEfficiencyCheckpoint, type BabyEfficiencyOptions, type BabyEfficiencyResult, type EfficiencyProgress } from '../../../core/src/calc/babyEfficiency'
+import { BABY_EFFICIENCY_CHECKPOINT_VERSION, validateBabyEfficiency, type BabyEfficiencyCheckpoint, type BabyEfficiencyOptions, type BabyEfficiencyResult, type EfficiencyProgress } from '../../../core/src/calc/babyEfficiency'
 import type { BabyEfficiencyMessage } from '../../../core/src/calc/babyEfficiencyMessages'
 interface SavedTask { resourceRevision?: string; options: BabyEfficiencyOptions, checkpoint?: BabyEfficiencyCheckpoint, progress: EfficiencyProgress }
 export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?: string) {
@@ -91,10 +91,12 @@ export function useBabyEfficiency(options: Ref<BabyEfficiencyOptions>, taskKey?:
   try {
     const saved = wx.getStorageSync?.(STORAGE_KEY) as SavedTask | undefined
     if (saved?.options && compatibleCheckpoint(saved) && !validateBabyEfficiency(saved.options)
+      && (!saved.checkpoint || saved.checkpoint.version === BABY_EFFICIENCY_CHECKPOINT_VERSION)
       && Boolean(saved.options.activity?.includeUnreleasedPokemon) === Boolean(options.value.activity?.includeUnreleasedPokemon)
       && Boolean(saved.options.campTicket) === Boolean(options.value.campTicket)
       && saved.options.objective === options.value.objective
-      && (options.value.completionTarget == null || saved.options.completionTarget === options.value.completionTarget)) {
+      && (options.value.completionTarget == null || (saved.options.completionTarget === options.value.completionTarget
+        && (saved.options.completionStatistic ?? 'first-hit') === (options.value.completionStatistic ?? 'first-hit')))) {
       task = saved; progress.value = saved.progress ?? { percent: 0, island: '', evaluatedStates: 0 }; notice.value = '正在恢复上次未完成的计算'; void launch()
     }
   } catch { /* A corrupt or unavailable local record must not block new calculations. */ }

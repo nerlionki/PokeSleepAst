@@ -70,7 +70,7 @@ function clearFilters() {
         >{{ translateUi(label) }}</button>
         <button class="ghost" type="button" @click="clearFilters">{{ translateUi("清空筛选") }}</button>
       </div>
-      <HorizontalStrip v-if="panel">
+      <HorizontalStrip v-if="panel" :selection="activeSelection">
         <div class="picker-opts">
           <button type="button" :class="{ on: !activeSelection.length }" @click="activeSelection.splice(0)">
             {{ translateUi("全部") }}

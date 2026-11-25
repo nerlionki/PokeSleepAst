@@ -29,6 +29,8 @@ export type RaeSleepModel =
   | { precision: 'low', iterations: number, seed?: number, random?: () => number }
   | { precision: 'medium' | 'high', prune?: number, statistic?: 'expectation' | 'first-hit', trace?: RaeTreeTrace }
 
+export type RaeSleepTargetModel = { precision: 'low', iterations: number, seed?: number } | { precision: 'medium' | 'high', prune?: number }
+
 type TreeStatistic = 'expectation' | 'first-hit'
 export interface RaeTreeTransition {
   statistic: TreeStatistic
@@ -56,6 +58,7 @@ export interface RaeTreeFrontier {
 interface RaeTreeTrace {
   transition?: (entry: RaeTreeTransition) => void
   frontier?: (entry: RaeTreeFrontier) => void
+  styleExpectation?: (style: RaeSleepCandidate, slot: number, mass: number) => void
 }
 
 interface Outcome { spo: number, limits: number, weight: number, hits: number, candy: number, additionalCandy?: readonly number[] }
@@ -246,6 +249,7 @@ function advanceTree(
   }
   const fraction = spo - Math.floor(spo)
   const trace = model.trace
+  const onStyle = firstHit ? undefined : trace?.styleExpectation
   const diagnostics: TreeDiagnostics = { peakFrontier: 1, peakAfterClustering: 1, discardedMass: 0 }
   for (const [slotIndex, slot] of slots.entries()) {
     const last = slotIndex === slots.length - 1
@@ -255,6 +259,7 @@ function advanceTree(
     for (const [usedLimits, budgets] of frontier.entries()) {
       const pool = slot.pools[usedLimits]!
       const { outcomes, cumulative } = pool.buckets
+      const styleFactors = onStyle && new Float64Array(pool.styles.outcomes.length)
       const transfer = (row: Outcome, remaining: number, mass: number) => {
         if (mass <= 0 && !trackTargetFrontier) return
         // Keep the same key after spending integer costs in different orders.
@@ -268,10 +273,11 @@ function advanceTree(
           destination.set(following, (destination.get(following) ?? 0) + mass)
         }
       }
-      const record = (row: Outcome, remaining: number, mass: number) => {
+      const record = (row: StyleOutcome, remaining: number, mass: number) => {
         const hitMass = mass * row.hits
         if (firstHit) probability += hitMass
         else {
+          onStyle?.(row.candidate, slotIndex, mass)
           slotCounts[slotIndex]! += hitMass
           slotCandy[slotIndex]! += mass * row.candy
           row.additionalCandy?.forEach((amount, index) => { slotAdditionalCandy[slotIndex]![index]! += amount * mass })
@@ -320,7 +326,11 @@ function advanceTree(
           }
         } else {
           const factor = mass / cumulative[end - 1]!
-          if (emit) emit(slot.kind, pool.styles.outcomes.slice(0, affordableCount(pool.styles.outcomes, budget)), factor)
+          if (emit || styleFactors) {
+            const eligible = affordableCount(pool.styles.outcomes, budget)
+            if (emit) emit(slot.kind, pool.styles.outcomes.slice(0, eligible), factor)
+            if (styleFactors) styleFactors[eligible - 1]! += factor
+          }
           const rewards = pool.rewardPrefixes[end]!
           if (firstHit) probability += rewards[0]! * factor
           else {
@@ -335,6 +345,17 @@ function advanceTree(
           for (let index = 0; index < end; index++) {
             const row = outcomes[index]!
             transfer(row, remaining, row.weight * factor * (firstHit ? 1 - row.hits : 1))
+          }
+        }
+      }
+      if (styleFactors && onStyle) {
+        // Each state's factor applies to every style up to its affordability cutoff.
+        let factor = 0
+        for (let index = styleFactors.length - 1; index >= 0; index--) {
+          factor += styleFactors[index]!
+          if (factor > 0) {
+            const row = pool.styles.outcomes[index]!
+            onStyle(row.candidate, slotIndex, row.weight * factor)
           }
         }
       }
@@ -410,6 +431,29 @@ export function prepareRaeSleepDraw(query: RaeSleepQuery) {
   const { spo } = query
   return (random: () => number, pick: (row: RaeSleepCandidate, index: number) => void, trace?: (detail: RaeSleepPickTrace) => void) =>
     drawSlots(slots, spo, random, pick, trace)
+}
+
+/** Per-style expectations and a single first-hit calculation for the union of the targets. */
+export function evaluateRaeSleepTargets(query: RaeSleepQuery, targetIds: readonly number[], model: RaeSleepTargetModel) {
+  const ids = [...new Set(targetIds)]
+  const markTargets = (targets: ReadonlySet<number>) => {
+    const mark = (rows: readonly RaeSleepCandidate[]) => rows.map(row => ({ ...row, target: targets.has(row.internalId) }))
+    return {
+      ...query, typedPool: mark(query.typedPool),
+      mixedPool: query.mixedPool && { ...query.mixedPool, candidates: mark(query.mixedPool.candidates) },
+    }
+  }
+  const jointQuery = markTargets(new Set(ids))
+  const joint = runRaeSleepLottery(jointQuery, model.precision === 'low' || ids.length === 1 ? model : { ...model, statistic: 'first-hit' })
+  const expectedCount = (counts: readonly number[]) => counts.reduce((sum, count) => sum + count, 0)
+  return {
+    probability: joint.probability,
+    byTarget: Object.fromEntries(ids.map(id => {
+      // The same seed replays the same Monte Carlo draws because target flags do not affect selection.
+      const result = ids.length === 1 ? joint : runRaeSleepLottery(markTargets(new Set([id])), model.precision === 'low' ? model : { ...model, statistic: 'expectation' })
+      return [id, expectedCount(result.slotCounts)]
+    })),
+  }
 }
 
 /** Both trees use the same transitions as sampling. Pruned branches do not count as hits. */

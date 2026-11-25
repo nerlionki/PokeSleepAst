@@ -1,10 +1,10 @@
 import { withResources, resourceRevision, compatibleCheckpoint } from '../../../core/src/resources/runtime'
 import { createSleepSimulationTask, type SleepSimulationWorker } from '../../../core/src/composables/sleepSimulationTask'
-import type { SleepSimulationCheckpoint, SleepSimulationMessage, SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
+import { SLEEP_SIMULATION_CHECKPOINT_VERSION, type SleepSimulationCheckpoint, type SleepSimulationMessage, type SleepSimulationRequest } from '../../../core/src/calc/sleepSimulation'
 import { requireWorkerSupport } from './compatibility'
 import { workerErrorMessage } from './workerError'
 const STORAGE_KEY = 'sleep-simulation-checkpoint-v3'
-export function useSleepSimulation(campTicket?: () => boolean) {
+export function useSleepSimulation(campTicket?: () => boolean, precision?: () => SleepSimulationRequest['precision']) {
   const state = createSleepSimulationTask(async (isActive) => {
     requireWorkerSupport()
     await new Promise<void>((resolve, reject) => wx.preDownloadSubpackage({ packageType: 'workers', success: () => resolve(), fail: () => reject(new Error('后台模拟资源下载失败，请检查网络后重试')) }))
@@ -68,7 +68,9 @@ export function useSleepSimulation(campTicket?: () => boolean) {
   })
   try {
     const saved = wx.getStorageSync?.(STORAGE_KEY) as (SleepSimulationRequest & { resourceRevision?: string }) | undefined
-    if (saved?.powers?.length && compatibleCheckpoint(saved) && (!campTicket || Boolean(saved.options?.campTicket) === campTicket()) && Number.isInteger(saved.iterations) && saved.iterations > 0 && saved.iterations <= 100000) {
+    if (saved?.powers?.length && compatibleCheckpoint(saved) && (!campTicket || Boolean(saved.options?.campTicket) === campTicket())
+      && (!saved.checkpoint || saved.checkpoint.version === SLEEP_SIMULATION_CHECKPOINT_VERSION)
+      && (!precision || (saved.precision ?? 'low') === precision()) && Number.isInteger(saved.iterations) && saved.iterations > 0 && saved.iterations <= 100000) {
       void state.calculate(saved); state.notice.value = '正在恢复上次未完成的模拟'
     }
   } catch { /* Ignore corrupt storage; new calculations remain available. */ }

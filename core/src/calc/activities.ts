@@ -158,7 +158,9 @@ export function activityValues(context: ActivityContext, island: string, pokemon
   const cached = cache.get(cacheKey)
   if (cached) return cached
   const values = Object.fromEntries(fields.map(key => [key, NUMERIC_ACTIVITY_EFFECTS[key] === 'add' ? 0 : 1])) as unknown as ResolvedActivityValues
-  let encounterModifier = EVENT_PARAMETERS.sleep.upWeights.normal
+  // Older complete snapshots use an implicit unit weight for unboosted encounters.
+  const normalEncounterWeight = EVENT_PARAMETERS.sleep.upWeights.normal ?? 1
+  let encounterModifier = normalEncounterWeight
   let encounterEvent = ''
   Object.assign(values, { eventMix: 'off', shinyUp: false, allRecipeCategories: false, fixedIngredientDrops: {}, extraIngredientEnergyMultipliers: {}, recipeEnergyModifiers: [], availableRecipeCategories: [], favoredBerries: [] })
   const touched = new Set<string>()
@@ -218,7 +220,7 @@ export function activityValues(context: ActivityContext, island: string, pokemon
   for (const [key, value] of Object.entries(fallback ?? {})) if (!touched.has(key)) Object.assign(values, { [key]: value })
   Object.assign(values, context.overrides)
   values.encounterModifier = context.overrides?.encounterWeightMultiplier
-    ?? (encounterEvent ? encounterModifier : fallback?.encounterWeightMultiplier ?? EVENT_PARAMETERS.sleep.upWeights.normal)
+    ?? (encounterEvent ? encounterModifier : fallback?.encounterWeightMultiplier ?? normalEncounterWeight)
   if (context.overrides?.allRecipeCategories === false) values.availableRecipeCategories = []
   else if (values.allRecipeCategories) values.availableRecipeCategories = ['curry', 'salad', 'dessert']
   values.allRecipeCategories = values.availableRecipeCategories.length === 3

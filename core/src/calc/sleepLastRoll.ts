@@ -4,13 +4,16 @@ import { sleepStyleInternalId } from './sleepRewards'
 const excluded = new Set<number>(source.excludedInternalIds)
 
 /** RAE excludes these styles from the restricted leader pool. */
-export function isLastRollExcluded(style: { pokeId: number, stars: number, styleId?: number }): boolean {
+export function isLastRollExcluded(style: Parameters<typeof sleepStyleInternalId>[0]): boolean {
   return excluded.has(sleepStyleInternalId(style))
 }
 
-const fillers: Readonly<Record<string, Readonly<Record<string, boolean>>>> = source.raeFiller.byIsland
+const fillers: Readonly<Record<string, Readonly<Record<string, boolean>>>> | undefined = source.raeFiller?.byIsland
+export function requireRaeSleepLottery() {
+  if (!fillers) throw new Error('RAE 睡姿抽选资料不完整')
+}
 export function isRaeFiller(island: string, internalId: number): boolean {
-  return fillers[island]?.[internalId] === true
+  return fillers?.[island]?.[internalId] === true
 }
 
 export const RAE_SPO_RATE = 38_000

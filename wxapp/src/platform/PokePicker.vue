@@ -104,20 +104,20 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
               <button type="button" :class="{ on: panel === 'ing' || ing.length > 0 }" @click="toggle('ing')">{{ translateUi("食材") }}</button>
               <button type="button" class="ghost" @click="clearFilters">{{ translateUi("清空筛选") }}</button>
             </div>
-            <HorizontalStrip v-if="panel === 'spec'"><div class="picker-opts">
+            <HorizontalStrip v-if="panel === 'spec'" :selection="spec"><div class="picker-opts">
               <button v-for="s in specs" :key="s" type="button" :class="{ on: s === '全部' ? !spec.length : spec.includes(s) }" @click="toggleChoice(spec, s, specs)">{{ s }}</button>
             </div></HorizontalStrip>
-            <HorizontalStrip v-else-if="panel === 'type'"><div class="picker-opts">
+            <HorizontalStrip v-else-if="panel === 'type'" :selection="type"><div class="picker-opts">
               <button type="button" :class="{ on: !type.length }" @click="type = []">{{ translateUi("全部") }}</button>
               <button v-for="t in types" :key="t" type="button" :class="{ on: type.includes(t) }" @click="toggleChoice(type, t, types)">
                 <BerryIcon :name="berryByType(t)?.name ?? ''" small />{{ gameText(t) }}
               </button>
             </div></HorizontalStrip>
-            <HorizontalStrip v-else-if="panel === 'sleep'"><div class="picker-opts">
+            <HorizontalStrip v-else-if="panel === 'sleep'" :selection="sleep"><div class="picker-opts">
               <button type="button" :class="{ on: !sleep.length }" @click="sleep = []">{{ translateUi("全部") }}</button>
               <button v-for="s in sleeps" :key="s" type="button" :class="{ on: sleep.includes(s) }" @click="toggleChoice(sleep, s, sleeps)">{{ gameText(s) }}</button>
             </div></HorizontalStrip>
-            <HorizontalStrip v-else-if="panel === 'ing'"><div class="picker-opts">
+            <HorizontalStrip v-else-if="panel === 'ing'" :selection="ing"><div class="picker-opts">
               <button type="button" :class="{ on: !ing.length }" @click="ing = []">{{ translateUi("全部") }}</button>
               <button v-for="i in INGREDIENTS" :key="i.id" type="button" :class="{ on: ing.includes(String(i.id)) }" @click="toggleChoice(ing, String(i.id), INGREDIENTS.map(item => String(item.id)))">
                 <IngredientIcon :id="i.id" :name="i.name" small />{{ gameText(i.name) }}

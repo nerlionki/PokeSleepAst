@@ -11,6 +11,7 @@
 
   import { useActivities } from '../../composables/useActivities';
   import { researchActivity, researchSleepStyles } from '../../calc/activities';
+  import type { CompletionSelectionMode } from '../../calc/completionEfficiency';
   import { computed, ref, watch } from 'vue';
   import { storeToRefs } from 'pinia';
   import { usePlanStore } from '../../stores/plans';
@@ -18,12 +19,15 @@
   import {
     BABY_POKEMON_IDS,
     BABY_POKEMON_NAMES,
-    babyEfficiencyIslands,
+    babyEfficiencyTargetIds,
     EFFICIENCY_SLEEP_TYPES
   } from '../../calc/babyEfficiency';
   import { ISLANDS, SLEEP_STYLES } from '../../calc/data';
+  import { familyOf } from '../../calc/candyPlan';
+  import { raeMappedSleepStyleId } from '../../calc/sleepRewards';
   import {
     EVENT_BONUSES,
+    resolvedSleepdex,
     styleKey
   } from '../../calc/sleep';
   import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules';
@@ -96,11 +100,10 @@
   const statuses = computed(() =>
     options.value.targets.map(target => displayStatus(target, options.value))
   );
-  const kind = ref<SplitTarget['kind']>(
-      components_plan_SplitSleepPane_config_clientDefaults[
-        'kindInitial'
-      ] as unknown as SplitTarget['kind']
-    ),
+  const initialKind = components_plan_SplitSleepPane_config_clientDefaults.kindInitial as SplitTarget['kind'];
+  const kind = ref<SplitTarget['kind']>(initialKind === 'baby' ? 'catch' : initialKind),
+    statistic = ref<NonNullable<SplitTarget['statistic']>>('first-hit'),
+    selectionMode = ref<CompletionSelectionMode>('free'),
     pokeId = ref(
       components_plan_SplitSleepPane_config_clientDefaults['pokeIdInitial']
     ),
@@ -115,26 +118,23 @@
     );
   const currentStyles = computed(() =>
     researchSleepStyles(SLEEP_STYLES, researchActivity(activity.context.value))
+      .filter(row => !row.limited && row.island === island.value)
   );
-  const allowedIds = computed(() =>
-    kind.value === 'baby'
-      ? BABY_POKEMON_IDS.filter(id =>
-          babyEfficiencyIslands(id, undefined, activity.context.value).some(
-            row => row.id === island.value
-          )
-        )
-      : [
-          ...new Set(
-            currentStyles.value
-              .filter(row => row.island === island.value)
-              .map(row => row.pokeId)
-          )
-        ]
-  );
+  const selectableStyles = computed(() => {
+    const found = new Set(selectionMode.value === 'sleepdex' ? resolvedSleepdex(plan.value) : []);
+    return currentStyles.value.filter(row => raeMappedSleepStyleId(row) != null && !found.has(styleKey(row.pokeId, row.stars, row.styleId)));
+  });
+  const allowedIds = computed(() => {
+    if (kind.value === 'style') return [...new Set(selectableStyles.value.map(row => row.pokeId))];
+    const species = new Set(currentStyles.value.map(row => row.pokeId));
+    if (kind.value === 'candy') {
+      const families = new Set([...species].map(familyOf));
+      return BABY_POKEMON_IDS.filter(id => families.has(familyOf(id)));
+    }
+    return BABY_POKEMON_IDS.filter(id => babyEfficiencyTargetIds(id).some(target => species.has(target)));
+  });
   const faces = computed(() =>
-    currentStyles.value.filter(
-      row => row.island === island.value && row.pokeId === pokeId.value
-    )
+    selectableStyles.value.filter(row => row.pokeId === pokeId.value)
   );
   watch(
     allowedIds,
@@ -180,6 +180,7 @@
       formError.value = '请选择可参与普通研究的目标';
       return;
     }
+    if (kind.value === 'style') target.statistic = statistic.value;
     if (
       config.value.targets.some(
         row => splitTargetKey(row) === splitTargetKey(target)
@@ -193,6 +194,10 @@
   }
   function run() {
     formError.value = '';
+    if (!config.value.targets.length) {
+      formError.value = '请选择可参与普通研究的目标';
+      return;
+    }
     void calculate();
   }
   const resultGroups = computed(() =>
@@ -201,7 +206,7 @@
         kind: metricKind,
         title:
           metricKind === 'count'
-            ? '宝宝遇到只数最大'
+            ? '遇见只数最多'
             : metricKind === 'candy'
               ? '糖果最多'
               : '睡姿概率最大',
@@ -296,7 +301,7 @@
       <PlanCampTicket v-model="campTicketMode" :disabled="busy" />
       <h3>{{ translateUi('目标') }}</h3>
       <p v-if="!config.targets.length" class="muted">
-        {{ translateUi('添加宝宝或指定睡姿，支持混选多个目标。') }}
+        {{ translateUi('添加目标') }}
       </p>
       <div
         v-for="(target, index) in config.targets"
@@ -306,9 +311,9 @@
         <div class="target-info">
           <strong>{{ statuses[index]?.label }}</strong
           ><span class="muted">{{
-            target.kind === 'baby'
-              ? translateUi('宝宝 · 全部星级 · 同家族糖果')
-              : translateUi('指定睡姿 · 每日至少一次概率')
+            target.kind === 'style'
+              ? translateUi(target.statistic === 'expectation' ? '遇见只数最多' : '指定睡姿 · 每日至少一次概率')
+              : translateUi(target.kind === 'candy' ? '家族刷糖效率' : '宝宝捕捉效率')
           }}</span
           ><span v-if="statuses[index]?.reason" class="amber">{{
             translateUi(statuses[index]?.reason)
@@ -334,8 +339,16 @@
             translateUi('添加目标类型')
           }}</label
           ><select id="split-target-kind" v-model="kind">
-            <option value="baby">{{ translateUi('宝宝') }}</option>
+            <option value="catch">{{ translateUi('捕捉') }}</option>
             <option value="style">{{ translateUi('指定睡姿') }}</option>
+            <option value="candy">{{ translateUi('刷糖') }}</option>
+          </select>
+        </div>
+        <div v-if="kind === 'style'" class="field">
+          <label for="split-style-selection">{{ translateUi('睡姿选择范围') }}</label>
+          <select id="split-style-selection" v-model="selectionMode">
+            <option value="sleepdex">{{ translateUi('根据睡姿图鉴 · 仅未收集') }}</option>
+            <option value="free">{{ translateUi('自由选择') }}</option>
           </select>
         </div>
         <div v-if="allowedIds.length" class="field">
@@ -343,7 +356,7 @@
           ><PokePicker
             v-model="pokeId"
             :allowed-ids="allowedIds"
-            :name-overrides="kind === 'baby' ? BABY_POKEMON_NAMES : undefined"
+            :name-overrides="kind === 'style' ? undefined : BABY_POKEMON_NAMES"
           />
         </div>
         <div v-if="kind === 'style'" class="field">
@@ -356,6 +369,13 @@
             >
               {{ row.stars }}★ · {{ sleepStyleText(row) }}
             </option>
+          </select>
+        </div>
+        <div v-if="kind === 'style'" class="field">
+          <label for="split-style-statistic">{{ translateUi('目标') }}</label>
+          <select id="split-style-statistic" v-model="statistic">
+            <option value="first-hit">{{ translateUi('每日补齐概率最高') }}</option>
+            <option value="expectation">{{ translateUi('遇见只数最多') }}</option>
           </select>
         </div>
         <button
@@ -431,7 +451,7 @@
             :disabled="busy"
           />{{ translateUi('活动期间遇到其他睡眠类型宝可梦') }}</label
         >
-        <div class="field">
+        <div v-if="(config.precision ?? 'low') === 'low'" class="field">
           <label for="split-iterations">{{
             translateUi('每个研究状态的模拟次数')
           }}</label
@@ -458,8 +478,8 @@
           class="stack weight-row"
         >
           <strong>{{ statuses[index]?.label }}</strong>
-          <div v-if="target.kind === 'baby'" class="split-fields">
-            <div class="field">
+          <div v-if="target.kind !== 'style'" class="split-fields">
+            <div v-if="target.kind !== 'candy'" class="field">
               <label :for="`split-count-${index}`">{{
                 translateUi('只数权重')
               }}</label
@@ -472,7 +492,7 @@
                 :disabled="busy"
               />
             </div>
-            <div class="field">
+            <div v-if="target.kind !== 'catch'" class="field">
               <label :for="`split-candy-${index}`">{{
                 translateUi('糖果权重')
               }}</label
@@ -489,7 +509,7 @@
           <template v-else>
             <div class="field">
               <label :for="`split-probability-${index}`">{{
-                translateUi('睡姿概率权重')
+                translateUi(target.statistic === 'expectation' ? '只数权重' : '睡姿概率权重')
               }}</label
               ><input
                 :id="`split-probability-${index}`"
@@ -507,11 +527,19 @@
           </template>
         </div>
       </div>
-      <p v-if="formError" class="amber" role="alert">{{ formError }}</p>
+      <div class="field">
+        <label for="split-precision">{{ translateUi('计算精度') }}</label>
+        <select id="split-precision" v-model="config.precision" :disabled="busy">
+          <option value="low">{{ translateUi('低 · 快速搜索') }}</option>
+          <option value="medium">{{ translateUi('中 · 细化搜索') }}</option>
+          <option value="high">{{ translateUi('高 · 密集搜索') }}</option>
+        </select>
+      </div>
+      <p v-if="formError" class="amber" role="alert">{{ translateUi(formError) }}</p>
       <button
         class="btn sage"
         type="button"
-        :disabled="busy || !config.targets.length"
+        :disabled="busy"
         @click="run"
       >
         {{ translateUi('计算最佳方案') }}
@@ -547,7 +575,7 @@
         {{ metricLabel(metric)
         }}{{ translateUi('：未解锁或本次模拟收益为 0，不参与综合评分。') }}
       </p>
-      <p class="muted">
+      <p v-if="(result.options.precision ?? 'low') === 'low'" class="muted">
         {{
           translateUi(
             '只数、糖果是该方案所有睡眠合计的期望值（模拟平均）。例如两觉合计期望 1.084 只，表示长期重复相同条件时，平均每天约 1.084 只，不代表大概率至少遇到 1 只；单日可能为 0 只、1 只或更多。'
@@ -583,7 +611,7 @@
         >
           <SplitRecommendation
             v-if="
-              metric.kind !== 'probability' ||
+              result.options.targets[metric.targetIndex]?.kind !== 'style' ||
               resultStatuses[metric.targetIndex]?.unlocked
             "
             :title="metricLabel(metric)"

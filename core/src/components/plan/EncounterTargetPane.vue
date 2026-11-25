@@ -36,7 +36,7 @@ const { settings } = storeToRefs(useSettingsStore())
 const { mode: campTicketMode, enabled: campTicket } = usePlanCampTicket('encounter')
 const activity = useActivities(options, () => options.value.island ?? 'all', () => settings.value.activity)
 const research = useEncounterActivity(activity.context)
-const babyIds = computed(() => availableBabyPokemonIds(research.value))
+const babyIds = computed(() => availableBabyPokemonIds(research.value, isCandy.value ? 'candy' : undefined))
 const eventMult = activity.field('drowsyPowerMultiplier', () => options.value.eventMult)
 const mixMode = activity.field('eventMix', () => normalizeEventMix(options.value.eventMix) !== 'off' ? settings.value.sleepEventMix : 'off')
 const otherTypes = computed({ get: () => mixMode.value !== 'off', set: (value: boolean) => { mixMode.value = value ? settings.value.sleepEventMix : 'off' } })
@@ -54,7 +54,7 @@ const validStyle = computed(() => faceKeys.value.includes(options.value.completi
 watch([isStyle, () => props.goal.selectionMode, faceKeys, validStyle], ([sleep, mode, keys, valid]) => {
   if (sleep && mode === 'sleepdex' && !valid) options.value.completionTarget = keys[0] ?? ''
 }, { immediate: true })
-const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, isStyle.value ? options.value.completionTarget : undefined, research.value))
+const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, isStyle.value ? options.value.completionTarget : undefined, research.value, isCandy.value ? 'candy' : undefined))
 const simulationOptions = computed(() => ({ ...options.value, campTicket: campTicket.value, objective: isStyle.value ? undefined : props.goal.purpose === 'candy' ? 'candy' as const : 'catch' as const, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions, props.goal.id)
 watch(() => campTicket.value, () => { if (busy.value) cancel() })
@@ -70,7 +70,9 @@ watch(() => [options.value.pokeId, options.value.completionTarget, props.goal.se
 const resultName = computed(() => result.value ? POKEDEX.find(poke => poke.id === result.value!.options.pokeId)?.name : '')
 const family = computed(() => [...new Set(POKEDEX.filter(poke => familyOf(poke.id) === familyOf(options.value.pokeId)).map(poke => poke.name))].join('、'))
 const resultStyle = computed(() => result.value ? targets.value.find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value!.options.completionTarget) : undefined)
-const canCalculate = computed(() => isStyle.value ? validStyle.value : babyIds.value.includes(options.value.pokeId))
+const statistic = computed({ get: () => options.value.completionStatistic ?? 'first-hit', set: (value: 'first-hit' | 'expectation') => { options.value.completionStatistic = value } })
+const probabilityResult = computed(() => isStyle.value && result.value?.options.completionStatistic !== 'expectation')
+const canCalculate = computed(() => isStyle.value ? validStyle.value && islands.value.length > 0 : babyIds.value.includes(options.value.pokeId))
 </script>
 
 <template>
@@ -105,6 +107,7 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : babyIds.v
       <label class="row"><input :disabled="busy" v-model="otherTypes" type="checkbox" role="switch"> {{ translateUi("活动期间遇到一些其他类型宝可梦") }}</label>
       <button class="btn ghost" type="button" :disabled="busy" @click="activity.reset()">{{ translateUi("恢复此目标自动活动设置") }}</button>
       <div class="efficiency-fields">
+        <div v-if="isStyle" class="field"><label for="encounter-statistic">{{ translateUi("目标") }}</label><select id="encounter-statistic" v-model="statistic" :disabled="busy"><option value="first-hit">{{ translateUi("每日补齐概率最高") }}</option><option value="expectation">{{ translateUi("遇见只数最多") }}</option></select></div>
         <div v-if="options.precision === 'low'" class="field"><label for="encounter-iterations">{{ translateUi("计算次数") }}</label><input :disabled="busy" id="encounter-iterations" v-model.number="options.iterations" type="number" :min="INPUT_LIMITS.encounter_iterations.min" :max="INPUT_LIMITS.encounter_iterations.max" :step="INPUT_LIMITS.encounter_iterations.step" inputmode="numeric"></div>
         <div class="field"><label for="encounter-precision">{{ translateUi("计算精度") }}</label><select :disabled="busy" id="encounter-precision" v-model="options.precision"><option value="low">{{ translateUi("低 · 快速搜索") }}</option><option value="medium">{{ translateUi("中 · 细化搜索") }}</option><option value="high">{{ translateUi("高 · 密集搜索") }}</option></select></div>
       </div>
@@ -113,11 +116,11 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value : babyIds.v
     <button class="btn sage" type="button" :disabled="busy || !canCalculate" @click="calculate">{{ translateUi("计算此目标效率") }}</button>
     <p v-if="error" class="amber" role="alert">{{ translateUi(error) }}</p>
     <p v-if="notice" class="muted" role="status">{{ translateUi(notice) }}</p>
-    <p v-if="options.pokeId && (isStyle ? options.completionTarget && !validStyle : !canCalculate)" class="muted">{{ translateUi("此目标暂不可参与抽选") }}</p>
+    <p v-if="options.pokeId && (!isStyle || options.completionTarget) && !canCalculate" class="muted">{{ translateUi("此目标暂不可参与抽选") }}</p>
     <template v-if="result">
       <p v-if="dirty" class="amber">{{ translateUi("参数已修改，请重新计算更新结果。") }}</p>
       <p class="muted">{{ gameText(resultName) }}<template v-if="resultStyle"> · {{ resultStyle.stars }}★ {{ sleepStyleText(resultStyle) }}</template> · <template v-if="result.options.precision === 'low'">{{ result.options.iterations.toLocaleString('zh-CN') }} {{ translateUi("次模拟 · 睡意之力 ×") }}</template><template v-else>{{ translateUi("睡意之力") }} ×</template>{{ result.options.eventMult }} {{ translateUi("· 跨类型：") }}{{ translateUi(eventMixLabel(result.options.eventMix)) }} {{ translateUi("· 露营券：") }}{{ result.options.campTicket ? translateUi("开启") : translateUi("关闭") }} · {{ result.options.island === 'all' ? translateUi("全部岛屿") : gameText(ISLANDS.find(island => island.id === result?.options.island)?.name) }}{{ translateUi("。以下为本次搜索中该指标最高的方案。") }}</p>
-      <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="isStyle ? translateUi('每日补齐概率最高') : isCandy ? translateUi('家族糖果最多') : translateUi('遇见只数最多')" :unit="isCandy ? '颗' : '只'" :optimum="isCandy ? result.candy : result.catch" :precision="result.options.precision" :probability="isStyle" />
+      <BabyEfficiencyResult :key="JSON.stringify(result.options)" :title="probabilityResult ? translateUi('每日补齐概率最高') : isCandy ? translateUi('家族糖果最多') : translateUi('遇见只数最多')" :unit="isCandy ? '颗' : '只'" :optimum="isCandy ? result.candy : result.catch" :precision="result.options.precision" :probability="probabilityResult" />
     </template>
     <ProgressDialog :open="busy" :title="translateUi('正在计算{title}', { title: translateUi(title) })" :progress="Math.min(100, Math.floor(progress.percent))" :stage="progress.island || '准备候选方案'" :notice="notice" :detail="translateUi('已模拟 {count} 个抽取状态', { count: progress.evaluatedStates.toLocaleString('zh-CN') })" cancellable cancel-text="取消计算" @cancel="cancel" />
   </section>

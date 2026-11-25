@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useMealPlan } from '#platform/scorePlan'
 import { boxLabel } from '../../calc/boxFilter'
 import { ingredientImageId, ingredientLabel, recipeById } from '../../calc/catalogIds'
-import { isMealHealer, type MealPlanRequest } from '../../calc/mealPlan'
+import { isMealHealer, MEAL_PLAN_NO_CANDIDATES, type MealPlanRequest } from '../../calc/mealPlan'
 import { MEAL_TARGET } from '../../calc/mealSupply'
 import { normalizeScoreOptions, scoreCandidates, type ScoreOptions } from '../../calc/scorePlan'
 import { teamRestrictionError } from '../../calc/teamRestrictions'
@@ -41,11 +41,12 @@ const ready = ref(false)
 const loadError = ref(false)
 const selectionError = ref('')
 const choosingRecipe = ref(false)
-const picking = ref(false)
+const candidatePicker = ref<'recommended' | 'box' | null>(null)
 const query = ref('')
 const visible = ref(20)
 const recipe = computed(() => recipeById(plan.value.recipeId))
 const eligible = computed(() => scoreCandidates(store.pokemon).candidates)
+const hasEligible = computed(() => store.ready && eligible.value.length > 0)
 const byUid = computed(() => new Map(eligible.value.map(pokemon => [pokemon.uid, pokemon])))
 const team = computed(() => plan.value.team.flatMap(uid => {
   const member = byUid.value.get(uid)
@@ -54,6 +55,7 @@ const team = computed(() => plan.value.team.flatMap(uid => {
 const teamIds = computed(() => new Set(team.value.map(member => member.uid)))
 const full = computed(() => team.value.length >= 5)
 const pickerRows = computed(() => eligible.value
+  .filter(pokemon => !teamIds.value.has(pokemon.uid))
   .map(pokemon => ({ pokemon, name: gameText(boxLabel(pokemon)), healer: isMealHealer(pokemon) }))
   .filter(row => textHit(row.name, query.value) || textHit(boxLabel(row.pokemon), query.value))
   .sort((a, b) => Number(b.healer) - Number(a.healer) || a.name.localeCompare(b.name)))
@@ -98,9 +100,13 @@ const resultList = computed(() => {
   if (listTask.dirty.value || result?.scope !== 'individuals') return null
   return result.candidates.flatMap(estimate => {
     const pokemon = byUid.value.get(estimate.uid)
-    return pokemon ? [{ pokemon, estimate }] : []
+    return pokemon && !teamIds.value.has(pokemon.uid) ? [{ pokemon, estimate }] : []
   })
 })
+const pickerOpen = computed(() => choosingRecipe.value || hasEligible.value && !full.value && !busy.value &&
+  (candidatePicker.value === 'box' || candidatePicker.value === 'recommended' && resultList.value !== null))
+const pickerTitle = computed(() => choosingRecipe.value ? '选择食谱'
+  : candidatePicker.value === 'box' ? '从 Box 选择队员' : 'Box 供料个体')
 const estimate = computed(() => {
   const result = teamTask.result.value
   return !teamTask.dirty.value && result?.scope === 'team' ? result.estimate : null
@@ -109,23 +115,38 @@ const missing = computed(() => Object.entries(estimate.value?.missing ?? {}).fil
 const pct = (ratio: number) => (ratio * 100).toFixed(1)
 const foodName = (key: string) => gameText(ingredientLabel(key))
 
-function toggle(member: BoxPokemon) {
-  if (busy.value) return
+function closePicker() {
+  choosingRecipe.value = false
+  candidatePicker.value = null
   selectionError.value = ''
-  if (teamIds.value.has(member.uid)) {
-    plan.value.team = team.value.map(pokemon => pokemon.uid).filter(uid => uid !== member.uid)
-    return
-  }
-  if (full.value) return
+}
+
+function openCandidates(mode: 'recommended' | 'box', refresh = false) {
+  if (!ready.value || !hasEligible.value || busy.value || full.value) return
+  closePicker()
+  candidatePicker.value = mode
+  if (mode === 'recommended' && (refresh || resultList.value === null)) void listTask.calculate()
+}
+
+function removeMember(member: BoxPokemon) {
+  if (busy.value || !teamIds.value.has(member.uid)) return
+  plan.value.team = team.value.filter(pokemon => pokemon.uid !== member.uid).map(pokemon => pokemon.uid)
+  openCandidates(recipe.value ? 'recommended' : 'box')
+}
+
+function addMember(member: BoxPokemon) {
+  if (busy.value || full.value || teamIds.value.has(member.uid)) return
+  selectionError.value = ''
   const next = [...team.value, member]
   const invalid = teamRestrictionError(next)
   if (invalid) { selectionError.value = invalid; return }
   plan.value.team = next.map(pokemon => pokemon.uid)
+  if (full.value) closePicker()
 }
 
 function pick(id: number) {
   plan.value.recipeId = id
-  choosingRecipe.value = false
+  closePicker()
 }
 </script>
 
@@ -159,39 +180,21 @@ function pick(id: number) {
           </span>
         </div>
       </div>
-      <button v-if="recipe && !full" type="button" class="btn" :disabled="!ready || busy" @click="listTask.calculate()">{{ t('推荐') }}</button>
-      <p v-if="!full && listTask.error.value" role="alert" class="amber">{{ t(listTask.error.value) }}</p>
-      <p v-if="!full && listTask.dirty.value" class="muted">{{ t('参数已修改，请重新计算更新结果。') }}</p>
+      <button v-if="recipe && !full" type="button" class="btn" :disabled="!ready || busy || !hasEligible" @click="openCandidates('recommended', true)">{{ t('推荐') }}</button>
+      <p v-if="store.ready && !hasEligible" class="muted" role="status">{{ t(MEAL_PLAN_NO_CANDIDATES) }}</p>
+      <p v-else-if="!full && listTask.error.value" role="alert" class="amber">{{ t(listTask.error.value) }}</p>
+      <p v-if="hasEligible && !full && listTask.dirty.value" class="muted">{{ t('参数已修改，请重新计算更新结果。') }}</p>
     </section>
 
-    <section v-if="resultList || team.length" class="card stack">
+    <section v-if="hasEligible && (resultList || team.length)" class="card stack">
       <div class="row meal-plan-between">
         <h3 :aria-label="t('队伍') + ' ' + team.length + '/5'">{{ team.length }}/5</h3>
-        <button v-if="!full" type="button" class="btn ghost" :aria-expanded="picking" @click="picking = !picking">{{ t('从 Box 选择队员') }}</button>
+        <button v-if="!full" type="button" class="btn ghost" :disabled="busy || !ready" :aria-expanded="pickerOpen && candidatePicker === 'box'" @click="openCandidates('box')">{{ t('从 Box 选择队员') }}</button>
       </div>
       <div v-for="member in team" :key="member.uid" class="row meal-plan-between">
         <span>{{ gameText(boxLabel(member)) }} · Lv.{{ member.level }}<template v-if="isMealHealer(member)"> · {{ t('回复活力') }}</template></span>
-        <button type="button" class="btn ghost" :disabled="busy" @click="toggle(member)">{{ t('移出队伍') }}</button>
+        <button type="button" class="btn ghost" :disabled="busy" @click="removeMember(member)">{{ t('移出队伍') }}</button>
       </div>
-      <template v-if="picking && !full">
-        <input v-model="query" class="picker-search" :placeholder="t('搜索 Box 个体')" :aria-label="t('搜索 Box 个体')">
-        <p v-if="!pickerRows.length" class="muted">{{ t('暂无可上场的个体') }}</p>
-        <div v-for="{ pokemon, name, healer } in pickerRows.slice(0, visible)" :key="pokemon.uid" class="row meal-plan-between">
-          <span>{{ name }} · Lv.{{ pokemon.level }}<template v-if="healer"> · {{ t('回复活力') }}</template></span>
-          <button type="button" class="btn ghost" :disabled="busy" @click="toggle(pokemon)">
-            {{ t(teamIds.has(pokemon.uid) ? '移出队伍' : '加入队伍') }}
-          </button>
-        </div>
-        <button v-if="visible < pickerRows.length" type="button" class="btn ghost" @click="visible += 20">{{ t('加载更多') }}</button>
-      </template>
-      <p v-if="selectionError" role="alert" class="amber">{{ t(selectionError) }}</p>
-      <template v-if="resultList && !full">
-        <h4>{{ t('Box 供料个体') }}</h4>
-        <p class="muted">{{ t(resultList.length ? '按所选料理的食谱覆盖率排序，分食材显示三顿用量的达标时间。' : 'Box 中暂无能提供目标食材的可用个体') }}</p>
-        <MealCandidateRow v-for="{ pokemon, estimate: candidate } in resultList" :key="pokemon.uid"
-          :pokemon="pokemon" :estimate="candidate" :selected="teamIds.has(pokemon.uid)" :disabled="busy"
-          @toggle="toggle(pokemon)" />
-      </template>
     </section>
 
     <section v-if="estimate || teamTask.error.value || teamTask.dirty.value" class="card stack">
@@ -230,19 +233,36 @@ function pick(id: number) {
         </div>
       </template>
     </section>
-    <button type="button" class="btn" :disabled="!ready || busy || !recipe || !team.length" @click="teamTask.calculate()">{{ t('计算耗时') }}</button>
+    <button type="button" class="btn" :disabled="!ready || busy || !hasEligible || !recipe || !team.length" @click="teamTask.calculate()">{{ t('计算耗时') }}</button>
 
     <Teleport to="body">
-      <div v-if="choosingRecipe" v-back="() => { choosingRecipe = false }" class="overlay picker-overlay"
-        @click.self="choosingRecipe = false" @touchstart.stop @touchend.stop @touchcancel.stop>
+      <div v-if="pickerOpen" v-back="closePicker" class="overlay picker-overlay"
+        @click.self="closePicker" @touchstart.stop @touchend.stop @touchcancel.stop>
         <section class="sheet picker-sheet" role="dialog" aria-modal="true" aria-labelledby="meal-recipe-picker-title">
           <header class="picker-header">
-            <h3 id="meal-recipe-picker-title">{{ t('选择食谱') }}</h3>
-            <button type="button" class="btn ghost picker-close" @click="choosingRecipe = false">{{ t('关闭') }}</button>
+            <h3 id="meal-recipe-picker-title">{{ t(pickerTitle) }}<template v-if="!choosingRecipe"> · {{ team.length }}/5</template></h3>
+            <button type="button" class="btn ghost picker-close" @click="closePicker">{{ t('关闭') }}</button>
           </header>
           <div class="meal-recipe-picker-viewport">
             <div class="meal-recipe-picker-scroll">
-              <RecipePane selectable :selected-id="plan.recipeId" @pick="pick" />
+              <RecipePane v-if="choosingRecipe" selectable :selected-id="plan.recipeId" @pick="pick" />
+              <div v-else class="stack">
+                <p v-if="selectionError" role="alert" class="amber">{{ t(selectionError) }}</p>
+                <template v-if="candidatePicker === 'box'">
+                  <input v-model="query" class="picker-search" :placeholder="t('搜索 Box 个体')" :aria-label="t('搜索 Box 个体')">
+                  <p v-if="!pickerRows.length" class="muted">{{ t('暂无可上场的个体') }}</p>
+                  <div v-for="{ pokemon, name, healer } in pickerRows.slice(0, visible)" :key="pokemon.uid" class="row meal-plan-between">
+                    <span>{{ name }} · Lv.{{ pokemon.level }}<template v-if="healer"> · {{ t('回复活力') }}</template></span>
+                    <button type="button" class="btn ghost" @click="addMember(pokemon)">{{ t('加入队伍') }}</button>
+                  </div>
+                  <button v-if="visible < pickerRows.length" type="button" class="btn ghost" @click="visible += 20">{{ t('加载更多') }}</button>
+                </template>
+                <template v-else>
+                  <p class="muted">{{ t(resultList?.length ? '按所选料理的食谱覆盖率排序，分食材显示三顿用量的达标时间。' : 'Box 中暂无能提供目标食材的可用个体') }}</p>
+                  <MealCandidateRow v-for="{ pokemon, estimate: candidate } in resultList" :key="pokemon.uid"
+                    :pokemon="pokemon" :estimate="candidate" @add="addMember(pokemon)" />
+                </template>
+              </div>
             </div>
           </div>
         </section>

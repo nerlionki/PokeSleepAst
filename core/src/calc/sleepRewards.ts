@@ -1,6 +1,7 @@
 import ruleParameters from '../data/rule-parameters.resource'
 /** RAE 睡姿图鉴的逐睡姿奖励：https://pks.raenonx.cc/zh/sleepdex/lookup */
 import rewards from '../data/sleep-rewards.resource'
+import dprSource from '../data/sleep-dpr-source.resource'
 import { unlockedSubskills } from './member'
 const sleepRewards_teamResearchBonuses_ruleParameters = ruleParameters.modules.sleepRewards.teamResearchBonuses
 const sleepRewards_boostedResearchReward_ruleParameters = ruleParameters.modules.sleepRewards.boostedResearchReward
@@ -53,9 +54,17 @@ export function sleepReward(style: { pokeId: number, stars: number, styleId?: nu
     ?? bySpeciesAndStars.get(`${style.pokeId}-${style.stars}`)
 }
 
+type StyleIdentity = { island?: string, pokeId: number, stars: number, styleId?: number }
+const raeIdsByLinkage = new Map(dprSource.entries.map(row => [row.key, row.internalId]))
+
+/** The DPR sources record the internal ID for each verified map linkage. */
+export function raeMappedSleepStyleId(style: StyleIdentity): number | undefined {
+  return style.styleId ?? (style.island == null ? undefined : raeIdsByLinkage.get(`${style.island}:${style.pokeId}:${style.stars}:`))
+}
+
 /** Original game sleep-style order, independent of per-island generated row IDs. */
-export function sleepStyleInternalId(style: { pokeId: number, stars: number, styleId?: number }): number {
-  return style.styleId ?? bySpeciesAndStars.get(`${style.pokeId}-${style.stars}`)?.id ?? Number.MAX_SAFE_INTEGER
+export function sleepStyleInternalId(style: StyleIdentity): number {
+  return raeMappedSleepStyleId(style) ?? bySpeciesAndStars.get(`${style.pokeId}-${style.stars}`)?.id ?? Number.MAX_SAFE_INTEGER
 }
 
 /** 当日按抽选顺序累计；特殊UP实际出现时完整奖励上限为11。 */

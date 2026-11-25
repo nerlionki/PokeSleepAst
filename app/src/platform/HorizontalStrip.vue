@@ -1,3 +1,7 @@
+<script setup lang="ts">
+defineProps<{ selection?: readonly string[] }>()
+</script>
+
 <template>
   <div class="horizontal-strip" @touchstart.stop @touchend.stop @touchcancel.stop><slot /></div>
 </template>

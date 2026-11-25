@@ -6,7 +6,8 @@ import { pendingResearchPokemon } from './researchAvailability'
 import { normalizeEventMix } from './sleepRules'
 import { sha256, utf8 } from '../resources/sha256'
 import type { IslandId, SleepType } from '../types'
-import { encounterCount, sleepExpect, sleepExpectSteps, type SleepExpectCheckpoint, type DrawOpts } from './sleep'
+import { encounterCount, sleepExpect, sleepExpectSteps, sleepTreeExpect, type SleepExpectCheckpoint, type DrawOpts } from './sleep'
+import type { EfficiencyPrecision } from './babyEfficiency'
 const sleepSimulation_prepareActivityRequest_runtimeParameters = runtimeParameters.modules.sleepSimulation.prepareActivityRequest.values
 const sleepSimulation_validResearchOptions_runtimeParameters = runtimeParameters.modules.sleepSimulation.validResearchOptions.values
 const sleepSimulation_config_ruleCatalogs = ruleCatalogs.modules.sleepSimulation
@@ -18,10 +19,12 @@ export interface SleepSimulationRequest {
   sleepType: SleepType
   powers: number[]
   iterations: number
+  precision?: EfficiencyPrecision
   seed: number
   options: Pick<DrawOpts, 'campTicket' | 'activity' | 'researchedBefore' | 'researchSession' | 'researchLimit' | 'firstResearchExtras' | 'rank' | 'discovered' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps' | 'researchExpBonus' | 'shardBonus' | 'focusIncense' | 'luckIncense'> & { incenseSession?: 0 | 1 }
 }
-export interface SleepSimulationCheckpoint { version: 10, activity?: ResearchActivityContext, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint, signature: string }
+export const SLEEP_SIMULATION_CHECKPOINT_VERSION = 11
+export interface SleepSimulationCheckpoint { version: typeof SLEEP_SIMULATION_CHECKPOINT_VERSION, activity?: ResearchActivityContext, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint, signature: string }
 export type SleepSimulationRows = ReturnType<typeof sleepExpect>
 export type SleepSimulationMessage = { type: 'progress', completed: number, total: number }
   | { type: 'checkpoint', checkpoint: SleepSimulationCheckpoint }
@@ -71,22 +74,26 @@ export function simulateSleep(request: SleepSimulationRequest, emit: (message: S
 /** Resume after every 100 researches without changing the random sequence. */
 export function* sleepSimulationSteps(request: SleepSimulationRequest): Generator<SleepSimulationCheckpoint, SleepSimulationRows> {
   request = prepareActivityRequest(request)
+  const precision = request.precision ?? 'low'
   if (!validResearchOptions(request) || !Number.isInteger(request.iterations) || request.iterations < 1 || request.iterations > sleepSimulation_sleepSimulationSteps_ruleParameters.maxIterations
-    || !request.powers.length || request.powers.length > 2 || request.powers.some((power) => !Number.isFinite(power) || power < 0)) throw new Error('模拟参数无效，请重新设置')
+    || !['low', 'medium', 'high'].includes(precision) || !request.powers.length || request.powers.length > 2 || request.powers.some((power) => !Number.isFinite(power) || power < 0)) throw new Error('模拟参数无效，请重新设置')
   const signature = sha256(utf8(JSON.stringify([
-    request.island, request.sleepType, request.powers, request.seed, request.iterations,
+    request.island, request.sleepType, request.powers, request.seed, request.iterations, precision,
     { ...request.options, activity: { ...request.options.activity, pendingPokemon: undefined } },
   ])))
-  if (request.checkpoint && (request.checkpoint.version !== 10 || request.checkpoint.signature !== signature)) throw new Error('睡姿抽选规则已更新，请重新计算')
+  if (request.checkpoint && (request.checkpoint.version !== SLEEP_SIMULATION_CHECKPOINT_VERSION || request.checkpoint.signature !== signature)) throw new Error('睡姿抽选规则已更新，请重新计算')
   const checkpoint = sameResearchAvailability(request.checkpoint?.activity, request.options.activity) ? request.checkpoint : undefined
   const result = [...(checkpoint?.result ?? [])]
+  const metadata = { version: SLEEP_SIMULATION_CHECKPOINT_VERSION, activity: request.options.activity as ResearchActivityContext, signature } as const
   for (let index = checkpoint?.powerIndex ?? 0; index < request.powers.length; index++) {
-    const steps = sleepExpectSteps(request.island, request.sleepType, request.powers[index]!, request.iterations, 'normal',
-      researchOptions(request, index), undefined, index === checkpoint?.powerIndex ? checkpoint.session : undefined)
-    let next = steps.next()
-    const metadata = { version: 10 as const, activity: request.options.activity as ResearchActivityContext, signature }
-    while (!next.done) { yield { ...metadata, powerIndex: index, result: [...result], session: next.value }; next = steps.next() }
-    result.push(...next.value)
+    const power = request.powers[index]!
+    const opts = researchOptions(request, index)
+    if (precision === 'low') {
+      const steps = sleepExpectSteps(request.island, request.sleepType, power, request.iterations, 'normal', opts, undefined, index === checkpoint?.powerIndex ? checkpoint.session : undefined)
+      let next = steps.next()
+      while (!next.done) { yield { ...metadata, powerIndex: index, result: [...result], session: next.value }; next = steps.next() }
+      result.push(...next.value)
+    } else result.push(...sleepTreeExpect(request.island, request.sleepType, power, request.iterations, opts, precision))
     yield { ...metadata, powerIndex: index + 1, result: [...result] }
   }
   return result

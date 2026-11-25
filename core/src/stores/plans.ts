@@ -6,7 +6,7 @@ import { ref, watch } from 'vue'
 import type { CandyRow } from '../calc/candyPlan'
 import { migrateCandyStocks } from '../calc/candyPlan'
 import type { CatchGoal } from '../calc/catch'
-import { DEFAULT_BABY_EFFICIENCY, DEFAULT_COMPLETION_EFFICIENCY, normalizeBabyEfficiencyPokemonId, validateBabyEfficiency, type BabyEfficiencyOptions } from '../calc/babyEfficiency'
+import { DEFAULT_BABY_EFFICIENCY, DEFAULT_COMPLETION_EFFICIENCY, normalizeBabyEfficiencyPokemonId, validateBabyEfficiency, type BabyEfficiencyOptions, type EfficiencyPrecision } from '../calc/babyEfficiency'
 import { DEFAULT_WHISTLE, normalizeWhistleOptions, type WhistleOptions } from '../calc/whistle'
 import { loadJson, saveJson } from '../storage'
 import { defaultSplitOptions, normalizeSplitOptions, type SplitOptions } from '../calc/splitSleep'
@@ -20,6 +20,7 @@ export type PlanCampTicketScope = 'sleep' | 'split' | 'encounter'
 interface PlanState {
   snorlaxStrength: number
   sleepScore: number
+  sleepPrecision: EfficiencyPrecision
   sleepType: '淺淺入夢' | '安然入睡' | '深深入眠' | '没有特征'
   campTicketOverrides?: Partial<Record<PlanCampTicketScope, boolean>>
   incense: boolean
@@ -43,6 +44,7 @@ interface PlanState {
 const empty: PlanState = {
   snorlaxStrength: (stores_plans_config_clientDefaults["empty_snorlaxStrength"] as 0),
   sleepScore: (stores_plans_config_clientDefaults["empty_sleepScore"] as 100),
+  sleepPrecision: (stores_plans_config_clientDefaults.empty_sleepPrecision as EfficiencyPrecision | undefined) ?? 'low',
   sleepType: (stores_plans_config_clientDefaults["empty_sleepType"] as "没有特征"),
   incense: (stores_plans_config_clientDefaults["empty_incense"] as false),
   rank: (stores_plans_config_clientDefaults["empty_rank"] as ""),
@@ -74,6 +76,7 @@ export const usePlanStore = defineStore('plans', () => {
     plan.value = {
       ...empty,
       ...saved,
+      sleepPrecision: saved.sleepPrecision === 'medium' || saved.sleepPrecision === 'high' || saved.sleepPrecision === 'low' ? saved.sleepPrecision : empty.sleepPrecision,
       sleepdex: saved.sleepdex ?? [],
       sleepdexMode: saved.sleepdexMode ?? ((saved.sleepdex?.length ?? 0) > 0 ? 'list' : 'all'),
       sleepdexExcluded: saved.sleepdexExcluded ?? [],

@@ -1,5 +1,6 @@
 export const mealPlanMessages: Record<string, Record<string, string>> = {
   "zh-TW": {
+    "Box 中没有可参与规划的个体，请先添加并确认生产资料": "Box 中沒有可參與規劃的個體，請先添加并確認生產資料",
     "料理规划": "料理規劃",
     "所供食材全部达标 · {time}": "所供食材全部達標 · {time}",
     "7 天内多数未达标": "7 天內多數未達標",
@@ -50,6 +51,7 @@ export const mealPlanMessages: Record<string, Record<string, string>> = {
     "加载更多": "載入更多",
   },
   "ja": {
+    "Box 中没有可参与规划的个体，请先添加并确认生产资料": "計画に使えるポケモンがボックスにいません。ポケモンを追加し、食材などのおてつだいデータを確認してください。",
     "料理规划": "料理プラン",
     "所供食材全部达标 · {time}": "供給できる食材がすべて揃うまで · {time}",
     "7 天内多数未达标": "7日以内に揃わない試行が多数",
@@ -100,6 +102,7 @@ export const mealPlanMessages: Record<string, Record<string, string>> = {
     "加载更多": "さらに表示",
   },
   "en": {
+    "Box 中没有可参与规划的个体，请先添加并确认生产资料": "No Pokémon in the Box can be used for planning. Add a Pokémon and verify its production data first.",
     "料理规划": "Meal planner",
     "所供食材全部达标 · {time}": "All supplied ingredients ready · {time}",
     "7 天内多数未达标": "Usually not ready within 7 days",

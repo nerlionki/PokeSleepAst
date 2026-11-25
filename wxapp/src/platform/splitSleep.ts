@@ -2,7 +2,7 @@ import { withResources, resourceRevision, compatibleCheckpoint } from '../../../
 import { computed, onScopeDispose, shallowRef, type Ref } from 'vue'
 import { requireWorkerSupport } from './compatibility'
 import { workerErrorMessage } from './workerError'
-import { validateSplitOptions, type SplitCheckpoint, type SplitMessage, type SplitOptions, type SplitResult } from '../../../core/src/calc/splitSleep'
+import { SPLIT_CHECKPOINT_VERSION, validateSplitOptions, type SplitCheckpoint, type SplitMessage, type SplitOptions, type SplitResult } from '../../../core/src/calc/splitSleep'
 
 interface SavedTask { resourceRevision?: string; options: SplitOptions, checkpoint?: SplitCheckpoint, progress: { completed: number, total: number } }
 export function useSplitSleep(options: Ref<SplitOptions>) {
@@ -19,8 +19,13 @@ export function useSplitSleep(options: Ref<SplitOptions>) {
     catch { notice.value = '存储空间不足，请保持小程序在前台完成计算' }
   }
   function stop(clear = true) {
-    generation++; worker?.terminate(); worker = null; busy.value = false
+    generation++
+    const current = worker
+    worker = null
+    busy.value = false
     if (clear) { task = null; resumeOnKill = false; try { wx.removeStorageSync(key) } catch {} }
+    // WeChat can reclaim the native worker before this callback runs.
+    try { current?.terminate() } catch {}
   }
   function cancel() { stop(); notice.value = '已取消计算' }
   async function launch() {
@@ -73,7 +78,8 @@ export function useSplitSleep(options: Ref<SplitOptions>) {
   wx.onAppHide?.(hide); wx.onAppShow?.(show)
   try {
     const saved = wx.getStorageSync(key) as SavedTask | undefined
-    if (saved?.options && compatibleCheckpoint(saved) && !validateSplitOptions(saved.options) && JSON.stringify(saved.options) === JSON.stringify(options.value)) {
+    if (saved?.options && compatibleCheckpoint(saved) && (!saved.checkpoint || saved.checkpoint.version === SPLIT_CHECKPOINT_VERSION)
+      && !validateSplitOptions(saved.options) && JSON.stringify(saved.options) === JSON.stringify(options.value)) {
       task = saved; progress.value = saved.progress ?? { completed: 0, total: 0 }; notice.value = '正在恢复上次未完成的计算'; void launch()
     }
   } catch { /* Corrupt local records never block a new calculation. */ }
