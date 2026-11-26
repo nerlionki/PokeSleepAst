@@ -435,7 +435,7 @@ export function inspectResearchLottery(island: IslandId, sleepType: SleepType, d
 export interface SleepExpectRow { name: string, pokeId: number, stars: number, styleId: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }
 export interface SleepExpectCheckpoint { completed: number, randomState: number, rows: SleepExpectRow[] }
 
-function researchRewardAtSlot(style: SleepStyleRow, index: number, island: IslandId, activity: ResearchActivityContext, opts: DrawOpts) {
+function researchRewardAtSlot(style: SleepStyleIdentity, index: number, island: IslandId, activity: ResearchActivityContext, opts: DrawOpts) {
   const base = boostedResearchReward(dailyResearchReward(sleepReward(style), (opts.researchedBefore ?? 0) + index, opts.researchLimit ?? (sleep_sleepExpectSteps_runtimeParameters.p003 as 10)), opts)
   if (!base) return undefined
   const effect = activityValues(activity, island, pokeById(style.pokeId), 240, undefined, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))

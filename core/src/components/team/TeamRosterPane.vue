@@ -73,6 +73,7 @@
     uid: string;
     custom: boolean;
     napping: boolean;
+    shiny?: boolean;
     name: string;
   }
 

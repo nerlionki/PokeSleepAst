@@ -68,7 +68,13 @@ const { busy, error, notice, result, progress, dirty, calculate, cancel } = useB
 watch(() => campTicket.value, () => { if (busy.value) cancel() })
 const resultId = computed(() => resolveSleepStyleRef(result.value?.options.completionTarget))
 const resultTarget = computed(() => resultId.value == null ? undefined : targets.value.find(style => raeSleepStyleId(style) === resultId.value))
-const resultStyle = computed(() => result.value && resultId.value != null && activitySleepStyles(SLEEP_STYLES, createActivityContext('research', result.value.options.activity)).find(style => raeSleepStyleId(style) === resultId.value))
+const resultStyle = computed(() => {
+  const completed = result.value
+  const id = resultId.value
+  if (!completed || id == null) return undefined
+  const activity = createActivityContext('research', completed.options.activity)
+  return activitySleepStyles(SLEEP_STYLES, activity).find(style => raeSleepStyleId(style) === id)
+})
 const statistic = computed({ get: () => options.value.completionStatistic ?? 'first-hit', set: (value: 'first-hit' | 'expectation') => { options.value.completionStatistic = value } })
 const probabilityResult = computed(() => result.value?.options.completionStatistic !== 'expectation')
 // In dex mode a newly collected face leaves the target list; free mode keeps it.

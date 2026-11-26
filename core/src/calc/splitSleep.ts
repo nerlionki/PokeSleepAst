@@ -7,7 +7,7 @@ import { researchActivity, researchSleepStyles, activityValues, type ResearchAct
 import { pendingResearchPokemon } from './researchAvailability'
 import { activityEfficiencyIsland } from './babyEfficiency'
 import type { IslandId, SleepType } from '../types'
-import { ISLANDS, SLEEP_STYLES } from './data'
+import { ISLANDS, SLEEP_STYLES, type SleepStyleRow } from './data'
 import { familyOf } from './candyPlan'
 import { BABY_POKEMON_IDS, babyEfficiencyIslands, babyEfficiencyPokemonName, efficiencyCurve, efficiencyDrawState, efficiencyIslands, EFFICIENCY_SLEEP_TYPES, MAX_EFFICIENCY_DROWSY_POWER, normalizeBabyEfficiencyPokemonId, type EfficiencyIsland, type EfficiencyPrecision } from './babyEfficiency'
 import { createDrawStateKey, efficiencyRandom, efficiencyRewardsAfterResearch, simulateEfficiencySlots, type EfficiencySimulation } from './babyEfficiencyDraw'
@@ -51,7 +51,7 @@ export const splitTargetKey = (target: SplitTarget) => target.kind === 'style' ?
   : `${target.kind}:${target.kind === 'candy' ? familyOf(target.pokeId) : normalizeBabyEfficiencyPokemonId(target.pokeId)}`
 export function splitTargetStatus(target: SplitTarget, island: IslandId, strength: number, activity?: ResearchActivitySelection) {
   const internalId = target.kind === 'style' ? resolveSleepStyleRef(target.style) : undefined
-  const matches = (row: typeof SLEEP_STYLES[number]) => !row.limited && row.pokeId === target.pokeId && raeSleepStyleId(row) === internalId
+  const matches = (row: SleepStyleRow) => !row.limited && row.pokeId === target.pokeId && raeSleepStyleId(row) === internalId
   const style = internalId == null ? undefined : researchSleepStyles(SLEEP_STYLES, researchActivity(activity)).find(row => row.island === island && matches(row))
   const available = target.kind === 'style' ? !!style
     : babyEfficiencyIslands(target.pokeId, undefined, activity, target.kind === 'candy' ? 'candy' : 'catch').some(row => row.id === island)

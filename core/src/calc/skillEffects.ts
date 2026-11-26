@@ -65,7 +65,7 @@ function giveItem(actor: EffectActor, id: number, amount: number) {
 export function applySkillModelEffects(actor: EffectActor, team: EffectActor[], context: EffectContext, skill: MainSkill, level: number, weight = 1,
   sharedCrit?: { amount: number, probability: number }[]) {
   const crit = sharedCrit ?? []
-  const models = team.map(member => ({ pokeId: member.poke.id, skill: member.poke.mainSkill, berry: member.poke.berry, get energy() { return member.energy }, get rate() { return member.skillRate } }))
+  const models: ModelActor[] = team.map(member => ({ pokeId: member.poke.id, skill: member.poke.mainSkill, berry: member.poke.berry, get energy() { return member.energy }, get rate() { return member.skillRate } }))
   const self = models[team.indexOf(actor)] ?? { pokeId: actor.poke.id, skill: actor.poke.mainSkill, berry: actor.poke.berry, get energy() { return actor.energy }, get rate() { return actor.skillRate } }
   const original = (model: ModelActor) => model === self ? actor : team[models.indexOf(model)]!
   const modifiers = context.modifiers?.(actor, skill.name) ?? { ingredient: 1, berry: 1, shards: 1, healing: 1 }
