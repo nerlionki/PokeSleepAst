@@ -11,10 +11,11 @@ import { useFeaturesStore } from '../../stores/features'
 import { OVERVIEW_STEPS, PAGE_GUIDES, type GuidePage } from '../../ui/guide'
 import { guideLayout, type GuideRect } from '../../ui/guideLayout'
 
-const props = defineProps<{ hostPage?: string }>()
+const props = defineProps<{ hostPage?: string; activeRoute?: Pick<ReturnType<typeof useRoute>, 'name' | 'query'> }>()
 const guide = useGuideStore()
 const features = useFeaturesStore()
-const route = useRoute()
+const localRoute = useRoute()
+const route = props.activeRoute ?? localRoute
 const router = useRouter()
 const activeHost = computed(() => !props.hostPage || route.name === props.hostPage)
 const overview = computed(() => guide.mode === 'overview')

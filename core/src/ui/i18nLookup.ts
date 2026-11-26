@@ -7,9 +7,9 @@ import { mealPlanMessages } from './mealPlanMessages'
 const settingsSummary = '{island} · 营地 {bonus}% · {start}–{end} / {score}分';
 
 const updatedLabels: Record<string, Record<string, string>> = {
-  'zh-TW': { "全局食谱等级": "全域食譜等級", "单独设置食谱等级": "個別設定食譜等級", "未单独设置的食谱跟随全局食谱等级。": "未個別設定的食譜會套用全域食譜等級。", 全部料理: '全部料理', 露营券: '露營券', 跟随全局设置: '跟隨全域設定', "可以遇见全部类型的宝可梦": "可以遇見全部類型的寶可夢", 睡眠规划: '睡眠規劃', '没有匹配的活动。': '沒有匹配的活動。', [settingsSummary]: '{island} · 營地 {bonus}% · {start}–{end} / {score}分' },
-  ja: { "全局食谱等级": "共通レシピレベル", "单独设置食谱等级": "レシピレベルを個別設定", "未单独设置的食谱跟随全局食谱等级。": "個別設定のないレシピには共通レベルが適用されます。", 全部料理: 'すべての料理', 露营券: 'グッドキャンプチケット', 跟随全局设置: '全体設定に従う', "可以遇见全部类型的宝可梦": "すべての睡眠タイプのポケモンに出会えます", 睡眠规划: '睡眠計画', '没有匹配的活动。': '該当するイベントはありません。', [settingsSummary]: '{island} · フィールドボーナス {bonus}% · {start}–{end} / {score}点' },
-  en: { "全局食谱等级": "Default recipe level", "单独设置食谱等级": "Set individual recipe levels", "未单独设置的食谱跟随全局食谱等级。": "Recipes without an individual level use the default.", 全部料理: 'All dishes', 露营券: 'Good Camp Ticket', 跟随全局设置: 'Use global setting', "可以遇见全部类型的宝可梦": "Pokémon of all sleep types can appear", 睡眠规划: 'Sleep Planner', '没有匹配的活动。': 'No matching events.', [settingsSummary]: '{island} · Area bonus {bonus}% · {start}–{end} / {score} pts' },
+  'zh-TW': { '卡蒂狗（洗翠的样子）': '卡蒂狗（洗翠的樣子）', "全局食谱等级": "全域食譜等級", "单独设置食谱等级": "個別設定食譜等級", "未单独设置的食谱跟随全局食谱等级。": "未個別設定的食譜會套用全域食譜等級。", 全部料理: '全部料理', 露营券: '露營券', 跟随全局设置: '跟隨全域設定', "可以遇见全部类型的宝可梦": "可以遇見全部類型的寶可夢", 睡眠规划: '睡眠規劃', '没有匹配的活动。': '沒有匹配的活動。', [settingsSummary]: '{island} · 營地 {bonus}% · {start}–{end} / {score}分' },
+  ja: { '卡蒂狗（洗翠的样子）': 'ガーディ（ヒスイのすがた）', "全局食谱等级": "共通レシピレベル", "单独设置食谱等级": "レシピレベルを個別設定", "未单独设置的食谱跟随全局食谱等级。": "個別設定のないレシピには共通レベルが適用されます。", 全部料理: 'すべての料理', 露营券: 'グッドキャンプチケット', 跟随全局设置: '全体設定に従う', "可以遇见全部类型的宝可梦": "すべての睡眠タイプのポケモンに出会えます", 睡眠规划: '睡眠計画', '没有匹配的活动。': '該当するイベントはありません。', [settingsSummary]: '{island} · フィールドボーナス {bonus}% · {start}–{end} / {score}点' },
+  en: { '卡蒂狗（洗翠的样子）': 'Growlithe (Hisuian Form)', "全局食谱等级": "Default recipe level", "单独设置食谱等级": "Set individual recipe levels", "未单独设置的食谱跟随全局食谱等级。": "Recipes without an individual level use the default.", 全部料理: 'All dishes', 露营券: 'Good Camp Ticket', 跟随全局设置: 'Use global setting', "可以遇见全部类型的宝可梦": "Pokémon of all sleep types can appear", 睡眠规划: 'Sleep Planner', '没有匹配的活动。': 'No matching events.', [settingsSummary]: '{island} · Area bonus {bonus}% · {start}–{end} / {score} pts' },
 };
 
 // Pure catalog lookup. The WeChat build loads this file from its own subpackage.

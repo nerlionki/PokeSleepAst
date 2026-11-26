@@ -1,8 +1,24 @@
 import { taskNavigationLocked } from '../../../core/src/composables/taskNavigationLock'
-import { nextTick, reactive } from 'vue'
+import { inject, nextTick, provide, reactive, type InjectionKey } from 'vue'
 import Taro from '@tarojs/taro'
 export const route = reactive({ path: '/pokemon', name: 'pokemon', query: {} as Record<string, string> })
-const queries = new Map<string, Record<string, string>>()
+const pageRoutes = new Map<string, typeof route>()
+const pageRouteKey: InjectionKey<typeof route> = Symbol('page route')
+
+function routeForPage(page: string) {
+  let value = pageRoutes.get(page)
+  if (!value) {
+    value = reactive({ path: '/' + page, name: page, query: {} as Record<string, string> })
+    pageRoutes.set(page, value)
+  }
+  return value
+}
+
+export function providePageRoute(page: string) {
+  const value = routeForPage(page)
+  provide(pageRouteKey, value)
+  return value
+}
 const positions = new Map<string, number>()
 const firstTab: Record<string, string> = { pokemon: 'dex', plan: 'sleep', team: 'team', data: 'island', profile: 'home' }
 function scrollKey() {
@@ -18,25 +34,29 @@ async function restorePageScroll() {
 }
 export function activatePage(page: string) {
   if (route.name === page) return
-  route.path = '/' + page
-  route.name = page
-  route.query = queries.get(page) ?? {}
+  const next = routeForPage(page)
+  route.path = next.path
+  route.query = next.query
+  route.name = next.name
   void restorePageScroll()
 }
 export function commitPageQuery(page: string, query: Record<string, string>) {
   const next = { ...query }
-  queries.set(page, next)
+  routeForPage(page).query = next
   if (route.name === page) route.query = next
 }
-export function useRoute() { return route }
+export function useRoute() { return inject(pageRouteKey, route) }
 export function useRouter() {
+  const current = useRoute()
   async function navigate(target: { path?: string; name?: string; query?: Record<string, string> }) {
     if (taskNavigationLocked.value) return
-    const page = target.name ?? target.path?.replace(/^\//, '') ?? route.name
-    const previous = route.name
-    route.path = '/' + page; route.name = page; route.query = target.query ?? queries.get(page) ?? {}
-    queries.set(page, route.query)
-    if (page !== previous) await Taro.switchTab({ url: `/pages/${page}/index` })
+    const page = target.name ?? target.path?.replace(/^\//, '') ?? current.name
+    if (target.query) commitPageQuery(page, target.query)
+    if (page === current.name && current.name !== route.name) return
+    if (page !== route.name) {
+      await Taro.switchTab({ url: `/pages/${page}/index` })
+      return
+    }
     await restorePageScroll()
   }
   return { push: navigate, replace: navigate }

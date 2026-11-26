@@ -12,7 +12,7 @@ function show(tab: 'home' | 'logs') { void router.push({ path: route.path, query
 
 <template>
   <div v-if="logsOpen" class="stack">
-    <div class="row"><button class="btn ghost" type="button" @click="show('home')">{{ translateUi("返回我的") }}</button><h2>{{ translateUi("应用日志") }}</h2></div>
+    <div class="profile-subpage-header"><button class="btn ghost" type="button" @click="show('home')">{{ translateUi("返回我的") }}</button><h2>{{ translateUi("应用日志") }}</h2></div>
     <AppLogsPane />
   </div>
   <Component v-else>

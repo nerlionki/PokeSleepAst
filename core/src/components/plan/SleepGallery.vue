@@ -14,7 +14,7 @@
   import { pokeHit } from '../../calc/pokeSearch';
   import { storeToRefs } from 'pinia';
   import { BERRIES, ISLANDS, POKEDEX, SLEEP_STYLES, berryByType, type SleepStyleRow } from '../../calc/data';
-  import { RANK_ORDER, resolvedSleepdex, styleKey, styleUnlockRequirement } from '../../calc/sleep';
+  import { RANK_ORDER, resolvedSleepdex, raeSleepStyleId, styleUnlockRequirement } from '../../calc/sleep';
   import type { IslandId } from '../../types';
   import { sleepReward } from '../../calc/sleepRewards';
   import { usePlanStore } from '../../stores/plans';
@@ -101,9 +101,10 @@
         return false;
       if (stars.value.length && !stars.value.includes(style.stars))
         return false;
-      const key = styleKey(style.pokeId, style.stars, style.styleId);
-      if (view.value === 'found' && !found.has(key)) return false;
-      if (view.value === 'missing' && found.has(key)) return false;
+      const id = raeSleepStyleId(style);
+      if (id == null) return false;
+      if (view.value === 'found' && !found.has(id)) return false;
+      if (view.value === 'missing' && found.has(id)) return false;
       if (!matchesChoice(berryType.value, poke?.berryType)) return false;
       if (
         specialty.value.length &&
@@ -115,21 +116,22 @@
       if (!matchesChoice(sleepType.value, style.sleepType)) return false;
       return true;
     });
-    const cards = new Map<string, { style: (typeof rows)[number]; islands: Set<string>; key: string }>();
+    const cards = new Map<string, { style: (typeof rows)[number]; id: number; islands: Set<string>; key: string }>();
     for (const style of rows) {
-      const face = styleKey(style.pokeId, style.stars, style.styleId);
-      const key = island.value.length ? `${style.island}:${style.id}:${face}` : face;
+      const id = raeSleepStyleId(style);
+      if (id == null) continue;
+      const key = island.value.length ? `${style.island}:${id}` : String(id);
       const card = cards.get(key);
       if (card) {
         card.islands.add(style.island);
         if (card.style.limited && !style.limited) card.style = style;
       } else {
-        cards.set(key, { style, islands: new Set([style.island]), key });
+        cards.set(key, { style, id, islands: new Set([style.island]), key });
       }
     }
-    return [...cards.values()].sort(({ style: a }, { style: b }) =>
+    return [...cards.values()].sort(({ style: a, id: aId }, { style: b, id: bId }) =>
       nationalDex(a.pokeId) - nationalDex(b.pokeId) || a.pokeId - b.pokeId
-        || a.stars - b.stars || (a.styleId ?? 0) - (b.styleId ?? 0)
+        || a.stars - b.stars || aId - bId
     );
   });
 
@@ -144,12 +146,6 @@
   function islandNames(ids: Set<string>) {
     return ISLANDS.filter(item => ids.has(item.id))
       .map(item => gameText(item.name)).join(' · ');
-  }
-
-  function found(style: { pokeId: number; stars: number; styleId?: number }) {
-    return foundKeys.value.has(
-      styleKey(style.pokeId, style.stars, style.styleId)
-    );
   }
 
   function setName(value: string) {
@@ -388,16 +384,12 @@
     </p>
     <div class="style-wall">
       <button
-        v-for="{ style, islands, key } in slice"
+        v-for="{ style, id, islands, key } in slice"
         :key="key"
         type="button"
         class="style-card"
-        :class="{ on: view === 'missing' ? !found(style) : found(style) }"
-        @click="
-          planStore.toggleStyle(
-            styleKey(style.pokeId, style.stars, style.styleId)
-          )
-        "
+        :class="{ on: view === 'missing' ? !foundKeys.has(id) : foundKeys.has(id) }"
+        @click="planStore.toggleStyle(id)"
       >
         <PokeSprite :id="style.pokeId" :name="style.name" />
         <strong>{{ gameText(style.name) }}</strong>

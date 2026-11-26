@@ -12,7 +12,9 @@ import { isLastRollExcluded, isRaeFiller, raeSpoBudget, raeSpoCost, RAE_SPO_RATE
 import snorlaxRanks from '../data/snorlax-ranks.resource'
 import type { IslandId, SleepType } from '../types'
 import { ENCOUNTER_BANDS, ISLANDS, islandById, pokeById, SLEEP_STYLES, type SleepStyleRow } from './data'
-import { boostedResearchReward, dailyResearchReward, sleepReward, sleepStyleInternalId, type ResearchBonuses } from './sleepRewards'
+import { boostedResearchReward, dailyResearchReward, sleepReward, type ResearchBonuses } from './sleepRewards'
+import { legacySleepStyleKey, raeSleepStyleId, resolveSleepStyleRef, type SleepStyleIdentity, type SleepStyleRef } from './sleepStyleIdentity'
+export { raeSleepStyleId, resolveSleepStyleRef } from './sleepStyleIdentity'
 const sleep_config_extracted0 = extracted0.modules.sleep
 const sleep_sleepMinutes_ruleParameters = ruleParameters.modules.sleep.sleepMinutes
 const sleep_energyLost_ruleParameters = ruleParameters.modules.sleep.energyLost
@@ -51,6 +53,14 @@ export function sleepShinyRate(context: ActivityContext, shinyUp = false, island
 
 /** RAE 地图页 snorlaxData：每岛 35 档评级的能量门槛，和每条睡姿的最低评级（下标）。 */
 const SNORLAX = snorlaxRanks as Record<IslandId, { energy: number[], unlock: Record<string, number> }>
+const unlockByIsland = new Map(Object.entries(SNORLAX).map(([island, rank]) => {
+  const byStyle = new Map<number, number>()
+  for (const [key, value] of Object.entries(rank.unlock)) {
+    const id = resolveSleepStyleRef(key)
+    if (id != null) byStyle.set(id, value)
+  }
+  return [island, byStyle] as const
+}))
 
 export const RANK_ORDER = (cloneData(sleep_config_extracted0.RANK_ORDER) as unknown as readonly [readonly ["普通",5],readonly ["超级",5],readonly ["高级",5],readonly ["大师",20]])
   .flatMap(([title, n]) => Array.from({ length: n }, (_, i) => `${title}${i + 1}`))
@@ -87,8 +97,9 @@ export function rankToNext(island: IslandId, strength: number) {
 }
 
 /** 这条睡姿在该岛需要的最低评级下标。 */
-export function styleUnlockRequirement(island: IslandId, style: { pokeId: number, stars: number, styleId?: number, unlockRank?: number }): number | undefined {
-  return style.unlockRank ?? SNORLAX[island]?.unlock[styleKey(style.pokeId, style.stars, style.styleId)]
+export function styleUnlockRequirement(island: IslandId, style: SleepStyleIdentity & { unlockRank?: number }): number | undefined {
+  const id = raeSleepStyleId(style)
+  return style.unlockRank ?? (id == null ? undefined : unlockByIsland.get(island)?.get(id))
 }
 
 export function styleUnlockIndex(island: IslandId, style: Parameters<typeof styleUnlockRequirement>[1]): number {
@@ -175,7 +186,7 @@ export const SPECIAL_POKEMON = new Set(cloneData(sleep_config_extracted0.SPECIAL
 export interface DrawOpts extends ResearchBonuses {
   /** In-process observers for the production draw. Never sent to workers. */
   traceSlot?: (slot: SleepSlotTrace) => void
-  observeResearch?: (slots: { pokeId: number, stars: number, styleId?: number, candy: number }[]) => void
+  observeResearch?: (slots: { pokeId: number, stars: number, styleId: number, candy: number }[]) => void
   simulationNumber?: number
   seed?: number
   campTicket?: boolean
@@ -191,7 +202,7 @@ export interface DrawOpts extends ResearchBonuses {
   firstResearchExtras?: number
   rank?: string
   mode?: 'normal' | 'map'
-  discovered?: string[]
+  discovered?: SleepStyleRef[]
   rare?: boolean
   shinyUp?: boolean
   /** Shared only across draws in the same research batch. */
@@ -206,12 +217,13 @@ export interface DrawOpts extends ResearchBonuses {
 }
 
 export interface DrawnStyle {
+  id: number
   pokeId: number
   name: string
   stars: number
   styleName: string
   dpr: number
-  styleId?: number
+  styleId: number
   rare?: boolean
   shiny?: boolean
   undiscovered?: boolean
@@ -226,46 +238,40 @@ export interface SleepSlotTrace {
   before: number
   after: number
   selectionBudget: number
-  eligible: { id: number, pokeId: number, stars: number, styleId?: number, dpr: number }[]
+  eligible: { id: number, pokeId: number, stars: number, styleId: number, dpr: number }[]
   affordable: number[]
   picked: DrawnStyle
   rngCalls: number
 }
 
-export function styleKey(pokeId: number, stars: number, styleId?: number) {
-  return styleId == null ? `${pokeId}-${stars}` : `${pokeId}-${stars}-${styleId}`
-}
+export { legacySleepStyleKey as styleKey }
 
-type StyleFace = { pokeId: number, stars: number, styleId?: number, island: string, limited?: boolean }
-
-function faceOf(style: StyleFace) {
-  return { stars: style.stars, styleId: style.styleId }
-}
-
-const facesByPokemon = new Map<number, { stars: number, styleId?: number }[]>()
+const facesByPokemon = new Map<number, Map<number, number>>()
 const knownStyles = [...SLEEP_STYLES, ...ACTIVITY_CATALOG.activities.flatMap(event => [...(event.spawns ?? []), ...(event.phases ?? []).flatMap(phase => phase.spawns ?? [])])]
-for (const style of knownStyles as StyleFace[]) {
-  const key = styleKey(style.pokeId, style.stars, style.styleId)
-  const faces = facesByPokemon.get(style.pokeId) ?? []
-  if (!faces.some((face) => styleKey(style.pokeId, face.stars, face.styleId) === key)) faces.push(faceOf(style))
+for (const style of knownStyles) {
+  const id = raeSleepStyleId(style)
+  if (id == null) continue
+  const faces = facesByPokemon.get(style.pokeId) ?? new Map<number, number>()
+  faces.set(id, style.stars)
   facesByPokemon.set(style.pokeId, faces)
 }
 
 const starsByPokemon = new Map<number, number[]>()
 for (const [pokeId, faces] of facesByPokemon) {
-  starsByPokemon.set(pokeId, [...new Set(faces.map((face) => face.stars))].sort((a, b) => a - b))
+  starsByPokemon.set(pokeId, [...new Set(faces.values())].sort((a, b) => a - b))
 }
 
 const islandIds = new Set<string>(ISLANDS.map((island) => island.id))
-let wallKeys: string[] | null = null
+let wallKeys: number[] | null = null
 
 /** 图鉴墙上会出现的睡姿，含进化型。同一条睡姿只记一次；百变怪的多个四星按睡姿 id 分开。 */
-export function wallStyleKeys(): string[] {
+export function wallStyleKeys(): number[] {
   if (wallKeys) return wallKeys
-  const keys = new Set<string>()
-  for (const style of knownStyles as StyleFace[]) {
+  const keys = new Set<number>()
+  for (const style of knownStyles) {
     if (!islandIds.has(style.island)) continue
-    keys.add(styleKey(style.pokeId, style.stars, style.styleId))
+    const id = raeSleepStyleId(style)
+    if (id != null) keys.add(id)
   }
   wallKeys = [...keys]
   return wallKeys
@@ -273,22 +279,28 @@ export function wallStyleKeys(): string[] {
 
 export interface SleepdexSelection {
   sleepdexMode?: 'all' | 'list'
-  sleepdex?: readonly string[]
-  sleepdexExcluded?: readonly string[]
+  sleepdex?: readonly SleepStyleRef[]
+  sleepdexExcluded?: readonly SleepStyleRef[]
+}
+
+export function resolvedStyleIds(refs: readonly SleepStyleRef[] = []): number[] {
+  return [...new Set(refs.map(resolveSleepStyleRef).filter((id): id is number => id != null))]
 }
 
 /** 没手动改过图鉴时，墙上每一张都算已选中。 */
-export function resolvedSleepdex(selection: SleepdexSelection): string[] {
-  if (selection.sleepdexMode === 'list') return [...(selection.sleepdex ?? [])]
-  const excluded = new Set(selection.sleepdexExcluded ?? [])
+export function resolvedSleepdex(selection: SleepdexSelection): number[] {
+  if (selection.sleepdexMode === 'list') return resolvedStyleIds(selection.sleepdex)
+  const excluded = new Set(resolvedStyleIds(selection.sleepdexExcluded))
   return wallStyleKeys().filter((key) => !excluded.has(key))
 }
 
-export function sleepdexState(pokeId: number, discovered: readonly string[]) {
+export function sleepdexState(pokeId: number, discovered: readonly SleepStyleRef[]) {
   const stars = starsByPokemon.get(pokeId) ?? []
-  const faces = facesByPokemon.get(pokeId) ?? []
-  const have = new Set(discovered)
-  const missing = stars.filter((star) => faces.some((face) => face.stars === star && !have.has(styleKey(pokeId, face.stars, face.styleId))))
+  const faces = facesByPokemon.get(pokeId)
+  const have = new Set(resolvedStyleIds(discovered))
+  const missingStars = new Set<number>()
+  for (const [id, star] of faces ?? []) if (!have.has(id)) missingStars.add(star)
+  const missing = stars.filter(star => missingStars.has(star))
   return { stars, missing, complete: stars.length > 0 && missing.length === 0 }
 }
 
@@ -323,7 +335,8 @@ function buildResearchLottery(island: IslandId, sleepType: SleepType, power: num
     const legendary = SPECIAL_POKEMON.has(style.pokeId)
     if (style.limited || !hasResearchDpr(style) || (options.rare === false && legendary)
       || (!context.includeUnreleasedPokemon && context.pendingPokemon?.includes(style.pokeId))) return []
-    const internalId = sleepStyleInternalId(style)
+    const internalId = raeSleepStyleId(style)
+    if (internalId == null) return []
     const effect = activityValues(context, island, pokeById(style.pokeId), 240, undefined, session)
     const candidate: RaeSleepCandidate = {
       internalId, unlockRank: styleUnlockIndex(island, style), spo: raeSpoCost(style.dpr),
@@ -352,7 +365,7 @@ function prepareResearchDraw(island: IslandId, sleepType: SleepType, power: numb
   const mixed = query.mixedPool?.slots ?? 0
   const session = options.researchSession ?? Number((options.researchedBefore ?? 0) > 0)
   const roll = prepareRaeSleepDraw(query)
-  const discovered = new Set(options.discovered)
+  const discovered = new Set(resolvedStyleIds(options.discovered))
   const shinyRates = options.preparedShinyRates ?? new Map<number, number>()
   return (rng: () => number, simulation = 1): DrawnStyle[] => {
     const got: DrawnStyle[] = []
@@ -366,16 +379,19 @@ function prepareResearchDraw(island: IslandId, sleepType: SleepType, power: numb
         rate = sleepShinyRate(context, options.shinyUp, island, style.pokeId, session)
         shinyRates.set(style.pokeId, rate)
       }
-      got.push({ ...style, rare: candidate.legendary, shiny: random() < rate,
-        undiscovered: !discovered.has(styleKey(style.pokeId, style.stars, style.styleId)) })
+      got.push({ ...style, id: candidate.internalId, styleId: candidate.internalId, rare: candidate.legendary, shiny: random() < rate,
+        undiscovered: !discovered.has(candidate.internalId) })
     }, trace && (detail => {
-      const eligible = detail.eligible.map(candidate => styles.get(candidate)!)
+      const eligible = detail.eligible.map(candidate => {
+        const { pokeId, stars, dpr } = styles.get(candidate)!
+        return { id: candidate.internalId, styleId: candidate.internalId, pokeId, stars, dpr }
+      })
       trace({
         simulation, seed: options.seed, slot: detail.slot + 1,
         pool: detail.slot === naturalSlots ? 'camp' : detail.slot < mixed ? 'open' : 'typed',
         branch: detail.stage === 'filler' ? 'exhausted' : detail.stage === 'last' ? 'terminal' : detail.stage === 'regular' ? 'weighted' : 'camp',
         before: detail.before * RAE_SPO_RATE, after: detail.after * RAE_SPO_RATE, selectionBudget: detail.budget * RAE_SPO_RATE,
-        eligible: eligible.map(({ id, pokeId, stars, styleId, dpr }) => ({ id, pokeId, stars, styleId, dpr })),
+        eligible,
         affordable: eligible.filter(style => raeSpoCost(style.dpr) <= detail.budget).map(style => style.id),
         picked: { ...got[detail.slot]! }, rngCalls: calls - beforeSlot,
       })
@@ -416,7 +432,7 @@ export function inspectResearchLottery(island: IslandId, sleepType: SleepType, d
   return { power, ...buildResearchLottery(island, sleepType, power, rank, 'normal', context, options) }
 }
 
-export interface SleepExpectRow { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }
+export interface SleepExpectRow { name: string, pokeId: number, stars: number, styleId: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }
 export interface SleepExpectCheckpoint { completed: number, randomState: number, rows: SleepExpectRow[] }
 
 function researchRewardAtSlot(style: SleepStyleRow, index: number, island: IslandId, activity: ResearchActivityContext, opts: DrawOpts) {
@@ -441,8 +457,8 @@ export function sleepTreeExpect(island: IslandId, sleepType: SleepType, dp: numb
   const rows = new Map<string, SleepExpectRow>()
   for (const [candidate, slots] of counts) {
     const style = styles.get(candidate)!
-    const key = `${style.pokeId}-${style.stars}-${candidate.legendary ? 'r' : 'n'}`
-    const row = rows.get(key) ?? { name: style.name, pokeId: style.pokeId, stars: style.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
+    const key = `${candidate.internalId}-${candidate.legendary ? 'r' : 'n'}`
+    const row = rows.get(key) ?? { name: style.name, pokeId: style.pokeId, stars: style.stars, styleId: candidate.internalId, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
     const shiny = sleepShinyRate(context, options.shinyUp, island, style.pokeId, session)
     slots.forEach((mass, slot) => {
       const count = mass * displayBatch
@@ -474,8 +490,8 @@ export function* sleepExpectSteps(
   const effects = activityValues(activity, island, undefined, (sleep_sleepExpectSteps_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: opts.eventMult ?? 1, eventMix: normalizeEventMix(opts.eventMix) }, opts.researchSession ?? Number((opts.researchedBefore ?? 0) > 0))
   if (effects.drowsyPowerMultiplier !== (opts.eventMult ?? 1)) dp = dp / (opts.eventMult ?? 1) * effects.drowsyPowerMultiplier
   opts = { ...opts, activity, activityResolved: true, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
-  const freq = new Map<string, { name: string, pokeId: number, stars: number, count: number, shiny: number, rare: number, researchExp: number, shards: number, candy: number }>()
-  for (const row of checkpoint?.rows ?? []) freq.set(`${row.pokeId}-${row.stars}-${row.rare ? 'r' : 'n'}`, { ...row })
+  const freq = new Map<string, SleepExpectRow>()
+  for (const row of checkpoint?.rows ?? []) freq.set(`${row.styleId}-${row.rare ? 'r' : 'n'}`, { ...row })
   const rank = opts.rank ?? '大师1'
   const drawResearch = prepareResearchDraw(island, sleepType, dp, rank, mode, activity, opts)
   const random = createSleepRandom(checkpoint?.randomState ?? opts.seed ?? 0)
@@ -483,8 +499,8 @@ export function* sleepExpectSteps(
     const draw = drawResearch(random.next, i + 1)
     const observed = opts.observeResearch ? [] as Parameters<NonNullable<DrawOpts['observeResearch']>>[0] : undefined
     for (const [index, s] of draw.entries()) {
-      const key = `${s.pokeId}-${s.stars}-${s.rare ? 'r' : 'n'}`
-      const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
+      const key = `${s.styleId}-${s.rare ? 'r' : 'n'}`
+      const cur = freq.get(key) ?? { name: s.name, pokeId: s.pokeId, stars: s.stars, styleId: s.styleId, count: 0, shiny: 0, rare: 0, researchExp: 0, shards: 0, candy: 0 }
       const reward = researchRewardAtSlot(s, index, island, activity, opts)
       cur.count += 1
       cur.researchExp += reward?.researchExp ?? 0

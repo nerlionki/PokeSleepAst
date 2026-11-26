@@ -12,6 +12,7 @@ import potTiers from '../data/pot-tiers.resource'
 import ranks from '../data/ranks.resource'
 import recipes from '../data/recipes.resource'
 import sleepStyles from '../data/sleep-styles.resource'
+import { bindRaeSleepStyle } from './sleepStyleIdentity'
 import subskills from '../data/subskills.resource'
 import subskillDraw from '../data/subskill-draw.resource'
 import xp from '../data/xp.resource'
@@ -57,7 +58,10 @@ export const MEAL_RECOVERY = mealRecovery
 export const POT_TIERS = potTiers
 export const RANKS = ranks
 export interface SleepStyleRow {
+  /** Canonical RAE ID for a row bound by the runtime. */
   id: number
+  /** Canonical RAE sleep-style ID shared across islands. */
+  raeStyleId?: number
   pokeId: number
   name: string
   island: string
@@ -79,7 +83,7 @@ export interface SleepStyleRow {
   unlockRank?: number
 }
 
-export const SLEEP_STYLES = sleepStyles as SleepStyleRow[]
+export const SLEEP_STYLES = (sleepStyles as SleepStyleRow[]).map(bindRaeSleepStyle).filter(row => row != null)
 export const NATURES = natures
 export const NEUTRAL_NATURE = clientDefaults.modules.natureLabels.neutralNature
 export const SUBSKILLS = subskills

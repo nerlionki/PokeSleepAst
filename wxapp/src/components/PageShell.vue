@@ -7,13 +7,14 @@ import { taskNavigationLocked } from '../../../core/src/composables/taskNavigati
 import { hydrate } from '../platform/hydrate'
 import { isPrivateSharePage, isSinglePageMode } from '../platform/share'
 import { usePageTab } from '../../../core/src/composables/usePageTab'
-import { activatePage, route } from '../platform/router'
+import { activatePage, providePageRoute, route } from '../platform/router'
 import { useAppearanceStore } from '../../../core/src/stores/appearance'
 import { luminance } from '../../../core/src/ui/appearance'
 import { useViewport } from '../platform/viewport'
 import { viewportVariables } from '../../../core/src/ui/responsive'
 const props = defineProps<{ page: string }>()
-const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex')
+const pageRoute = providePageRoute(props.page)
+const pokemonTab = usePageTab(['dex', 'box', 'wall'] as const, 'dex', pageRoute)
 const appearance = useAppearanceStore()
 const viewport = useViewport()
 const layoutVariables = computed(() => ({
@@ -64,7 +65,7 @@ useDidShow(() => { active(); applyBars(); applyLanguage(); refreshShareMode() })
       </view>
     </view>
     <view v-else class="page"><slot /></view>
-    <GuideTour v-if="ready && !singlePage" :host-page="page" />
+    <GuideTour v-if="ready && !singlePage" :host-page="page" :active-route="route" />
   </view>
 </template>
 <style>

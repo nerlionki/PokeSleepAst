@@ -8,6 +8,7 @@ import { usePageTab } from '../../../../core/src/composables/usePageTab'
 import { onMounted, watchEffect } from 'vue'
 import { useAppearanceStore } from '../../../../core/src/stores/appearance'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { tabDestination } from '../../router'
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
 import { useRosterStore } from '../../stores/roster'
@@ -48,23 +49,23 @@ onMounted(async () => {
       <RouterView />
     </main>
     <nav class="tabbar" :inert="taskNavigationLocked" :aria-disabled="taskNavigationLocked">
-      <RouterLink :to="{ name: 'pokemon' }">
+      <RouterLink :to="tabDestination('pokemon')">
         <TabIcon name="pokemon" />
         {{ translateUi("宝可梦") }}
       </RouterLink>
-      <RouterLink :to="{ name: 'plan' }">
+      <RouterLink :to="tabDestination('plan')">
         <TabIcon name="plan" />
         {{ translateUi("规划") }}
       </RouterLink>
-      <RouterLink :to="{ name: 'team' }">
+      <RouterLink :to="tabDestination('team')">
         <TabIcon name="team" />
         {{ translateUi("配队") }}
       </RouterLink>
-      <RouterLink :to="{ name: 'data' }">
+      <RouterLink :to="tabDestination('data')">
         <TabIcon name="data" />
         {{ translateUi("资料") }}
       </RouterLink>
-      <RouterLink :to="{ name: 'profile' }">
+      <RouterLink :to="tabDestination('profile')">
         <TabIcon name="profile" />
         {{ translateUi("我的") }}
       </RouterLink>

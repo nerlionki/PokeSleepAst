@@ -1,7 +1,7 @@
 import { validateMainSkillModels } from './skillEffectModel'
 /** Validate new skill data before installing a snapshot; never mix old remote tables with bundled fields. */
-export function validateSkillResources(data: Record<string, unknown>) {
-  validateMainSkillModels(data)
+export function validateSkillResources(data: Record<string, unknown>, maximumModelVersion = 2) {
+  validateMainSkillModels(data, maximumModelVersion)
   const object = (value: unknown): Record<string, any> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {}
   const tables = object(object(data['skill-tables.json']).modules)
   const skills = object(tables.mainSkills).MAIN_SKILLS

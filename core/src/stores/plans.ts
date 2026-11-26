@@ -12,6 +12,7 @@ import { loadJson, saveJson } from '../storage'
 import { defaultSplitOptions, normalizeSplitOptions, type SplitOptions } from '../calc/splitSleep'
 import type { CompletionEfficiencyOptions } from '../calc/completionEfficiency'
 import { normalizeEncounterGoals, type EncounterGoal } from '../calc/encounterPlan'
+import { migrateSleepStyleRefs, resolveSleepStyleRef, type SleepStyleRef } from '../calc/sleepStyleIdentity'
 const stores_plans_config_clientDefaults = clientDefaults.modules.stores_plans
 
 
@@ -25,10 +26,10 @@ interface PlanState {
   campTicketOverrides?: Partial<Record<PlanCampTicketScope, boolean>>
   incense: boolean
   rank: string
-  sleepdex: string[]
+  sleepdex: SleepStyleRef[]
   /** all：默认全选，sleepdexExcluded 里的是取消的。list：sleepdex 是手动记下的已发现。 */
   sleepdexMode: 'all' | 'list'
-  sleepdexExcluded: string[]
+  sleepdexExcluded: SleepStyleRef[]
   rare: boolean
   shinyUp: boolean
   catchGoals: CatchGoal[]
@@ -73,13 +74,14 @@ export const usePlanStore = defineStore('plans', () => {
     babyEfficiency.pokeId = normalizeBabyEfficiencyPokemonId(babyEfficiency.pokeId)
     const selectionMode = saved.completionEfficiency?.selectionMode === 'free' ? 'free' : 'sleepdex'
     const completionEfficiency: CompletionEfficiencyOptions = { ...DEFAULT_COMPLETION_EFFICIENCY, ...saved.completionEfficiency, selectionMode }
+    completionEfficiency.completionTarget = resolveSleepStyleRef(completionEfficiency.completionTarget) ?? completionEfficiency.completionTarget
     plan.value = {
       ...empty,
       ...saved,
       sleepPrecision: saved.sleepPrecision === 'medium' || saved.sleepPrecision === 'high' || saved.sleepPrecision === 'low' ? saved.sleepPrecision : empty.sleepPrecision,
-      sleepdex: saved.sleepdex ?? [],
+      sleepdex: migrateSleepStyleRefs(saved.sleepdex),
       sleepdexMode: saved.sleepdexMode ?? ((saved.sleepdex?.length ?? 0) > 0 ? 'list' : 'all'),
-      sleepdexExcluded: saved.sleepdexExcluded ?? [],
+      sleepdexExcluded: migrateSleepStyleRefs(saved.sleepdexExcluded),
       catchGoals: saved.catchGoals ?? [],
       encounterGoals: normalizeEncounterGoals(saved.encounterGoals),
       candyRows: saved.candyRows ?? [],
@@ -96,7 +98,9 @@ export const usePlanStore = defineStore('plans', () => {
     if (ready.value) void saveJson('plans', v)
   }, { deep: true })
 
-  function toggleStyle(key: string) {
+  function toggleStyle(ref: SleepStyleRef) {
+    const key = resolveSleepStyleRef(ref)
+    if (key == null) return
     if (plan.value.sleepdexMode === 'list') {
       const set = new Set(plan.value.sleepdex)
       if (set.has(key)) set.delete(key)

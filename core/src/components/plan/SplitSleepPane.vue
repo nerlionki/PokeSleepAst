@@ -24,11 +24,10 @@
   } from '../../calc/babyEfficiency';
   import { ISLANDS, SLEEP_STYLES } from '../../calc/data';
   import { familyOf } from '../../calc/candyPlan';
-  import { raeMappedSleepStyleId } from '../../calc/sleepRewards';
   import {
     EVENT_BONUSES,
     resolvedSleepdex,
-    styleKey
+    raeSleepStyleId
   } from '../../calc/sleep';
   import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules';
   import {
@@ -107,7 +106,7 @@
     pokeId = ref(
       components_plan_SplitSleepPane_config_clientDefaults['pokeIdInitial']
     ),
-    face = ref(
+    face = ref<SplitTarget['style']>(
       components_plan_SplitSleepPane_config_clientDefaults['faceInitial']
     ),
     advanced = ref(
@@ -122,7 +121,10 @@
   );
   const selectableStyles = computed(() => {
     const found = new Set(selectionMode.value === 'sleepdex' ? resolvedSleepdex(plan.value) : []);
-    return currentStyles.value.filter(row => raeMappedSleepStyleId(row) != null && !found.has(styleKey(row.pokeId, row.stars, row.styleId)));
+    return currentStyles.value.filter(row => {
+      const id = raeSleepStyleId(row);
+      return id != null && !found.has(id);
+    });
   });
   const allowedIds = computed(() => {
     if (kind.value === 'style') return [...new Set(selectableStyles.value.map(row => row.pokeId))];
@@ -148,12 +150,12 @@
     rows => {
       if (
         !rows.some(
-          row => styleKey(row.pokeId, row.stars, row.styleId) === face.value
+          row => raeSleepStyleId(row) === face.value
         )
       ) {
         const first = rows[0];
         face.value = first
-          ? styleKey(first.pokeId, first.stars, first.styleId)
+          ? raeSleepStyleId(first) ?? ''
           : '';
       }
     },
@@ -178,7 +180,7 @@
     );
     if (!pokeId.value || (kind.value === 'style' && !face.value)) {
       formError.value = '请选择可参与普通研究的目标';
-      return;
+      return false;
     }
     if (kind.value === 'style') target.statistic = statistic.value;
     if (
@@ -187,17 +189,15 @@
       )
     ) {
       formError.value = '该目标已添加';
-      return;
+      return false;
     }
     config.value.targets.push(target);
     formError.value = '';
+    return true;
   }
   function run() {
     formError.value = '';
-    if (!config.value.targets.length) {
-      formError.value = '请选择可参与普通研究的目标';
-      return;
-    }
+    if (!config.value.targets.length && !addTarget()) return;
     void calculate();
   }
   const resultGroups = computed(() =>
@@ -364,8 +364,8 @@
           ><select id="split-face" v-model="face">
             <option
               v-for="row in faces"
-              :key="styleKey(row.pokeId, row.stars, row.styleId)"
-              :value="styleKey(row.pokeId, row.stars, row.styleId)"
+              :key="raeSleepStyleId(row)"
+              :value="raeSleepStyleId(row)"
             >
               {{ row.stars }}★ · {{ sleepStyleText(row) }}
             </option>

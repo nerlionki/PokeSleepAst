@@ -12,8 +12,9 @@ import type { IslandId, SleepType } from '../types'
 import { familyOf } from './candyPlan'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES, type SleepStyleRow } from './data'
 import { evolutionStages } from './evolution'
-import { drowsyPower, encounterCount, RANK_ORDER, rankFromStrength, rankStrength, SPECIAL_POKEMON, styleUnlockIndex, styleKey } from './sleep'
-import { raeMappedSleepStyleId, sleepReward, sleepStyleInternalId } from './sleepRewards'
+import { drowsyPower, encounterCount, RANK_ORDER, rankFromStrength, rankStrength, SPECIAL_POKEMON, styleUnlockIndex } from './sleep'
+import { sleepReward } from './sleepRewards'
+import { raeSleepStyleId, resolveSleepStyleRef, type SleepStyleRef } from './sleepStyleIdentity'
 import { createDrawStateKey, efficiencyRandom, prepareEfficiencyLottery, simulateEfficiencySlots, efficiencyRewardsAfterResearch, type EfficiencySimulation, type EfficiencyBucket, type EfficiencyDrawState, type EfficiencyReward } from './babyEfficiencyDraw'
 const babyEfficiency_config_extracted0 = extracted0.modules.babyEfficiency
 const babyEfficiency_config_extracted1 = extracted1.modules.babyEfficiency
@@ -33,7 +34,7 @@ export interface BabyEfficiencyOptions {
   activity?: ResearchActivitySelection
   pokeId: number
   /** 指定时搜索这一条睡姿的每日至少一次概率，不合并物种或同星睡姿。 */
-  completionTarget?: string
+  completionTarget?: SleepStyleRef
   /** Existing completion panels default to first-hit. Fixed and offline callers can select expectation. */
   completionStatistic?: 'expectation' | 'first-hit'
   island?: IslandId | 'all'
@@ -103,7 +104,7 @@ export interface EfficiencyProgress { percent: number, island: string, evaluated
 export function validateBabyEfficiency(options: BabyEfficiencyOptions, checkAvailability = true): string | null {
   if (options.objective != null && options.objective !== 'catch' && options.objective !== 'candy') return '请选择有效的效率目标'
   if (options.completionTarget != null) {
-    if (typeof options.completionTarget !== 'string' || (checkAvailability && completionStyleId(researchSleepStyles(SLEEP_STYLES, researchActivity(options.activity)), options.pokeId, options.completionTarget) == null)) return '请选择可参与普通研究的未收集睡姿'
+    if ((typeof options.completionTarget !== 'string' && typeof options.completionTarget !== 'number') || (checkAvailability && completionStyleId(researchSleepStyles(SLEEP_STYLES, researchActivity(options.activity)), options.pokeId, options.completionTarget) == null)) return '请选择可参与普通研究的未收集睡姿'
     if (options.completionStatistic != null && options.completionStatistic !== 'expectation' && options.completionStatistic !== 'first-hit') return '请选择可参与普通研究的未收集睡姿'
   } else if (!BABY_POKEMON_IDS.includes(normalizeBabyEfficiencyPokemonId(options.pokeId))) return '请选择进化链的一阶段宝可梦'
   if (options.island != null && options.island !== 'all' && !(checkAvailability ? babyEfficiencyIslands(options.pokeId, options.completionTarget, options.activity, options.objective) : ISLANDS).some((island) => island.id === options.island)) return '请选择目标睡姿或宝可梦出没的岛屿'
@@ -117,19 +118,17 @@ export function validateBabyEfficiency(options: BabyEfficiencyOptions, checkAvai
   return null
 }
 
-/** The saved sleepdex key selects a row; only the verified RAE ID identifies its draws. */
-function completionStyleId(styles: readonly SleepStyleRow[], pokeId: number, key: string): number | undefined {
-  const ids = new Set(styles.filter(style => !style.limited && style.pokeId === pokeId && styleKey(style.pokeId, style.stars, style.styleId) === key)
-    .map(raeMappedSleepStyleId).filter(id => id != null))
-  return ids.size === 1 ? ids.values().next().value : undefined
+function completionStyleId(styles: readonly SleepStyleRow[], pokeId: number, ref: SleepStyleRef): number | undefined {
+  const id = resolveSleepStyleRef(ref)
+  return id != null && styles.some(style => !style.limited && style.pokeId === pokeId && raeSleepStyleId(style) === id) ? id : undefined
 }
 
-export function babyEfficiencyIslands(pokeId: number, completionTarget?: string, activity?: ResearchActivitySelection, objective?: BabyEfficiencyOptions['objective']) {
+export function babyEfficiencyIslands(pokeId: number, completionTarget?: SleepStyleRef, activity?: ResearchActivitySelection, objective?: BabyEfficiencyOptions['objective']) {
   const targets = babyEfficiencyTargetIds(pokeId)
   const family = familyOf(pokeId)
   const styles = researchSleepStyles(SLEEP_STYLES, researchActivity(activity))
   const internalId = completionTarget == null ? undefined : completionStyleId(styles, pokeId, completionTarget)
-  const isTarget = (style: SleepStyleRow) => completionTarget != null ? internalId != null && raeMappedSleepStyleId(style) === internalId
+  const isTarget = (style: SleepStyleRow) => completionTarget != null ? internalId != null && raeSleepStyleId(style) === internalId
     : objective === 'candy' ? familyOf(style.pokeId) === family : targets.includes(style.pokeId)
   return ISLANDS.filter(island => styles.some(style => !style.limited && style.island === island.id && isTarget(style)))
 }
@@ -151,15 +150,18 @@ export function babyEfficiencySleepTypes(options: BabyEfficiencyOptions): SleepT
   return EFFICIENCY_SLEEP_TYPES.filter((type) => type === ownType || type === '没有特征')
 }
 
-export function efficiencyIslands(pokeId: number, completionTarget?: string, activity?: ResearchActivitySelection, objective?: BabyEfficiencyOptions['objective']): EfficiencyIsland[] {
+export function efficiencyIslands(pokeId: number, completionTarget?: SleepStyleRef, activity?: ResearchActivitySelection, objective?: BabyEfficiencyOptions['objective']): EfficiencyIsland[] {
   requireRaeSleepLottery()
   const targets = babyEfficiencyTargetIds(pokeId)
   const family = familyOf(pokeId)
   const context = researchActivity(activity)
-  const eligibleStyles = researchSleepStyles(SLEEP_STYLES, context).filter(style => !style.limited)
+  const eligibleStyles = researchSleepStyles(SLEEP_STYLES, context).flatMap(style => {
+    const raeStyleId = raeSleepStyleId(style)
+    return !style.limited && raeStyleId != null ? [{ ...style, raeStyleId }] : []
+  })
   const internalId = completionTarget == null ? undefined : completionStyleId(eligibleStyles, pokeId, completionTarget)
   const rewardOf = (style: SleepStyleRow): EfficiencyReward => ({
-    catch: Number(completionTarget == null ? targets.includes(style.pokeId) : internalId != null && raeMappedSleepStyleId(style) === internalId),
+    catch: Number(completionTarget == null ? targets.includes(style.pokeId) : internalId != null && style.raeStyleId === internalId),
     candy: completionTarget == null && familyOf(style.pokeId) === family ? (sleepReward(style)?.candy ?? 0) : 0,
   })
   return ISLANDS.flatMap((island) => {
@@ -170,7 +172,7 @@ export function efficiencyIslands(pokeId: number, completionTarget?: string, act
       id: island.id as IslandId,
       name: island.name,
       bands,
-      styles: styles.map((style: SleepStyleRow) => ({
+      styles: styles.map(style => ({
         ...rewardOf(style),
         pokeId: style.pokeId,
         unlockRank: styleUnlockIndex(island.id as IslandId, style),
@@ -179,9 +181,9 @@ export function efficiencyIslands(pokeId: number, completionTarget?: string, act
         unlockStrength: rankStrength(island.id as IslandId, RANK_ORDER[styleUnlockIndex(island.id as IslandId, style)]!),
         dpr: style.dpr,
         belly: style.styleName.includes('大肚'),
-        order: sleepStyleInternalId(style),
+        order: style.raeStyleId,
         lastRollExcluded: isLastRollExcluded(style),
-        filler: isRaeFiller(island.id, sleepStyleInternalId(style)),
+        filler: isRaeFiller(island.id, style.raeStyleId),
       })),
     }]
   })
@@ -250,7 +252,7 @@ export function efficiencyDrawState(_island: EfficiencyIsland, state: CurveState
 }
 
 /** Fixed single-session entry using the same pool and settings as the completion planner. */
-export function inspectCompletionLottery(options: BabyEfficiencyOptions & { island: IslandId, sleepType: SleepType, completionTarget: string }, strength: number, score: number) {
+export function inspectCompletionLottery(options: BabyEfficiencyOptions & { island: IslandId, sleepType: SleepType, completionTarget: SleepStyleRef }, strength: number, score: number) {
   const context = researchActivity(options.activity)
   const base = efficiencyIslands(options.pokeId, options.completionTarget, context).find(row => row.id === options.island)
   if (!base) return undefined
@@ -299,7 +301,7 @@ function mergeIntervals(intervals: EfficiencyInterval[]): EfficiencyInterval[] {
 }
 
 interface SplitLeaders { catch: { value: number, splits: number[] }, candy: { value: number, splits: number[] } }
-export const BABY_EFFICIENCY_CHECKPOINT_VERSION = 11
+export const BABY_EFFICIENCY_CHECKPOINT_VERSION = 12
 export interface BabyEfficiencyCheckpoint {
   version: typeof BABY_EFFICIENCY_CHECKPOINT_VERSION
   /** 捕捉目标组；用于丢弃南瓜精合并前的旧续算结果。 */
@@ -328,7 +330,7 @@ export function* babyEfficiencySteps(
   const availability = researchActivity(options.activity ?? checkpoint?.options.activity, options.activity?.pendingPokemon ?? pendingResearchPokemon())
   if (checkpoint && checkpoint.version !== BABY_EFFICIENCY_CHECKPOINT_VERSION) throw new Error('续算规则或参数与检查点不一致，请重新计算')
   if (checkpoint && !sameResearchAvailability(checkpoint.options.activity, availability)) checkpoint = undefined
-  options = { ...options, activity: availability }
+  options = { ...options, activity: availability, ...(options.completionTarget != null && { completionTarget: resolveSleepStyleRef(options.completionTarget) ?? options.completionTarget }) }
   islands ??= efficiencyIslands(options.pokeId, options.completionTarget, options.activity, options.objective)
   const completion = options.completionTarget != null
   const firstHit = completion && options.completionStatistic !== 'expectation'

@@ -431,7 +431,10 @@ export function simulateTeam(
     }
     if (!asleep && t > 0 && asleepAt(t - 1)) {
       // 模型在睡眠结束时结算研究，先恢复画皮，再发动睡眠期间储存的技能。
-      for (const m of members) resetSkillModelState(m, 'sleepStart')
+      for (const m of members) {
+        resetSkillModelState(m, 'sleepResearch')
+        resetSkillModelState(m, 'sleepStart')
+      }
       const teamBonuses = members.filter(m => unlockedSubskills(m.input.level, m.input.subskills).includes('energyRecover')).length
       for (const m of members) {
         if (opts.fixedEnergy == null) {

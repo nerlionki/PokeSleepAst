@@ -3,7 +3,7 @@ import ruleCatalogs from '../data/rule-catalogs.resource'
 import ruleParameters from '../data/rule-parameters.resource'
 import clientFactoryDefaults from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
-import { ACTIVITY_CATALOG, researchActivity, researchSleepStyles, activityValues, type ResearchActivitySelection } from './activities'
+import { researchActivity, researchSleepStyles, activityValues, type ResearchActivitySelection } from './activities'
 import { pendingResearchPokemon } from './researchAvailability'
 import { activityEfficiencyIsland } from './babyEfficiency'
 import type { IslandId, SleepType } from '../types'
@@ -11,8 +11,8 @@ import { ISLANDS, SLEEP_STYLES } from './data'
 import { familyOf } from './candyPlan'
 import { BABY_POKEMON_IDS, babyEfficiencyIslands, babyEfficiencyPokemonName, efficiencyCurve, efficiencyDrawState, efficiencyIslands, EFFICIENCY_SLEEP_TYPES, MAX_EFFICIENCY_DROWSY_POWER, normalizeBabyEfficiencyPokemonId, type EfficiencyIsland, type EfficiencyPrecision } from './babyEfficiency'
 import { createDrawStateKey, efficiencyRandom, efficiencyRewardsAfterResearch, simulateEfficiencySlots, type EfficiencySimulation } from './babyEfficiencyDraw'
-import { drowsyPower, encounterCount, rankStrength, RANK_ORDER, styleKey, styleUnlockIndex } from './sleep'
-import { raeMappedSleepStyleId } from './sleepRewards'
+import { drowsyPower, encounterCount, rankStrength, RANK_ORDER, styleUnlockIndex } from './sleep'
+import { raeSleepStyleId, resolveSleepStyleRef, type SleepStyleRef } from './sleepStyleIdentity'
 import { normalizeEventMix, type EventMix } from './sleepRules'
 const factory_splitSleep_config_clientFactoryDefaults = clientFactoryDefaults.modules.factory_splitSleep
 const splitSleep_config_ruleCatalogs = ruleCatalogs.modules.splitSleep
@@ -24,7 +24,7 @@ const splitSleep_splitSleepSteps_runtimeParameters = runtimeParameters.modules.s
 export interface SplitTarget {
   kind: 'baby' | 'catch' | 'candy' | 'style'
   pokeId: number
-  style: string
+  style: SleepStyleRef
   countWeight: number
   candyWeight: number
   probabilityWeight: number
@@ -42,21 +42,23 @@ export interface SplitOptions {
   iterations: number
   precision?: EfficiencyPrecision
 }
-export const newSplitTarget = (kind: SplitTarget['kind'], pokeId: number, style = ''): SplitTarget => ({ kind, pokeId, style, ...cloneData(clientFactoryDefaults.modules.factory_splitSleep.newSplitTarget) })
+export const newSplitTarget = (kind: SplitTarget['kind'], pokeId: number, style: SleepStyleRef = ''): SplitTarget => ({ kind, pokeId, style: resolveSleepStyleRef(style) ?? style, ...cloneData(clientFactoryDefaults.modules.factory_splitSleep.newSplitTarget) })
 export function defaultSplitOptions(): SplitOptions {
   const options = cloneData(factory_splitSleep_config_clientFactoryDefaults["defaultSplitOptions"]) as unknown as SplitOptions
   return { ...options, precision: options.precision ?? 'low' }
 }
-export const splitTargetKey = (target: SplitTarget) => target.kind === 'style' ? `style:${target.style}`
+export const splitTargetKey = (target: SplitTarget) => target.kind === 'style' ? `style:${resolveSleepStyleRef(target.style) ?? target.style}`
   : `${target.kind}:${target.kind === 'candy' ? familyOf(target.pokeId) : normalizeBabyEfficiencyPokemonId(target.pokeId)}`
 export function splitTargetStatus(target: SplitTarget, island: IslandId, strength: number, activity?: ResearchActivitySelection) {
-  const style = researchSleepStyles(SLEEP_STYLES, researchActivity(activity)).find(row => row.island === island && row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
-  const available = target.kind === 'style' ? !!style && raeMappedSleepStyleId(style) != null
+  const internalId = target.kind === 'style' ? resolveSleepStyleRef(target.style) : undefined
+  const matches = (row: typeof SLEEP_STYLES[number]) => !row.limited && row.pokeId === target.pokeId && raeSleepStyleId(row) === internalId
+  const style = internalId == null ? undefined : researchSleepStyles(SLEEP_STYLES, researchActivity(activity)).find(row => row.island === island && matches(row))
+  const available = target.kind === 'style' ? !!style
     : babyEfficiencyIslands(target.pokeId, undefined, activity, target.kind === 'candy' ? 'candy' : 'catch').some(row => row.id === island)
   const unlockStrength = style ? rankStrength(island, RANK_ORDER[styleUnlockIndex(island, style)]!) : null
   const unlocked = available && (target.kind !== 'style' || (unlockStrength != null && strength >= unlockStrength))
-  const namedStyle = style ?? SLEEP_STYLES.find(row => row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
-  const label = target.kind !== 'style' ? babyEfficiencyPokemonName(target.pokeId) : namedStyle ? `${namedStyle.name} ${namedStyle.stars}★ ${namedStyle.styleName}` : target.style
+  const namedStyle = style ?? (internalId == null ? undefined : SLEEP_STYLES.find(matches))
+  const label = target.kind !== 'style' ? babyEfficiencyPokemonName(target.pokeId) : namedStyle ? `${namedStyle.name} ${namedStyle.stars}★ ${namedStyle.styleName}` : String(target.style)
   const reason = !available ? '当前岛屿无此普通研究目标，请更换岛屿或移除目标' : !unlocked ? `未达到解锁能量 ${unlockStrength!.toLocaleString('zh-CN')}，当前权重为 0` : ''
   return { label, namedStyle, available, unlocked, unlockStrength, reason }
 }
@@ -65,7 +67,7 @@ function validTarget(target: SplitTarget): boolean {
   if (![target.countWeight, target.candyWeight, target.probabilityWeight].every(n => Number.isFinite(n) && n >= 0)) return false
   if (target.statistic != null && !['expectation', 'first-hit'].includes(target.statistic)) return false
   return target.kind !== 'style' ? BABY_POKEMON_IDS.includes(normalizeBabyEfficiencyPokemonId(target.pokeId))
-    : [...SLEEP_STYLES.filter(row => !row.limited), ...ACTIVITY_CATALOG.activities.flatMap(event => event.spawns ?? [])].some(row => row.pokeId === target.pokeId && styleKey(row.pokeId, row.stars, row.styleId) === target.style)
+    : Number.isSafeInteger(target.pokeId) && target.pokeId > 0 && (typeof target.style === 'string' ? target.style.length > 0 : resolveSleepStyleRef(target.style) != null)
 }
 /** Preserve valid saved preferences without carrying corrupt data into a worker. */
 export function normalizeSplitOptions(saved?: Partial<SplitOptions> | null): SplitOptions {
@@ -80,7 +82,7 @@ export function normalizeSplitOptions(saved?: Partial<SplitOptions> | null): Spl
   if (value.precision == null || !['low', 'medium', 'high'].includes(value.precision)) value.precision = defaultSplitOptions().precision
   const seen = new Set<string>()
   value.targets = (Array.isArray(saved?.targets) ? saved.targets : []).filter(validTarget).flatMap((target): SplitTarget[] => {
-    if (target.kind === 'style') return [target]
+    if (target.kind === 'style') return [{ ...target, style: resolveSleepStyleRef(target.style) ?? target.style }]
     const normalized = { ...target, pokeId: normalizeBabyEfficiencyPokemonId(target.pokeId) }
     if (normalized.kind !== 'baby') return [normalized]
     return [{ ...normalized, kind: 'catch' }, { ...normalized, kind: 'candy' }]
@@ -131,7 +133,7 @@ export interface SplitResult {
 }
 interface SessionMetric { count: number, probability: number, candies: number[] }
 interface Session extends SessionMetric { second: SessionMetric, camp?: SessionMetric }
-export const SPLIT_CHECKPOINT_VERSION = 7
+export const SPLIT_CHECKPOINT_VERSION = 8
 export interface SplitCheckpoint { version: typeof SPLIT_CHECKPOINT_VERSION, signature: string, pendingPokemon?: number[], completed: number, sessions: Session[][] }
 export interface SplitRequest { splitOptions: SplitOptions, checkpoint?: SplitCheckpoint }
 export type SplitMessage = { type: 'checkpoint', checkpoint: SplitCheckpoint } | { type: 'progress', completed: number, total: number } | { type: 'result', result: SplitResult } | { type: 'error', message: string }
@@ -166,6 +168,7 @@ export function* splitSleepSteps(request: SplitRequest): Generator<SplitCheckpoi
   const options: SplitOptions = { ...JSON.parse(JSON.stringify(request.splitOptions)), activity: context, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix }
   const error = validateSplitOptions(options)
   if (error) throw new Error(error)
+  options.targets = options.targets.map(target => target.kind === 'style' ? { ...target, style: resolveSleepStyleRef(target.style) ?? target.style } : target)
   const precision = options.precision ?? 'low'
   const iterations = precision === 'low' ? options.iterations : 1
   const signature = JSON.stringify({ ...options, activity: { ...context, pendingPokemon: undefined } }) + (options.campTicket ? ":camp-v1" : "")

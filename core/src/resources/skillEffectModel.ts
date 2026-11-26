@@ -1,5 +1,5 @@
 /** Data-only validation: safe before installing a resource snapshot or importing calculators. */
-export function validateMainSkillModels(data: Record<string, unknown>) {
+export function validateMainSkillModels(data: Record<string, unknown>, maximumModelVersion = 2) {
   const obj = (v: any): Record<string, any> => v && typeof v === 'object' && !Array.isArray(v) ? v : {}
   const valid = (test: unknown, message: string) => { if (!test) throw new Error('主技能模型：' + message) }
   const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v)
@@ -12,7 +12,7 @@ export function validateMainSkillModels(data: Record<string, unknown>) {
   const pokemon = data['pokedex.json'] as any[], ingredients = data['ingredients.json'] as any[], berries = data['berries.json'] as any[]
   valid(Array.isArray(skills) && Array.isArray(pokemon) && Array.isArray(ingredients) && Array.isArray(berries), '目录缺失')
   const skillIds = new Set(skills.map(s => s.id)), pokeIds = new Set(pokemon.map(p => p.id)), ingredientIds = new Set(ingredients.map(i => i.id))
-  valid(execution.schemaVersion === 1 && positiveInt(execution.recursionLimit) && execution.recursionLimit <= 32 && finite(execution.energyCap)
+  valid([1, 2].includes(execution.schemaVersion) && execution.schemaVersion <= maximumModelVersion && positiveInt(execution.recursionLimit) && execution.recursionLimit <= 32 && finite(execution.energyCap)
     && execution.energyCap > 0 && positiveInt(execution.sameSpeciesCap), '执行契约不兼容')
   const reset = obj(obj(execution.stateResets).onceBonus)
   valid(['sleepStart', 'sleepEnd'].includes(reset.event) && probability(reset.expected) && typeof reset.sampled === 'boolean', '状态重置配置无效')
@@ -93,6 +93,7 @@ export function validateMainSkillModels(data: Record<string, unknown>) {
   }
   const target = (t: any) => {
     valid(['self', 'team', 'random'].includes(t.kind) && (t.count == null || positiveInt(t.count)), '目标配置无效')
+    if ('excludeSelf' in t) valid(execution.schemaVersion === 2 && t.kind === 'random' && typeof t.excludeSelf === 'boolean', '排除自身的目标选择无效')
     if (t.sampled) valid(probability(t.sampled.lowestChance) && typeof t.sampled.randomLowestTies === 'boolean', '随机目标配置无效')
     if (t.expected && !t.expected.supportSize) {
       if (t.expected.rankWeights) valid(Array.isArray(t.expected.rankWeights) && t.expected.rankWeights.length === t.expected.fullTeamSize
@@ -103,12 +104,38 @@ export function validateMainSkillModels(data: Record<string, unknown>) {
   const effects = (rows: any, skill: any, depth = 0): void => {
     valid(Array.isArray(rows) && rows.length <= 32 && depth < 16, '效果列表无效')
     for (const e of rows) {
-      valid(['charge', 'currency', 'giveItem', 'heal', 'help', 'skillOnlyHelp', 'ingredients', 'firstIngredient', 'pot', 'crit', 'zone', 'berries', 'drainEnergy', 'sequence', 'accumulateRelease', 'onceBonus'].includes(e?.op), '未支持的计算算子')
+      valid(['charge', 'currency', 'giveItem', 'heal', 'help', 'skillOnlyHelp', 'ingredients', 'firstIngredient', 'pot', 'crit', 'zone', 'berries', 'drainEnergy', 'sequence', 'accumulateRelease', 'onceBonus', 'grantSkillActivation'].includes(e?.op), '未支持的计算算子')
       if (e.condition) condition(e.condition)
       if (e.target) target(e.target)
       if (e.profiles) valid(Array.isArray(e.profiles) && e.profiles.length && e.profiles.every((p: string) => ['expected', 'sampled'].includes(p)), '结算口径无效')
-      if (e.chance) valid(probability(e.chance.probability) && (e.chance.test == null || ['lt', 'gte'].includes(e.chance.test))
-        && (e.chance.expectedProbability == null || probability(e.chance.expectedProbability)), '发动概率无效')
+      if (e.chance != null) {
+        const chance = obj(e.chance)
+        if ('targetSkillRolls' in chance) {
+          const roll = obj(chance.targetSkillRolls), trials = roll.trials
+          valid(execution.schemaVersion === 2 && Object.keys(chance).length === 1
+            && Object.keys(roll).length === 2 && ['base', 'effective'].includes(roll.rate), '目标概率配置无效')
+          const validTrials = (value: unknown) => positiveInt(value)
+          if (typeof trials === 'number') valid(validTrials(trials), '技能判定次数无效')
+          else {
+            const column = obj(trials).column, index = skill.columns.indexOf(column)
+            valid(typeof column === 'string' && Object.keys(obj(trials)).length === 1 && index >= 0
+              && skill.levels.slice(0, skill.maxLevel).every((row: unknown[]) => {
+                const value = row[index]
+                return validTrials(typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value)
+              }), '技能判定次数列无效')
+          }
+        } else {
+          valid(probability(chance.probability) && (chance.test == null || ['lt', 'gte'].includes(chance.test))
+            && (chance.expectedProbability == null || probability(chance.expectedProbability)), '发动概率无效')
+        }
+      }
+      if (e.op === 'grantSkillActivation') {
+        valid(execution.schemaVersion === 2 && ['collection', 'storedSkill'].includes(e.bonusTrigger)
+          && e.amount === undefined && e.effects === undefined, '额外发动奖励配置无效')
+        valid(e.profiles?.length === 1 && e.profiles[0] === 'sampled', '额外发动奖励暂仅支持抽样口径')
+        continue
+      }
+      valid(e.bonusTrigger === undefined, '额外发动奖励触发方式不能用于其他算子')
       if (e.op === 'sequence' || e.op === 'onceBonus') { effects(e.effects, skill, depth + 1); if (e.op === 'onceBonus') valid(probability(e.releaseChance) && finite(e.bonus) && e.bonus >= 0, '状态概率无效'); continue }
       if (e.op === 'accumulateRelease') {
         valid(positiveInt(e.maxStacks) && e.maxStacks <= 100 && probability(e.releaseChance) && Number.isInteger(e.extraTable)

@@ -3,8 +3,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useFeaturesStore } from '../stores/features'
 
 /** Keep page sections in route history so system Back restores the previous section. */
-export function usePageTab<T extends string>(tabs: readonly T[], fallback: T) {
-  const route = useRoute()
+export function usePageTab<T extends string>(tabs: readonly T[], fallback: T, pageRoute?: Pick<ReturnType<typeof useRoute>, 'path' | 'query'>) {
+  const route = pageRoute ?? useRoute()
   const router = useRouter()
   const features = useFeaturesStore()
   return computed<T>({

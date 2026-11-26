@@ -50,7 +50,7 @@ function goBack() {
       <slot name="app-tools" />
     </template>
     <template v-else>
-      <div class="row"><button class="btn ghost" type="button" @click="goBack">{{ translateUi(tab === 'recipe-levels' ? '返回' : '返回我的') }}</button><h2>{{ translateUi(titles[tab]) }}</h2></div>
+      <div class="profile-subpage-header"><button class="btn ghost" type="button" @click="goBack">{{ translateUi(tab === 'recipe-levels' ? '返回' : '返回我的') }}</button><h2>{{ translateUi(titles[tab]) }}</h2></div>
       <FeaturesPane v-if="tab === 'features'" />
       <BackupPane v-else-if="tab === 'backup'" />
       <AppearancePane v-else-if="tab === 'appearance'" />

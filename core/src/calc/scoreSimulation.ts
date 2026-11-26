@@ -1,4 +1,4 @@
-import { resetSkillModelState } from './skillModel'
+import { resetSkillModelState, takeSkillActivationBonus } from './skillModel'
 import { itemById, itemHealEnergy, ITEM_ROLES } from './itemCatalog'
 import { ingredientEnergyValue } from './activityIngredients'
 import runtimeParameters from '../data/runtime-parameters.resource'
@@ -339,11 +339,13 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
   function releaseStock(members: readonly Actor[]) {
     for (const m of members) {
       const stock = m.stock
+      const bonus = m.activationBonus
       m.stock = 0
       for (let i = 0; i < stock; i++) {
         skillReleases.record(currentMinute)
         release(m)
       }
+      if (bonus && takeSkillActivationBonus(m, stock > 0)) release(m)
     }
   }
   function collect(members: readonly Actor[], beforeRotation = false) {
@@ -374,7 +376,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       : leaving.some(member => roles.get(member)?.teamHeal) ? '换下奶妈'
         : crit >= scoreSimulation_release_ruleParameters.skillCritCap && leaving.some(member => roles.get(member)?.crit) ? '料理暴击加成已满' : undefined
     if (active.length) {
-      collect(leaving.filter(m => m.stock || m.heldBerries || sumBag(m.heldFood)), true)
+      collect(leaving.filter(m => m.stock || m.heldBerries || sumBag(m.heldFood) || m.activationBonus === 'collection'), true)
       segments[segments.length - 1]!.end = currentMinute
       for (const m of new Set([...active, ...team])) { m.stock = 0; m.failures = Math.max(0, m.failures + m.syncHelps - rollback); m.syncHelps = 0 }
     }
@@ -554,6 +556,7 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       m.exp += score * expBonus * natureStatFactor(m.pokemon.nature, 'exp') * activityValues(settings.activity, settings.island, m.poke, session.start).sleepExpMultiplier
     }
     const sleepTeam = [...(sleepProducers.get(session) ?? select(policy.sleep[session.slot]!))]
+    for (const m of actors.values()) resetSkillModelState(m, 'sleepResearch')
     for (const m of sleepTeam) resetSkillModelState(m, 'sleepStart')
     for (const m of actors.values()) if (!team.includes(m) && !sleepTeam.includes(m) && !active.includes(m)) {
       m.energy = sleepRecoveredEnergy(m.energy, Math.ceil(score * scoreSimulation_settle_ruleParameters.inactiveRecoveryShare), m.input, settings.incense, 0)
@@ -646,8 +649,8 @@ export function simulateScore(request: ScoreRequest, policy: ScorePolicy, seed: 
       if (waking || sleep && !entering) collect(active)
       else if (!entering && (policy.collectMode ?? 'all') === 'all') collect(active)
       else if (!entering && policy.collectMode === 'targeted') collect(active.filter(m =>
-        m.stock > 0 || m.drops.some(drop => (bag[drop.id] ?? 0) < reserve(String(drop.id)))))
-      else if (!entering) collect(active.filter(m => m.stock > 0 &&
+        m.stock > 0 || m.activationBonus === 'collection' || m.drops.some(drop => (bag[drop.id] ?? 0) < reserve(String(drop.id)))))
+      else if (!entering) collect(active.filter(m => (m.stock > 0 || m.activationBonus === 'collection') &&
         (roles.get(m)?.teamHeal || roles.get(m)?.crit || roles.get(m)?.pot)))
     }
     const nightNode = sleep && !entering && collection

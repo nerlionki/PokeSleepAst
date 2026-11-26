@@ -1,14 +1,27 @@
 import tables from '../data/skill-tables.resource'
 import { berryByName, pokeById } from './data'
 import { MAIN_SKILLS, clampSkillLevel, type MainSkill, skillByPokedexName } from './mainSkills'
-import type { SkillAmount, SkillCondition, SkillProfile, SkillTarget } from './skillModelTypes'
+import type { SkillAmount, SkillBonusTrigger, SkillChance, SkillCondition, SkillProfile, SkillTarget } from './skillModelTypes'
 
 export const SKILL_EXECUTION = tables.modules.mainSkills.execution
-export function resetSkillModelState(actor: { disguiseReady?: number; disguise?: boolean }, event: 'sleepStart' | 'sleepEnd') {
+export interface SkillModelState {
+  disguiseReady?: number
+  disguise?: boolean
+  activationBonus?: SkillBonusTrigger
+}
+export function resetSkillModelState(actor: SkillModelState, event: 'sleepStart' | 'sleepEnd' | 'sleepResearch' | 'campChange') {
   const reset = SKILL_EXECUTION.stateResets.onceBonus
   if (reset.event === event) { actor.disguiseReady = reset.expected; actor.disguise = reset.sampled }
+  if (event === 'sleepResearch' || event === 'campChange') actor.activationBonus = undefined
 }
-export interface ModelActor { pokeId: number; skill: string; berry: string; energy: number }
+
+export function takeSkillActivationBonus(actor: SkillModelState, hasStoredSkill: boolean): boolean {
+  if (actor.activationBonus !== 'collection' && !(hasStoredSkill && actor.activationBonus === 'storedSkill')) return false
+  actor.activationBonus = undefined
+  return true
+}
+
+export interface ModelActor { pokeId: number; skill: string; berry: string; energy: number; rate?: number }
 export interface ModelContext {
   profile: SkillProfile; skill: MainSkill; level: number; actor: ModelActor; team: ModelActor[]
   random(): number; firstIngredient: string; target?: ModelActor; supportTeamSize?: number
@@ -62,13 +75,25 @@ export function modelAmount(value: SkillAmount | undefined, ctx: ModelContext): 
   const { chance, hit, miss } = value.randomMultiplier
   return ctx.profile === 'sampled' ? ctx.random() < chance ? hit : miss : chance * hit + (1 - chance) * miss
 }
+/** Target rate is evaluated only after resolving the effect's own or inherited target. */
+export function targetSkillProbability(chance: Extract<SkillChance, { targetSkillRolls: unknown }>, ctx: ModelContext): number {
+  const { rate, trials } = chance.targetSkillRolls
+  const target = ctx.target ?? ctx.actor
+  const raw = rate === 'effective' ? target.rate : pokeById(target.pokeId)?.skillRate
+  const p = Math.min(1, Math.max(0, raw ?? 0))
+  const count = typeof trials === 'number' ? trials : modelAmount(trials, ctx)
+  return 1 - (1 - p) ** count
+}
+
 export function* modelTargets(spec: SkillTarget | undefined, ctx: ModelContext, bound?: ModelActor): Generator<{ target: ModelActor; probability: number }> {
   const target = bound ?? ctx.actor
   if (!spec || spec.kind === 'self') { yield { target, probability: 1 }; return }
   if (spec.kind === 'team') { yield* ctx.team.map(target => ({ target, probability: 1 })); return }
-  const count = Math.min(spec.count ?? 1, ctx.team.length)
+  const team = spec.excludeSelf ? ctx.team.filter(member => member !== ctx.actor) : ctx.team
+  const count = Math.min(spec.count ?? 1, team.length)
+  if (!count) return
   if (ctx.profile === 'sampled') {
-    const available = [...ctx.team]
+    const available = [...team]
     const pick = (rows: ModelActor[]) => rows[Math.floor(ctx.random() * rows.length)]!
     for (let i = 0; i < count; i++) {
       let chosen: ModelActor
@@ -84,20 +109,20 @@ export function* modelTargets(spec: SkillTarget | undefined, ctx: ModelContext, 
   }
   const config = spec.expected
   if (!config && spec.sampled && count === 1) {
-    const minimum = Math.min(...ctx.team.map(target => target.energy))
-    const lowest = ctx.team.filter(target => target.energy === minimum)
+    const minimum = Math.min(...team.map(target => target.energy))
+    const lowest = team.filter(target => target.energy === minimum)
     const priority = spec.sampled.randomLowestTies ? lowest : lowest.slice(0, 1)
     const bias = spec.sampled.lowestChance
-    yield* ctx.team.map(target => ({ target, probability: (1 - bias) / ctx.team.length + (priority.includes(target) ? bias / priority.length : 0) }))
+    yield* team.map(target => ({ target, probability: (1 - bias) / team.length + (priority.includes(target) ? bias / priority.length : 0) }))
     return
   }
-  if (!config || config.supportSize) { yield* ctx.team.map(target => ({ target, probability: count / Math.max(ctx.team.length, config?.supportSize ? ctx.supportTeamSize ?? ctx.team.length : ctx.team.length) })); return }
-  const ranked = [...ctx.team].sort((a, b) => a.energy - b.energy)
-  const weights = config.rankWeights && ctx.team.length === config.fullTeamSize ? config.rankWeights
-    : config.rankWeights ? ranked.map(() => count / ctx.team.length)
+  if (!config || config.supportSize) { yield* team.map(target => ({ target, probability: count / Math.max(team.length, config?.supportSize ? ctx.supportTeamSize ?? team.length : team.length) })); return }
+  const ranked = [...team].sort((a, b) => a.energy - b.energy)
+  const weights = config.rankWeights && team.length === config.fullTeamSize ? config.rankWeights
+    : config.rankWeights ? ranked.map(() => count / team.length)
       : ranked.map((_, index) => index === 0 ? config.firstWeight! : config.otherWeight!)
   const total = weights.reduce((sum, value) => sum + value, 0)
-  yield* ctx.team.map(target => {
+  yield* team.map(target => {
     const ties = config.shareTies ? ranked.flatMap((member, index) => member.energy === target.energy ? [index] : []) : [ranked.indexOf(target)]
     return { target, probability: ties.reduce((sum, index) => sum + weights[index]!, 0) / ties.length * count / total }
   })

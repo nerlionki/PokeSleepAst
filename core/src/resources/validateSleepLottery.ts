@@ -1,6 +1,23 @@
 export const RAE_FILLER_ISLANDS = ['greengrass', 'cyan', 'taupe', 'snowdrop', 'lapis', 'powerplant', 'canyon', 'greenex', 'cyanex'] as const
 
+function validateSleepStyleIds(data: Record<string, unknown>) {
+  const styles = data['sleep-styles.json'] as { island: string, pokeId: number, stars: number, styleId?: number, raeStyleId?: number }[] | undefined
+  if (!Array.isArray(styles) || !styles.some(style => style?.raeStyleId !== undefined)) return
+  const source = data['sleep-dpr-source.json'] as { entries?: { key: string, internalId: number }[] } | undefined
+  const ids = new Map((source?.entries ?? []).map(({ key, internalId }) => [key, internalId]))
+  const seen = new Set<string>()
+  for (const row of styles) {
+    const internalId = row?.raeStyleId
+    if (internalId == null || !Number.isSafeInteger(internalId) || internalId <= 0) throw new Error('资料包缺少 RAE 睡姿抽选资料')
+    const expected = ids.get(`${row.island}:${row.pokeId}:${row.stars}:${row.styleId ?? ''}`) ?? row.styleId
+    const link = `${row.island}:${internalId}`
+    if (internalId !== expected || seen.has(link)) throw new Error('资料包缺少 RAE 睡姿抽选资料')
+    seen.add(link)
+  }
+}
+
 export function validateSleepLottery(data: Record<string, unknown>) {
+  validateSleepStyleIds(data)
   const source = data['sleep-last-roll-source.json'] as {
     raeFiller?: { source?: string, baseStyleCount?: number, byIsland?: Record<string, Record<string, boolean>> }
     excludedInternalIds?: number[]

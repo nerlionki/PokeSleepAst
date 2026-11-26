@@ -22,17 +22,23 @@ export type SkillAmount = number
 export interface SkillTarget {
   kind: 'self' | 'team' | 'random'
   count?: number
+  excludeSelf?: boolean
   expected?: { firstWeight?: number; otherWeight?: number; rankWeights?: number[]; fullTeamSize?: number; shareTies?: boolean; supportSize?: boolean }
   sampled?: { lowestChance: number; randomLowestTies: boolean }
 }
+export type SkillChance =
+  | { probability: number; test?: 'lt' | 'gte'; expectedProbability?: number }
+  | { targetSkillRolls: { rate: 'base' | 'effective'; trials: number | { column: string } } }
+export type SkillBonusTrigger = 'collection' | 'storedSkill'
 export interface SkillEffect {
   op: 'charge' | 'currency' | 'giveItem' | 'heal' | 'help' | 'skillOnlyHelp' | 'ingredients' | 'firstIngredient'
-    | 'pot' | 'crit' | 'zone' | 'berries' | 'drainEnergy' | 'sequence' | 'accumulateRelease' | 'onceBonus'
+    | 'pot' | 'crit' | 'zone' | 'berries' | 'drainEnergy' | 'sequence' | 'accumulateRelease' | 'onceBonus' | 'grantSkillActivation'
   amount?: SkillAmount
   target?: SkillTarget
   condition?: SkillCondition
   profiles?: SkillProfile[]
-  chance?: { probability: number; test?: 'lt' | 'gte'; expectedProbability?: number }
+  chance?: SkillChance
+  bonusTrigger?: SkillBonusTrigger
   currency?: 'dreamShards' | 'candies'
   itemId?: number
   pool?: number[]

@@ -4,7 +4,8 @@ import extracted1 from '../data/client-defaults.resource'
 import { cloneData } from './dataClone'
 import { ISLANDS, POKEDEX, SLEEP_STYLES, pokeById } from './data'
 import { familyOf } from './candyPlan'
-import { styleKey } from './sleep'
+import { resolvedStyleIds } from './sleep'
+import { raeSleepStyleId, type SleepStyleRef } from './sleepStyleIdentity'
 import { researchActivity, researchSleepStyles, activityValues, type ResearchActivitySelection } from './activities'
 import type { IslandId } from '../types'
 const catch_config_extracted0 = extracted0.modules.catch
@@ -21,6 +22,7 @@ export interface CatchGoal {
   pokeId: number
   purpose: CatchPurpose
   stars: number[]
+  sleepStyleId?: number
 }
 
 export interface CatchMatch {
@@ -62,23 +64,25 @@ function coverageScore(matches: Iterable<CatchMatch>) {
 }
 
 function mergeGoals(goals: CatchGoal[]) {
-  const valid: { pokeId: number, purpose: CatchPurpose, stars: number[] }[] = []
-  const sleepTargets = new Map<number, { pokeId: number, purpose: 'sleep', stars: number[] }>()
+  type CoverageTarget = { pokeId: number, purpose: CatchPurpose, stars: number[], styleIds: number[] }
+  const valid: CoverageTarget[] = []
+  const sleepTargets = new Map<number, CoverageTarget>()
   for (const goal of goals) {
     if (!pokeById(goal.pokeId)) continue
     if (goal.purpose !== 'sleep') {
-      valid.push({ pokeId: goal.pokeId, purpose: goal.purpose, stars: [] })
+      valid.push({ pokeId: goal.pokeId, purpose: goal.purpose, stars: [], styleIds: [] })
       continue
     }
-    const stars = [...new Set(goal.stars.filter((n) => n >= 1 && n <= (catch_mergeGoals_runtimeParameters.p001 as 5)))]
-    if (!stars.length) continue
+    const stars = goal.sleepStyleId == null ? goal.stars.filter(n => n >= 1 && n <= (catch_mergeGoals_runtimeParameters.p001 as 5)) : []
+    if (!stars.length && goal.sleepStyleId == null) continue
     let target = sleepTargets.get(goal.pokeId)
     if (!target) {
-      target = { pokeId: goal.pokeId, purpose: 'sleep', stars: [] }
+      target = { pokeId: goal.pokeId, purpose: 'sleep', stars: [], styleIds: [] }
       sleepTargets.set(goal.pokeId, target)
       valid.push(target)
     }
     target.stars = [...new Set([...target.stars, ...stars])].sort((a, b) => a - b)
+    if (goal.sleepStyleId != null && !target.styleIds.includes(goal.sleepStyleId)) target.styleIds.push(goal.sleepStyleId)
   }
   return valid.map((goal, index) => ({ ...goal, baseWeight: valid.length - index }))
 }
@@ -86,7 +90,7 @@ function mergeGoals(goals: CatchGoal[]) {
 export function recommendIslands(
   goals: CatchGoal[],
   weights: { catch?: number, candy?: number } = {},
-  discovered: readonly string[] = [],
+  discovered: readonly SleepStyleRef[] = [],
   activity?: ResearchActivitySelection,
 ): CatchIslandPick[] {
   const context = researchActivity(activity)
@@ -98,7 +102,7 @@ export function recommendIslands(
     starsOnIsland.set(style.island, map)
     map.set(style.pokeId, [...new Set([...(map.get(style.pokeId) ?? []), style.stars])])
   }
-  const found = new Set(discovered)
+  const found = new Set(resolvedStyleIds(discovered))
   const eligibleIds = new Set(styles.map(style => style.pokeId))
   const targets = mergeGoals(goals.filter(goal => eligibleIds.has(goal.pokeId)))
   const picks: CatchIslandPick[] = []
@@ -116,7 +120,11 @@ export function recommendIslands(
         if (!poke) continue
         const islandStars = styleMap?.get(target.pokeId) ?? []
         const stars = target.purpose === 'sleep'
-          ? islandStars.filter((star) => target.stars.includes(star) && styles.some((style) => style.island === island.id && style.pokeId === target.pokeId && style.stars === star && !found.has(styleKey(style.pokeId, style.stars, style.styleId))))
+          ? islandStars.filter(star => styles.some(style => {
+            if (style.island !== island.id || style.pokeId !== target.pokeId || style.stars !== star) return false
+            const id = raeSleepStyleId(style)
+            return id != null && !found.has(id) && (target.stars.includes(star) || target.styleIds.includes(id))
+          }))
           : []
         const factor = target.purpose === 'sleep'
           ? (STAR_FACTOR[Math.min(stars.length, (catch_recommendIslands_runtimeParameters.p001 as 4))] ?? 0)
@@ -163,7 +171,7 @@ export function recommendIslands(
   })
 }
 
-export function recommendThree(goals: CatchGoal[], discovered: readonly string[] = [], modes: readonly string[] = CATCH_MODES.map((mode) => mode.id), activity?: ResearchActivitySelection) {
+export function recommendThree(goals: CatchGoal[], discovered: readonly SleepStyleRef[] = [], modes: readonly string[] = CATCH_MODES.map((mode) => mode.id), activity?: ResearchActivitySelection) {
   return CATCH_MODES.filter((mode) => modes.includes(mode.id)).map((mode) => ({
     id: mode.id,
     name: mode.name,

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
 import { pageScrollLocks } from './pageScrollLock'
-import { route } from './router'
+import { useRoute } from './router'
 
 const props = defineProps<{ resetOn?: string }>()
 const anchor = shallowRef<string>()
-const page = route.name
+const page = useRoute().name
 const scrollEnabled = computed(() => !pageScrollLocks.has(page))
 watch(() => props.resetOn, () => {
   anchor.value = anchor.value === 'tab-content-start' ? 'tab-content-top' : 'tab-content-start'

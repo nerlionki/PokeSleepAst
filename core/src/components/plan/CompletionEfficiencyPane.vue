@@ -15,7 +15,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { completionTargets } from '../../calc/completionEfficiency'
-import { EVENT_BONUSES, styleKey } from '../../calc/sleep'
+import { EVENT_BONUSES, raeSleepStyleId, resolveSleepStyleRef } from '../../calc/sleep'
 import { ISLANDS, SLEEP_STYLES } from '../../calc/data'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useBabyEfficiency } from '../../composables/useBabyEfficiency'
@@ -34,7 +34,10 @@ const targets = computed(() => completionTargets(plan.value, options.value.selec
 const pokeIds = computed(() => [...new Set(targets.value.map(style => style.pokeId))])
 const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId))
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, options.value.completionTarget, research.value))
-const targetAvailable = computed(() => islands.value.length > 0 && faces.value.some(style => styleKey(style.pokeId, style.stars, style.styleId) === options.value.completionTarget))
+const targetAvailable = computed(() => {
+  const id = resolveSleepStyleRef(options.value.completionTarget)
+  return id != null && islands.value.length > 0 && faces.value.some(style => raeSleepStyleId(style) === id)
+})
 const activity = useActivities(options, () => options.value.island ?? 'all', () => settings.value.activity)
 const research = useEncounterActivity(activity.context)
 const eventMult = activity.field('drowsyPowerMultiplier', () => options.value.eventMult)
@@ -50,10 +53,11 @@ watch(pokeIds, ids => {
 watch(faces, styles => {
   if (!options.value.completionTarget) {
     const first = styles[0]
-    options.value.completionTarget = first ? styleKey(first.pokeId, first.stars, first.styleId) : ''
+    options.value.completionTarget = first ? raeSleepStyleId(first) ?? '' : ''
   }
 }, { immediate: true })
 function selectPokemon(id: number) {
+  if (id === options.value.pokeId) return
   options.value.pokeId = id
   options.value.completionTarget = ''
 }
@@ -62,8 +66,9 @@ watch(islands, available => {
 }, { immediate: true })
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions)
 watch(() => campTicket.value, () => { if (busy.value) cancel() })
-const resultTarget = computed(() => result.value && targets.value.find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
-const resultStyle = computed(() => result.value && activitySleepStyles(SLEEP_STYLES, createActivityContext('research', result.value.options.activity)).find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value?.options.completionTarget))
+const resultId = computed(() => resolveSleepStyleRef(result.value?.options.completionTarget))
+const resultTarget = computed(() => resultId.value == null ? undefined : targets.value.find(style => raeSleepStyleId(style) === resultId.value))
+const resultStyle = computed(() => result.value && resultId.value != null && activitySleepStyles(SLEEP_STYLES, createActivityContext('research', result.value.options.activity)).find(style => raeSleepStyleId(style) === resultId.value))
 const statistic = computed({ get: () => options.value.completionStatistic ?? 'first-hit', set: (value: 'first-hit' | 'expectation') => { options.value.completionStatistic = value } })
 const probabilityResult = computed(() => result.value?.options.completionStatistic !== 'expectation')
 // In dex mode a newly collected face leaves the target list; free mode keeps it.
@@ -88,7 +93,7 @@ watch(() => options.value.selectionMode, () => {
     </article>
     <article v-else class="card stack">
       <div class="field"><label>{{ translateUi("目标宝可梦 ·") }} {{ options.selectionMode === 'free' ? translateUi("全部可研究睡姿") : translateUi("仅未收集") }}</label><PokePicker :model-value="options.pokeId" :allowed-ids="pokeIds" @update:model-value="selectPokemon" /></div>
-      <div class="field"><label for="completion-target">{{ translateUi("目标睡姿") }}</label><select id="completion-target" v-model="options.completionTarget" :disabled="busy"><option v-for="style in faces" :key="styleKey(style.pokeId, style.stars, style.styleId)" :value="styleKey(style.pokeId, style.stars, style.styleId)">{{ style.stars }}★ · {{ sleepStyleText(style) }}</option></select></div>
+      <div class="field"><label for="completion-target">{{ translateUi("目标睡姿") }}</label><select id="completion-target" v-model="options.completionTarget" :disabled="busy"><option v-if="!targetAvailable" value="">{{ translateUi('请选择具体睡姿') }}</option><option v-for="style in faces" :key="raeSleepStyleId(style)" :value="raeSleepStyleId(style)">{{ style.stars }}★ · {{ sleepStyleText(style) }}</option></select></div>
       <div class="efficiency-fields">
         <div class="field"><label for="completion-island">{{ translateUi("岛屿") }}</label><select id="completion-island" v-model="options.island" :disabled="busy"><option value="all">{{ translateUi("全部 · 自动择优") }}</option><option v-for="island in islands" :key="island.id" :value="island.id">{{ gameText(island.name) }}</option></select></div>
         <div class="field"><label for="completion-sleep-type">{{ translateUi("睡眠类型") }}</label><select id="completion-sleep-type" v-model="options.sleepType" :disabled="busy"><option value="all">{{ translateUi("全部 · 自动择优") }}</option><option v-for="type in EFFICIENCY_SLEEP_TYPES" :key="type" :value="type">{{ gameText(type) }}</option></select></div>

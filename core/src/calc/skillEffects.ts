@@ -3,7 +3,7 @@ import { cloneData } from './dataClone'
 import { INGREDIENTS } from './data'
 import { MAIN_SKILLS, clampSkillLevel, skillByPokedexName, type MainSkill } from './mainSkills'
 import { itemById } from './itemCatalog'
-import { SKILL_EXECUTION, modelAmount, modelCondition, conditionNeedsTarget, modelTargets, modelFirstIngredient, type ModelActor, type ModelContext } from './skillModel'
+import { SKILL_EXECUTION, modelAmount, modelCondition, conditionNeedsTarget, modelTargets, modelFirstIngredient, targetSkillProbability, type ModelActor, type ModelContext } from './skillModel'
 import type { SkillEffect } from './skillModelTypes'
 import type { ProduceInput, ProduceResult } from '../types'
 const skillEffects_config_extracted0 = extracted0.modules.skillEffects
@@ -65,8 +65,8 @@ function giveItem(actor: EffectActor, id: number, amount: number) {
 export function applySkillModelEffects(actor: EffectActor, team: EffectActor[], context: EffectContext, skill: MainSkill, level: number, weight = 1,
   sharedCrit?: { amount: number, probability: number }[]) {
   const crit = sharedCrit ?? []
-  const models = team.map(member => ({ pokeId: member.poke.id, skill: member.poke.mainSkill, berry: member.poke.berry, get energy() { return member.energy } }))
-  const self = models[team.indexOf(actor)] ?? { pokeId: actor.poke.id, skill: actor.poke.mainSkill, berry: actor.poke.berry, get energy() { return actor.energy } }
+  const models = team.map(member => ({ pokeId: member.poke.id, skill: member.poke.mainSkill, berry: member.poke.berry, get energy() { return member.energy }, get rate() { return member.skillRate } }))
+  const self = models[team.indexOf(actor)] ?? { pokeId: actor.poke.id, skill: actor.poke.mainSkill, berry: actor.poke.berry, get energy() { return actor.energy }, get rate() { return actor.skillRate } }
   const original = (model: ModelActor) => model === self ? actor : team[models.indexOf(model)]!
   const modifiers = context.modifiers?.(actor, skill.name) ?? { ingredient: 1, berry: 1, shards: 1, healing: 1 }
   const base: ModelContext = { profile: 'expected', skill, level, actor: self, team: models, random: () => 0,
@@ -76,12 +76,14 @@ export function applySkillModelEffects(actor: EffectActor, team: EffectActor[], 
       if (effect.profiles && !effect.profiles.includes('expected')) continue
       if (effect.condition && !conditionNeedsTarget(effect.condition) && !modelCondition(effect.condition, base)) continue
       let mass = w
-      if (effect.chance) mass *= effect.chance.expectedProbability ?? (effect.chance.test === 'gte' ? 1 - effect.chance.probability : effect.chance.probability)
+      if (effect.chance && 'probability' in effect.chance) mass *= effect.chance.expectedProbability ?? (effect.chance.test === 'gte' ? 1 - effect.chance.probability : effect.chance.probability)
       if (mass <= 0) continue
       for (const { target, probability } of modelTargets(effect.target, base, bound)) {
         const ctx = { ...base, target }
         if (!modelCondition(effect.condition, ctx)) continue
-        const targetActor = original(target), p = mass * probability
+        const targetActor = original(target)
+        const p = mass * probability * (effect.chance && 'targetSkillRolls' in effect.chance ? targetSkillProbability(effect.chance, ctx) : 1)
+        if (effect.chance && 'targetSkillRolls' in effect.chance && p <= 0) continue
         const value = (amount = effect.amount) => modelAmount(amount, ctx) * multiplier
         switch (effect.op) {
           case 'sequence': execute(effect.effects!, p, target, multiplier); break

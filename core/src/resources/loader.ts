@@ -33,7 +33,7 @@ export function decodeSnapshot(manifest: unknown, payload: string, context?: Res
   if (!data || Array.isArray(data) || Object.keys(data).sort().join('\n') !== RESOURCE_FILES.join('\n') || Object.values(data).some(value => value === null || typeof value !== 'object')) throw new Error('资料包不完整')
   validateActivityResource(data)
   validateCatalogReferences(data)
-  validateSkillResources(data)
+  validateSkillResources(data, 1)
   validateSleepLottery(data)
   const { activityArchive } = data['meta.json'] as { activityArchive?: unknown }
   if (activityArchive !== undefined) validateActivityArchive(activityArchive, data)

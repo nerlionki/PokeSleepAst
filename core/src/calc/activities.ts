@@ -8,6 +8,7 @@ import { skillByPokedexName } from './mainSkills'
 import { foldText } from './text'
 import { ingredientKey, migrateCatalogCounts, recipeKey } from './catalogIds'
 import type { SleepStyleRow } from './data'
+import { bindRaeSleepStyle, raeSleepStyleId } from './sleepStyleIdentity'
 import { hasResearchDpr, pendingResearchPokemon } from './researchAvailability'
 import { NUMERIC_ACTIVITY_EFFECTS, validateActivityCatalog, validateActivityEffects, type NumericActivityField, type ActivityValues, type ActivityOverrides, type ActivityTarget, type ActivityRule, type RecipeEnergyModifier, type ActivityFeature, type ActivityDomain } from '../resources/activityModel'
 export type { NumericActivityField, ActivityValues, ActivityOverrides, ActivityTarget, ActivityRule, RecipeEnergyModifier, ActivityFeature, ActivityDomain } from '../resources/activityModel'
@@ -260,10 +261,10 @@ export function activitySleepStyles(base: readonly SleepStyleRow[], context = cr
   const phases = activeActivities(context).flatMap(event => [event, ...(event.phases ?? []).filter(phase => active(phase, activityDate(context)))])
   // Event-only mythical encounters are recorded in the Pokédex, outside the simulated pool.
   const ordinary = (style: SleepStyleRow) => !Object.hasOwn(mythical, style.pokeId)
-  const spawns = phases.flatMap(phase => phase.spawns ?? []).filter(ordinary)
+  const spawns = phases.flatMap(phase => phase.spawns ?? []).filter(ordinary).map(bindRaeSleepStyle).filter(row => row != null)
   if (!spawns.length) return base.filter(style => !style.limited && ordinary(style))
-  const overrides = new Set(spawns.map(style => `${style.island}:${style.pokeId}:${style.stars}`))
-  return [...base.filter(style => !style.limited && ordinary(style) && !overrides.has(`${style.island}:${style.pokeId}:${style.stars}`)), ...spawns]
+  const overrides = new Set(spawns.map(style => `${style.island}:${style.raeStyleId}`))
+  return [...base.filter(style => !style.limited && ordinary(style) && !overrides.has(`${style.island}:${raeSleepStyleId(style)}`)), ...spawns]
 }
 
 /** undefined means a legacy what-if catalog; null means a configured event is currently unavailable. */

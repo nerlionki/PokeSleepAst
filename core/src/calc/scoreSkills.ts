@@ -1,6 +1,6 @@
 import { INGREDIENTS } from './data'
 import { MAIN_SKILLS, clampSkillLevel, skillByPokedexName } from './mainSkills'
-import { SKILL_EXECUTION, modelAmount, modelCondition, conditionNeedsTarget, modelTargets, type ModelContext } from './skillModel'
+import { SKILL_EXECUTION, modelAmount, modelCondition, conditionNeedsTarget, modelTargets, targetSkillProbability, type ModelContext, type SkillModelState } from './skillModel'
 import type { SkillEffect } from './skillModelTypes'
 
 function sampledEffects(effects: readonly SkillEffect[]): SkillEffect[] {
@@ -20,7 +20,7 @@ export function scoreSkillRoles(name: string, pokeId: number) {
   }
 }
 
-export interface ScoreActor {
+export interface ScoreActor extends SkillModelState {
   uid: string, pokeId: number, berry: string, skill: string, skillLevel: number, rate: number
   energy: number, factor: number, disguise: boolean, stockpile: number, firstFood: string
 }
@@ -52,13 +52,15 @@ export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkil
     for (const effect of effects) {
       if (effect.profiles && !effect.profiles.includes('sampled')) continue
       if (effect.condition && !conditionNeedsTarget(effect.condition) && !modelCondition(effect.condition, base)) continue
-      if (effect.chance) {
+      if (effect.chance && 'probability' in effect.chance) {
         const roll = ctx.random(), pass = effect.chance.test === 'gte' ? roll >= effect.chance.probability : roll < effect.chance.probability
         if (!pass) continue
       }
       for (const { target } of modelTargets(effect.target, base, bound)) {
         const targetActor = target as ScoreActor, model = { ...base, target }
         if (!modelCondition(effect.condition, model)) continue
+        if (effect.op === 'grantSkillActivation' && targetActor.activationBonus) continue
+        if (effect.chance && 'targetSkillRolls' in effect.chance && !(ctx.random() < targetSkillProbability(effect.chance, model))) continue
         const value = (amount = effect.amount) => modelAmount(amount, model) * multiplier
         switch (effect.op) {
           case 'sequence': execute(effect.effects!, targetActor, multiplier); break
@@ -68,6 +70,7 @@ export function scoreSkill(actor: ScoreActor, team: ScoreActor[], ctx: ScoreSkil
           case 'heal': ctx.heal(targetActor, value() * targetActor.factor * modifiers.healing); break
           case 'help': ctx.helps(targetActor, value()); break
           case 'skillOnlyHelp': ctx.helps(targetActor, value(), true); break
+          case 'grantSkillActivation': targetActor.activationBonus = effect.bonusTrigger!; break
           case 'pot': ctx.pot(value()); break
           case 'crit': ctx.crit(value()); break
           case 'zone': ctx.zone(value()); break

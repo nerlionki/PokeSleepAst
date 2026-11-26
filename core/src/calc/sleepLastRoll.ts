@@ -1,11 +1,12 @@
 import source from '../data/sleep-last-roll-source.resource'
-import { sleepStyleInternalId } from './sleepRewards'
+import { raeSleepStyleId, type SleepStyleIdentity } from './sleepStyleIdentity'
 
 const excluded = new Set<number>(source.excludedInternalIds)
 
 /** RAE excludes these styles from the restricted leader pool. */
-export function isLastRollExcluded(style: Parameters<typeof sleepStyleInternalId>[0]): boolean {
-  return excluded.has(sleepStyleInternalId(style))
+export function isLastRollExcluded(style: SleepStyleIdentity): boolean {
+  const id = raeSleepStyleId(style)
+  return id != null && excluded.has(id)
 }
 
 const fillers: Readonly<Record<string, Readonly<Record<string, boolean>>>> | undefined = source.raeFiller?.byIsland

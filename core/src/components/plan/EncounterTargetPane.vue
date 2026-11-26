@@ -12,7 +12,7 @@ import { storeToRefs } from 'pinia'
 import type { EncounterGoal } from '../../calc/encounterPlan'
 import { availableBabyPokemonIds, BABY_POKEMON_NAMES, babyEfficiencyIslands, EFFICIENCY_SLEEP_TYPES } from '../../calc/babyEfficiency'
 import { completionTargets } from '../../calc/completionEfficiency'
-import { EVENT_BONUSES, styleKey } from '../../calc/sleep'
+import { EVENT_BONUSES, raeSleepStyleId, resolveSleepStyleRef } from '../../calc/sleep'
 import { eventMixLabel, normalizeEventMix } from '../../calc/sleepRules'
 import { useEncounterActivity } from '../../composables/useEncounterAvailability'
 import { useActivities } from '../../composables/useActivities'
@@ -49,11 +49,18 @@ watch(pokeIds, ids => {
   }
 }, { immediate: true })
 const faces = computed(() => targets.value.filter(style => style.pokeId === options.value.pokeId).sort((a, b) => a.stars - b.stars))
-const faceKeys = computed(() => faces.value.map(style => styleKey(style.pokeId, style.stars, style.styleId)))
-const validStyle = computed(() => faceKeys.value.includes(options.value.completionTarget ?? ''))
-watch([isStyle, () => props.goal.selectionMode, faceKeys, validStyle], ([sleep, mode, keys, valid]) => {
-  if (sleep && mode === 'sleepdex' && !valid) options.value.completionTarget = keys[0] ?? ''
+const faceKeys = computed(() => faces.value.map(raeSleepStyleId))
+const validStyle = computed(() => {
+  const id = resolveSleepStyleRef(options.value.completionTarget)
+  return id != null && faceKeys.value.includes(id)
+})
+watch([isStyle, () => props.goal.selectionMode, faceKeys], ([sleep, mode, keys]) => {
+  if (sleep && mode === 'sleepdex' && !options.value.completionTarget) options.value.completionTarget = keys[0] ?? ''
 }, { immediate: true })
+function selectPokemon(id: number) {
+  if (isStyle.value && id !== options.value.pokeId) options.value.completionTarget = ''
+  options.value.pokeId = id
+}
 const islands = computed(() => babyEfficiencyIslands(options.value.pokeId, isStyle.value ? options.value.completionTarget : undefined, research.value, isCandy.value ? 'candy' : undefined))
 const simulationOptions = computed(() => ({ ...options.value, campTicket: campTicket.value, objective: isStyle.value ? undefined : props.goal.purpose === 'candy' ? 'candy' as const : 'catch' as const, activity: research.value, eventMult: eventMult.value, eventMix: mixMode.value }))
 const { busy, error, notice, result, progress, dirty, calculate, cancel } = useBabyEfficiency(simulationOptions, props.goal.id)
@@ -69,7 +76,10 @@ watch(() => [options.value.pokeId, options.value.completionTarget, props.goal.se
 }, { flush: 'sync' })
 const resultName = computed(() => result.value ? POKEDEX.find(poke => poke.id === result.value!.options.pokeId)?.name : '')
 const family = computed(() => [...new Set(POKEDEX.filter(poke => familyOf(poke.id) === familyOf(options.value.pokeId)).map(poke => poke.name))].join('、'))
-const resultStyle = computed(() => result.value ? targets.value.find(style => styleKey(style.pokeId, style.stars, style.styleId) === result.value!.options.completionTarget) : undefined)
+const resultStyle = computed(() => {
+  const id = resolveSleepStyleRef(result.value?.options.completionTarget)
+  return id == null ? undefined : targets.value.find(style => raeSleepStyleId(style) === id)
+})
 const statistic = computed({ get: () => options.value.completionStatistic ?? 'first-hit', set: (value: 'first-hit' | 'expectation') => { options.value.completionStatistic = value } })
 const probabilityResult = computed(() => isStyle.value && result.value?.options.completionStatistic !== 'expectation')
 const canCalculate = computed(() => isStyle.value ? validStyle.value && islands.value.length > 0 : babyIds.value.includes(options.value.pokeId))
@@ -84,11 +94,11 @@ const canCalculate = computed(() => isStyle.value ? validStyle.value && islands.
         <div class="field"><label for="encounter-selection">{{ translateUi("睡姿选择范围") }}</label><select :disabled="busy" id="encounter-selection" v-model="goal.selectionMode"><option value="sleepdex">{{ translateUi("根据睡姿图鉴 · 仅未收集") }}</option><option value="free">{{ translateUi("自由选择") }}</option></select></div>
         <p v-if="!pokeIds.length" class="muted">{{ translateUi("暂无可选择的睡姿。可切换为自由选择，或在睡姿图鉴中取消勾选尚未收集的睡姿。") }}</p>
       </template>
-      <div v-if="pokeIds.length || options.pokeId" class="field"><label>{{ isStyle ? translateUi("目标宝可梦") : translateUi("目标一阶段宝可梦") }}</label><PokePicker v-if="!busy" v-model="options.pokeId" :allowed-ids="pokeIds" :name-overrides="isStyle ? undefined : BABY_POKEMON_NAMES" /></div>
-      <div v-if="isStyle && (goal.selectionMode === 'free' || faces.length > 1)" class="field">
+      <div v-if="pokeIds.length || options.pokeId" class="field"><label>{{ isStyle ? translateUi("目标宝可梦") : translateUi("目标一阶段宝可梦") }}</label><PokePicker v-if="!busy" :model-value="options.pokeId" @update:model-value="selectPokemon" :allowed-ids="pokeIds" :name-overrides="isStyle ? undefined : BABY_POKEMON_NAMES" /></div>
+      <div v-if="isStyle && (goal.selectionMode === 'free' || faces.length > 1 || !validStyle)" class="field">
         <label for="encounter-style">{{ translateUi('具体睡姿') }}</label>
         <select id="encounter-style" v-model="options.completionTarget" :disabled="busy">
-          <option v-if="goal.selectionMode === 'free'" value="">{{ translateUi('请选择具体睡姿') }}</option>
+          <option v-if="goal.selectionMode === 'free' || !validStyle" value="">{{ translateUi('请选择具体睡姿') }}</option>
           <option v-for="(style, index) in faces" :key="faceKeys[index]" :value="faceKeys[index]">{{ style.stars }}★ · {{ sleepStyleText(style) }}</option>
         </select>
       </div>

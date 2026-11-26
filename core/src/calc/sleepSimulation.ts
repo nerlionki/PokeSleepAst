@@ -6,7 +6,7 @@ import { pendingResearchPokemon } from './researchAvailability'
 import { normalizeEventMix } from './sleepRules'
 import { sha256, utf8 } from '../resources/sha256'
 import type { IslandId, SleepType } from '../types'
-import { encounterCount, sleepExpect, sleepExpectSteps, sleepTreeExpect, type SleepExpectCheckpoint, type DrawOpts } from './sleep'
+import { encounterCount, resolvedStyleIds, sleepExpect, sleepExpectSteps, sleepTreeExpect, type SleepExpectCheckpoint, type DrawOpts } from './sleep'
 import type { EfficiencyPrecision } from './babyEfficiency'
 const sleepSimulation_prepareActivityRequest_runtimeParameters = runtimeParameters.modules.sleepSimulation.prepareActivityRequest.values
 const sleepSimulation_validResearchOptions_runtimeParameters = runtimeParameters.modules.sleepSimulation.validResearchOptions.values
@@ -23,7 +23,7 @@ export interface SleepSimulationRequest {
   seed: number
   options: Pick<DrawOpts, 'campTicket' | 'activity' | 'researchedBefore' | 'researchSession' | 'researchLimit' | 'firstResearchExtras' | 'rank' | 'discovered' | 'rare' | 'shinyUp' | 'eventMix' | 'eventMult' | 'pokemonUps' | 'researchExpBonus' | 'shardBonus' | 'focusIncense' | 'luckIncense'> & { incenseSession?: 0 | 1 }
 }
-export const SLEEP_SIMULATION_CHECKPOINT_VERSION = 11
+export const SLEEP_SIMULATION_CHECKPOINT_VERSION = 12
 export interface SleepSimulationCheckpoint { version: typeof SLEEP_SIMULATION_CHECKPOINT_VERSION, activity?: ResearchActivityContext, powerIndex: number, result: SleepSimulationRows, session?: SleepExpectCheckpoint, signature: string }
 export type SleepSimulationRows = ReturnType<typeof sleepExpect>
 export type SleepSimulationMessage = { type: 'progress', completed: number, total: number }
@@ -34,7 +34,7 @@ function prepareActivityRequest(request: SleepSimulationRequest): SleepSimulatio
   const effects = activityValues(activity, request.island, undefined, (sleepSimulation_prepareActivityRequest_runtimeParameters.p001 as 240), { drowsyPowerMultiplier: request.options.eventMult ?? 1, eventMix: normalizeEventMix(request.options.eventMix) })
   const changed = effects.drowsyPowerMultiplier !== (request.options.eventMult ?? 1)
   return { ...request, powers: changed ? request.powers.map(power => power / (request.options.eventMult ?? 1) * effects.drowsyPowerMultiplier) : request.powers,
-    options: { ...request.options, activity, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix } }
+    options: { ...request.options, activity, eventMult: effects.drowsyPowerMultiplier, eventMix: effects.eventMix, discovered: resolvedStyleIds(request.options.discovered) } }
 }
 function researchOptions(request: SleepSimulationRequest, index: number): DrawOpts & { seed: number } {
   return { ...request.options,

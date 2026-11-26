@@ -22,7 +22,7 @@ import { useActivities } from '../../composables/useActivities';
     recommendThree,
     type CatchPurpose
   } from '../../calc/catch';
-  import { resolvedSleepdex, styleKey } from '../../calc/sleep';
+  import { resolvedSleepdex, raeSleepStyleId, resolveSleepStyleRef } from '../../calc/sleep';
   import { researchSleepStyles } from '../../calc/activities';
   import { POKEDEX, SLEEP_STYLES } from '../../calc/data';
   import { BABY_POKEMON_NAMES } from '../../calc/babyEfficiency';
@@ -53,16 +53,14 @@ import { useActivities } from '../../composables/useActivities';
   };
   const catchGoals = computed(() =>
     goals.value.map(goal => {
-      const style = styles.value.find(
-        style =>
-          styleKey(style.pokeId, style.stars, style.styleId) ===
-          goal.options.completionTarget
-      );
+      const id = resolveSleepStyleRef(goal.options.completionTarget);
+      const style = id == null ? undefined : styles.value.find(style => style.pokeId === goal.options.pokeId && raeSleepStyleId(style) === id);
       return {
         id: goal.id,
         pokeId: goal.options.pokeId,
         purpose: goal.purpose,
-        stars: style ? [style.stars] : []
+        stars: style ? [style.stars] : [],
+        sleepStyleId: style ? id : undefined
       };
     })
   );
@@ -85,11 +83,8 @@ import { useActivities } from '../../composables/useActivities';
     const name = individualName(species, species || '请选择宝可梦');
     if (!species) return translateUi('请选择宝可梦');
     if (goal.purpose !== 'sleep') return name;
-    const style = styles.value.find(
-      style =>
-        styleKey(style.pokeId, style.stars, style.styleId) ===
-        goal.options.completionTarget
-    );
+    const id = resolveSleepStyleRef(goal.options.completionTarget);
+    const style = id == null ? undefined : styles.value.find(style => style.pokeId === goal.options.pokeId && raeSleepStyleId(style) === id);
     return style
       ? `${name} · ${style.stars}★ ${sleepStyleText(style)}`
       : translateUi('{name} · 待选择睡姿', { name });

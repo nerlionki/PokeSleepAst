@@ -2,6 +2,7 @@ import { DEFAULT_BABY_EFFICIENCY, DEFAULT_COMPLETION_EFFICIENCY, BABY_POKEMON_ID
 import type { CatchPurpose } from './catch'
 import type { CompletionSelectionMode } from './completionEfficiency'
 import { newUid } from './uid'
+import { resolveSleepStyleRef } from './sleepStyleIdentity'
 
 export interface EncounterGoal {
   id: string
@@ -26,6 +27,7 @@ export function normalizeEncounterGoals(saved: unknown): EncounterGoal[] {
       delete options.completionTarget
       if (!BABY_POKEMON_IDS.includes(options.pokeId)) options.pokeId = DEFAULT_BABY_EFFICIENCY.pokeId
     }
+    if (row.purpose === 'sleep') options.completionTarget = resolveSleepStyleRef(options.completionTarget) ?? options.completionTarget
     if (row.purpose !== 'sleep' || (options.completionStatistic !== 'expectation' && options.completionStatistic !== 'first-hit')) delete options.completionStatistic
     // Empty/unavailable style selections must remain editable rather than dropping the goal.
     const probe = { ...options, pokeId: DEFAULT_BABY_EFFICIENCY.pokeId }

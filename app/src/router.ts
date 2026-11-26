@@ -1,5 +1,6 @@
 import { taskNavigationLocked } from '../../core/src/composables/taskNavigationLock'
-import { createRouter, createWebHashHistory, type RouteLocationNormalized } from 'vue-router'
+import { createRouter, createWebHashHistory, type LocationQuery, type RouteLocationNormalized } from 'vue-router'
+import { shallowReactive } from 'vue'
 import DataView from './views/DataView.vue'
 import PlanView from './views/PlanView.vue'
 import PokemonView from './views/PokemonView.vue'
@@ -7,6 +8,11 @@ import ProfileView from './views/ProfileView.vue'
 import TeamView from './views/TeamView.vue'
 
 const pageScroll = new Map<string, number>()
+const lastPageQueries = shallowReactive(new Map<string, LocationQuery>())
+
+export function tabDestination(name: string) {
+  return { name, query: lastPageQueries.get(name) }
+}
 function scrollKey(route: Pick<RouteLocationNormalized, 'path' | 'query' | 'meta'>) {
   const tab = route.query.tab ?? (Array.isArray(route.meta.backTabs) ? route.meta.backTabs[0] : '')
   return JSON.stringify([route.path, tab, route.query.boxOverview, route.query.encounterVersion])
@@ -23,6 +29,10 @@ export const router = createRouter({
     { path: '/data', name: 'data', component: DataView, meta: { backTabs: ['island', 'berry', 'ing', 'recipe', 'skill', 'nature', 'pot', 'bundles', 'calendar'] } },
     { path: '/profile', name: 'profile', component: ProfileView, meta: { backTabs: ['home', 'backup', 'settings', 'recipe-levels', 'appearance', 'credits', 'update'] } },
   ],
+})
+
+router.afterEach((to, _from, failure) => {
+  if (!failure && typeof to.name === 'string') lastPageQueries.set(to.name, to.query)
 })
 
 router.beforeEach((_to, from) => {
