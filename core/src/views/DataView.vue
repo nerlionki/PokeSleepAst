@@ -3,7 +3,7 @@
   import TabContent from '#platform/TabContent.vue';
   import Segmented from '../components/shared/Segmented.vue';
   import GuideEntry from '../components/shared/GuideEntry.vue';
-  import { useTabSwipe } from '../composables/useTabSwipe';
+  import { useTabSwipe } from '#platform/tabSwipe';
   import clientDefaults from '../data/client-defaults.resource';
 
   import { shallowRef } from 'vue';

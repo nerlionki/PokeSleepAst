@@ -9,6 +9,12 @@
   import BerryIcon from '../shared/BerryIcon.vue';
   import IngredientIcon from '../shared/IngredientIcon.vue';
   import EventBundlesPane from './EventBundlesPane.vue';
+  import { useRouter } from 'vue-router';
+  import { isTrialMiniProgram } from '#platform/dataSource';
+  import { shopsForEvent } from '../../calc/eventExchange';
+  import { useEventExchanges } from '../../composables/useEventExchanges';
+  import { useFeaturesStore } from '../../stores/features';
+  import EventExchangeOffers from './EventExchangeOffers.vue';
   import ActivityPokemonIcons from './ActivityPokemonIcons.vue';
   import resourceMeta from '../../data/meta.resource';
   import type {
@@ -30,6 +36,16 @@
   const areas = computed(() => record.value?.bonusGroups ?? []);
   const berries = computed(() => record.value?.berryGroup?.items ?? []);
   const notes = computed(() => record.value?.notes ?? []);
+  const router = useRouter();
+  const features = useFeaturesStore();
+  const { plannerShops } = useEventExchanges(isTrialMiniProgram);
+  const shops = computed(() => shopsForEvent(record.value));
+  const canPlanExchange = computed(() => features.enabled('plan', 'exchange')
+    && plannerShops.value.some(shop => shop.event.id === record.value?.id));
+  function openExchangePlan() {
+    if (!canPlanExchange.value || !record.value) return;
+    void router.push({ path: '/plan', query: { tab: 'exchange', exchangeEvent: record.value.id } });
+  }
   const encounterUps = computed(() => {
     const ups = meta?.activityArchive?.encounterUps;
     if (!ups) return [];
@@ -41,11 +57,12 @@
     small: '小 UP',
     special: '特别 UP'
   };
-  const tabs = [
+  const tabs = computed(() => [
     { id: 'bonuses', label: '活动加成' },
-    { id: 'bundles', label: '活动礼包' }
-  ] as const;
-  const tab = shallowRef<'bonuses' | 'bundles'>('bonuses');
+    { id: 'bundles', label: '活动礼包' },
+    ...(shops.value.length ? [{ id: 'exchange', label: '兑换道具' } as const] : [])
+  ] as const);
+  const tab = shallowRef<'bonuses' | 'bundles' | 'exchange'>('bonuses');
   const groupOrder = [
     'energy',
     'candy',
@@ -293,6 +310,15 @@
       <p v-if="!hasBonuses" class="muted">
         {{ t('该活动暂无已收录的加成。') }}
       </p>
+    </div>
+    <div v-else-if="tab === 'exchange'" class="stack">
+      <button v-if="canPlanExchange" type="button" class="btn" @click="openExchangePlan">{{ t('前往兑换规划') }}</button>
+      <div v-for="shop in shops" :key="shop.key" class="stack">
+        <p v-if="shop.exchange.opensAt && shop.exchange.closesAt" class="muted">
+          {{ t('兑换开放时间') }} {{ shop.exchange.opensAt.slice(0, 16).replace('T', ' ') }} – {{ shop.exchange.closesAt.slice(0, 16).replace('T', ' ') }}
+        </p>
+        <EventExchangeOffers :shop="shop" />
+      </div>
     </div>
     <EventBundlesPane v-else :event="event" />
   </div>

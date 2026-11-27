@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageShell from '../../components/PageShell.vue'
-import Content from '../../generated/views/PokemonView.vue'
+import PokemonView from './PokemonView.vue'
 </script>
-<template><PageShell page="pokemon"><Content /></PageShell></template>
+
+<template><PageShell page="pokemon"><PokemonView /></PageShell></template>

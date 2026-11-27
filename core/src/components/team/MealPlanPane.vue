@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Dialog from '#platform/Dialog.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMealPlan } from '#platform/scorePlan'
@@ -235,39 +236,31 @@ function pick(id: number) {
     </section>
     <button type="button" class="btn" :disabled="!ready || busy || !hasEligible || !recipe || !team.length" @click="teamTask.calculate()">{{ t('计算耗时') }}</button>
 
-    <Teleport to="body">
-      <div v-if="pickerOpen" v-back="closePicker" class="overlay picker-overlay"
-        @click.self="closePicker" @touchstart.stop @touchend.stop @touchcancel.stop>
-        <section class="sheet picker-sheet" role="dialog" aria-modal="true" aria-labelledby="meal-recipe-picker-title">
-          <header class="picker-header">
-            <h3 id="meal-recipe-picker-title">{{ t(pickerTitle) }}<template v-if="!choosingRecipe"> · {{ team.length }}/5</template></h3>
-            <button type="button" class="btn ghost picker-close" @click="closePicker">{{ t('关闭') }}</button>
-          </header>
-          <div class="meal-recipe-picker-viewport">
-            <div class="meal-recipe-picker-scroll">
-              <RecipePane v-if="choosingRecipe" selectable :selected-id="plan.recipeId" @pick="pick" />
-              <div v-else class="stack">
-                <p v-if="selectionError" role="alert" class="amber">{{ t(selectionError) }}</p>
-                <template v-if="candidatePicker === 'box'">
-                  <input v-model="query" class="picker-search" :placeholder="t('搜索 Box 个体')" :aria-label="t('搜索 Box 个体')">
-                  <p v-if="!pickerRows.length" class="muted">{{ t('暂无可上场的个体') }}</p>
-                  <div v-for="{ pokemon, name, healer } in pickerRows.slice(0, visible)" :key="pokemon.uid" class="row meal-plan-between">
-                    <span>{{ name }} · Lv.{{ pokemon.level }}<template v-if="healer"> · {{ t('回复活力') }}</template></span>
-                    <button type="button" class="btn ghost" @click="addMember(pokemon)">{{ t('加入队伍') }}</button>
-                  </div>
-                  <button v-if="visible < pickerRows.length" type="button" class="btn ghost" @click="visible += 20">{{ t('加载更多') }}</button>
-                </template>
-                <template v-else>
-                  <p class="muted">{{ t(resultList?.length ? '按所选料理的食谱覆盖率排序，分食材显示三顿用量的达标时间。' : 'Box 中暂无能提供目标食材的可用个体') }}</p>
-                  <MealCandidateRow v-for="{ pokemon, estimate: candidate } in resultList" :key="pokemon.uid"
-                    :pokemon="pokemon" :estimate="candidate" @add="addMember(pokemon)" />
-                </template>
+    <Dialog v-if="pickerOpen" variant="picker"
+      :title="t(pickerTitle) + (choosingRecipe ? '' : ' · ' + team.length + '/5')" @close="closePicker">
+      <div class="meal-recipe-picker-viewport">
+        <div class="meal-recipe-picker-scroll">
+          <RecipePane v-if="choosingRecipe" selectable :selected-id="plan.recipeId" @pick="pick" />
+          <div v-else class="stack">
+            <p v-if="selectionError" role="alert" class="amber">{{ t(selectionError) }}</p>
+            <template v-if="candidatePicker === 'box'">
+              <input v-model="query" class="picker-search" :placeholder="t('搜索 Box 个体')" :aria-label="t('搜索 Box 个体')">
+              <p v-if="!pickerRows.length" class="muted">{{ t('暂无可上场的个体') }}</p>
+              <div v-for="{ pokemon, name, healer } in pickerRows.slice(0, visible)" :key="pokemon.uid" class="row meal-plan-between">
+                <span>{{ name }} · Lv.{{ pokemon.level }}<template v-if="healer"> · {{ t('回复活力') }}</template></span>
+                <button type="button" class="btn ghost" @click="addMember(pokemon)">{{ t('加入队伍') }}</button>
               </div>
-            </div>
+              <button v-if="visible < pickerRows.length" type="button" class="btn ghost" @click="visible += 20">{{ t('加载更多') }}</button>
+            </template>
+            <template v-else>
+              <p class="muted">{{ t(resultList?.length ? '按所选料理的食谱覆盖率排序，分食材显示三顿用量的达标时间。' : 'Box 中暂无能提供目标食材的可用个体') }}</p>
+              <MealCandidateRow v-for="{ pokemon, estimate: candidate } in resultList" :key="pokemon.uid"
+                :pokemon="pokemon" :estimate="candidate" @add="addMember(pokemon)" />
+            </template>
           </div>
-        </section>
+        </div>
       </div>
-    </Teleport>
+    </Dialog>
     <ProgressDialog :open="busy" title="正在计算料理规划" :progress="progress" :notice="notice" cancellable @cancel="activeTask?.cancel()" />
   </div>
 </template>

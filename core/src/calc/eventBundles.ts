@@ -113,13 +113,14 @@ export function visibleEventBundles(catalog: EventBundleCatalog, now: Date, quer
     .map(({ bundle }) => bundle)
 }
 
-function matchesBundleActivity(bundle: EventBundle, event: Activity): boolean {
+type BundleActivity = Pick<Activity, 'id' | 'name' | 'startsOn' | 'endsOn'>
+function matchesBundleActivity(bundle: EventBundle, event: BundleActivity): boolean {
   return bundle.eventId ? bundle.eventId === event.id
     : foldText(bundle.eventName) === foldText(event.name) && bundle.announcedOn !== null
       && bundle.announcedOn < event.endsOn && bundle.eventEndsOn >= event.startsOn
 }
 
-export function bundlesForActivity(catalog: EventBundleCatalog, event: Activity): EventBundle[] {
+export function bundlesForActivity(catalog: EventBundleCatalog, event: BundleActivity): EventBundle[] {
   return catalog.bundles.filter(bundle => matchesBundleActivity(bundle, event))
 }
 

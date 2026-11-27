@@ -1,18 +1,35 @@
 <script setup lang="ts">
-import { t as translateUi } from '../../ui/i18n'
+import { gameText, t as translateUi } from '../../ui/i18n'
 import { gameLabel } from '../../ui/gameLabels'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { computed, shallowRef } from 'vue'
-import type { EfficiencyOptimum, EfficiencyPrecision } from '../../calc/babyEfficiency'
+import { ISLANDS } from '../../calc/data'
+import type { BabyEfficiencyResult, EfficiencyOptimum, EfficiencyPrecision } from '../../calc/babyEfficiency'
+import PlanningResultCurve from './PlanningResultCurve.vue'
 const components_plan_BabyEfficiencyResult_config_clientDefaults = clientDefaults.modules.components_plan_BabyEfficiencyResult
 
 
-const props = defineProps<{ title: string, unit: string, optimum: EfficiencyOptimum, precision: EfficiencyPrecision, probability?: boolean }>()
+const props = defineProps<{
+  title: string, unit: string, optimum: EfficiencyOptimum, precision: EfficiencyPrecision, probability?: boolean
+  curves?: BabyEfficiencyResult['curves'], curveGoal?: 'catch' | 'candy'
+}>()
 const visibleCount = shallowRef(components_plan_BabyEfficiencyResult_config_clientDefaults["visibleCountInitial"])
 const visible = computed(() => props.optimum.intervals.slice(0, visibleCount.value))
 const format = (value: number) => value.toLocaleString('zh-CN', { maximumFractionDigits: 3 })
 const range = (min: number, max: number | null) => max === null ? `≥ ${format(min)}` : min === max ? format(min) : `${format(min)} – ${format(max)}`
+const curveSeries = computed(() => {
+  const goal = props.curveGoal ?? 'catch'
+  const bestIsland = props.optimum.intervals[0]?.islandId
+  const unit: '%' | '只' | '颗' = props.probability ? '%' : goal === 'candy' ? '颗' : '只'
+  return [...(props.curves ?? [])].sort((a, b) => Number(b.islandId === bestIsland) - Number(a.islandId === bestIsland))
+    .map(curve => ({
+      label: gameText(ISLANDS.find(island => island.id === curve.islandId)?.name),
+      points: curve[goal].filter(point => point != null),
+      unit,
+    }))
+    .filter(curve => curve.points.length > 0)
+})
 </script>
 
 <template>
@@ -36,6 +53,7 @@ const range = (min: number, max: number | null) => max === null ? `≥ ${format(
       <button v-if="visibleCount < optimum.intervals.length" class="btn ghost" type="button" @click="visibleCount += 20">{{ translateUi("显示更多方案（剩余") }} {{ optimum.intervals.length - visibleCount }}）</button>
     </template>
   </section>
+  <PlanningResultCurve v-if="curveSeries.length" axis="energy" :series="curveSeries" />
 </template>
 
 <style scoped>

@@ -1507,14 +1507,20 @@
           "name": "雷公沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/37.webp",
-          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。"
+          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。",
+          "compatiblePokemonIds": [
+            243
+          ]
         },
         {
           "id": 92,
           "name": "炎帝沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/92.webp",
-          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。"
+          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。",
+          "compatiblePokemonIds": [
+            244
+          ]
         },
         {
           "id": 94,
@@ -1530,14 +1536,20 @@
           "name": "水君沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/95.webp",
-          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。"
+          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。",
+          "compatiblePokemonIds": [
+            245
+          ]
         },
         {
           "id": 99,
           "name": "克雷色利亞沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/99.webp",
-          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。"
+          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。",
+          "compatiblePokemonIds": [
+            488
+          ]
         },
         {
           "id": 106,
@@ -1551,21 +1563,31 @@
           "name": "拉帝亞斯沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/110.webp",
-          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。"
+          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。",
+          "compatiblePokemonIds": [
+            380
+          ]
         },
         {
           "id": 112,
           "name": "拉帝亞斯／拉帝歐斯沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/112.webp",
-          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。"
+          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。",
+          "compatiblePokemonIds": [
+            380,
+            381
+          ]
         },
         {
           "id": 117,
           "name": "超夢沙布蕾",
           "category": "沙布蕾",
           "imageFile": "items/117.webp",
-          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。"
+          "usage": "在点心时间喂给指定宝可梦，增加 6 点友情点数。",
+          "compatiblePokemonIds": [
+            150
+          ]
         },
         {
           "id": 21,
@@ -2144,70 +2166,110 @@
           "name": "雷公的鬃毛",
           "category": "活动研究物品",
           "imageFile": "items/36.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "raikou-research",
+            "name": "雷公研究"
+          }
         },
         {
           "id": 93,
           "name": "炎帝的鬃毛",
           "category": "活动研究物品",
           "imageFile": "items/93.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "entei-research",
+            "name": "炎帝研究"
+          }
         },
         {
           "id": 96,
           "name": "水君的鬃毛",
           "category": "活动研究物品",
           "imageFile": "items/96.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "suicune-research",
+            "name": "水君研究"
+          }
         },
         {
           "id": 98,
           "name": "美夢幣",
           "category": "活动研究物品",
           "imageFile": "items/98.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "announcement-323135353933333136383332353039393533",
+            "name": "新年2025"
+          }
         },
         {
           "id": 100,
           "name": "克雷色利亞的羽絨",
           "category": "活动研究物品",
           "imageFile": "items/100.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "announcement-323436343635363930323437313032343635",
+            "name": "克雷色利亚VS达克莱伊"
+          }
         },
         {
           "id": 105,
           "name": "寶可夢的掉落物",
           "category": "活动研究物品",
           "imageFile": "items/105.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "announcement-333032323532323137353634333937353639",
+            "name": "雷公＆炎帝＆水君研究"
+          }
         },
         {
           "id": 107,
           "name": "美夢幣",
           "category": "活动研究物品",
           "imageFile": "items/107.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "announcement-333435333139353737393034373432343032",
+            "name": "新年2026"
+          }
         },
         {
           "id": 111,
           "name": "拉帝亞斯的羽絨",
           "category": "活动研究物品",
           "imageFile": "items/111.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "announcement-333738363536323735393239343937363031",
+            "name": "拉帝亚斯研究"
+          }
         },
         {
           "id": 113,
           "name": "拉帝歐斯的羽絨",
           "category": "活动研究物品",
           "imageFile": "items/113.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "announcement-343031343632313536343838333433353533",
+            "name": "拉帝欧斯与心之水滴"
+          }
         },
         {
           "id": 118,
           "name": "超夢的基因",
           "category": "活动研究物品",
           "imageFile": "items/118.webp",
-          "usage": "用于在对应活动的兑换处换取奖励。"
+          "usage": "用于在对应活动的兑换处换取奖励。",
+          "researchEvent": {
+            "id": "announcement-343239383235333132353739313235323439",
+            "name": "秘境研究！追寻超梦吧"
+          }
         },
         {
           "id": 103,

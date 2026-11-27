@@ -2,21 +2,11 @@ import type { Ref } from 'vue'
 import { taskNavigationLocked } from './taskNavigationLock'
 
 interface Point { clientX?: number; clientY?: number; pageX?: number; pageY?: number }
-interface SwipeEvent {
+export interface SwipeEvent {
   touches?: ArrayLike<Point>
   changedTouches?: ArrayLike<Point>
   target?: unknown
   currentTarget?: unknown
-}
-interface SwipeElement {
-  tagName?: string
-  nodeName?: string
-  type?: string
-  getAttribute?: (name: string) => string | null
-  dataset?: Record<string, string | undefined>
-  parentElement?: SwipeElement
-  scrollWidth?: number
-  clientWidth?: number
 }
 
 export function swipeStep(dx: number, dy: number): number {
@@ -24,24 +14,17 @@ export function swipeStep(dx: number, dy: number): number {
 }
 
 /** Bind only to a page's main tabs. Inner sections let gestures bubble here. */
-export function useTabSwipe<T extends string>(model: Ref<T>, available: () => readonly T[], disabled: () => boolean = () => false) {
+export function createTabSwipe<T extends string>(
+  model: Ref<T>,
+  available: () => readonly T[],
+  ignoreTarget: (event: SwipeEvent) => boolean,
+  disabled: () => boolean = () => false
+) {
   let start: { x: number; y: number; time: number } | undefined
   const point = (value?: Point) => value && { x: value.clientX ?? value.pageX ?? 0, y: value.clientY ?? value.pageY ?? 0 }
   function touchStart(event: SwipeEvent) {
     start = undefined
-    if (taskNavigationLocked.value || disabled() || event.touches?.length !== 1) return
-    let element = event.target as SwipeElement | undefined
-    while (element) {
-      if (/^(input|textarea|select|slider|switch)$/i.test(element.tagName ?? element.nodeName ?? '')
-        || /^(range|slider)$/i.test(element.type ?? '')
-        || element.getAttribute?.('role') === 'slider'
-        || element.dataset?.swipeIgnore != null
-        || (typeof getComputedStyle === 'function'
-          && (element.scrollWidth ?? 0) > (element.clientWidth ?? Infinity) + 2
-          && /^(auto|scroll)$/.test(getComputedStyle(element as Element).overflowX))) return
-      if (element === event.currentTarget) break
-      element = element.parentElement
-    }
+    if (taskNavigationLocked.value || disabled() || event.touches?.length !== 1 || ignoreTarget(event)) return
     const at = point(event.touches[0])
     if (at) start = { ...at, time: Date.now() }
   }

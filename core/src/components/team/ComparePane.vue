@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Dialog from '#platform/Dialog.vue'
 import { gameText, t as translateUi } from '../../ui/i18n'
 import { editorMemberFields, MEMBER_PRESETS } from '../../calc/memberPresets'
 
@@ -276,30 +277,24 @@ function saveCustomToBox() {
       </article>
     </div>
 
-    <div v-if="picking" v-back="() => { picking = false }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="picking = false">
-      <section class="sheet stack">
-        <h3>{{ translateUi("加入比较") }}</h3>
+    <Dialog v-if="picking" :title="translateUi('加入比较')" @close="picking = false">
         <button v-for="p in box.pokemon" :key="p.uid" class="data-row" type="button" @click="take(p.uid)">
           <PokeSprite :id="p.pokeId" :name="boxLabel(p)" :shiny="p.shiny" :ribbon-hours="p.tune?.ribbonHours" />
           <span>{{ boxLabel(p) }} Lv.{{ p.level }} · {{ p.nature }}</span>
         </button>
         <p v-if="!box.pokemon.length" class="muted">{{ translateUi("盒子是空的，可以用自定义面板。") }}</p>
-        <button class="btn ghost" type="button" @click="picking = false">{{ translateUi("关闭") }}</button>
-      </section>
-    </div>
+    </Dialog>
 
     <SpeciesSheet v-if="adding" @close="adding = false" @pick="addCustom" />
 
-    <div v-if="editingPanel" v-back="() => { editing = null }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay" @click.self="editing = null">
-      <section class="sheet stack member-editor-sheet">
-        <div class="row">
-          <h3>{{ customs.some((item) => item.uid === editing) ? translateUi("自定义面板") : translateUi("编辑个体") }}</h3>
-        </div>
-        <MemberEditor v-model="editingPanel" @copy="duplicateEditing" @remove="remove(editing ?? '')" />
+    <Dialog v-if="editingPanel"
+      :title="translateUi(customs.some(item => item.uid === editing) ? '自定义面板' : '编辑个体')" @close="editing = null">
+      <MemberEditor v-model="editingPanel" @copy="duplicateEditing" @remove="remove(editing ?? '')" />
+      <template #footer>
         <button v-if="customs.some((item) => item.uid === editing)" class="btn" type="button" :disabled="[151, 491].includes(editingPanel.pokeId) && editingPanel.ingredientSlots[0] == null" @click="saveCustomToBox">{{ translateUi("保存到盒子") }}</button>
         <button class="btn" type="button" :disabled="[151, 491].includes(editingPanel.pokeId) && editingPanel.ingredientSlots[0] == null" @click="editing = null">{{ translateUi("完成") }}</button>
-      </section>
-    </div>
+      </template>
+    </Dialog>
   </div>
 </template>
 

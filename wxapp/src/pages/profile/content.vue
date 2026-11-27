@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import PageShell from '../../components/PageShell.vue'
-import ShareEntry from '../../components/ShareEntry.vue'
-import Content from '../../generated/views/ProfileView.vue'
+import ProfileView from './ProfileView.vue'
 </script>
-<template>
-  <PageShell page="profile">
-    <Content>
-      <template #app-tools>
-        <ShareEntry />
-      </template>
-    </Content>
-  </PageShell>
-</template>
+
+<template><PageShell page="profile"><ProfileView /></PageShell></template>

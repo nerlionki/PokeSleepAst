@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Dialog from '#platform/Dialog.vue'
 import { gameText, t as translateUi } from '../../ui/i18n'
 
 
@@ -30,13 +31,7 @@ function pause() { emit('pause', completed.value) }
 </script>
 
 <template>
-  <Teleport to="body">
-    <div v-back="pause" class="overlay ocr-overlay" @click.self="pause">
-      <section class="sheet stack" role="dialog" aria-modal="true" aria-labelledby="ocr-completion-title">
-        <div class="row">
-          <h2 id="ocr-completion-title">{{ translateUi("补全识别结果") }}</h2>
-          <button class="btn ghost" type="button" @click="pause">{{ translateUi("稍后补全") }}</button>
-        </div>
+  <Dialog :title="translateUi('补全识别结果')" @close="pause">
         <div class="row">
           <PokeSprite :id="pokemon.pokeId" :name="boxLabel(pokemon)" :shiny="pokemon.shiny" :ribbon-hours="pokemon.tune?.ribbonHours" />
           <strong>{{ boxLabel(pokemon) }}</strong>
@@ -56,14 +51,16 @@ function pause() { emit('pause', completed.value) }
           <span v-if="selections[field] && completed.ocrMissing?.includes(field)" class="ocr-warning">{{ translateUi("选择无效：请检查等级范围或重复的副技能。") }}</span>
         </div>
         <p class="muted" role="status">{{ pending ? translateUi("还有 {arg1} 项待确认", { arg1: String(pending) }) : translateUi("当前记录已补全") }}</p>
+    <template #footer>
+      <div class="row">
+        <button class="btn ghost" type="button" @click="pause">{{ translateUi("稍后补全") }}</button>
         <button class="btn" type="button" :disabled="pending > 0" @click="emit('save', completed)">{{ translateUi("保存并继续") }}</button>
-      </section>
-    </div>
-  </Teleport>
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
-.ocr-overlay { z-index: 50; }
 .ocr-warning { color: var(--rose); font-size: var(--font-13); }
 button:disabled { opacity: .5; cursor: default; }
 </style>

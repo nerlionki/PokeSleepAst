@@ -1,18 +1,16 @@
 <script setup lang="ts">
-  import { gameText, t as translateUi } from '../../ui/i18n';
+  import { catalogText, gameText, t as translateUi } from '../../ui/i18n';
 
   import { gameLabel } from '../../ui/gameLabels';
   import FallbackImage from '../shared/FallbackImage.vue';
   import clientDefaults from '../../data/client-defaults.resource';
 
   import { computed, shallowRef } from 'vue';
-  import { ITEM_CATEGORIES, DISPLAY_ITEMS, type ItemEntry } from '../../calc/items';
+  import { ITEM_CATEGORIES, DISPLAY_ITEMS, type DisplayItem } from '../../calc/items';
   import { textHit } from '../../calc/text';
   import DrawerSheet from '../shared/DrawerSheet.vue';
   import PokeSprite from '../shared/PokeSprite.vue';
-  import { pokeById } from '../../calc/data';
-  import { pokemonUsingEvolutionItem } from '../../calc/evolution';
-  import { ANNOUNCED } from '../../calc/announcedContent';
+  import { itemPokemon, itemUsage } from '../../ui/itemUsage';
   const components_data_ItemPane_config_clientDefaults =
     clientDefaults.modules.components_data_ItemPane;
 
@@ -20,10 +18,10 @@
   const category = shallowRef(
     components_data_ItemPane_config_clientDefaults['categoryInitial']
   );
-  const open = shallowRef<ItemEntry | null>(
+  const open = shallowRef<DisplayItem | null>(
     components_data_ItemPane_config_clientDefaults[
       'openInitial'
-    ] as unknown as ItemEntry | null
+    ] as unknown as DisplayItem | null
   );
   const listed = computed(() =>
     DISPLAY_ITEMS.filter(
@@ -33,18 +31,8 @@
           ...itemPokemon(item).map(row => gameText(row.name))].join(' '), props.q)
     )
   );
-  function itemPokemon(item: ItemEntry) {
-    const ids = item.category === '进化道具' && typeof item.id === 'number'
-      ? pokemonUsingEvolutionItem(item.id)
-      : item.compatiblePokemonIds ?? [];
-    return ids.flatMap(id => {
-      const announced = ANNOUNCED.pokemon.find(row => (row.runtimeId ?? row.nationalDex ?? row.imageId) === id);
-      const name = pokeById(id)?.name ?? announced?.name;
-      return name ? [{ id: announced?.imageId ?? id, name }] : [];
-    });
-  }
   const compatible = computed(() => open.value ? itemPokemon(open.value) : []);
-  const usage = computed(() => open.value?.usage ?? (open.value?.category === '进化道具' ? '用于满足指定宝可梦的进化条件。' : ''));
+  const usage = computed(() => open.value ? itemUsage(open.value, compatible.value) : '');
 </script>
 
 <template>
@@ -83,20 +71,29 @@
       </button>
     </div>
     <DrawerSheet v-if="open" :title="gameText(open.name)" @close="open = null">
-      <div class="row">
-        <FallbackImage
-          loading="lazy"
-          decoding="async"
-          class="item-icon large"
-          :src="open.icon"
-          :alt="gameText(open.name)"
-        >
-          <template v-if="open.pokemonItem?.kind === 'incense'" #fallback>
-            <PokeSprite :id="open.pokemonItem.pokemonId" />
-          </template>
-        </FallbackImage><strong>{{ translateUi(open.category) }}</strong>
+      <div class="item-detail-heading">
+        <div class="item-detail-image">
+          <FallbackImage
+            loading="lazy"
+            decoding="async"
+            class="item-icon large"
+            :src="open.icon"
+            :alt="gameText(open.name)"
+          >
+            <template v-if="open.pokemonItem?.kind === 'incense'" #fallback>
+              <PokeSprite :id="open.pokemonItem.pokemonId" />
+            </template>
+          </FallbackImage>
+        </div>
+        <strong>{{ translateUi(open.category) }}</strong>
       </div>
-      <p v-if="usage"><strong>{{ translateUi('用途') }}</strong> {{ translateUi(usage) }}</p>
+      <div v-if="open.researchEvents.length">
+        <strong>{{ translateUi('对应活动') }}</strong>
+        <div v-for="event in open.researchEvents" :key="event.id">
+          {{ catalogText('活动标题', event.id, event.name) }}
+        </div>
+      </div>
+      <p v-if="usage"><strong>{{ translateUi('用途') }}</strong> {{ usage }}</p>
       <div v-if="open.dreamShardsByResearchRank?.length">
         <div class="item-yield-row">
           <strong>{{ translateUi('研究等级') }}</strong>
@@ -113,8 +110,8 @@
       </div>
       <div v-if="compatible.length" class="stack">
         <h3>{{ translateUi('适用宝可梦') }}</h3>
-        <div class="row">
-          <div v-for="pokemon in compatible" :key="pokemon.id" class="icon-cell">
+        <div class="item-pokemon-list">
+          <div v-for="pokemon in compatible" :key="pokemon.id" class="item-pokemon-card">
             <PokeSprite :id="pokemon.id" :name="pokemon.name" />
             <span>{{ gameText(pokemon.name) }}</span>
           </div>
@@ -129,6 +126,46 @@
 </template>
 
 <style scoped>
+.item-detail-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.item-detail-heading > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.item-detail-image {
+  display: flex;
+  flex: 0 0 64px;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.item-pokemon-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.item-pokemon-card {
+  display: flex;
+  flex: 0 1 76px;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  font-size: var(--font-11);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 .item-yield-row {
   display: flex;
   justify-content: space-between;

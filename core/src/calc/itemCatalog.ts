@@ -12,6 +12,7 @@ export interface GameItem<Id extends number | PokemonItemId = number> {
   /** Index 0 corresponds to research rank 1. */
   dreamShardsByResearchRank?: number[]
   compatiblePokemonIds?: number[]
+  researchEvent?: { id: string; name: string }
   pokemonItem?: { kind: 'incense'; pokemonId: number; typeId: number } | { kind: 'candy'; pokemonId: number }
   /** 常驻商店按单件折算的钻石售价；缺省表示无单买价资料。 */
   diamondPrice?: number

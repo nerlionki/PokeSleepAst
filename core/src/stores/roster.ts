@@ -44,6 +44,8 @@ export const useRosterStore = defineStore('roster', () => {
   const error = ref(stores_roster_config_clientDefaults["errorInitial"])
   const teams = ref<SavedTeam[]>([])
   const activeTeamId = ref('')
+  const draftTeamId = ref('')
+  let previousTeamId = ''
   function currentTeam(): SavedTeam {
     return cloneData({ id: activeTeamId.value, name: teams.value.find(team => team.id === activeTeamId.value)?.name ?? '我的队伍', slots: slots.value, customs: customs.value, tunes: tunes.value })
   }
@@ -63,6 +65,21 @@ export const useRosterStore = defineStore('roster', () => {
     teams.value = [...teamList(), { id, name: `队伍 ${teams.value.length + 1}`, slots: five([]), customs: [], tunes: {} }]
     selectTeam(id)
     return id
+  }
+  function beginTeamDraft() {
+    if (draftTeamId.value) return draftTeamId.value
+    previousTeamId = activeTeamId.value
+    draftTeamId.value = createTeam()
+    return draftTeamId.value
+  }
+  function finishTeamDraft(id: string, save: boolean) {
+    if (id !== draftTeamId.value) return
+    if (!save) {
+      if (previousTeamId) selectTeam(previousTeamId)
+      deleteTeam(id)
+    }
+    draftTeamId.value = ''
+    previousTeamId = ''
   }
   function renameTeam(id: string, name: string) {
     teams.value = teams.value.map(team => team.id === id ? { ...team, name: name.trim() || '我的队伍' } : team)
@@ -107,8 +124,8 @@ export const useRosterStore = defineStore('roster', () => {
   }
 
   let saving = Promise.resolve()
-  watch([slots, customs, tunes, teams, activeTeamId], () => {
-    if (!ready.value) return
+  watch([slots, customs, tunes, teams, activeTeamId, draftTeamId], () => {
+    if (!ready.value || draftTeamId.value) return
     const snapshot = cloneData({ slots: slots.value, customs: customs.value, tunes: tunes.value, teams: teamList(), activeTeamId: activeTeamId.value })
     saving = saving.then(() => saveJson('roster', snapshot)).catch(() => { error.value = '队伍未能保存，请检查本机存储空间。' })
   }, { deep: true })
@@ -167,5 +184,5 @@ export const useRosterStore = defineStore('roster', () => {
     return copy.uid
   }
 
-  return { slots, customs, tunes, teams, activeTeamId, teamList, selectTeam, createTeam, renameTeam, deleteTeam, ready, error, hydrate, setSlot, addCustom, updateCustom, setTune, duplicateCustom }
+  return { slots, customs, tunes, teams, activeTeamId, teamList, selectTeam, createTeam, beginTeamDraft, finishTeamDraft, renameTeam, deleteTeam, ready, error, hydrate, setSlot, addCustom, updateCustom, setTune, duplicateCustom }
 })

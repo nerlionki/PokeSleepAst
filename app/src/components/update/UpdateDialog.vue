@@ -35,19 +35,23 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     <div v-if="store.visible && store.update" v-back="() => { void store.dismiss() }" class="overlay update-overlay" @click.self="store.dismiss()">
       <section ref="panel" class="sheet stack update-dialog" role="dialog" aria-modal="true" aria-labelledby="update-title" tabindex="-1">
         <h2 id="update-title">{{ translateUi("发现新版本") }} {{ store.update.version }}</h2>
-        <p class="muted">{{ translateUi("当前") }} {{ store.currentVersion }} {{ translateUi("· 安装包") }} {{ size }} MB</p>
-        <p class="update-notes">{{ store.update.notes || translateUi("新版本已发布，欢迎更新。") }}</p>
-        <div v-if="store.phase === 'downloading' || store.phase === 'verifying'" class="stack" role="status" aria-live="polite">
-          <progress :value="percent" max="100" :aria-label="translateUi('安装包下载进度')" />
-          <span class="muted">{{ action }}</span>
+        <div class="stack update-body">
+          <p class="muted">{{ translateUi("当前") }} {{ store.currentVersion }} {{ translateUi("· 安装包") }} {{ size }} MB</p>
+          <p class="update-notes">{{ store.update.notes || translateUi("新版本已发布，欢迎更新。") }}</p>
+          <div v-if="store.phase === 'downloading' || store.phase === 'verifying'" class="stack" role="status" aria-live="polite">
+            <progress :value="percent" max="100" :aria-label="translateUi('安装包下载进度')" />
+            <span class="muted">{{ action }}</span>
+          </div>
+          <p v-if="store.message && store.phase === 'ready'" class="muted" role="status">{{ translateUi(store.message) }}</p>
+          <p v-if="store.error" class="update-error" role="alert">{{ translateUi(store.error) }}</p>
         </div>
-        <p v-if="store.message && store.phase === 'ready'" class="muted" role="status">{{ translateUi(store.message) }}</p>
-        <p v-if="store.error" class="update-error" role="alert">{{ translateUi(store.error) }}</p>
-        <button class="btn" type="button" :disabled="store.busy" @click="store.install()">{{ action }}</button>
-        <div class="row">
-          <button class="btn ghost" type="button" :disabled="store.busy" @click="store.dismiss()">{{ translateUi("稍后提醒") }}</button>
-          <button class="btn ghost" type="button" :disabled="store.busy" @click="store.dismiss(true)">{{ translateUi("跳过此版本") }}</button>
-        </div>
+        <footer class="stack update-footer">
+          <button class="btn" type="button" :disabled="store.busy" @click="store.install()">{{ action }}</button>
+          <div class="row">
+            <button class="btn ghost" type="button" :disabled="store.busy" @click="store.dismiss()">{{ translateUi("稍后提醒") }}</button>
+            <button class="btn ghost" type="button" :disabled="store.busy" @click="store.dismiss(true)">{{ translateUi("跳过此版本") }}</button>
+          </div>
+        </footer>
       </section>
     </div>
   </Teleport>
@@ -56,7 +60,10 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 <style scoped>
 .update-overlay { z-index: 60; align-items: center; padding: 16px; }
 .update-dialog { width: 100%; max-width: 520px; margin: auto; border: 1px solid var(--line); border-radius: 24px; outline: none; }
-.update-notes { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 35dvh; overflow-y: auto; }
+.update-dialog { display: flex; flex-direction: column; overflow: hidden; }
+.update-dialog h2, .update-footer { flex: none; }
+.update-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.update-notes { white-space: pre-wrap; overflow-wrap: anywhere; }
 .update-error { color: var(--rose); }
 progress { width: 100%; accent-color: var(--amber); }
 button:disabled { opacity: .6; cursor: wait; }

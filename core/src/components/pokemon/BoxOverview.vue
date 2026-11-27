@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import IngredientRankScroll from '#platform/IngredientRankScroll.vue';
+  import UiIconButton from '../shared/UiIconButton.vue'
+  import RangeSlider from '#platform/RangeSlider.vue';
+  import Dialog from '#platform/Dialog.vue'
   import { gameText, t as translateUi } from '../../ui/i18n';
 
   import { INPUT_RANGES } from '../../calc/inputRanges';
@@ -186,20 +188,22 @@
 <template>
   <div class="stack box-overview">
     <div class="overview-heading">
-      <button class="btn ghost" type="button" @click="emit('back')">
-        {{ translateUi('返回 Box') }}
-      </button>
+      <div class="overview-heading-side">
+        <UiIconButton icon="back" :label="translateUi('返回 Box')" @click="emit('back')" />
+      </div>
       <h2>{{ translateUi('Box 概览') }}</h2>
-      <button
-        class="btn ghost"
-        type="button"
-        :class="{ on: customized }"
-        :disabled="!loaded"
-        :aria-expanded="adjusting"
-        @click="adjusting = !adjusting"
-      >
-        {{ translateUi('调整加成') }}
-      </button>
+      <div class="overview-heading-side overview-heading-actions">
+        <button
+          class="btn ghost"
+          type="button"
+          :class="{ on: customized }"
+          :disabled="!loaded"
+          :aria-expanded="adjusting"
+          @click="adjusting = !adjusting"
+        >
+          {{ translateUi('调整加成') }}
+        </button>
+      </div>
     </div>
     <p class="muted">
       {{ translateUi('当前培养状态 · 全天满活 ·') }} {{ box.pokemon.length }}
@@ -209,11 +213,7 @@
       v-model="activityEnabled"
       :label="translateUi('计入活动加成')"
     />
-    <section
-      v-if="adjusting"
-      class="card stack"
-      :aria-label="translateUi('概览计算加成')"
-    >
+    <Dialog v-if="adjusting" :title="translateUi('调整加成')" @close="adjusting = false">
       <div class="bonus-fields">
         <div
           class="field"
@@ -223,10 +223,9 @@
           @touchcancel.stop
         >
           <label for="overview-area">{{ translateUi('营地加成（%）') }}</label
-          ><input
+          ><RangeSlider
             id="overview-area"
-            v-model.number="bonuses.areaBonus"
-            type="range"
+            v-model="bonuses.areaBonus"
             :min="INPUT_LIMITS.overview_area.min"
             :max="AREA_BONUS_MAX"
             :step="INPUT_LIMITS.overview_area.step"
@@ -253,10 +252,12 @@
         :activity-selection="calculationSettings.activity"
         @change="setEnvironment"
       />
-      <button class="btn ghost" type="button" @click="resetBonuses">
-        {{ translateUi('恢复基础口径') }}
-      </button>
-    </section>
+      <template #footer>
+        <button class="btn ghost" type="button" @click="resetBonuses">
+          {{ translateUi('恢复基础口径') }}
+        </button>
+      </template>
+    </Dialog>
     <p v-if="customized" class="muted">
       {{ translateUi('营地加成') }}
       {{ Math.round(clampAreaBonus(bonuses.areaBonus) * 100)
@@ -378,79 +379,73 @@
         </button>
       </div>
     </template>
-    <div
-      v-if="selected"
-      v-back="
-        () => {
-          selectedIngredientKey = null;
-        }
-      "
-      class="overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ingredient-ranking-title"
-      @click.self="selectedIngredientKey = null"
-      @keydown.esc="selectedIngredientKey = null"
-    >
-      <section class="sheet stack ingredient-ranking">
-        <div class="row">
-          <IngredientIcon :id="selected.imageId" :name="selected.name" :image-file="selected.imageFile" />
-          <h3 id="ingredient-ranking-title">
-            {{ gameText(selected.name) }}{{ translateUi('产量排名') }}
-          </h3>
-          <button class="btn ghost" type="button" @click="selectedIngredientKey = null">
-            {{ translateUi('关闭') }}
-          </button>
-        </div>
-        <p class="muted">
-          {{ translateUi('当前等级 · 全天满活 · 无持有上限 ·') }}
-          {{ selected.rows.length }} {{ translateUi('只个体') }}
-        </p>
-        <p v-if="selected.coverage" class="muted">{{
-          translateUi('{recipe} · 三餐需 {count} 个/日', {
-            recipe: gameText(selected.coverage.recipe.name), count: selected.coverage.dailyNeed
-          })
-        }}</p>
-        <IngredientRankScroll>
-          <OverviewRankRow
-            v-for="(row, index) in selected.rows.slice(0, visibleRanks)"
-            :key="row.pokemon.uid"
-            :row="row"
-            :rank="index + 1"
-            unit="个"
-            ingredients
-            :ingredient-key="selected.key"
-          />
-          <button
-            v-if="selected.rows.length > visibleRanks"
-            class="btn ghost"
-            type="button"
-            @click="visibleRanks += 20"
-          >
-            {{ translateUi('加载更多（还有') }}
-            {{ selected.rows.length - visibleRanks }} {{ translateUi('只）') }}
-          </button>
-        </IngredientRankScroll>
-      </section>
-    </div>
+    <Dialog v-if="selected" :title="gameText(selected.name) + translateUi('产量排名')"
+      @close="selectedIngredientKey = null">
+      <IngredientIcon :id="selected.imageId" :name="selected.name" :image-file="selected.imageFile" />
+      <p class="muted">
+        {{ translateUi('当前等级 · 全天满活 · 无持有上限 ·') }}
+        {{ selected.rows.length }} {{ translateUi('只个体') }}
+      </p>
+      <p v-if="selected.coverage" class="muted">{{
+        translateUi('{recipe} · 三餐需 {count} 个/日', {
+          recipe: gameText(selected.coverage.recipe.name), count: selected.coverage.dailyNeed
+        })
+      }}</p>
+      <OverviewRankRow
+        v-for="(row, index) in selected.rows.slice(0, visibleRanks)"
+        :key="row.pokemon.uid"
+        :row="row"
+        :rank="index + 1"
+        unit="个"
+        ingredients
+        :ingredient-key="selected.key"
+      />
+      <template v-if="selected.rows.length > visibleRanks" #footer>
+        <button class="btn ghost" type="button" @click="visibleRanks += 20">
+          {{ translateUi('加载更多（还有') }}
+          {{ selected.rows.length - visibleRanks }} {{ translateUi('只）') }}
+        </button>
+      </template>
+    </Dialog>
   </div>
 </template>
 <style scoped>
+  .box-overview {
+    width: 100%;
+    max-width: 1120px;
+    margin-left: auto;
+    margin-right: auto;
+  }
   .overview-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
   }
+  .overview-heading-side {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+  }
+  .overview-heading-actions {
+    justify-content: flex-end;
+  }
   .overview-heading .btn {
-    flex-shrink: 0;
-    width: auto;
+    max-width: 100%;
     margin: 0;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .overview-heading h2 {
+    flex: 0 1 auto;
+    max-width: 45%;
     margin: 0;
     font-size: var(--font-22);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .overview-bonus-header h3 {
+    margin: 0;
   }
   .bonus-fields {
     display: grid;
@@ -538,11 +533,6 @@
   .ingredient-tile:disabled {
     opacity: 0.6;
   }
-  .ingredient-ranking .row h3 {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-  }
   @media (max-width: 760px) {
     .berry-rank-grid {
       grid-template-columns: 1fr;
@@ -552,9 +542,6 @@
     }
   }
   @media (max-width: 400px) {
-    .overview-heading {
-      flex-wrap: wrap;
-    }
     .overview-heading h2 {
       font-size: var(--font-19);
     }

@@ -2,19 +2,18 @@
 import { useListScroll } from '../../composables/useListScroll'
 const candyScroll = useListScroll('candy')
 import { t as translateUi, gameText } from '../../ui/i18n'
-import { INPUT_RANGES } from '../../calc/inputRanges'
-const INPUT_LIMITS = INPUT_RANGES.CandyPane
 
 import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
-import FormField from '../shared/FormField.vue'
+import Dialog from '#platform/Dialog.vue'
+import CandyRowFields from './CandyRowFields.vue'
 import { newUid } from '../../calc/uid'
 import { computed, ref, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { boxLabel } from '../../calc/boxFilter'
 import { pokeById } from '../../calc/data'
-import { CANDY_BOOSTS, CANDY_PRESETS, CANDY_PLANNING_ACTIVITY, candyBoostPolicy, candyRowFromBox, evolutionLevels, familyOf, planCandy, type CandyBoostId, type CandyRow } from '../../calc/candyPlan'
+import { CANDY_BOOSTS, CANDY_PLANNING_ACTIVITY, candyBoostPolicy, candyRowFromBox, familyOf, planCandy, type CandyBoostId, type CandyRow } from '../../calc/candyPlan'
 import { useBoxStore } from '../../stores/box'
 import { usePlanStore } from '../../stores/plans'
 import type { BoxPokemon } from '../../types'
@@ -30,6 +29,8 @@ const mode = shallowRef<Exclude<CandyBoostId, 'normal'>>(components_plan_CandyPa
 const importing = shallowRef(components_plan_CandyPane_config_clientDefaults["importingInitial"])
 const imported = ref(new Set<string>())
 const expandedRows = ref(new Set<string>())
+const draft = ref<CandyRow | null>(null)
+const draftStocks = ref<Partial<Record<string, number>>>({})
 const boxList = computed(() => [...box.pokemon].reverse())
 
 function openImport() {
@@ -51,9 +52,9 @@ const active = computed(() => plans.value[mode.value])
 const boost = computed(() => candyBoostPolicy(mode.value, CANDY_PLANNING_ACTIVITY))
 
 function addRow() {
-  const id = newUid()
-  plan.value.candyRows.push({
-    id,
+  draftStocks.value = {}
+  draft.value = {
+    id: newUid(),
     pokeId: 1,
     method: 'target',
     start: 1,
@@ -62,8 +63,17 @@ function addRow() {
     useAll: false,
     nature: 'flat',
     remaining: null,
-  })
-  expandedRows.value.add(id)
+  }
+}
+
+function saveRow() {
+  const row = draft.value
+  if (!row) return
+  const stock = draftStocks.value[familyOf(row.pokeId)]
+  if (stock != null) setStock(row.pokeId, stock)
+  plan.value.candyRows.push(row)
+  expandedRows.value.add(row.id)
+  draft.value = null
 }
 
 async function removeRow(id: string) {
@@ -92,11 +102,6 @@ function stockOf(pokeId: number) {
 function setStock(pokeId: number, value: number) {
   plan.value.candyStocks[familyOf(pokeId)] = Math.max(0, Math.floor(Number(value)) || 0)
 }
-
-function setRemaining(row: CandyRow, raw: string) {
-  row.remaining = raw === '' ? null : Math.max(0, Math.floor(Number(raw)) || 0)
-}
-
 function statusOf(index: number) {
   const row = active.value.results[index]
   if (!row || row.error) return row?.error ?? '待计算'
@@ -111,7 +116,6 @@ function missingOf(index: number) {
   return translateUi('缺糖 {count} 颗', { count: result.missing.toLocaleString('zh-CN') })
 }
 
-const presets = CANDY_PRESETS
 </script>
 
 <template>
@@ -142,7 +146,7 @@ const presets = CANDY_PRESETS
     <p v-if="active.over" class="amber">{{ translateUi("超出") }}{{ translateUi(boost.name) }}{{ translateUi("额度") }} {{ active.over.toLocaleString('zh-CN') }} {{ translateUi("颗") }}</p>
     <p v-if="active.missing" class="amber">{{ translateUi("缺糖") }} {{ active.missing.toLocaleString('zh-CN') }} {{ translateUi("颗") }}</p>
     <div class="row">
-      <button class="btn" type="button" @click="addRow">{{ translateUi("新增宝可梦") }}</button>
+      <button class="btn" type="button" aria-haspopup="dialog" @click="addRow">{{ translateUi("新增宝可梦") }}</button>
       <button class="btn" type="button" :disabled="!box.pokemon.length" @click="openImport">{{ translateUi("从 Box 导入") }}</button>
     </div>
     </div>
@@ -168,49 +172,7 @@ const presets = CANDY_PRESETS
         >{{ expandedRows.has(row.id) ? translateUi("收起") : translateUi("详情") }}</button>
       </div>
       <template v-if="expandedRows.has(row.id)">
-      <div class="row">
-        <FormField v-slot="{ id }" :label="translateUi('当前糖果')"><input :id="id" :value="stockOf(row.pokeId)" type="number" :min="INPUT_LIMITS.stockOf_row_pokeId.min" @change="setStock(row.pokeId, Number(($event.target as HTMLInputElement).value))"></FormField>
-        <FormField v-slot="{ id }" :label="translateUi('输入方式')"><select :id="id" v-model="row.method">
-            <option value="target">{{ translateUi("目标等级") }}</option>
-            <option value="manual">{{ translateUi("指定糖果") }}</option>
-          </select></FormField>
-      </div>
-      <div class="row">
-        <FormField v-slot="{ id }" :label="translateUi('当前等级')"><input :id="id" v-model.number="row.start" type="number" :min="INPUT_LIMITS.row_start.min" :max="INPUT_LIMITS.row_start.max"></FormField>
-        <div v-if="row.method === 'target'" class="field">
-          <label>{{ translateUi("目标等级") }}</label>
-          <input v-model.number="row.target" type="number" :min="INPUT_LIMITS.row_target.min" :max="INPUT_LIMITS.row_target.max">
-        </div>
-        <div v-else class="field">
-          <label>{{ translateUi("使用糖果") }}</label>
-          <input v-model.number="row.use" type="number" :min="INPUT_LIMITS.row_use.min" :disabled="row.useAll">
-        </div>
-      </div>
-      <div v-if="row.method === 'target'" class="picker-opts">
-        <button v-for="lv in presets" :key="lv" type="button" :class="{ on: row.target === lv }" @click="row.target = lv">{{ lv }}</button>
-        <button
-          v-for="lv in evolutionLevels(row.pokeId)"
-          :key="'e' + lv"
-          type="button"
-          :class="{ on: row.target === lv }"
-          @click="row.target = lv"
-        >{{ translateUi("进化") }} {{ lv }}</button>
-      </div>
-      <label v-else class="row"><input v-model="row.useAll" type="checkbox"> {{ translateUi("用光当前剩余糖果") }}</label>
-      <div class="row">
-        <FormField v-slot="{ id }" :label="translateUi('经验修正')"><select :id="id" v-model="row.nature">
-            <option value="flat">{{ translateUi("无修正") }}</option>
-            <option value="up">+EXP</option>
-            <option value="down">−EXP</option>
-          </select></FormField>
-        <FormField v-slot="{ id }" :label="translateUi('升级还需 EXP')"><input :id="id"
-            :value="row.remaining ?? ''"
-            type="number"
-            :min="INPUT_LIMITS.row_remaining.min"
-            :placeholder="translateUi('留空＝刚到本级')"
-            @change="setRemaining(row, ($event.target as HTMLInputElement).value)"
-          ></FormField>
-      </div>
+      <CandyRowFields :row="row" :stock="stockOf(row.pokeId)" @stock="setStock(row.pokeId, $event)" />
       <p v-if="active.results[index] && !active.results[index].error">
         {{ translateUi("使用") }} {{ active.results[index].candies.toLocaleString('zh-CN') }} {{ translateUi("颗 · 梦碎") }} {{ active.results[index].shards.toLocaleString('zh-CN') }}
         {{ translateUi("· 到 Lv.") }}{{ active.results[index].level }}
@@ -226,20 +188,25 @@ const presets = CANDY_PRESETS
     <p v-if="!plan.candyRows.length" class="muted">{{ translateUi("新增宝可梦，填写目标等级或要花的糖果。") }}</p>
     </div>
     </div>
-    <div v-if="importing" v-back="() => { importing = false }" class="overlay" @click.self="importing = false">
-      <section class="sheet stack">
-        <div class="row">
-          <h3>{{ translateUi("从 Box 导入") }}</h3>
-          <button class="btn ghost" type="button" @click="importing = false">{{ translateUi("完成") }}</button>
-        </div>
+    <Dialog v-if="draft" :title="translateUi('新增宝可梦')" @close="draft = null">
+      <PokePicker v-model="draft.pokeId" />
+      <CandyRowFields :row="draft" :stock="draftStocks[familyOf(draft.pokeId)] ?? stockOf(draft.pokeId)"
+        @stock="draftStocks[familyOf(draft.pokeId)] = $event" />
+      <template #footer>
+        <button class="btn sage" type="button" @click="saveRow">{{ translateUi("完成") }}</button>
+      </template>
+    </Dialog>
+    <Dialog v-if="importing" :title="translateUi('从 Box 导入')" @close="importing = false">
         <p class="muted">{{ translateUi("带入等级、经验性格和升级还需 EXP，目标等级默认下一档。可连续点选多只。") }}</p>
         <button v-for="p in boxList" :key="p.uid" class="data-row" type="button" @click="importFromBox(p)">
           <PokeSprite :id="p.pokeId" :name="boxLabel(p)" :shiny="p.shiny" :ribbon-hours="p.tune?.ribbonHours" />
           <span>{{ boxLabel(p) }} Lv.{{ p.level }} · {{ gameText(p.nature) }}</span>
           <span v-if="imported.has(p.uid)" class="chip">{{ translateUi("已加入") }}</span>
         </button>
-      </section>
-    </div>
+      <template #footer>
+        <button class="btn ghost" type="button" @click="importing = false">{{ translateUi("完成") }}</button>
+      </template>
+    </Dialog>
   </div>
 </template>
 

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { t as translateUi } from '../../../core/src/ui/i18n'
 import { computed, useSlots, type VNode } from 'vue'
-const props = defineProps<{ modelValue?: unknown; value?: unknown; modelModifiers?: { number?: boolean }; disabled?: boolean }>()
+interface SelectOption { label: string; value: unknown }
+const props = defineProps<{ modelValue?: unknown; value?: unknown; modelModifiers?: { number?: boolean }; disabled?: boolean; options?: readonly SelectOption[] }>()
 const emit = defineEmits<{ 'update:modelValue': [value: unknown]; change: [event: { target: { value: unknown } }] }>()
 const slots = useSlots()
-function options(nodes: VNode[]): Array<{ label: string; value: unknown }> {
+function options(nodes: VNode[]): SelectOption[] {
   return nodes.flatMap(node => {
     if (Array.isArray(node.children) && node.type !== 'option') return options(node.children as VNode[])
     if (node.type !== 'option') return []
@@ -12,7 +13,7 @@ function options(nodes: VNode[]): Array<{ label: string; value: unknown }> {
     return [{ label, value: node.props?.value ?? label }]
   })
 }
-const items = computed(() => options(slots.default?.() ?? []))
+const items = computed(() => props.options ?? options(slots.default?.() ?? []))
 const selected = computed(() => Math.max(0, items.value.findIndex(item => String(item.value) === String(props.modelValue ?? props.value))))
 function change(event: { detail: { value: number | string } }) {
   const item = items.value[Number(event.detail.value)]

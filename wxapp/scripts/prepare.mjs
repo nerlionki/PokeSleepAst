@@ -7,13 +7,12 @@ const root = path.resolve(import.meta.dirname, '../..');
 const wxRoot = path.join(root, 'wxapp');
 const core = path.join(root, 'core/src');
 const generated = path.join(wxRoot, 'src/generated');
-const require = createRequire(path.join(wxRoot, 'package.json'));
+const require = createRequire(import.meta.url);
 const {
   nativeScopedStyles,
   stripWebCheckboxStyles
-} = require('./config/native-scoped-styles.cjs');
-const { nativeCandyListScroll } = require('./config/candy-list-scroll.cjs');
-const { withHomeListAd } = require('./config/home-list-ad.cjs');
+} = require('../config/native-scoped-styles.cjs');
+const { nativeCandyListScroll } = require('../config/candy-list-scroll.cjs');
 const write = (file, value) => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, value);
@@ -64,9 +63,6 @@ for (const file of walk(core)) {
       );
     }
   );
-  text = text
-    .replace(/import UpdateSettings from[^\n]*\n/g, '')
-    .replace(/<UpdateSettings\s*\/>/g, '');
   text = text.replace('<article class="card"></article>', '');
   text = text.replace(/<Teleport\b[^>]*>/g, '').replace(/<\/Teleport>/g, '');
   // Native text nodes cannot host image children. Preserve inline icon rows
@@ -79,32 +75,6 @@ for (const file of walk(core)) {
       /^(?:\w*Icon|PokeSprite|img)$/.test(node.tag ?? '') ||
       (node.children ?? []).some(hasImage);
     const visit = node => {
-      if (node.tag === 'section' && node.props.some(
-        prop => prop.type === 6 && prop.name === 'class' && prop.value?.content.split(/\s+/).includes('member-editor-sheet')
-      )) {
-        edits.push({
-          start: node.loc.start.offset + node.loc.source.indexOf('>') + 1,
-          length: 0,
-          value: '<scroll-view :scroll-y="true" class="member-editor-scroll"><custom-wrapper><view class="stack member-editor-content">'
-        }, {
-          start: node.loc.end.offset - '</section>'.length,
-          length: 0,
-          value: '</view></custom-wrapper></scroll-view>'
-        });
-      }
-      if (rel === 'components/shared/SpeciesSheet.vue' && node.props?.some(
-        prop => prop.type === 6 && prop.name === 'class' && prop.value?.content.split(/\s+/).includes('poke-wall')
-      )) {
-        edits.push({
-          start: node.loc.start.offset,
-          length: 0,
-          value: `<view class="species-list-viewport"><scroll-view :scroll-y="true" :scroll-into-view="resultsRevision ? (resultsRevision % 2 ? 'species-results-top' : 'species-results-start') : undefined" class="species-list-scroll"><view id="species-results-top" /><view id="species-results-start" /><custom-wrapper :key="resultsRevision">`
-        }, {
-          start: node.loc.end.offset,
-          length: 0,
-          value: '</custom-wrapper></scroll-view></view>'
-        });
-      }
       if (rel === 'components/team/MealPlanPane.vue' && node.props?.some(
         prop => prop.type === 6 && prop.name === 'class' && prop.value?.content === 'meal-recipe-picker-scroll'
       )) {
@@ -215,7 +185,6 @@ for (const file of walk(core)) {
   }
   if (rel === 'components/plan/CandyPane.vue')
     text = nativeCandyListScroll(text);
-  if (rel === 'components/pokemon/PokedexPane.vue') text = withHomeListAd(text);
   if (rel === 'components/pokemon/VirtualPokedex.vue') {
     // Native scroll-view needs a bounded viewport: percentage height on a flex
     // item can otherwise expand with the virtual spacers and get clipped by
@@ -233,7 +202,7 @@ for (const file of walk(core)) {
     text = text.replace(
       '</style>',
       `
-.virtual-dex-viewport { flex: 1; height: 0; min-height: 0; position: relative; overflow: hidden; }
+.virtual-dex-viewport { flex: 1 0 0; height: 0; min-height: 120px; position: relative; overflow: hidden; }
 .virtual-dex { position: absolute; top: 0; left: 0; width: 100%; height: 100%; flex: none; box-sizing: border-box; }
 </style>`
     );
@@ -449,7 +418,7 @@ const modelLoaders = subPackages
   .join(',');
 write(
   path.join(wxRoot, 'src/native/image-loader.js'),
-  require('./config/native-image-loader.cjs').imageLoaderSource(
+  require('../config/native-image-loader.cjs').imageLoaderSource(
     subPackages
       .filter(item => item.name.startsWith('asset-'))
       .map(item => item.name)
@@ -485,7 +454,7 @@ export { translate, hasInterfaceTranslations } from './core/src/ui/i18nLookup.ts
 const pages = ['pokemon', 'plan', 'team', 'data', 'profile'];
 const labels = ['宝可梦', '规划', '配队', '资料', '我的'];
 const tabBarItems =
-  await require('./config/tabbar-icons.cjs').createTabBarItems(
+  await require('../config/tabbar-icons.cjs').createTabBarItems(
     sharp,
     path.join(wxRoot, 'src/assets/tabbar'),
     pages,
@@ -502,7 +471,7 @@ fs.mkdirSync(path.join(wxRoot, 'src/workers'), { recursive: true });
 const {
   schedulerSource,
   calculationWorkerEntry
-} = require('./config/calculation-worker.cjs');
+} = require('../config/calculation-worker.cjs');
 await esbuild.build({
   stdin: {
     contents: `import { babyEfficiencySteps } from './core/src/calc/babyEfficiency';
@@ -656,13 +625,6 @@ write(
   path.join(wxRoot, 'src/app.css'),
   css +
     `
-.sheet.member-editor-sheet { display: block; height: var(--visible-height, 82vh); max-height: calc(var(--visible-height, 100vh) - 24px); padding: 0; overflow: hidden; }
-.member-editor-scroll { height: 100%; width: 100%; }
-.member-editor-content { padding: 16px 16px 28px; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
-.member-editor-content .btn { padding: 10px 12px; border-radius: 12px; }
-.sheet.species-sheet { display: flex; flex-direction: column; height: var(--visible-height, 82vh); max-height: calc(var(--visible-height, 100vh) - 24px); overflow: hidden; }
-.species-list-viewport { flex: 1; height: 0; min-height: 0; min-width: 0; position: relative; overflow: hidden; }
-.species-list-scroll { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 ` +
     '\npage{padding:0;box-sizing:border-box;font-size:var(--font-16);min-height:100vh;background:var(--ink);background-image:none} view,text,button,input,picker,textarea{box-sizing:border-box} .page{width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding-left:16px;padding-right:16px;padding-bottom:12px} .wx-control{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:var(--font-16);color:var(--text)} .wx-input{height:44px;line-height:24px;padding:10px 12px} .wx-select{padding:10px 12px;min-height:44px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere} .wx-inline{display:inline-flex;align-items:center;gap:4px;min-width:0} .wx-sub-ico{background:transparent;mask-image:none;-webkit-mask-image:none} .wx-textarea{padding:10px 12px} image{display:inline-block} button{line-height:1.5;margin:0} textarea{width:100%;min-height:100px} .source-link{color:var(--sage);margin-right:12px} .wx-settings{margin-bottom:14px}\n'
 );

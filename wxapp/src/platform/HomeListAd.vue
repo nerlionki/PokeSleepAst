@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { shallowRef } from 'vue'
-import { refreshViewport } from '../platform/viewport'
+import { refreshViewport } from './viewport'
 
 const loaded = shallowRef(false)
 

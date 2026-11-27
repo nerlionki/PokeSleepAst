@@ -201,7 +201,7 @@
           <FallbackImage v-if="icon" class="bundle-item-icon" :src="icon" alt=""
             ><template #fallback><span /></template
           ></FallbackImage>
-          <p>
+          <p class="bundle-item-name">
             {{
               seedPokemon
                 ? translateUi('主技能种子（{pokemon}）', {
@@ -210,17 +210,15 @@
                 : gameText(item?.name ?? entry.name)
             }}
             ×{{ entry.quantity }}
-            <span
-              v-if="!item && !entry.pokemonIncense && !seedPokemon"
-              class="muted bundle-excluded"
-              >{{ translateUi('（道具目录未匹配）') }}</span
-            >
-            <span
-              v-else-if="bundle.valuation?.excluded.includes(entry.name)"
-              class="muted bundle-excluded"
-              >{{ translateUi('（无单买价，未计入）') }}</span
-            >
           </p>
+          <span
+            v-if="!item && !entry.pokemonIncense && !seedPokemon"
+            class="muted bundle-excluded"
+          >{{ translateUi('（道具目录未匹配）') }}</span>
+          <span
+            v-else-if="bundle.valuation?.excluded.includes(entry.name)"
+            class="muted bundle-excluded"
+          >{{ translateUi('（无单买价，未计入）') }}</span>
         </div>
       </div>
     </article>
@@ -265,7 +263,8 @@
   }
   .bundle-items {
     margin-top: 4px;
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 4px;
   }
   .bundle-item {
@@ -274,8 +273,17 @@
     gap: 6px;
     min-height: 24px;
   }
-  .bundle-item p {
+  .bundle-item-name {
+    flex: 1;
+    min-width: 0;
     margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .bundle-excluded {
+    flex: 0 1 auto;
+    max-width: 45%;
+    text-align: right;
+    overflow-wrap: anywhere;
   }
   .bundle-avatar,
   .bundle-item-icon {

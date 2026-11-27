@@ -7,7 +7,8 @@
   } from '../../ui/i18n';
 
   import { confirmRemoval } from '#platform/confirm';
-  import { computed, shallowRef } from 'vue';
+  import PlanningTargetDialog from './PlanningTargetDialog.vue';
+  import { computed, ref, shallowRef } from 'vue';
   import { storeToRefs } from 'pinia';
   import { usePlanStore } from '../../stores/plans';
   import { useSettingsStore } from '../../stores/settings';
@@ -38,6 +39,9 @@ import { useActivities } from '../../composables/useActivities';
     goals.value.find(goal => goal.id === selectedId.value)
   );
   const busy = shallowRef(false);
+  const draft = ref<EncounterGoal | null>(null);
+  const draftReady = shallowRef(false);
+  const addLabels = { catch: '添加捕捉', candy: '添加刷糖', sleep: '添加睡姿' } as const;
   const recommendationMode = shallowRef('all');
   const recommendations = shallowRef<ReturnType<typeof recommendThree> | null>(
     null
@@ -91,9 +95,15 @@ import { useActivities } from '../../composables/useActivities';
   }
   function add(purpose: CatchPurpose) {
     if (busy.value) return;
-    const goal = newEncounterGoal(purpose);
+    draftReady.value = false;
+    draft.value = newEncounterGoal(purpose);
+  }
+  function saveGoal() {
+    const goal = draft.value;
+    if (!goal || !draftReady.value) return;
     goals.value.push(goal);
     selectedId.value = goal.id;
+    draft.value = null;
   }
   async function remove(id: string) {
     if (!(await confirmRemoval('确认删除此遇见目标？'))) return;
@@ -135,6 +145,7 @@ import { useActivities } from '../../composables/useActivities';
           class="btn"
           type="button"
           :disabled="busy"
+          aria-haspopup="dialog"
           @click="add('catch')"
         >
           {{ translateUi('添加捕捉') }}
@@ -143,6 +154,7 @@ import { useActivities } from '../../composables/useActivities';
           class="btn"
           type="button"
           :disabled="busy"
+          aria-haspopup="dialog"
           @click="add('candy')"
         >
           {{ translateUi('添加刷糖') }}
@@ -151,12 +163,17 @@ import { useActivities } from '../../composables/useActivities';
           class="btn"
           type="button"
           :disabled="busy"
+          aria-haspopup="dialog"
           @click="add('sleep')"
         >
           {{ translateUi('添加睡姿') }}
         </button>
       </div>
     </header>
+    <PlanningTargetDialog v-if="draft" :title="translateUi(addLabels[draft.purpose])" :ready="draftReady"
+      @close="draft = null" @save="saveGoal">
+      <EncounterTargetPane :key="draft.id" :goal="draft" adding @valid="draftReady = $event" />
+    </PlanningTargetDialog>
     <p v-if="!goals.length" class="muted">
       {{
         translateUi(

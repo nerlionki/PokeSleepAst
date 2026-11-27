@@ -7,7 +7,7 @@ import { cloneData } from './dataClone'
 import { researchActivity, researchSleepStyles, sameResearchAvailability, activityValues, type ActivityContext, type ResearchActivitySelection } from './activities'
 import { pendingResearchPokemon } from './researchAvailability'
 import { normalizeEventMix, openSleepSlots, type EventMix } from './sleepRules'
-import { isLastRollExcluded, isRaeFiller, raeSpoCost, RAE_SPO_RATE, requireRaeSleepLottery } from './sleepLastRoll'
+import { isLastRollExcluded, isRaeFiller, raeSpoBudget, raeSpoCost, RAE_SPO_RATE, requireRaeSleepLottery } from './sleepLastRoll'
 import type { IslandId, SleepType } from '../types'
 import { familyOf } from './candyPlan'
 import { ENCOUNTER_BANDS, ISLANDS, POKEDEX, SLEEP_STYLES, type SleepStyleRow } from './data'
@@ -15,6 +15,7 @@ import { evolutionStages } from './evolution'
 import { drowsyPower, encounterCount, RANK_ORDER, rankFromStrength, rankStrength, SPECIAL_POKEMON, styleUnlockIndex } from './sleep'
 import { sleepReward } from './sleepRewards'
 import { raeSleepStyleId, resolveSleepStyleRef, type SleepStyleRef } from './sleepStyleIdentity'
+import { betterCurvePoint, type PlanningCurvePoint } from './planningCurve'
 import { createDrawStateKey, efficiencyRandom, prepareEfficiencyLottery, simulateEfficiencySlots, efficiencyRewardsAfterResearch, type EfficiencySimulation, type EfficiencyBucket, type EfficiencyDrawState, type EfficiencyReward } from './babyEfficiencyDraw'
 const babyEfficiency_config_extracted0 = extracted0.modules.babyEfficiency
 const babyEfficiency_config_extracted1 = extracted1.modules.babyEfficiency
@@ -98,6 +99,12 @@ export interface BabyEfficiencyResult {
   catch: EfficiencyOptimum
   candy: EfficiencyOptimum
   evaluatedStates: number
+  curves?: EfficiencyCurves[]
+}
+interface EfficiencyCurves {
+  islandId: IslandId
+  catch: (PlanningCurvePoint | null)[]
+  candy: (PlanningCurvePoint | null)[]
 }
 export interface EfficiencyProgress { percent: number, island: string, evaluatedStates: number }
 
@@ -301,7 +308,7 @@ function mergeIntervals(intervals: EfficiencyInterval[]): EfficiencyInterval[] {
 }
 
 interface SplitLeaders { catch: { value: number, splits: number[] }, candy: { value: number, splits: number[] } }
-export const BABY_EFFICIENCY_CHECKPOINT_VERSION = 12
+export const BABY_EFFICIENCY_CHECKPOINT_VERSION = 14
 export interface BabyEfficiencyCheckpoint {
   version: typeof BABY_EFFICIENCY_CHECKPOINT_VERSION
   /** 捕捉目标组；用于丢弃南瓜精合并前的旧续算结果。 */
@@ -312,6 +319,7 @@ export interface BabyEfficiencyCheckpoint {
   leaders: SplitLeaders
   best: { catch: EfficiencyOptimum, candy: EfficiencyOptimum }
   evaluatedStates: number
+  curves?: EfficiencyCurves[]
 }
 const emptyLeaders = (): SplitLeaders => ({ catch: { value: -1, splits: [] }, candy: { value: -1, splits: [] } })
 
@@ -347,6 +355,7 @@ export function* babyEfficiencySteps(
   const cache = new Map<string, EfficiencySimulation>()
   const drawStateKey = createDrawStateKey()
   const best = checkpoint?.best ?? { catch: { value: 0, intervals: [] as EfficiencyInterval[] }, candy: { value: 0, intervals: [] as EfficiencyInterval[] } }
+  const curves = options.precision === 'low' ? undefined : checkpoint?.curves ?? []
   const step = options.precision === 'low' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p001 as 10) : options.precision === 'medium' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p002 as 5) : 1
   const stride = options.precision === 'low' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p003 as 8) : options.precision === 'medium' ? 2 : 1
   const baseSplits = options.splitSleep !== false ? Array.from({ length: Math.floor((babyEfficiency_babyEfficiencySteps_runtimeParameters.p004 as 99) / step) }, (_, index) => (index + 1) * step) : babyEfficiency_config_ruleCatalogs.babyEfficiencyStepsList2.values
@@ -372,12 +381,18 @@ export function* babyEfficiencySteps(
     const secondIsland = activityEfficiencyIsland(originalIsland, context, 1)
     if (islandIndex < (checkpoint?.islandIndex ?? 0)) continue
     const resumeIndex = islandIndex === checkpoint?.islandIndex ? checkpoint.splitIndex : 0
+    let islandCurves = curves?.find(curve => curve.islandId === island.id)
+    if (curves && !islandCurves) {
+      islandCurves = { islandId: island.id, catch: [], candy: [] }
+      curves.push(islandCurves)
+    }
+    const maxCurveEnergy = MAX_EFFICIENCY_DROWSY_POWER / ((options.splitSleep === false ? 100 : 50) * options.eventMult)
     update(islandIndex / islands.length * 100, island.name, true)
-    const curves = new Map<number, CurveState[]>()
+    const sessionCurves = new Map<number, CurveState[]>()
     const curveOf = (score: number, second = false) => {
       const key = second ? -score : score
-      if (!curves.has(key)) curves.set(key, efficiencyCurve(second ? secondIsland : island, score, options.eventMult))
-      return curves.get(key)!
+      if (!sessionCurves.has(key)) sessionCurves.set(key, efficiencyCurve(second ? secondIsland : island, score, options.eventMult))
+      return sessionCurves.get(key)!
     }
     const sessionCache = new Map<string, { catch: { value: number, types: SleepType[] }, candy: { value: number, types: SleepType[] } }>()
     const sessionAt = (score: number, min: number, researchedBefore = 0) => {
@@ -409,11 +424,23 @@ export function* babyEfficiencySteps(
     const scanSplit = (first: number, position: number, total: number) => {
       const second = first === (babyEfficiency_babyEfficiencySteps_runtimeParameters.p008 as 100) ? 0 : (babyEfficiency_babyEfficiencySteps_runtimeParameters.p009 as 100) - first
       const curvesToMerge = second ? [curveOf(first), curveOf(second)] : [curveOf(first)]
-      const ceiling = Math.floor(MAX_EFFICIENCY_DROWSY_POWER / (Math.max(first, second) * options.eventMult))
-      const starts = [...new Set([ceiling, ...curvesToMerge.flatMap((curve) => curve.map((state) => state.min))])].filter(min => min <= ceiling).sort((a, b) => a - b)
+      const highestScore = Math.max(first, second)
+      const ceiling = Math.floor(MAX_EFFICIENCY_DROWSY_POWER / (highestScore * options.eventMult))
+      const boundaries = [...new Set([ceiling, ...curvesToMerge.flatMap((curve) => curve.map((state) => state.min))])].filter(min => min <= ceiling).sort((a, b) => a - b)
       const smallestScore = second ? Math.min(first, second) : first
       const maxCount = Math.max(3, ...island.bands.map(band => band.count))
       const stableFrom = Math.max(1, ...island.styles.map(style => Math.max(style.unlockStrength, strengthForPower(raeSpoCost(style.dpr) * RAE_SPO_RATE * maxCount, smallestScore, options.eventMult))), ...island.bands.map(band => strengthForPower(band.min, smallestScore, options.eventMult)))
+      // Mixed costs can change the draw within a gap. Sample one interior SPO boundary
+      // while retaining every existing boundary and skipping already stable budgets.
+      const budgetAt = (energy: number) => Math.floor(raeSpoBudget(drowsyPower(highestScore, energy, options.eventMult)))
+      const starts = options.precision === 'high' ? boundaries.flatMap((min, index) => {
+        const next = Math.min(boundaries[index + 1] ?? min, stableFrom)
+        if (next - min <= 1) return [min]
+        const midpoint = min + Math.floor((next - min) / 2)
+        const spo = Math.max(budgetAt(midpoint), budgetAt(min) + 1)
+        const added = strengthForPower(spo * RAE_SPO_RATE, highestScore, options.eventMult)
+        return added > min && added < next ? [min, added] : [min]
+      }) : boundaries
       const checked = new Set<number>()
       const values = new Map<number, EfficiencyReward>()
       const leaders = { catch: { value: -1, indexes: [] as number[] }, candy: { value: -1, indexes: [] as number[] } }
@@ -431,6 +458,14 @@ export function* babyEfficiencySteps(
         values.set(index, totals)
         for (const goal of goals) {
           const value = totals[goal]
+          if (islandCurves) {
+            // Keep the strongest evaluated point in each display bucket. The
+            // overall peak and its earliest sampled energy survive reduction.
+            const bucket = Math.min(319, Math.floor(320 * min / maxCurveEnergy))
+            const points = islandCurves[goal]
+            const point = { x: min, value: value / iterations }
+            if (betterCurvePoint(point, points[bucket])) points[bucket] = point
+          }
           const local = compareEfficiency(value, leaders[goal].value)
           if (local > 0) leaders[goal] = { value, indexes: [index] }
           else if (local === 0) leaders[goal].indexes.push(index)
@@ -470,7 +505,7 @@ export function* babyEfficiencySteps(
       return leaders
     }
     const localLeaders = islandIndex === checkpoint?.islandIndex ? checkpoint.leaders : emptyLeaders()
-    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: BABY_EFFICIENCY_CHECKPOINT_VERSION, targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates() })
+    const save = (splitIndex: number): BabyEfficiencyCheckpoint => ({ version: BABY_EFFICIENCY_CHECKPOINT_VERSION, targetPokeIds, options: { ...baseOptions }, islandIndex, splitIndex, leaders: localLeaders, best, evaluatedStates: completedStates(), ...(curves && { curves }) })
     for (const [index, split] of baseSplits.entries()) {
       if (index < resumeIndex) continue
       const leaders = scanSplit(split, index, baseSplits.length + (options.precision === 'medium' ? (babyEfficiency_babyEfficiencySteps_runtimeParameters.p011 as 4) : 0))
@@ -498,6 +533,7 @@ export function* babyEfficiencySteps(
     catch: { value: best.catch.value / iterations, intervals: mergeIntervals(best.catch.intervals) },
     candy: { value: best.candy.value / iterations, intervals: mergeIntervals(best.candy.intervals) },
     evaluatedStates: completedStates(),
+    ...(curves && { curves: curves.map(curve => ({ ...curve, catch: curve.catch.filter(point => point != null), candy: curve.candy.filter(point => point != null) })) }),
   }
 }
 

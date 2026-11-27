@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageShell from '../../components/PageShell.vue'
-import Content from '../../generated/views/PlanView.vue'
+import PlanView from './PlanView.vue'
 </script>
-<template><PageShell page="plan"><Content /></PageShell></template>
+
+<template><PageShell page="plan"><PlanView /></PageShell></template>

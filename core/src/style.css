@@ -286,6 +286,10 @@ h3 {
   align-items: center;
   gap: 10px;
 }
+.profile-subpage-header.settings-subpage-header {
+  flex-direction: column;
+  align-items: flex-start;
+}
 .profile-subpage-header > button {
   flex: none;
 }
@@ -501,15 +505,6 @@ h3 {
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
-.drawer-back {
-  width: 42px;
-  height: 42px;
-  border: 0;
-  background: transparent;
-  font-size: var(--font-28);
-  line-height: 1;
-  color: var(--text);
-}
 .drawer-body {
   align-content: start;
   grid-auto-rows: max-content;
@@ -579,18 +574,6 @@ h3 {
 .picker-header h3 {
   margin: 0;
   min-width: 0;
-}
-.picker-close {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-self: center;
-  align-items: center;
-  justify-content: center;
-  min-width: 64px;
-  height: 44px;
-  padding: 0 12px;
-  line-height: 1.2;
-  white-space: nowrap;
 }
 .picker-body {
   flex: 1;
@@ -1927,6 +1910,7 @@ textarea {
   max-height: 100%;
 }
 .picker-header { min-width: 0; }
+.picker-editor-footer { flex: none; padding-top: 8px; border-top: 1px solid var(--line); }
 .picker-body { gap: 10px; }
 .picker-controls {
   flex: 0 1 auto;

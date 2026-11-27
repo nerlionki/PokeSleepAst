@@ -5,6 +5,9 @@ export { ITEM_ROLES, itemById } from './itemCatalog'
 export interface ItemEntry extends GameItem<number | PokemonItemId> {
   icon: string
 }
+export interface DisplayItem extends ItemEntry {
+  researchEvents: NonNullable<GameItem['researchEvent']>[]
+}
 export const ITEM_CATEGORIES = [...new Set(ITEM_CATALOG.map(item => item.category))]
 export function itemImage(item: Pick<GameItem, 'imageFile' | 'sharedImageId'>) {
   return publicImage(item.sharedImageId === undefined ? item.imageFile : `items/${item.sharedImageId}.webp`)
@@ -19,14 +22,22 @@ export const ITEMS: ItemEntry[] = [...ITEM_CATALOG, ...pokemonIncenses].map(item
 }))
 
 export function itemGroupKey(item: ItemEntry) {
-  return JSON.stringify([item.category, item.name, item.sharedImageId ?? item.id])
+  const key = [item.category, item.name]
+  return JSON.stringify(item.category === '活动研究物品' ? key : [...key, item.sharedImageId ?? item.id])
 }
 export const DISPLAY_ITEMS = [...ITEMS.reduce((groups, item) => {
   const key = itemGroupKey(item)
   const previous = groups.get(key)
-  groups.set(key, previous ? {
-    ...previous,
-    compatiblePokemonIds: [...new Set([...previous.compatiblePokemonIds ?? [], ...item.compatiblePokemonIds ?? []])],
-  } : item)
+  const researchEvents = previous?.researchEvents ?? []
+  const event = item.researchEvent
+  groups.set(key, {
+    ...(previous ?? item),
+    icon: previous?.icon || item.icon,
+    ...(previous && {
+      compatiblePokemonIds: [...new Set([...previous.compatiblePokemonIds ?? [], ...item.compatiblePokemonIds ?? []])],
+    }),
+    researchEvents: event && !researchEvents.some(entry => entry.id === event.id)
+      ? [...researchEvents, event] : researchEvents,
+  })
   return groups
-}, new Map<string, ItemEntry>()).values()]
+}, new Map<string, DisplayItem>()).values()]

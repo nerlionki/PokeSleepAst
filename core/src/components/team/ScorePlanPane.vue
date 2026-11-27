@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import TimeField from '../shared/TimeField.vue'
+import Dialog from '#platform/Dialog.vue'
 import { gameText, t as translateUi } from '../../ui/i18n'
 
 
@@ -159,8 +160,9 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
       </div>
       <PlanningInventory v-model:bag="options.bag" v-model:unresolved="options.unresolvedBag" :disabled="!ready" :initially-open="components_team_ScorePlanPane_config_clientDefaults.inventoryInitial" />
       <p v-if="!foodCount" class="muted">{{ translateUi("尚无初始食材，早餐只能使用开始后实际收取的产物。") }}</p>
-      <button class="btn ghost" type="button" :aria-expanded="advanced" @click="advanced = !advanced">{{ translateUi("详细设置") }}{{ advancedChanged ? " " + translateUi("· 已调整") : '' }}</button>
-      <div v-if="advanced" class="stack score-details">
+      <button class="btn ghost" type="button" aria-haspopup="dialog" @click="advanced = true">{{ translateUi("详细设置") }}{{ advancedChanged ? " " + translateUi("· 已调整") : '' }}</button>
+      <Dialog v-if="advanced" :title="translateUi('详细设置')" @close="advanced = false">
+        <div class="stack score-details">
         <h4>{{ translateUi("规划周期与操作") }}</h4>
         <div class="row">
           <div class="field"><label for="score-day">{{ translateUi("开始星期") }}</label><select id="score-day" v-model.number="options.startDay" @change="options.days = Math.min(options.days, INPUT_LIMITS.score_days.max - options.startDay)"><option v-for="(day, i) in ['周一','周二','周三','周四','周五','周六','周日']" :key="day" :value="i">{{ translateUi(day) }}</option></select></div>
@@ -201,8 +203,11 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
           <h4>{{ translateUi("画皮初始状态") }}</h4>
           <label v-for="p in box.pokemon.filter(p => !p.napping && p.pokeId === 778)" :key="p.uid" class="score-check"><input :model-value="options.initialDisguise[p.uid] ?? true" :checked="options.initialDisguise[p.uid] ?? true" type="checkbox" @change="options.initialDisguise[p.uid] = ($event.target as HTMLInputElement).checked"><span class="score-check-label">{{ boxLabel(p) }} {{ translateUi("· 画皮仍可大成功") }}</span></label>
         </template>
-        <button class="btn ghost" type="button" @click="reset">{{ translateUi("恢复默认设置，保留初始能量与食材") }}</button>
-      </div>
+        </div>
+        <template #footer>
+          <button class="btn ghost" type="button" @click="reset">{{ translateUi("恢复默认设置，保留初始能量与食材") }}</button>
+        </template>
+      </Dialog>
       <p v-if="inputError" class="amber" role="alert">{{ inputError }}</p>
       <p v-if="!box.pokemon.length" class="muted">{{ translateUi("请先在 Box 添加宝可梦，再开始规划。") }}</p>
       <div v-if="baselines.length" class="field">
@@ -286,7 +291,6 @@ const mealLabels = ['早餐', '午餐', '晚餐'] as const
 .score-plan.has-results { max-width: none; gap: 16px; }
 .score-inputs, .score-results { min-width: 0; }
 .score-basics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
-.score-details { padding-top: 12px; border-top: 1px solid var(--line); }
 .score-details h4 { margin: 14px 0 0; }
 .score-sleep, .score-team, .score-state, .score-action { padding: 12px 0; border-bottom: 1px solid var(--line); }
 .score-roster { display: flex; flex-wrap: wrap; gap: 16px; }

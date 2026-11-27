@@ -37,6 +37,7 @@
   import BerryIcon from '../shared/BerryIcon.vue';
   import MainSkillIcon from '../shared/MainSkillIcon.vue';
   import VirtualPokedex from './VirtualPokedex.vue';
+  import HomeListAd from '#platform/HomeListAd.vue';
   import DrawerSheet from '../shared/DrawerSheet.vue';
   import IngredientIcon from '../shared/IngredientIcon.vue';
   import { DISPLAY_ITEMS } from '../../calc/items';
@@ -306,6 +307,7 @@
     </div>
     <p class="muted dex-fixed">{{ list.length }} {{ translateUi('只') }}</p>
     <VirtualPokedex :items="list" :scroll-reset-key="scrollResetKey" @pick="selected = $event" />
+    <HomeListAd />
     <DrawerSheet
       v-if="detail || announcedDetail"
       :title="gameText(detail?.name ?? announcedDetail?.name)"

@@ -4,7 +4,7 @@ const { parse: parseTemplate } = require('@vue/compiler-dom')
 
 // Web 的 44×24 自绘开关不能施加给微信原生 52×32 switch，否则文字会覆盖开关。
 exports.stripWebCheckboxStyles = function stripWebCheckboxStyles(css) {
-  return css.replace(/input\[type="checkbox"\][^{]*\{[^}]*\}/g, '')
+  return css.replace(/input\[type=(["'])checkbox\1\][^{]*\{[^}]*\}/g, '')
 }
 
 // Taro's native templates preserve class, but not Vue's data-v-* attributes.

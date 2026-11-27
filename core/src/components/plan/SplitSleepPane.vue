@@ -18,7 +18,6 @@
   import { useSettingsStore } from '../../stores/settings';
   import {
     BABY_POKEMON_IDS,
-    BABY_POKEMON_NAMES,
     babyEfficiencyTargetIds,
     EFFICIENCY_SLEEP_TYPES
   } from '../../calc/babyEfficiency';
@@ -38,9 +37,12 @@
     type SplitTarget
   } from '../../calc/splitSleep';
   import { useSplitSleep } from '../../composables/useSplitSleep';
-  import PokePicker from '#platform/PokePicker.vue';
+  import PlanningTargetDialog from './PlanningTargetDialog.vue';
+  import PlanningTargetFields from './PlanningTargetFields.vue';
+  import Dialog from '#platform/Dialog.vue';
   import ProgressDialog from '../shared/ProgressDialog.vue';
   import SplitRecommendation from './SplitRecommendation.vue';
+  import PlanningResultCurve from './PlanningResultCurve.vue';
   const components_plan_SplitSleepPane_config_clientDefaults =
     clientDefaults.modules.components_plan_SplitSleepPane;
 
@@ -100,6 +102,8 @@
     options.value.targets.map(target => displayStatus(target, options.value))
   );
   const initialKind = components_plan_SplitSleepPane_config_clientDefaults.kindInitial as SplitTarget['kind'];
+  const addingTarget = ref(false);
+  let runAfterAdd = false;
   const kind = ref<SplitTarget['kind']>(initialKind === 'baby' ? 'catch' : initialKind),
     statistic = ref<NonNullable<SplitTarget['statistic']>>('first-hit'),
     selectionMode = ref<CompletionSelectionMode>('free'),
@@ -193,11 +197,19 @@
     }
     config.value.targets.push(target);
     formError.value = '';
+    addingTarget.value = false;
+    if (runAfterAdd) void calculate();
+    runAfterAdd = false;
     return true;
+  }
+  function openTarget(runOnSave = false) {
+    formError.value = '';
+    runAfterAdd = runOnSave;
+    addingTarget.value = true;
   }
   function run() {
     formError.value = '';
-    if (!config.value.targets.length && !addTarget()) return;
+    if (!config.value.targets.length) { openTarget(true); return; }
     void calculate();
   }
   const resultGroups = computed(() =>
@@ -240,6 +252,23 @@
   const metricLabels = computed(
     () => result.value?.metrics.map(metricLabel) ?? []
   );
+  const curveSeries = computed(() => {
+    const current = result.value;
+    if (current?.options.precision !== 'medium' && current?.options.precision !== 'high') return [];
+    return current.metrics.map((metric, index) => {
+      const scores = new Map<number, number>();
+      for (const candidate of current.candidates) {
+        const score = candidate.sleeps[0]!.score;
+        scores.set(score, Math.max(scores.get(score) ?? 0, candidate.values[index]!));
+      }
+      const unit: '%' | '只' | '颗' = metric.kind === 'probability' ? '%' : metric.kind === 'candy' ? '颗' : '只';
+      return {
+        label: gameText(metricLabels.value[index]),
+        points: [...scores].map(([x, value]) => ({ x, value })).sort((a, b) => a.x - b.x),
+        unit
+      };
+    });
+  });
   const zeroMetrics = computed(
     () =>
       result.value?.metrics.filter(
@@ -300,9 +329,6 @@
       </div>
       <PlanCampTicket v-model="campTicketMode" :disabled="busy" />
       <h3>{{ translateUi('目标') }}</h3>
-      <p v-if="!config.targets.length" class="muted">
-        {{ translateUi('添加目标') }}
-      </p>
       <div
         v-for="(target, index) in config.targets"
         :key="splitTargetKey(target)"
@@ -333,7 +359,13 @@
           {{ translateUi('移除') }}
         </button>
       </div>
-      <div v-if="!busy" class="stack add-target">
+      <button class="btn ghost" type="button" aria-haspopup="dialog" :disabled="busy"
+        @click="openTarget()">
+        {{ translateUi('添加目标') }}
+      </button>
+      <PlanningTargetDialog v-if="addingTarget" :title="translateUi('添加目标')"
+        :ready="allowedIds.includes(pokeId) && (kind !== 'style' || Boolean(face))"
+        @close="formError = ''; addingTarget = false" @save="addTarget">
         <div class="field">
           <label for="split-target-kind">{{
             translateUi('添加目标类型')
@@ -344,33 +376,9 @@
             <option value="candy">{{ translateUi('刷糖') }}</option>
           </select>
         </div>
-        <div v-if="kind === 'style'" class="field">
-          <label for="split-style-selection">{{ translateUi('睡姿选择范围') }}</label>
-          <select id="split-style-selection" v-model="selectionMode">
-            <option value="sleepdex">{{ translateUi('根据睡姿图鉴 · 仅未收集') }}</option>
-            <option value="free">{{ translateUi('自由选择') }}</option>
-          </select>
-        </div>
-        <div v-if="allowedIds.length" class="field">
-          <label>{{ translateUi('选择宝可梦') }}</label
-          ><PokePicker
-            v-model="pokeId"
-            :allowed-ids="allowedIds"
-            :name-overrides="kind === 'style' ? undefined : BABY_POKEMON_NAMES"
-          />
-        </div>
-        <div v-if="kind === 'style'" class="field">
-          <label for="split-face">{{ translateUi('指定睡姿') }}</label
-          ><select id="split-face" v-model="face">
-            <option
-              v-for="row in faces"
-              :key="raeSleepStyleId(row)"
-              :value="raeSleepStyleId(row)"
-            >
-              {{ row.stars }}★ · {{ sleepStyleText(row) }}
-            </option>
-          </select>
-        </div>
+        <PlanningTargetFields v-model:selection-mode="selectionMode" v-model:poke-id="pokeId"
+          :style-id="face" :style-target="kind === 'style'" :allowed-ids="allowedIds" :faces="faces"
+          show-style @update:style-id="face = $event ?? ''" />
         <div v-if="kind === 'style'" class="field">
           <label for="split-style-statistic">{{ translateUi('目标') }}</label>
           <select id="split-style-statistic" v-model="statistic">
@@ -378,28 +386,17 @@
             <option value="expectation">{{ translateUi('遇见只数最多') }}</option>
           </select>
         </div>
-        <button
-          class="btn ghost"
-          type="button"
-          :disabled="!allowedIds.length"
-          @click="addTarget"
-        >
-          {{ translateUi('添加目标') }}
-        </button>
-      </div>
+        <p v-if="formError" class="amber" role="alert">{{ translateUi(formError) }}</p>
+      </PlanningTargetDialog>
       <button
         class="btn ghost"
         type="button"
-        :aria-expanded="advanced"
-        @click="advanced = !advanced"
+        aria-haspopup="dialog"
+        @click="advanced = true"
       >
-        {{
-          advanced
-            ? translateUi('收起高级设置')
-            : translateUi('高级设置 · 类型、活动与权重')
-        }}
+        {{ translateUi('高级设置 · 类型、活动与权重') }}
       </button>
-      <div v-if="advanced" class="stack advanced">
+      <Dialog v-if="advanced" :title="translateUi('高级设置 · 类型、活动与权重')" @close="advanced = false">
         <div class="split-fields">
           <div class="field">
             <label for="split-type">{{ translateUi('睡眠类型') }}</label
@@ -526,7 +523,7 @@
             </p>
           </template>
         </div>
-      </div>
+      </Dialog>
       <div class="field">
         <label for="split-precision">{{ translateUi('计算精度') }}</label>
         <select id="split-precision" v-model="config.precision" :disabled="busy">
@@ -535,7 +532,7 @@
           <option value="high">{{ translateUi('高 · 密集搜索') }}</option>
         </select>
       </div>
-      <p v-if="formError" class="amber" role="alert">{{ translateUi(formError) }}</p>
+      <p v-if="formError && !addingTarget" class="amber" role="alert">{{ translateUi(formError) }}</p>
       <button
         class="btn sage"
         type="button"
@@ -603,6 +600,13 @@
         :metric-labels="metricLabels"
         :optimum="result.whole"
       />
+      <PlanningResultCurve
+        v-if="curveSeries.length"
+        :key="JSON.stringify(result.options)"
+        axis="score"
+        :fixed-energy="result.options.strength"
+        :series="curveSeries"
+      />
       <section v-for="group in resultGroups" :key="group.kind" class="stack">
         <h3>{{ translateUi(group.title) }}</h3>
         <template
@@ -666,8 +670,6 @@
   .target-info span {
     font-size: var(--font-13);
   }
-  .add-target,
-  .advanced,
   .weight-row {
     border-top: 1px solid var(--line);
     padding-top: 14px;

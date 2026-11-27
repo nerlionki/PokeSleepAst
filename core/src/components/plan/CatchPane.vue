@@ -6,17 +6,18 @@ import { confirmRemoval } from '#platform/confirm'
 import clientDefaults from '../../data/client-defaults.resource'
 
 import { newUid } from '../../calc/uid'
-import { computed, shallowRef } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { CATCH_MODES, recommendThree, type CatchGoal, type CatchPurpose } from '../../calc/catch'
-import { resolvedSleepdex, sleepdexState } from '../../calc/sleep'
+import { resolvedSleepdex } from '../../calc/sleep'
 import { usePlanStore } from '../../stores/plans'
 import { useSettingsStore } from '../../stores/settings'
 import { useEncounterActivity } from '../../composables/useEncounterAvailability'
 import { useActivities } from '../../composables/useActivities'
 import { researchSleepStyles } from '../../calc/activities'
 import { SLEEP_STYLES } from '../../calc/data'
-import PokePicker from '#platform/PokePicker.vue'
+import CatchGoalFields from './CatchGoalFields.vue'
+import Dialog from '#platform/Dialog.vue'
 const components_plan_CatchPane_config_clientDefaults = clientDefaults.modules.components_plan_CatchPane
 
 
@@ -40,14 +41,21 @@ const fingerprint = computed(() => JSON.stringify({
   activity: research.value,
 }))
 const dirty = computed(() => stamped.value !== '' && stamped.value !== fingerprint.value)
+const draft = ref<CatchGoal | null>(null)
 
 function addGoal() {
-  plan.value.catchGoals.push({
+  draft.value = {
     id: newUid(),
-    pokeId: 1,
+    pokeId: eligibleIds.value.includes(1) ? 1 : eligibleIds.value[0] ?? 1,
     purpose: 'catch',
     stars: [],
-  })
+  }
+}
+
+function saveGoal() {
+  if (!draft.value || !eligibleIds.value.includes(draft.value.pokeId)) return
+  plan.value.catchGoals.push(draft.value)
+  draft.value = null
 }
 
 async function removeGoal(id: string) {
@@ -61,18 +69,6 @@ function moveGoal(index: number, step: number) {
   if (next < 0 || next >= rows.length) return
   const [row] = rows.splice(index, 1)
   rows.splice(next, 0, row)
-}
-
-function toggleStar(goal: CatchGoal, star: number) {
-  if (!coverage(goal.pokeId).missing.includes(star)) return
-  const set = new Set(goal.stars)
-  if (set.has(star)) set.delete(star)
-  else set.add(star)
-  goal.stars = [...set].sort((a, b) => a - b)
-}
-
-function coverage(pokeId: number) {
-  return sleepdexState(pokeId, discovered.value)
 }
 
 function generate() {
@@ -97,33 +93,18 @@ function purposeLabel(purpose: CatchPurpose) {
       </select>
     </div>
     <div class="row">
-      <button class="btn" type="button" @click="addGoal">{{ translateUi("新增目标") }}</button>
+      <button class="btn" type="button" aria-haspopup="dialog" @click="addGoal">{{ translateUi("新增目标") }}</button>
       <button class="btn sage" type="button" :disabled="!plan.catchGoals.some(goal => eligibleIds.includes(goal.pokeId))" @click="generate">{{ translateUi("生成推荐") }}</button>
     </div>
+    <Dialog v-if="draft" :title="translateUi('新增目标')" @close="draft = null">
+      <CatchGoalFields :goal="draft" :eligible-ids="eligibleIds" :discovered="discovered" />
+      <template #footer>
+        <button class="btn sage" type="button" :disabled="!eligibleIds.includes(draft.pokeId)" @click="saveGoal">{{ translateUi("完成") }}</button>
+      </template>
+    </Dialog>
     <p v-if="columns && dirty" class="amber">{{ translateUi("目标或推荐类型已修改，请重新生成") }}</p>
     <article v-for="(goal, index) in plan.catchGoals" :key="goal.id" class="card plan-goal">
-      <div class="plan-goal-top">
-        <span class="muted">{{ index + 1 }}</span>
-        <PokePicker v-model="goal.pokeId" :allowed-ids="eligibleIds" />
-        <p v-if="!eligibleIds.includes(goal.pokeId)" class="muted">{{ translateUi("此目标暂不可参与抽选") }}</p>
-        <select v-model="goal.purpose" :aria-label="translateUi('用途')">
-          <option value="catch">{{ translateUi("捕捉") }}</option>
-          <option value="sleep">{{ translateUi("睡姿") }}</option>
-          <option value="candy">{{ translateUi("刷糖") }}</option>
-        </select>
-      </div>
-      <p v-if="goal.purpose === 'sleep' && coverage(goal.pokeId).complete" class="amber">{{ translateUi("该宝可梦睡姿已集齐") }}</p>
-      <p v-else-if="goal.purpose === 'sleep' && !coverage(goal.pokeId).stars.length" class="muted">{{ translateUi("资料未收录这只宝可梦的睡姿") }}</p>
-      <div v-else-if="goal.purpose === 'sleep'" class="picker-opts">
-        <button
-          v-for="star in coverage(goal.pokeId).stars"
-          :key="star"
-          type="button"
-          :disabled="!coverage(goal.pokeId).missing.includes(star)"
-          :class="{ on: goal.stars.includes(star) && coverage(goal.pokeId).missing.includes(star) }"
-          @click="toggleStar(goal, star)"
-        >{{ star }}★<template v-if="!coverage(goal.pokeId).missing.includes(star)"> {{ translateUi("已发现") }}</template></button>
-      </div>
+      <CatchGoalFields :goal="goal" :eligible-ids="eligibleIds" :discovered="discovered" :position="index + 1" />
       <div class="row">
         <button class="btn ghost" type="button" :disabled="index === 0" @click="moveGoal(index, -1)">{{ translateUi("上移") }}</button>
         <button class="btn ghost" type="button" :disabled="index === plan.catchGoals.length - 1" @click="moveGoal(index, 1)">{{ translateUi("下移") }}</button>

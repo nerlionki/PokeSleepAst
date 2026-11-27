@@ -1,3 +1,6 @@
+import { validActivityExchanges, type ActivityExchange } from './activityExchange'
+export type { ActivityExchange, ExchangeOffer as ActivityExchangeOffer } from './activityExchange'
+
 export type ActivityBonusRef =
   | { kind: 'field'; id: string }
   | { kind: 'text'; value: string }
@@ -50,6 +53,8 @@ export interface ActivityAnnouncement {
   bonusGroups?: ActivityBonusArea[]
   berryGroup?: { items: ActivityBerryItem[] }
   notes?: string[]
+  exchange?: ActivityExchange
+  exchanges?: ActivityExchange[]
 }
 
 export interface ActivityEncounterUp {
@@ -132,6 +137,8 @@ export function validateActivityArchive(value: unknown, data?: Record<string, un
         section && typeof section.title === 'string' && section.title.trim() && Array.isArray(section.lines)
         && section.lines.length > 0 && section.lines.every(line => typeof line === 'string' && line.trim())))) return false
       if (!validBonus(event, data, date)) return false
+      if (event.exchanges !== undefined && !Array.isArray(event.exchanges)) return false
+      if (!validActivityExchanges([...(event.exchange === undefined ? [] : [event.exchange]), ...(event.exchanges ?? [])], data)) return false
       return true
     })) throw Error('历史活动公告资料无效')
   if (archive.encounterUps !== undefined) {

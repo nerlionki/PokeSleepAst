@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Dialog from '#platform/Dialog.vue'
   import { recipeById } from '../../calc/catalogIds';
   import { gameText, individualName, t as translateUi } from '../../ui/i18n';
 
@@ -454,21 +455,7 @@
       </p>
     </article>
 
-    <div
-      v-if="picking !== null"
-      v-back="
-        () => {
-          picking = null;
-        }
-      "
-      @touchstart.stop
-      @touchend.stop
-      @touchcancel.stop
-      class="overlay"
-      @click.self="picking = null"
-    >
-      <section class="sheet stack">
-        <h3>{{ translateUi('放入槽位') }} {{ picking + 1 }}</h3>
+    <Dialog v-if="picking !== null" :title="translateUi('放入槽位') + ' ' + (picking + 1)" @close="picking = null">
         <p v-if="roster.error" class="amber" role="alert">
           {{ translateUi(roster.error) }}
         </p>
@@ -495,11 +482,7 @@
         <p v-if="!box.pokemon.length" class="muted">
           {{ translateUi('盒子是空的，可以用自定义。') }}
         </p>
-        <button class="btn ghost" type="button" @click="picking = null">
-          {{ translateUi('关闭') }}
-        </button>
-      </section>
-    </div>
+    </Dialog>
 
     <SpeciesSheet
       v-if="adding !== null"
@@ -507,34 +490,14 @@
       @pick="pickSpecies"
     />
 
-    <div
-      v-if="editingDraft"
-      v-back="
-        () => {
-          editing = null;
-        }
-      "
-      @touchstart.stop
-      @touchend.stop
-      @touchcancel.stop
-      class="overlay"
-      @click.self="editing = null"
-    >
-      <section class="sheet stack member-editor-sheet">
-        <div class="row">
-          <h3>
-            {{
-              editingDraft && editing?.startsWith('custom-')
-                ? translateUi('自定义面板')
-                : translateUi('编辑个体')
-            }}
-          </h3>
-        </div>
-        <MemberEditor
-          v-model="editingDraft"
-          @copy="copySlot(roster.slots.indexOf(editing))"
-          @remove="removeSlot(roster.slots.indexOf(editing))"
-        />
+    <Dialog v-if="editingDraft"
+      :title="translateUi(editing?.startsWith('custom-') ? '自定义面板' : '编辑个体')" @close="editing = null">
+      <MemberEditor
+        v-model="editingDraft"
+        @copy="copySlot(roster.slots.indexOf(editing))"
+        @remove="removeSlot(roster.slots.indexOf(editing))"
+      />
+      <template #footer>
         <button
           v-if="editing?.startsWith('custom-')"
           class="btn"
@@ -558,7 +521,7 @@
         >
           {{ translateUi('完成') }}
         </button>
-      </section>
-    </div>
+      </template>
+    </Dialog>
   </div>
 </template>

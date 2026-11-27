@@ -1,37 +1,12 @@
 <script setup lang="ts">
-  import { t as translateUi } from '../../ui/i18n';
+import Dialog from '#platform/Dialog.vue'
 
-  defineProps<{ title: string }>();
-  const emit = defineEmits<{ close: [] }>();
+defineProps<{ title: string }>()
+const emit = defineEmits<{ close: [] }>()
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      v-back="() => emit('close')"
-      @touchstart.stop
-      @touchend.stop
-      @touchcancel.stop
-      class="overlay drawer-overlay"
-      @click.self="emit('close')"
-    >
-      <section class="sheet drawer-page">
-        <header class="drawer-bar">
-          <button
-            class="drawer-back"
-            type="button"
-            :aria-label="translateUi('返回')"
-            @click="emit('close')"
-          >
-            ‹
-          </button>
-          <h3>{{ title }}</h3>
-          <span />
-        </header>
-        <div class="drawer-body stack">
-          <slot />
-        </div>
-      </section>
-    </div>
-  </Teleport>
+  <Dialog :title="title" variant="drawer" @close="emit('close')">
+    <slot />
+  </Dialog>
 </template>

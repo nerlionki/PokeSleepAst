@@ -26,6 +26,11 @@ export function validateMainSkillModels(data: Record<string, unknown>, maximumMo
   for (const item of items.catalog) {
     valid(positiveInt(item.id) && !itemIds.has(item.id) && typeof item.name === 'string' && item.name.trim()
       && typeof item.category === 'string' && item.imageFile === `items/${item.id}.webp`, '道具 ID 或图片无效')
+    if (item.researchEvent !== undefined) {
+      const event = obj(item.researchEvent)
+      valid(typeof event.id === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(event.id)
+        && typeof event.name === 'string' && event.name.trim(), '研究道具对应活动无效')
+    }
     if (item.usage !== undefined) valid(typeof item.usage === 'string' && item.usage.trim(), '道具用途无效')
     if (item.compatiblePokemonIds !== undefined) valid(Array.isArray(item.compatiblePokemonIds)
       && item.compatiblePokemonIds.every(positiveInt) && new Set(item.compatiblePokemonIds).size === item.compatiblePokemonIds.length, '适用宝可梦 ID 无效')

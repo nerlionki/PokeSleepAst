@@ -95,7 +95,7 @@ export function subskillLevelBonus(level: number, subskills: string[]): number {
   return (subs.includes('skillLevelS') ? member_subskillLevelBonus_ruleParameters.skillLevelS : 0) + (subs.includes('skillLevelM') ? member_subskillLevelBonus_ruleParameters.skillLevelM : 0)
 }
 
-const SUBSKILL_UPGRADES: Record<string, string> = (cloneData(member_config_extracted0.SUBSKILL_UPGRADES) as unknown as Record<string, string>)
+export const SUBSKILL_UPGRADES: Record<string, string> = (cloneData(member_config_extracted0.SUBSKILL_UPGRADES) as unknown as Record<string, string>)
 
 /** 只允许已解锁副技能升一档；目标不能与任何槽位（包括未解锁）重复。 */
 export function silverSeedCandidates(level: number, subskills: string[]) {

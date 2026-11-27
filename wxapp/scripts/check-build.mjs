@@ -181,7 +181,8 @@ if (
   !pageRules.some(rule => /background-image\s*:\s*none/.test(rule))
 )
   throw Error('WeChat page background must be solid');
-for (const file of walk(path.join(root, 'src/generated')).filter(file =>
+const viewSources = ['src/generated', 'src/pages', 'src/platform'].flatMap(dir => walk(path.join(root, dir)));
+for (const file of viewSources.filter(file =>
   file.endsWith('.vue')
 )) {
   const source = fs.readFileSync(file, 'utf8');
@@ -293,7 +294,7 @@ if (
 )
   throw Error('Worker subpackage exceeds 2 MB');
 const profile = fs.readFileSync(
-  path.join(root, 'src/generated/views/ProfileView.vue'),
+  path.join(root, 'src/pages/profile/ProfileView.vue'),
   'utf8'
 );
 if (

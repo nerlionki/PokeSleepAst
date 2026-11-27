@@ -1,94 +1,49 @@
 <script setup lang="ts">
+import Dialog from './Dialog.vue'
+import { usePokemonPicker, type PokemonPickerProps } from '../../../core/src/composables/usePokemonPicker'
+import { toggleChoice } from '../../../core/src/calc/multiChoice'
 import HorizontalStrip from '#platform/HorizontalStrip.vue'
 import { t as translateUi, gameText } from '../../../core/src/ui/i18n'
-import clientDefaults from '../../../core/src/data/client-defaults.resource'
 
-import { computed, ref, shallowRef, watch } from 'vue'
-import { BERRIES, INGREDIENTS, POKEDEX, berryByType } from '../../../core/src/calc/data'
-import { selectionList, toggleChoice, matchesChoice } from '../../../core/src/calc/multiChoice'
-import { pokeHit } from '../../../core/src/calc/pokeSearch'
-import { compareDex } from '../../../core/src/calc/pokedexOrder'
-import { SPECIALTY_FILTERS, specialtyHit } from '../../../core/src/calc/specialty'
+import { useSlots } from 'vue'
+import { INGREDIENTS, berryByType } from '../../../core/src/calc/data'
 import BerryIcon from '../../../core/src/components/shared/BerryIcon.vue'
 import IngredientIcon from '../../../core/src/components/shared/IngredientIcon.vue'
 import PokeSprite from '../../../core/src/components/shared/PokeSprite.vue'
-const components_shared_PokePicker_config_clientDefaults = clientDefaults.modules.components_shared_PokePicker
 
 
 const model = defineModel<number>({ required: true })
-const props = defineProps<{ allowedIds?: readonly number[], nameOverrides?: Record<number, string> }>()
-const allowed = computed(() => props.allowedIds ? new Set(props.allowedIds) : null)
-const open = shallowRef(components_shared_PokePicker_config_clientDefaults["openInitial"])
-const q = shallowRef(components_shared_PokePicker_config_clientDefaults["qInitial"])
-const panel = shallowRef<'none' | 'spec' | 'type' | 'sleep' | 'ing'>((components_shared_PokePicker_config_clientDefaults["panelInitial"] as unknown as 'none' | 'spec' | 'type' | 'sleep' | 'ing'))
-const spec = ref(selectionList(components_shared_PokePicker_config_clientDefaults["specInitial"]))
-const type = ref(selectionList(components_shared_PokePicker_config_clientDefaults["typeInitial"]))
-const sleep = ref(selectionList(components_shared_PokePicker_config_clientDefaults["sleepInitial"]))
-const ing = ref(selectionList(components_shared_PokePicker_config_clientDefaults["ingInitial"]))
-
-const specs = ['全部', ...SPECIALTY_FILTERS]
-const types = computed(() => [...new Set(BERRIES.map((b) => b.type))])
-const sleeps = computed(() => [...new Set(POKEDEX.map((p) => p.sleepType))])
-
-const current = computed(() => POKEDEX.find((p) => p.id === model.value) ?? POKEDEX[0]!)
-
-const list = computed<(typeof POKEDEX)[number][]>((previous) => {
-  const results = POKEDEX.filter((p) => {
-    if (allowed.value && !allowed.value.has(p.id)) return false
-    if (spec.value.length && !spec.value.some(value => specialtyHit(p.specialty, value))) return false
-    if (!matchesChoice(type.value, p.berryType)) return false
-    if (!matchesChoice(sleep.value, p.sleepType)) return false
-    const ingredients = p.ingredients ?? []
-    if (ing.value.length && !ingredients.some((x) => ing.value.includes(String(x.id)))) return false
-    const extra = [p.berryType, p.berry, p.specialty, p.sleepType, ...ingredients.map((x) => x.name)].join(' ')
-    return pokeHit(p, q.value, extra)
-  }).sort(compareDex)
-  return previous?.length === results.length && results.every((poke, index) => poke === previous[index])
-    ? previous
-    : results
-})
-
-function pick(id: number) {
+const props = defineProps<PokemonPickerProps>()
+const emit = defineEmits<{ close: []; pick: [id: number] }>()
+const slots = useSlots()
+function select(id: number) {
   model.value = id
-  open.value = false
+  emit('pick', id)
 }
 
-function toggle(which: typeof panel.value) {
-  panel.value = panel.value === which ? 'none' : which
-}
-
-function clearFilters() {
-  spec.value = []
-  type.value = []
-  sleep.value = []
-  ing.value = []
-  q.value = ''
-  panel.value = 'none'
-}
-
-const resultsRevision = shallowRef(0)
-// Keep the scroll container mounted when the parent refreshes eligible Pokémon.
-watch([q, spec, type, sleep, ing], () => { resultsRevision.value++ }, { deep: true })
-const filterOn = computed(() => Boolean(spec.value.length || type.value.length || sleep.value.length || ing.value.length))
+const {
+  open, editing, current, q, panel, spec, type, sleep, ing, specs, types, sleeps,
+  list, resultsRevision, filterOn, pick, closePicker, goBack, toggle, clearFilters
+} = usePokemonPicker(props, model, select, () => Boolean(slots.editor), () => emit('close'))
 </script>
 
 <template>
   <div>
-    <button class="poke-pick" type="button" @click="open = true">
+    <button v-if="!dialogOnly" class="poke-pick" type="button" @click="open = true">
       <PokeSprite :id="current.id" :name="current.name" />
       <div class="poke-pick-txt">
         <strong>{{ props.nameOverrides?.[current.id] ?? gameText(current.name) }}</strong>
         <span class="muted berry-name">#{{ current.id }} · <BerryIcon :name="current.berry" small />{{ gameText(current.berryType) }}</span>
       </div>
     </button>
-    <Teleport to="body">
-      <div v-if="open" v-back="() => { open = false }" @touchstart.stop @touchend.stop @touchcancel.stop class="overlay picker-overlay" @click.self="open = false">
-        <section class="sheet picker-sheet">
-          <header class="picker-header">
-            <h3>{{ translateUi("选择宝可梦") }}</h3>
-            <button class="btn ghost picker-close" type="button" @click="open = false">{{ translateUi("关闭") }}</button>
-          </header>
-          <div class="picker-body stack">
+    <Dialog v-if="open" variant="picker"
+      :title="translateUi(editing ? (props.editorTitle ?? '编辑个体') : (props.title ?? '选择宝可梦'))"
+      :back-label="editing ? translateUi(props.title ?? '选择宝可梦') : undefined"
+      @close="closePicker" @back="goBack">
+          <div v-if="editing" class="picker-results">
+            <slot name="editor" :close="closePicker" />
+          </div>
+          <div v-else class="picker-body stack">
             <div class="picker-controls stack">
             <input v-model="q" class="picker-search" :placeholder="translateUi('搜索中文、英文、属性或编号')">
             <div class="picker-filters">
@@ -132,8 +87,9 @@ const filterOn = computed(() => Boolean(spec.value.length || type.value.length |
             <p class="muted">{{ translateUi("超梦等部分种类若缺定位/食材，对应筛选不会命中。") }}</p>
             </div>
             </div>
-          </section>
-        </div>
-      </Teleport>
+      <template v-if="editing && slots.editorFooter" #footer>
+        <slot name="editorFooter" :close="closePicker" />
+      </template>
+    </Dialog>
     </div>
   </template>

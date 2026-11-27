@@ -1,6 +1,8 @@
 import { loadJson, saveJson } from './storage'
 import { resourceContext, type ResourceContext } from '../../../core/src/resources/runtime'
-export const canSwitchDataSource = ['develop', 'trial'].includes(wx.getAccountInfoSync().miniProgram.envVersion)
+const environment = wx.getAccountInfoSync().miniProgram.envVersion
+export const isTrialMiniProgram = environment === 'trial'
+export const canSwitchDataSource = environment === 'develop' || isTrialMiniProgram
 export async function selectedDataSource(): Promise<ResourceContext> {
   return canSwitchDataSource && await loadJson('data-source', 'prod') === 'test' ? 'test' : 'prod'
 }

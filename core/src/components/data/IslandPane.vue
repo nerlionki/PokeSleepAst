@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import RangeSlider from '#platform/RangeSlider.vue';
   import { gameText, t as translateUi } from '../../ui/i18n';
 
   import { INPUT_RANGES } from '../../calc/inputRanges';
@@ -135,16 +136,15 @@
                 : ''
             }}</span
           >
-          <input
-            type="range"
+          <RangeSlider
             :min="INPUT_LIMITS.store_islandBonus_i_id_as_IslandId.min"
             :max="AREA_BONUS_MAX"
             :step="INPUT_LIMITS.store_islandBonus_i_id_as_IslandId.step"
-            :value="store.islandBonus(i.id as IslandId)"
+            :model-value="store.islandBonus(i.id as IslandId)"
             @change="
               store.setIslandBonus(
                 i.id as IslandId,
-                Number(($event.target as HTMLInputElement).value)
+                $event
               )
             "
           />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import RangeSlider from '#platform/RangeSlider.vue'
 import { t as translateUi, gameText } from '../../ui/i18n'
 import { INPUT_RANGES } from '../../calc/inputRanges'
 const INPUT_LIMITS = INPUT_RANGES.MemberEditor
@@ -30,7 +31,10 @@ const components_team_MemberEditor_config_clientDefaults = clientDefaults.module
 
 const natureMinted = computed({ get: () => model.value.natureMinted === true, set: (natureMinted: boolean) => patch({ natureMinted }) })
 const model = defineModel<MemberDraft>({ required: true })
-const props = withDefaults(defineProps<{ actions?: boolean, shiny?: boolean, ignore?: readonly MemberEditorField[] }>(), { actions: true, shiny: false, ignore: () => [] })
+const props = withDefaults(defineProps<{
+  actions?: boolean, shiny?: boolean, ignore?: readonly MemberEditorField[]
+  panelTarget?: boolean, panelNatureAdvanced?: boolean
+}>(), { actions: true, shiny: false, ignore: () => [] })
 const visible = (field: MemberEditorField) => !props.ignore.includes(field)
 const emit = defineEmits<{ copy: [], remove: [], confirm: [field: OcrMissingField] }>()
 
@@ -107,6 +111,12 @@ function subName(id: string) {
 
 function chooseIngredient(column: number, lineIndex: number) {
   if (!poke.value) return
+  if (props.panelTarget) {
+    const ingredientSlots: MemberDraft['ingredientSlots'] = [...model.value.ingredientSlots]
+    ingredientSlots[column] = ingredientSlots[column] === lineIndex ? null : lineIndex
+    patch({ ingredientSlots })
+    return
+  }
   const next = setIngredientChoice(poke.value.ingredients.length, model.value.ingredientSlots, column, lineIndex)
   if (next) patch({ ingredientSlots: next })
   emit('confirm', `ingredient${column}` as OcrMissingField)
@@ -188,7 +198,7 @@ function stepEvolution(delta: number) {
     <template v-if="visible('level')">
     <LevelSelector :model-value="model.level" :levels="LEVELS" @update:model-value="setLevel" />
     <label class="level-slider" data-swipe-ignore @touchstart.stop @touchend.stop @touchcancel.stop>
-      <input :value="model.level" type="range" :min="INPUT_LIMITS.model_level.min" :max="POKEMON_LEVEL_MAX" @input="setLevel(Number(($event.target as HTMLInputElement).value))">
+      <RangeSlider :model-value="model.level" :min="INPUT_LIMITS.model_level.min" :max="POKEMON_LEVEL_MAX" @update:model-value="setLevel" />
       <b>Lv.{{ model.level }}</b>
     </label>
     </template>
@@ -201,8 +211,9 @@ function stepEvolution(delta: number) {
     <div class="ing-board">
       <section v-for="(col, colIndex) in board" :key="colIndex" class="ing-col">
         <h3>Lv {{ INGREDIENT_GATES[colIndex] }}</h3>
-        <button v-if="isAllRounder(poke) && colIndex > 0" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">{{ translateUi("空") }}</button>
-        <p v-if="isAllRounder(poke) && colIndex === 0 && model.ingredientSlots[0] == null" class="amber" role="alert">{{ translateUi("Lv.1 食材不能为空，请选择实际食材。") }}</p>
+        <button v-if="panelTarget" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="model.ingredientSlots[colIndex] != null && chooseIngredient(colIndex, model.ingredientSlots[colIndex]!)">{{ translateUi('不限制') }}</button>
+        <button v-else-if="isAllRounder(poke) && colIndex > 0" type="button" class="ing-token" :class="{ on: model.ingredientSlots[colIndex] == null }" @click="clearIngredient(colIndex)">{{ translateUi("空") }}</button>
+        <p v-if="!panelTarget && isAllRounder(poke) && colIndex === 0 && model.ingredientSlots[0] == null" class="amber" role="alert">{{ translateUi("Lv.1 食材不能为空，请选择实际食材。") }}</p>
         <div class="ing-col-items">
           <button
             v-for="(cell, cellIndex) in col"
@@ -218,7 +229,7 @@ function stepEvolution(delta: number) {
         </div>
       </section>
     </div>
-    <p class="muted">{{ translateUi("亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽。") }}{{ isAllRounder(poke) ? translateUi("Lv.1 必须选择食材，不能留空。") : translateUi("第 1 槽固定。") }}</p>
+    <p v-if="!panelTarget" class="muted">{{ translateUi("亮着的是当前食材组合。30 级点选决定第 2 槽，60 级点选决定第 3 槽。") }}{{ isAllRounder(poke) ? translateUi("Lv.1 必须选择食材，不能留空。") : translateUi("第 1 槽固定。") }}</p>
     </template>
 
     <div v-if="visible('evolutions')" class="tune-row">
@@ -263,9 +274,10 @@ function stepEvolution(delta: number) {
     </section>
 
     <template v-if="visible('nature')">
-    <ToggleField v-model="natureMinted" :label="translateUi('已使用净白薄荷（性格无加减成）')" />
-    <button class="btn ghost" type="button" @click="natureOpen = !natureOpen">{{ translateUi("性格 ·") }} {{ gameText(model.nature) }}</button>
+    <ToggleField v-if="!panelTarget" v-model="natureMinted" :label="translateUi('已使用净白薄荷（性格无加减成）')" />
+    <button class="btn ghost" type="button" @click="natureOpen = !natureOpen">{{ translateUi("性格 ·") }} {{ panelTarget && !model.nature ? translateUi(panelNatureAdvanced ? '高级条件' : '不限制') : gameText(model.nature) }}</button>
     <div v-if="natureOpen" class="picker-opts">
+      <button v-if="panelTarget" type="button" :class="{ on: !model.nature && !panelNatureAdvanced }" @click="patch({ nature: '' }); natureOpen = false">{{ translateUi('不限制') }}</button>
       <button v-for="nature in NATURES" :key="nature.name" type="button" :class="{ on: model.nature === nature.name }" @click="patch({ nature: nature.name }); natureOpen = false">
         {{ gameText(nature.name) }} {{ model.natureMinted ? '' : natureMark(nature.up, '↑') }} {{ model.natureMinted ? '' : natureMark(nature.down, '↓') }}
       </button>
